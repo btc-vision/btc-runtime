@@ -31,6 +31,13 @@ export * from './math/cyrb53';
 export * from './math/sha256';
 export * from './math/rnd';
 
+/** Memory */
+export * from './memory/AddressMemoryMap';
+export * from './memory/MemorySlot';
+export * from './memory/MemorySlotPointer';
+export * from './memory/KeyMerger';
+export * from './memory/MultiAddressMemoryMap';
+
 /** Storage */
 export * from './storage/StoredU256';
 
