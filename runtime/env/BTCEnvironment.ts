@@ -12,6 +12,8 @@ import { Map } from '../generic/Map';
 import { OP_NET } from '../contracts/OP_NET';
 import { BlockchainStorage, PointerStorage } from '../types';
 
+export * from '../env/global';
+
 @final
 export class BlockchainEnvironment {
     private static readonly runtimeException: string = 'RuntimeException';
