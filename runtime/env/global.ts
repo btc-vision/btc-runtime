@@ -18,4 +18,4 @@ export declare function deployFromAddress(data: Uint8Array): Uint8Array;
 
 // @ts-ignore
 @external('env', 'call')
-export declare function call(calldata: Uint8Array): Uint8Array;
+export declare function call(data: Uint8Array): Uint8Array;

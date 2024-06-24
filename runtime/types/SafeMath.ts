@@ -72,6 +72,35 @@ export class SafeMath {
         return result;
     }
 
+    public static min(a: u256, b: u256): u256 {
+        return u256.lt(a, b) ? a : b;
+    }
+
+    public static max(a: u256, b: u256): u256 {
+        return u256.gt(a, b) ? a : b;
+    }
+
+    @inline
+    @unsafe
+    public static sqrt(y: u256): u256 {
+        if (u256.gt(y, u256.fromU32(3))) {
+            let z = y;
+
+            let x = SafeMath.add(SafeMath.div(y, u256.fromU32(2)), u256.fromU32(1));
+            while (u256.lt(x, z)) {
+                z = x;
+
+                let u = SafeMath.div(y, x);
+                x = SafeMath.div(u256.add(u, x), u256.fromU32(2));
+            }
+            return z;
+        } else if (!u256.eq(y, u256.Zero)) {
+            return u256.fromU32(1);
+        } else {
+            return u256.Zero;
+        }
+    }
+
     @inline
     @unsafe
     static shl(value: u256, shift: i32): u256 {
