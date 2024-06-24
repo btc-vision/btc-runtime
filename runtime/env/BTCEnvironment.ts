@@ -11,6 +11,7 @@ import { Potential } from '../lang/Definitions';
 import { Map } from '../generic/Map';
 import { OP_NET } from '../contracts/OP_NET';
 import { BlockchainStorage, PointerStorage } from '../types';
+import { deploy, deployFromAddress } from './global';
 
 export * from '../env/global';
 
@@ -170,6 +171,28 @@ export class BlockchainEnvironment {
         }
 
         return buffer.getBuffer();
+    }
+
+    public deployContract(hash: u256, bytecode: Uint8Array): BytesReader {
+        const writer = new BytesWriter();
+        writer.writeU256(hash);
+        writer.writeBytes(bytecode);
+
+        const cb: Potential<Uint8Array> = deploy(writer.getBuffer());
+        if (!cb) throw this.error('Failed to deploy contract');
+
+        return new BytesReader(cb as Uint8Array);
+    }
+
+    public deployContractFromExisting(hash: u256, existingAddress: Address): BytesReader {
+        const writer = new BytesWriter();
+        writer.writeU256(hash);
+        writer.writeAddress(existingAddress);
+
+        const cb: Potential<Uint8Array> = deployFromAddress(writer.getBuffer());
+        if (!cb) throw this.error('Failed to deploy contract');
+
+        return new BytesReader(cb as Uint8Array);
     }
 
     public getStorageAt(
