@@ -31,6 +31,8 @@
     "type": "module",
     "files": [
         "runtime",
+        "runtime/*.ts",
+        "runtime/**/*.ts",
         "!**/*.js.map",
         "!**/*.tsbuildinfo"
     ],
