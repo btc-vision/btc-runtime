@@ -28,16 +28,16 @@ export class BlockchainEnvironment {
     private _caller: PotentialAddress = null;
     private currentBlock: u256 = u256.Zero;
 
-    private _contract: Potential<OP_NET> = null;
-
     constructor() {}
+
+    private _contract: Potential<OP_NET> = null;
 
     public get contract(): OP_NET {
         if (!this._contract) {
             throw this.error('Contract is required');
         }
 
-        return this._contract;
+        return this._contract as OP_NET;
     }
 
     public set contract(contract: OP_NET) {
