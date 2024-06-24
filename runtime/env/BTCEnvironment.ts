@@ -33,6 +33,12 @@ export class BlockchainEnvironment {
 
     constructor() {}
 
+    private _timestamp: u64 = 0;
+
+    public get timestamp(): u64 {
+        return this._timestamp;
+    }
+
     private _contract: Potential<() => OP_NET> = null;
 
     public get contract(): OP_NET {
@@ -104,6 +110,8 @@ export class BlockchainEnvironment {
 
         this._owner = reader.readAddress();
         this._contractAddress = reader.readAddress();
+
+        this._timestamp = reader.readU64();
     }
 
     public call(destinationContract: Address, calldata: BytesWriter): BytesReader {
