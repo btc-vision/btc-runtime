@@ -223,8 +223,7 @@ export class Sha256 {
      * @returns A hash function state
      */
     constructor() {
-        let st = Internal._hashInit();
-        this.st = st;
+        this.st = Internal._hashInit();
     }
 
     /**
@@ -246,6 +245,15 @@ export class Sha256 {
      */
     static hmac(m: Uint8Array, k: Uint8Array): Uint8Array {
         return Internal._hmac(m, k);
+    }
+
+    /**
+     * Hash256
+     * @param {Uint8Array} m Message
+     * @returns {Uint8Array} `SHA-256(SHA-256(m))`
+     */
+    static hash256(m: Uint8Array): Uint8Array {
+        return Sha256.hash(Sha256.hash(m));
     }
 
     /**

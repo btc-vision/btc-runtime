@@ -30,6 +30,24 @@ export class StoredU256 {
     }
 
     @inline
+    public set value(value: u256) {
+        this._value = value;
+
+        Blockchain.setStorageAt(
+            this.address,
+            this.pointer,
+            this.subPointer,
+            this._value,
+            this.defaultValue,
+        );
+    }
+
+    @inline
+    public get toBytes(): Uint8Array {
+        return this._value.toUint8Array(true);
+    }
+
+    @inline
     @operator('+')
     public add(value: u256): this {
         this.ensureValue();
