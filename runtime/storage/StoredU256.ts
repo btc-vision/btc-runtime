@@ -44,7 +44,7 @@ export class StoredU256 {
 
     @inline
     public get toBytes(): Uint8Array {
-        return this._value.toUint8Array(true);
+        return this._value.toUint8Array(false);
     }
 
     @inline

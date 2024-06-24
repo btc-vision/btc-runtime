@@ -1,18 +1,21 @@
-import { u256 } from "as-bignum/assembly/integer/u256";
-import { Address } from "../types/Address";
+import { u256 } from 'as-bignum/assembly/integer/u256';
 
 // @ts-ignore
 @external('env', 'load')
-export declare function load(pointer: u256): u256;
+export declare function load(data: Uint8Array): u256;
 
 // @ts-ignore
 @external('env', 'store')
-export declare function store(pointer: u256, value: u256): void;
+export declare function store(data: Uint8Array): void;
 
 // @ts-ignore
 @external('env', 'deploy')
-export declare function deploy(bytecode: Uint8Array): Address;
+export declare function deploy(data: Uint8Array): Uint8Array;
+
+// @ts-ignore
+@external('env', 'deployFromAddress')
+export declare function deployFromAddress(data: Uint8Array): Uint8Array;
 
 // @ts-ignore
 @external('env', 'call')
-export declare function call(callee: Address, calldata: Uint8Array): Uint8Array;
+export declare function call(calldata: Uint8Array): Uint8Array;
