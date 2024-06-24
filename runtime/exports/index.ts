@@ -4,8 +4,6 @@ import { Selector } from '../math/abi';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { BytesReader } from '../buffer/BytesReader';
 
-export * from '../env/global';
-
 export function readMethod(method: Selector, data: Uint8Array): Uint8Array {
     const calldata: Calldata = new BytesReader(data);
     const result: BytesWriter = Blockchain.contract.callMethod(method, calldata);
