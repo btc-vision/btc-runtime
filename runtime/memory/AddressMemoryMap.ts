@@ -11,24 +11,43 @@ export class AddressMemoryMap<K extends string, V extends MemorySlotData<u256>> 
 
     private readonly memoryAllocatorAddress: Address;
 
-    constructor(pointer: u16, self: Address, private readonly defaultValue: V) {
+    constructor(
+        pointer: u16,
+        self: Address,
+        private readonly defaultValue: V,
+    ) {
         this.pointer = pointer;
         this.memoryAllocatorAddress = self;
     }
 
     public set(key: K, value: V): this {
         const keyHash: MemorySlotPointer = encodePointer(key);
-        Blockchain.setStorageAt(this.memoryAllocatorAddress, this.pointer, keyHash, value, this.defaultValue);
+        Blockchain.setStorageAt(
+            this.memoryAllocatorAddress,
+            this.pointer,
+            keyHash,
+            value,
+            this.defaultValue,
+        );
 
         return this;
     }
 
     public get(key: K): MemorySlotData<u256> {
-        return Blockchain.getStorageAt(this.memoryAllocatorAddress, this.pointer, encodePointer(key), this.defaultValue);
+        return Blockchain.getStorageAt(
+            this.memoryAllocatorAddress,
+            this.pointer,
+            encodePointer(key),
+            this.defaultValue,
+        );
     }
 
     public has(key: K): bool {
-        return Blockchain.hasStorageAt(this.memoryAllocatorAddress, this.pointer, encodePointer(key));
+        return Blockchain.hasStorageAt(
+            this.memoryAllocatorAddress,
+            this.pointer,
+            encodePointer(key),
+        );
     }
 
     @unsafe

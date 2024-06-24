@@ -5,12 +5,20 @@ import { KeyMerger } from './KeyMerger';
 import { Map } from '../generic/Map';
 
 @final
-export class MultiAddressMemoryMap<K extends string, K2 extends string, V extends MemorySlotData<u256>> extends Map<K, KeyMerger<K, K2, V>> {
+export class MultiAddressMemoryMap<
+    K extends string,
+    K2 extends string,
+    V extends MemorySlotData<u256>,
+> extends Map<K, KeyMerger<K, K2, V>> {
     public pointer: u16;
 
     private readonly memoryAllocatorAddress: Address;
 
-    constructor(pointer: u16, self: Address, private readonly defaultValue: V) {
+    constructor(
+        pointer: u16,
+        self: Address,
+        private readonly defaultValue: V,
+    ) {
         super();
 
         this.pointer = pointer;
@@ -37,7 +45,7 @@ export class MultiAddressMemoryMap<K extends string, K2 extends string, V extend
     public set(key: K, value: KeyMerger<K, K2, V>): this {
         this.createKeyMerger(key);
 
-        return <this><unknown>super.set(key, value);
+        return <this>(<unknown>super.set(key, value));
     }
 
     public has(key: K): bool {
@@ -54,7 +62,15 @@ export class MultiAddressMemoryMap<K extends string, K2 extends string, V extend
 
     private createKeyMerger(key: K): void {
         if (!super.has(key)) {
-            super.set(key, new KeyMerger<K, K2, V>(key, this.pointer, this.memoryAllocatorAddress, this.defaultValue));
+            super.set(
+                key,
+                new KeyMerger<K, K2, V>(
+                    key,
+                    this.pointer,
+                    this.memoryAllocatorAddress,
+                    this.defaultValue,
+                ),
+            );
         }
     }
 }

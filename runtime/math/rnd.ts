@@ -4,17 +4,18 @@ let random_state0_32: u32;
 let random_state1_32: u32;
 let random_seeded = false;
 
-function murmurHash3(h: u64): u64 { // Force all bits of a hash block to avalanche
-    h ^= h >> 33;                     // see: https://github.com/aappleby/smhasher
-    h *= 0xFF51AFD7ED558CCD;
+function murmurHash3(h: u64): u64 {
+    // Force all bits of a hash block to avalanche
+    h ^= h >> 33; // see: https://github.com/aappleby/smhasher
+    h *= 0xff51afd7ed558ccd;
     h ^= h >> 33;
-    h *= 0xC4CEB9FE1A85EC53;
+    h *= 0xc4ceb9fe1a85ec53;
     h ^= h >> 33;
     return h;
 }
 
 function splitMix32(h: u32): u32 {
-    h += 0x6D2B79F5;
+    h += 0x6d2b79f5;
     h = (h ^ (h >> 15)) * (h | 1);
     h ^= h + (h ^ (h >> 7)) * (h | 61);
     return h ^ (h >> 14);

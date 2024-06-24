@@ -3,23 +3,18 @@ import { Blockchain } from '../env';
 import { Selector } from '../math/abi';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { BytesReader } from '../buffer/BytesReader';
-import { OP_NET } from '../contracts/OP_NET';
 
 export * from '../env/global';
 
 export function readMethod(method: Selector, data: Uint8Array): Uint8Array {
-    const contract: OP_NET = new Blockchain.contract;
-
     const calldata: Calldata = new BytesReader(data);
-    const result: BytesWriter = contract.callMethod(method, calldata);
+    const result: BytesWriter = Blockchain.contract.callMethod(method, calldata);
 
     return result.getBuffer();
 }
 
 export function readView(method: Selector): Uint8Array {
-    const contract: OP_NET = new Blockchain.contract;
-
-    const result: BytesWriter = contract.callView(method);
+    const result: BytesWriter = Blockchain.contract.callView(method);
     return result.getBuffer();
 }
 

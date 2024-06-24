@@ -12,10 +12,6 @@ import { Map } from '../generic/Map';
 import { OP_NET } from '../contracts/OP_NET';
 import { BlockchainStorage, PointerStorage } from '../types';
 
-interface OPNetContract {
-    new (): OP_NET;
-}
-
 @final
 export class BlockchainEnvironment {
     private static readonly runtimeException: string = 'RuntimeException';
@@ -32,12 +28,11 @@ export class BlockchainEnvironment {
     private _caller: PotentialAddress = null;
     private currentBlock: u256 = u256.Zero;
 
-    private _contract: Potential<OPNetContract> = null;
+    private _contract: Potential<OP_NET> = null;
 
-    constructor() {
-    }
+    constructor() {}
 
-    public get contract(): OPNetContract {
+    public get contract(): OP_NET {
         if (!this._contract) {
             throw this.error('Contract is required');
         }
@@ -45,7 +40,7 @@ export class BlockchainEnvironment {
         return this._contract;
     }
 
-    public set contract(contract: OPNetContract) {
+    public set contract(contract: OP_NET) {
         this._contract = contract;
     }
 
@@ -121,7 +116,10 @@ export class BlockchainEnvironment {
         const buffer = calldata.getBuffer();
         externalCalls.push(buffer);
 
-        const response: Potential<Uint8Array> = this.getExternalCallResponse(destinationContract, externalCalls.length - 1);
+        const response: Potential<Uint8Array> = this.getExternalCallResponse(
+            destinationContract,
+            externalCalls.length - 1,
+        );
         if (!response) {
             throw this.error('external call failed');
         }
@@ -172,7 +170,12 @@ export class BlockchainEnvironment {
         return buffer.getBuffer();
     }
 
-    public getStorageAt(address: Address, pointer: u16, subPointer: MemorySlotPointer, defaultValue: MemorySlotData<u256>): MemorySlotData<u256> {
+    public getStorageAt(
+        address: Address,
+        pointer: u16,
+        subPointer: MemorySlotPointer,
+        defaultValue: MemorySlotData<u256>,
+    ): MemorySlotData<u256> {
         this.ensureStorageAtAddress(address);
 
         const pointerHash: MemorySlotPointer = encodePointerHash(pointer, subPointer);
@@ -201,7 +204,13 @@ export class BlockchainEnvironment {
         return val != u256.Zero;
     }
 
-    public setStorageAt(address: Address, pointer: u16, keyPointer: MemorySlotPointer, value: MemorySlotData<u256>, defaultValue: MemorySlotData<u256>): void {
+    public setStorageAt(
+        address: Address,
+        pointer: u16,
+        keyPointer: MemorySlotPointer,
+        value: MemorySlotData<u256>,
+        defaultValue: MemorySlotData<u256>,
+    ): void {
         this.ensureStorageAtAddress(address);
 
         const pointerHash: u256 = encodePointerHash(pointer, keyPointer);
@@ -283,7 +292,10 @@ export class BlockchainEnvironment {
         storage.set(pointerHash, defaultValue);
     }
 
-    private getExternalCallResponse(destinationContract: Address, index: i32): Potential<Uint8Array> {
+    private getExternalCallResponse(
+        destinationContract: Address,
+        index: i32,
+    ): Potential<Uint8Array> {
         if (!this.externalCallsResponse.has(destinationContract)) {
             this.externalCallsResponse.set(destinationContract, []);
         }
@@ -296,7 +308,11 @@ export class BlockchainEnvironment {
         return new Error(`${BlockchainEnvironment.runtimeException}: ${msg}`);
     }
 
-    private _internalSetStorageAt(address: Address, pointerHash: u256, value: MemorySlotData<u256>): void {
+    private _internalSetStorageAt(
+        address: Address,
+        pointerHash: u256,
+        value: MemorySlotData<u256>,
+    ): void {
         const storage: PointerStorage = this.storage.get(address);
         const keys: u256[] = storage.keys();
 
@@ -334,7 +350,11 @@ export class BlockchainEnvironment {
         return false;
     }
 
-    private ensureStorageAtPointer(address: Address, pointerHash: MemorySlotPointer, defaultValue: MemorySlotData<u256>): void {
+    private ensureStorageAtPointer(
+        address: Address,
+        pointerHash: MemorySlotPointer,
+        defaultValue: MemorySlotData<u256>,
+    ): void {
         if (!this.storage.has(address)) {
             throw this.error(`Storage slot not found for address ${address}`);
         }

@@ -14,9 +14,9 @@ export function cyrb53(str: string, seed: i32 = 0): i64 {
 }
 
 export function imul64(a: u64, b: u64): u64 {
-    const aLow: u64 = a & 0xFFFFFFFF;
+    const aLow: u64 = a & 0xffffffff;
     const aHigh: u64 = a >> 32;
-    const bLow: u64 = b & 0xFFFFFFFF;
+    const bLow: u64 = b & 0xffffffff;
     const bHigh: u64 = b >> 32;
 
     const low: u64 = aLow * bLow;
@@ -42,5 +42,5 @@ export function cyrb53a(str: u8[], seed: i32 = 0): u64 {
     h1 ^= h2 >> 16;
     h2 ^= h1 >> 16;
 
-    return (2097152 * (h2 & 0xFFFFFFFFFFFFFFFF) + (h1 >> 11)) & 0xFFFFFFFFFFFFFFFF;
+    return (2097152 * (h2 & 0xffffffffffffffff) + (h1 >> 11)) & 0xffffffffffffffff;
 }

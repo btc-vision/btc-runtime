@@ -69,4 +69,4 @@ class ABIRegistryBase {
     }
 }
 
-export const ABIRegistry = new ABIRegistryBase;
+export const ABIRegistry = new ABIRegistryBase();

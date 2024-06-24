@@ -12,7 +12,12 @@ export class KeyMerger<K extends string, K2 extends string, V extends MemorySlot
     public pointer: u16;
     private readonly memoryAllocatorAddress: Address;
 
-    constructor(parent: K, pointer: u16, self: Address, private readonly defaultValue: V) {
+    constructor(
+        parent: K,
+        pointer: u16,
+        self: Address,
+        private readonly defaultValue: V,
+    ) {
         this.pointer = pointer;
         this.memoryAllocatorAddress = self;
 
@@ -23,7 +28,13 @@ export class KeyMerger<K extends string, K2 extends string, V extends MemorySlot
         const mergedKey: string = `${this.parentKey}${key2}`;
         const keyHash: MemorySlotPointer = encodePointer(mergedKey);
 
-        Blockchain.setStorageAt(this.memoryAllocatorAddress, this.pointer, keyHash, value, this.defaultValue);
+        Blockchain.setStorageAt(
+            this.memoryAllocatorAddress,
+            this.pointer,
+            keyHash,
+            value,
+            this.defaultValue,
+        );
 
         return this;
     }
@@ -31,13 +42,22 @@ export class KeyMerger<K extends string, K2 extends string, V extends MemorySlot
     public get(key: K): MemorySlotData<u256> {
         const mergedKey: string = `${this.parentKey}${key}`;
 
-        return Blockchain.getStorageAt(this.memoryAllocatorAddress, this.pointer, encodePointer(mergedKey), this.defaultValue);
+        return Blockchain.getStorageAt(
+            this.memoryAllocatorAddress,
+            this.pointer,
+            encodePointer(mergedKey),
+            this.defaultValue,
+        );
     }
 
     public has(key: K): bool {
         const mergedKey: string = `${this.parentKey}${key}`;
 
-        return Blockchain.hasStorageAt(this.memoryAllocatorAddress, this.pointer, encodePointer(mergedKey));
+        return Blockchain.hasStorageAt(
+            this.memoryAllocatorAddress,
+            this.pointer,
+            encodePointer(mergedKey),
+        );
     }
 
     @unsafe

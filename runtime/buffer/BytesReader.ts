@@ -184,7 +184,7 @@ export class BytesReader {
             checksum += this.buffer.getUint8(i);
         }
 
-        checksum = checksum % (2 ** 32);
+        checksum = checksum % 2 ** 32;
 
         if (checksum !== writtenChecksum) {
             throw new Error('Invalid checksum for buffer');

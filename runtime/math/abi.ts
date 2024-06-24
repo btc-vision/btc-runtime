@@ -22,10 +22,7 @@ export function encodePointer(str: string): MemorySlotPointer {
 
 export function encodePointerHash(pointer: u16, sub: u256): MemorySlotPointer {
     const finalBuffer: Uint8Array = new Uint8Array(34);
-    const mergedKey: u8[] = [
-        u8(pointer & u16(0xFF)),
-        u8((pointer >> u16(8)) & u16(0xFF)),
-    ];
+    const mergedKey: u8[] = [u8(pointer & u16(0xff)), u8((pointer >> u16(8)) & u16(0xff))];
 
     for (let i: i32 = 0; i < mergedKey.length; i++) {
         finalBuffer[i] = mergedKey[i];

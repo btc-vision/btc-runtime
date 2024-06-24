@@ -28,7 +28,10 @@ export class BytesWriter {
 
     private selectorDatatype: u8[] = [];
 
-    constructor(length: i32 = 1, private readonly trackDataTypes: boolean = false) {
+    constructor(
+        length: i32 = 1,
+        private readonly trackDataTypes: boolean = false,
+    ) {
         this.buffer = new DataView(new ArrayBuffer(length));
     }
 
@@ -272,7 +275,7 @@ export class BytesWriter {
             checksum += this.buffer.getUint8(i);
         }
 
-        return checksum % (2 ** 32);
+        return checksum % 2 ** 32;
     }
 
     private writeMethodSelectorMap(value: Set<Selector>): void {

@@ -31,9 +31,7 @@ export abstract class OP_20 extends OP_NET implements IOP_20 {
     protected readonly allowanceMap: MultiAddressMemoryMap<Address, Address, MemorySlotData<u256>>;
     protected readonly balanceOfMap: AddressMemoryMap<Address, MemorySlotData<u256>>;
 
-    protected constructor(
-        public readonly maxSupply: u256,
-    ) {
+    protected constructor(public readonly maxSupply: u256) {
         super();
 
         this.allowanceMap = new MultiAddressMemoryMap<Address, Address, MemorySlotData<u256>>(
@@ -41,11 +39,25 @@ export abstract class OP_20 extends OP_NET implements IOP_20 {
             Blockchain.contractAddress,
             u256.Zero,
         );
-        this.balanceOfMap = new AddressMemoryMap<Address, MemorySlotData<u256>>(Blockchain.nextPointer, Blockchain.contractAddress, u256.Zero);
+        this.balanceOfMap = new AddressMemoryMap<Address, MemorySlotData<u256>>(
+            Blockchain.nextPointer,
+            Blockchain.contractAddress,
+            u256.Zero,
+        );
 
         const supplyPointer = Blockchain.nextPointer;
-        const supply: u256 = Blockchain.getStorageAt(Blockchain.contractAddress, supplyPointer, u256.Zero, u256.Zero);
-        this._totalSupply = new StoredU256(Blockchain.contractAddress, supplyPointer, u256.Zero, supply);
+        const supply: u256 = Blockchain.getStorageAt(
+            Blockchain.contractAddress,
+            supplyPointer,
+            u256.Zero,
+            u256.Zero,
+        );
+        this._totalSupply = new StoredU256(
+            Blockchain.contractAddress,
+            supplyPointer,
+            u256.Zero,
+            supply,
+        );
     }
 
     public _totalSupply: StoredU256;
@@ -126,7 +138,6 @@ export abstract class OP_20 extends OP_NET implements IOP_20 {
 
         return response;
     }
-
 
     public callMethod(method: Selector, calldata: Calldata): BytesWriter {
         switch (method) {
@@ -289,7 +300,10 @@ export abstract class OP_20 extends OP_NET implements IOP_20 {
     @unsafe
     protected _unsafeTransferFrom(from: Address, to: Address, value: u256): boolean {
         const balance: u256 = this.balanceOfMap.get(from);
-        if (balance < value) throw new Revert(`TransferFrom insufficient balance of ${from} is ${balance} and value is ${value}`);
+        if (balance < value)
+            throw new Revert(
+                `TransferFrom insufficient balance of ${from} is ${balance} and value is ${value}`,
+            );
 
         const newBalance: u256 = SafeMath.sub(balance, value);
 
