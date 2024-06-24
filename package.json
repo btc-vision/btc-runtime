@@ -30,7 +30,7 @@
     },
     "type": "module",
     "files": [
-        "btc",
+        "runtime",
         "!**/*.js.map",
         "!**/*.tsbuildinfo"
     ],
