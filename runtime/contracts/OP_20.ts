@@ -210,7 +210,7 @@ export abstract class OP_20 extends OP_NET implements IOP_20 {
         return this.balanceOfMap.get(owner);
     }
 
-    protected _burn(value: u256): boolean {
+    protected _burn(value: u256, onlyOwner: boolean = true): boolean {
         if (u256.eq(value, u256.Zero)) {
             throw new Revert(`No tokens`);
         }
@@ -218,7 +218,7 @@ export abstract class OP_20 extends OP_NET implements IOP_20 {
         const callee = Blockchain.callee();
         const caller = Blockchain.caller();
 
-        this.onlyOwner(callee); // only indexers can burn tokens
+        if (onlyOwner) this.onlyOwner(callee); // only indexers can burn tokens
 
         if (this._totalSupply.value < value) throw new Revert(`Insufficient total supply.`);
         if (!this.balanceOfMap.has(caller)) throw new Revert('Empty');
@@ -236,11 +236,11 @@ export abstract class OP_20 extends OP_NET implements IOP_20 {
         return true;
     }
 
-    protected _mint(to: Address, value: u256): boolean {
+    protected _mint(to: Address, value: u256, onlyOwner: boolean = true): boolean {
         const callee = Blockchain.callee();
         const caller = Blockchain.caller();
 
-        this.onlyOwner(callee);
+        if (onlyOwner) this.onlyOwner(callee);
 
         if (caller !== callee) throw new Revert(`callee != caller`);
         if (callee !== this.owner) throw new Revert('Only indexers can mint tokens');
