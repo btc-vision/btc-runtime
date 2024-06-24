@@ -134,6 +134,14 @@ export class BytesWriter {
         }
     }
 
+    public writeBytesU8Array(value: u8[]): void {
+        this.allocSafe(value.length);
+
+        for (let i = 0; i < value.length; i++) {
+            this.writeU8(value[i]);
+        }
+    }
+
     public writeBytesWithLength(value: Uint8Array): void {
         const length: u32 = u32(value.byteLength);
         this.allocSafe(length + 4);
