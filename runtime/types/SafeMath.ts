@@ -34,7 +34,9 @@ export class SafeMath {
         return c;
     }
 
-    @inline @unsafe @operator('/')
+    @inline
+    @unsafe
+    @operator('/')
     static div(a: u256, b: u256): u256 {
         if (b.isZero()) {
             throw new Error('Division by zero');
@@ -70,7 +72,8 @@ export class SafeMath {
         return result;
     }
 
-    @inline @unsafe
+    @inline
+    @unsafe
     static shl(value: u256, shift: i32): u256 {
         if (shift == 0) {
             return value.clone();
@@ -87,13 +90,10 @@ export class SafeMath {
         }
 
         // Determine how many full 64-bit segments we are shifting
-        let segmentShift = shift / bitsPerSegment | 0;
+        let segmentShift = (shift / bitsPerSegment) | 0;
         let bitShift = shift % bitsPerSegment;
 
-        let segments = [
-            value.lo1, value.lo2,
-            value.hi1, value.hi2,
-        ];
+        let segments = [value.lo1, value.lo2, value.hi1, value.hi2];
 
         let result = new Array<u64>(4).fill(0);
 
@@ -134,5 +134,4 @@ export class SafeMath {
     static inc(value: u256): u256 {
         return value.preInc();
     }
-
 }

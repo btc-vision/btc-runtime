@@ -4,8 +4,10 @@ export const MAX_EVENT_DATA_SIZE: u32 = 256; // 256 bytes max per event.
 export const MAX_EVENTS: u8 = 8; // 8 events max per transactions.
 
 export abstract class NetEvent {
-    protected constructor(public readonly eventType: string, protected data: BytesWriter) {
-    }
+    protected constructor(
+        public readonly eventType: string,
+        protected data: BytesWriter,
+    ) {}
 
     public get length(): u32 {
         return this.data.bufferLength();

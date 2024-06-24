@@ -12,8 +12,7 @@ const addressSelector = encodeSelector('address');
 const ownerSelector = encodeSelector('owner');
 
 export class OP_NET implements IBTC {
-    constructor() {
-    }
+    constructor() {}
 
     public get address(): string {
         return Blockchain.contractAddress;
@@ -74,5 +73,5 @@ export class OP_NET implements IBTC {
         response.writeBoolean(this.owner === owner);
 
         return response;
-    };
+    }
 }

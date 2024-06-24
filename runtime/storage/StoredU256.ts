@@ -6,8 +6,18 @@ import { Blockchain } from '../env';
 
 @final
 export class StoredU256 {
-    constructor(public address: Address, public pointer: u16, public subPointer: MemorySlotPointer, private defaultValue: u256) {
-        this._value = Blockchain.getStorageAt(this.address, this.pointer, this.subPointer, this.defaultValue);
+    constructor(
+        public address: Address,
+        public pointer: u16,
+        public subPointer: MemorySlotPointer,
+        private defaultValue: u256,
+    ) {
+        this._value = Blockchain.getStorageAt(
+            this.address,
+            this.pointer,
+            this.subPointer,
+            this.defaultValue,
+        );
     }
 
     private _value: u256 = u256.Zero;
@@ -19,119 +29,175 @@ export class StoredU256 {
         return this._value;
     }
 
-    @inline @operator('+')
+    @inline
+    @operator('+')
     public add(value: u256): this {
         this.ensureValue();
 
         this._value = SafeMath.add(this._value, value);
-        Blockchain.setStorageAt(this.address, this.pointer, this.subPointer, this._value, this.defaultValue);
+        Blockchain.setStorageAt(
+            this.address,
+            this.pointer,
+            this.subPointer,
+            this._value,
+            this.defaultValue,
+        );
 
         return this;
     }
 
-    @inline @operator('-')
+    @inline
+    @operator('-')
     public sub(value: u256): this {
         this.ensureValue();
 
         this._value = SafeMath.sub(this._value, value);
-        Blockchain.setStorageAt(this.address, this.pointer, this.subPointer, this._value, this.defaultValue);
+        Blockchain.setStorageAt(
+            this.address,
+            this.pointer,
+            this.subPointer,
+            this._value,
+            this.defaultValue,
+        );
 
         return this;
     }
 
-    @inline @operator('*')
+    @inline
+    @operator('*')
     public mul(value: u256): this {
         this.ensureValue();
 
         this._value = SafeMath.mul(this._value, value);
-        Blockchain.setStorageAt(this.address, this.pointer, this.subPointer, this._value, this.defaultValue);
+        Blockchain.setStorageAt(
+            this.address,
+            this.pointer,
+            this.subPointer,
+            this._value,
+            this.defaultValue,
+        );
 
         return this;
     }
 
-    @inline @operator('==')
+    @inline
+    @operator('==')
     public eq(value: u256): boolean {
         this.ensureValue();
 
         return this._value === value;
     }
 
-    @inline @operator('!=')
+    @inline
+    @operator('!=')
     public ne(value: u256): boolean {
         this.ensureValue();
 
         return this._value !== value;
     }
 
-    @inline @operator('<')
+    @inline
+    @operator('<')
     public lt(value: u256): boolean {
         this.ensureValue();
 
         return this._value < value;
     }
 
-    @inline @operator('>')
+    @inline
+    @operator('>')
     public gt(value: u256): boolean {
         this.ensureValue();
 
         return this._value > value;
     }
 
-    @inline @operator('<=')
+    @inline
+    @operator('<=')
     public le(value: u256): boolean {
         this.ensureValue();
 
         return this._value <= value;
     }
 
-    @inline @operator('>=')
+    @inline
+    @operator('>=')
     public ge(value: u256): boolean {
         this.ensureValue();
 
         return this._value >= value;
     }
 
-    @inline @operator('>>')
+    @inline
+    @operator('>>')
     public shr(value: i32): this {
         this.ensureValue();
 
         this._value = u256.shr(this._value, value);
-        Blockchain.setStorageAt(this.address, this.pointer, this.subPointer, this._value, this.defaultValue);
+        Blockchain.setStorageAt(
+            this.address,
+            this.pointer,
+            this.subPointer,
+            this._value,
+            this.defaultValue,
+        );
 
         return this;
     }
 
-    @inline @operator('&')
+    @inline
+    @operator('&')
     public and(value: u256): this {
         this.ensureValue();
 
         this._value = u256.and(this._value, value);
-        Blockchain.setStorageAt(this.address, this.pointer, this.subPointer, this._value, this.defaultValue);
+        Blockchain.setStorageAt(
+            this.address,
+            this.pointer,
+            this.subPointer,
+            this._value,
+            this.defaultValue,
+        );
 
         return this;
     }
 
-    @inline @operator('|')
+    @inline
+    @operator('|')
     public or(value: u256): this {
         this.ensureValue();
 
         this._value = u256.or(this._value, value);
-        Blockchain.setStorageAt(this.address, this.pointer, this.subPointer, this._value, this.defaultValue);
+        Blockchain.setStorageAt(
+            this.address,
+            this.pointer,
+            this.subPointer,
+            this._value,
+            this.defaultValue,
+        );
 
         return this;
     }
 
-    @inline @operator('^')
+    @inline
+    @operator('^')
     public xor(value: u256): this {
         this.ensureValue();
 
         this._value = u256.xor(this._value, value);
-        Blockchain.setStorageAt(this.address, this.pointer, this.subPointer, this._value, this.defaultValue);
+        Blockchain.setStorageAt(
+            this.address,
+            this.pointer,
+            this.subPointer,
+            this._value,
+            this.defaultValue,
+        );
 
         return this;
     }
 
-    @inline @operator('**')
+    @inline
+    @operator('**')
     public pow(value: u256): this {
         this.ensureValue();
 
@@ -147,12 +213,19 @@ export class StoredU256 {
             value = u256.shr(value, 1);
         }
 
-        Blockchain.setStorageAt(this.address, this.pointer, this.subPointer, this._value, this.defaultValue);
+        Blockchain.setStorageAt(
+            this.address,
+            this.pointer,
+            this.subPointer,
+            this._value,
+            this.defaultValue,
+        );
 
         return this;
     }
 
-    @inline @operator('%')
+    @inline
+    @operator('%')
     public mod(value: u256): this {
         this.ensureValue();
 
@@ -171,27 +244,47 @@ export class StoredU256 {
         }
 
         this._value = result;
-        Blockchain.setStorageAt(this.address, this.pointer, this.subPointer, this._value, this.defaultValue);
+        Blockchain.setStorageAt(
+            this.address,
+            this.pointer,
+            this.subPointer,
+            this._value,
+            this.defaultValue,
+        );
 
         return this;
     }
 
-    @inline @operator.postfix('++')
+    @inline
+    @operator.postfix('++')
     public inc(): this {
         this.ensureValue();
 
         this._value = SafeMath.add(this._value, u256.One);
-        Blockchain.setStorageAt(this.address, this.pointer, this.subPointer, this._value, this.defaultValue);
+        Blockchain.setStorageAt(
+            this.address,
+            this.pointer,
+            this.subPointer,
+            this._value,
+            this.defaultValue,
+        );
 
         return this;
     }
 
-    @inline @operator.postfix('--')
+    @inline
+    @operator.postfix('--')
     public dec(): this {
         this.ensureValue();
 
         this._value = SafeMath.sub(this._value, u256.One);
-        Blockchain.setStorageAt(this.address, this.pointer, this.subPointer, this._value, this.defaultValue);
+        Blockchain.setStorageAt(
+            this.address,
+            this.pointer,
+            this.subPointer,
+            this._value,
+            this.defaultValue,
+        );
 
         return this;
     }
@@ -200,7 +293,13 @@ export class StoredU256 {
     public set(value: u256): this {
         this._value = value;
 
-        Blockchain.setStorageAt(this.address, this.pointer, this.subPointer, this._value, this.defaultValue);
+        Blockchain.setStorageAt(
+            this.address,
+            this.pointer,
+            this.subPointer,
+            this._value,
+            this.defaultValue,
+        );
 
         return this;
     }
@@ -211,6 +310,11 @@ export class StoredU256 {
     }
 
     private ensureValue(): void {
-        this._value = Blockchain.getStorageAt(this.address, this.pointer, this.subPointer, this.defaultValue);
+        this._value = Blockchain.getStorageAt(
+            this.address,
+            this.pointer,
+            this.subPointer,
+            this.defaultValue,
+        );
     }
 }
