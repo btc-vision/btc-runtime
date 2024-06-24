@@ -45,6 +45,10 @@ export class BlockchainEnvironment {
         return this._contract;
     }
 
+    public set contract(contract: OPNetContract) {
+        this._contract = contract;
+    }
+
     private _nextPointer: u8 = 0;
 
     public get nextPointer(): u8 {
