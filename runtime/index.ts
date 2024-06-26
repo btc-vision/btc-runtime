@@ -10,6 +10,9 @@ export * from './contracts/OP_NET';
 export * from './buffer/BytesReader';
 export * from './buffer/BytesWriter';
 
+/** Interfaces */
+export * from './interfaces/DeployContractResponse';
+
 /** Events */
 export * from './events/NetEvent';
 export * from './events/predefined';

@@ -12,6 +12,7 @@ import { Map } from '../generic/Map';
 import { OP_NET } from '../contracts/OP_NET';
 import { BlockchainStorage, PointerStorage } from '../types';
 import { deploy, deployFromAddress } from './global';
+import { DeployContractResponse } from '../interfaces/DeployContractResponse';
 
 export * from '../env/global';
 
@@ -192,15 +193,23 @@ export class BlockchainEnvironment {
         return new BytesReader(cb as Uint8Array);
     }
 
-    public deployContractFromExisting(hash: u256, existingAddress: Address): BytesReader {
+    public deployContractFromExisting(
+        existingAddress: Address,
+        salt: u256,
+    ): DeployContractResponse {
         const writer = new BytesWriter();
-        writer.writeU256(hash);
         writer.writeAddress(existingAddress);
+        writer.writeU256(salt);
 
-        const cb: Potential<Uint8Array> = deployFromAddress(writer.getBuffer());
+        const buffer: Uint8Array = writer.getBuffer();
+        const cb: Potential<Uint8Array> = deployFromAddress(buffer);
         if (!cb) throw this.error('Failed to deploy contract');
 
-        return new BytesReader(cb as Uint8Array);
+        const reader: BytesReader = new BytesReader(cb as Uint8Array);
+        const virtualAddress: u256 = reader.readU256();
+        const contractAddress: Address = reader.readAddress();
+
+        return new DeployContractResponse(virtualAddress, contractAddress);
     }
 
     public getStorageAt(
