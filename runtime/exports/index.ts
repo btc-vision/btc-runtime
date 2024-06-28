@@ -32,26 +32,6 @@ export function getWriteMethods(): Uint8Array {
     return Blockchain.getWriteMethods();
 }
 
-export function getModifiedStorage(): Uint8Array {
-    return Blockchain.storageToBytes();
-}
-
-export function initializeStorage(): Uint8Array {
-    return Blockchain.initializedStorageToBytes();
-}
-
-export function loadStorage(data: Uint8Array): void {
-    Blockchain.loadStorage(data);
-}
-
-export function loadCallsResponse(data: Uint8Array): void {
-    Blockchain.loadCallsResponse(data);
-}
-
-export function getCalls(): Uint8Array {
-    return Blockchain.getCalls();
-}
-
 export function setEnvironment(data: Uint8Array): void {
     Blockchain.setEnvironment(data);
 }

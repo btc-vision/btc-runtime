@@ -36,28 +36,16 @@ export abstract class OP_20 extends OP_NET implements IOP_20 {
 
         this.allowanceMap = new MultiAddressMemoryMap<Address, Address, MemorySlotData<u256>>(
             Blockchain.nextPointer,
-            Blockchain.contractAddress,
             u256.Zero,
         );
         this.balanceOfMap = new AddressMemoryMap<Address, MemorySlotData<u256>>(
             Blockchain.nextPointer,
-            Blockchain.contractAddress,
             u256.Zero,
         );
 
         const supplyPointer = Blockchain.nextPointer;
-        const supply: u256 = Blockchain.getStorageAt(
-            Blockchain.contractAddress,
-            supplyPointer,
-            u256.Zero,
-            u256.Zero,
-        );
-        this._totalSupply = new StoredU256(
-            Blockchain.contractAddress,
-            supplyPointer,
-            u256.Zero,
-            supply,
-        );
+        const supply: u256 = Blockchain.getStorageAt(supplyPointer, u256.Zero, u256.Zero);
+        this._totalSupply = new StoredU256(supplyPointer, u256.Zero, supply);
     }
 
     public _totalSupply: StoredU256;

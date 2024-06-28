@@ -1,12 +1,10 @@
-import { u256 } from 'as-bignum/assembly/integer/u256';
-
 // @ts-ignore
 @external('env', 'load')
-export declare function load(data: Uint8Array): u256;
+export declare function loadPointer(data: Uint8Array): Uint8Array;
 
 // @ts-ignore
 @external('env', 'store')
-export declare function store(data: Uint8Array): void;
+export declare function storePointer(data: Uint8Array): Uint8Array;
 
 // @ts-ignore
 @external('env', 'deploy')
@@ -18,4 +16,4 @@ export declare function deployFromAddress(data: Uint8Array): Uint8Array;
 
 // @ts-ignore
 @external('env', 'call')
-export declare function call(data: Uint8Array): Uint8Array;
+export declare function callContract(data: Uint8Array): Uint8Array;
