@@ -1,4 +1,3 @@
-import { Address } from '../types/Address';
 import { MemorySlotData } from './MemorySlot';
 import { u256 } from 'as-bignum/assembly';
 import { KeyMerger } from './KeyMerger';
@@ -11,17 +10,13 @@ export class MultiAddressMemoryMap<
 > extends Map<K, KeyMerger<K, K2, V>> {
     public pointer: u16;
 
-    private readonly memoryAllocatorAddress: Address;
-
     constructor(
         pointer: u16,
-        self: Address,
         private readonly defaultValue: V,
     ) {
         super();
 
         this.pointer = pointer;
-        this.memoryAllocatorAddress = self;
     }
 
     public get(key: K): KeyMerger<K, K2, V> {
@@ -61,15 +56,7 @@ export class MultiAddressMemoryMap<
 
     private createKeyMerger(key: K): void {
         if (!super.has(key)) {
-            super.set(
-                key,
-                new KeyMerger<K, K2, V>(
-                    key,
-                    this.pointer,
-                    this.memoryAllocatorAddress,
-                    this.defaultValue,
-                ),
-            );
+            super.set(key, new KeyMerger<K, K2, V>(key, this.pointer, this.defaultValue));
         }
     }
 }

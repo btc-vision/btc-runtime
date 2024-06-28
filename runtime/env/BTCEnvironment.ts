@@ -10,8 +10,9 @@ import { MAX_EVENTS, NetEvent } from '../events/NetEvent';
 import { Potential } from '../lang/Definitions';
 import { Map } from '../generic/Map';
 import { OP_NET } from '../contracts/OP_NET';
-import { BlockchainStorage, PointerStorage } from '../types';
-import { deploy, deployFromAddress } from './global';
+import { PointerStorage } from '../types';
+import { deploy, deployFromAddress, loadPointer, storePointer } from './global';
+import { DeployContractResponse } from '../interfaces/DeployContractResponse';
 
 export * from '../env/global';
 
@@ -19,12 +20,7 @@ export * from '../env/global';
 export class BlockchainEnvironment {
     private static readonly runtimeException: string = 'RuntimeException';
 
-    private storage: BlockchainStorage = new Map();
-    private initializedStorage: BlockchainStorage = new Map();
-
-    private externalCalls: Map<Address, Uint8Array[]> = new Map();
-    private externalCallsResponse: Map<Address, Uint8Array[]> = new Map();
-
+    private storage: PointerStorage = new Map();
     private events: NetEvent[] = [];
 
     private _callee: PotentialAddress = null;
@@ -115,12 +111,8 @@ export class BlockchainEnvironment {
     }
 
     public call(destinationContract: Address, calldata: BytesWriter): BytesReader {
-        if (destinationContract === this._callee) {
+        /*if (destinationContract === this._callee) {
             throw this.error('Cannot call self');
-        }
-
-        if (!this.externalCalls.has(destinationContract)) {
-            this.externalCalls.set(destinationContract, []);
         }
 
         const externalCalls = this.externalCalls.get(destinationContract);
@@ -135,22 +127,9 @@ export class BlockchainEnvironment {
             throw this.error('external call failed');
         }
 
-        return new BytesReader(response);
-    }
+        return new BytesReader(response);*/
 
-    public getCalls(): Uint8Array {
-        const buffer: BytesWriter = new BytesWriter();
-
-        buffer.writeLimitedAddressBytesMap(this.externalCalls);
-        this.externalCalls.clear();
-
-        return buffer.getBuffer();
-    }
-
-    public loadCallsResponse(responses: Uint8Array): void {
-        const memoryReader: BytesReader = new BytesReader(responses);
-
-        this.externalCallsResponse = memoryReader.readMultiBytesAddressMap();
+        throw this.error('Not implemented');
     }
 
     public addEvent(event: NetEvent): void {
@@ -192,64 +171,62 @@ export class BlockchainEnvironment {
         return new BytesReader(cb as Uint8Array);
     }
 
-    public deployContractFromExisting(hash: u256, existingAddress: Address): BytesReader {
+    public deployContractFromExisting(
+        existingAddress: Address,
+        salt: u256,
+    ): DeployContractResponse {
         const writer = new BytesWriter();
-        writer.writeU256(hash);
         writer.writeAddress(existingAddress);
+        writer.writeU256(salt);
 
-        const cb: Potential<Uint8Array> = deployFromAddress(writer.getBuffer());
+        const buffer: Uint8Array = writer.getBuffer();
+        const cb: Potential<Uint8Array> = deployFromAddress(buffer);
         if (!cb) throw this.error('Failed to deploy contract');
 
-        return new BytesReader(cb as Uint8Array);
+        const reader: BytesReader = new BytesReader(cb as Uint8Array);
+        const virtualAddress: u256 = reader.readU256();
+        const contractAddress: Address = reader.readAddress();
+
+        return new DeployContractResponse(virtualAddress, contractAddress);
     }
 
     public getStorageAt(
-        address: Address,
         pointer: u16,
         subPointer: MemorySlotPointer,
         defaultValue: MemorySlotData<u256>,
     ): MemorySlotData<u256> {
-        this.ensureStorageAtAddress(address);
-
         const pointerHash: MemorySlotPointer = encodePointerHash(pointer, subPointer);
-        this.ensureStorageAtPointer(address, pointerHash, defaultValue);
-
-        const storage: PointerStorage = this.storage.get(address);
+        this.ensureStorageAtPointer(pointerHash, defaultValue);
 
         // maybe find a better way for this
-        const allKeys: u256[] = storage.keys();
+        const allKeys: u256[] = this.storage.keys();
         for (let i: i32 = 0; i < allKeys.length; i++) {
             const v: u256 = allKeys[i];
 
             if (u256.eq(v, pointerHash)) {
-                return storage.get(v);
+                return this.storage.get(v);
             }
         }
 
         return defaultValue;
     }
 
-    public hasStorageAt(address: Address, pointer: u16, subPointer: MemorySlotPointer): bool {
-        this.ensureStorageAtAddress(address);
-
+    public hasStorageAt(pointer: u16, subPointer: MemorySlotPointer): bool {
         // We mark zero as the default value for the storage, if something is 0, the storage slot get deleted or is non-existent
-        const val: u256 = this.getStorageAt(address, pointer, subPointer, u256.Zero);
+        const val: u256 = this.getStorageAt(pointer, subPointer, u256.Zero);
         return val != u256.Zero;
     }
 
     public setStorageAt(
-        address: Address,
         pointer: u16,
         keyPointer: MemorySlotPointer,
         value: MemorySlotData<u256>,
         defaultValue: MemorySlotData<u256>,
     ): void {
-        this.ensureStorageAtAddress(address);
-
         const pointerHash: u256 = encodePointerHash(pointer, keyPointer);
-        this.ensureStorageAtPointer(address, pointerHash, defaultValue);
+        this.ensureStorageAtPointer(pointerHash, defaultValue);
 
-        this._internalSetStorageAt(address, pointerHash, value);
+        this._internalSetStorageAt(pointerHash, value);
     }
 
     public getViewSelectors(): Uint8Array {
@@ -264,113 +241,43 @@ export class BlockchainEnvironment {
         return ABIRegistry.getWriteMethods();
     }
 
-    public loadStorage(data: Uint8Array): void {
-        this.purgeMemory();
-
-        const memoryReader: BytesReader = new BytesReader(data);
-        const contractsSize: u32 = memoryReader.readU32();
-
-        for (let i: u32 = 0; i < contractsSize; i++) {
-            const address: Address = memoryReader.readAddress();
-            const storageSize: u32 = memoryReader.readU32();
-
-            this.ensureStorageAtAddress(address);
-            const storage: PointerStorage = this.storage.get(address);
-
-            for (let j: u32 = 0; j < storageSize; j++) {
-                const keyPointer: MemorySlotPointer = memoryReader.readU256();
-                const value: MemorySlotData<u256> = memoryReader.readU256();
-
-                storage.set(keyPointer, value);
-            }
-        }
-    }
-
-    public storageToBytes(): Uint8Array {
-        const memoryWriter: BytesWriter = new BytesWriter();
-        memoryWriter.writeStorage(this.storage);
-
-        //this.storage.clear();
-
-        return memoryWriter.getBuffer();
-    }
-
-    public initializedStorageToBytes(): Uint8Array {
-        const memoryWriter: BytesWriter = new BytesWriter();
-        memoryWriter.writeStorage(this.initializedStorage);
-
-        //this.initializedStorage.clear();
-
-        return memoryWriter.getBuffer();
-    }
-
     private purgeMemory(): void {
         this.storage.clear();
-        this.initializedStorage.clear();
-
         this.events = [];
-
-        this.externalCallsResponse.clear();
-        this.externalCalls.clear();
-    }
-
-    private requireInitialStorage(address: Address, pointerHash: u256, defaultValue: u256): void {
-        if (!this.initializedStorage.has(address)) {
-            this.initializedStorage.set(address, new Map<u256, MemorySlotData<u256>>());
-        }
-
-        //load(pointerHash);
-
-        const storage = this.initializedStorage.get(address);
-        storage.set(pointerHash, defaultValue);
-    }
-
-    private getExternalCallResponse(
-        destinationContract: Address,
-        index: i32,
-    ): Potential<Uint8Array> {
-        if (!this.externalCallsResponse.has(destinationContract)) {
-            this.externalCallsResponse.set(destinationContract, []);
-        }
-
-        const externalCallsResponse = this.externalCallsResponse.get(destinationContract);
-        return externalCallsResponse[index] || null;
     }
 
     private error(msg: string): Error {
         return new Error(`${BlockchainEnvironment.runtimeException}: ${msg}`);
     }
 
-    private _internalSetStorageAt(
-        address: Address,
-        pointerHash: u256,
-        value: MemorySlotData<u256>,
-    ): void {
-        const storage: PointerStorage = this.storage.get(address);
-        const keys: u256[] = storage.keys();
+    private _internalSetStorageAt(pointerHash: u256, value: MemorySlotData<u256>): void {
+        const keys: u256[] = this.storage.keys();
 
         // Delete the old value, there is a bug with u256 and maps.
         for (let i = 0; i < keys.length; i++) {
             const key = keys[i];
 
             if (u256.eq(key, pointerHash)) {
-                storage.delete(key);
+                this.storage.delete(key);
             }
         }
 
-        //store(pointerHash, value);
+        this.storage.set(pointerHash, value);
 
-        storage.set(pointerHash, value);
-    }
-
-    private ensureStorageAtAddress(address: Address): void {
-        if (!this.storage.has(address)) {
-            this.storage.set(address, new Map<u256, MemorySlotData<u256>>());
+        if (u256.eq(value, u256.Zero)) {
+            return;
         }
+
+        const writer: BytesWriter = new BytesWriter();
+        writer.writeU256(pointerHash);
+        writer.writeU256(value);
+
+        const buffer: Uint8Array = writer.getBuffer();
+        storePointer(buffer);
     }
 
-    private hasPointerStorageHash(storage: PointerStorage, pointer: MemorySlotPointer): bool {
-        const keys = storage.keys();
+    private hasPointerStorageHash(pointer: MemorySlotPointer): bool {
+        const keys = this.storage.keys();
 
         for (let i = 0; i < keys.length; i++) {
             const key = keys[i];
@@ -380,24 +287,25 @@ export class BlockchainEnvironment {
             }
         }
 
-        return false;
+        // we attempt to load the requested pointer.
+        const writer = new BytesWriter();
+        writer.writeU256(pointer);
+
+        const result: Uint8Array = loadPointer(writer.getBuffer());
+        const reader: BytesReader = new BytesReader(result);
+
+        const value: u256 = reader.readU256();
+        this.storage.set(pointer, value); // cache the value
+
+        return !u256.eq(value, u256.Zero);
     }
 
     private ensureStorageAtPointer(
-        address: Address,
         pointerHash: MemorySlotPointer,
         defaultValue: MemorySlotData<u256>,
     ): void {
-        if (!this.storage.has(address)) {
-            throw this.error(`Storage slot not found for address ${address}`);
-        }
-
-        // !!! -- IMPORTANT -- !!!. We have to tell the indexer that we need this storage slot to continue even if it's already defined.
-        this.requireInitialStorage(address, pointerHash, defaultValue);
-
-        const storage: PointerStorage = this.storage.get(address);
-        if (!this.hasPointerStorageHash(storage, pointerHash)) {
-            this._internalSetStorageAt(address, pointerHash, defaultValue);
+        if (!this.hasPointerStorageHash(pointerHash)) {
+            this._internalSetStorageAt(pointerHash, defaultValue);
         }
     }
 }
