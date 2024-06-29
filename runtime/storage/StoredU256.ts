@@ -9,9 +9,7 @@ export class StoredU256 {
         public pointer: u16,
         public subPointer: MemorySlotPointer,
         private defaultValue: u256,
-    ) {
-        this._value = Blockchain.getStorageAt(this.pointer, this.subPointer, this.defaultValue);
-    }
+    ) {}
 
     private _value: u256 = u256.Zero;
 

@@ -3,10 +3,6 @@ import { Calldata } from '../../universal/ABIRegistry';
 import { StoredU256 } from '../../storage/StoredU256';
 
 export interface IOP_20 {
-    readonly name: string;
-    readonly symbol: string;
-
-    readonly decimals: u8;
     readonly _totalSupply: StoredU256;
 
     balanceOf(callData: Calldata): BytesWriter;
