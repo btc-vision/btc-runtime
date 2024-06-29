@@ -11,7 +11,7 @@ import { Potential } from '../lang/Definitions';
 import { Map } from '../generic/Map';
 import { OP_NET } from '../contracts/OP_NET';
 import { PointerStorage } from '../types';
-import { deploy, deployFromAddress, loadPointer, storePointer } from './global';
+import { callContract, deploy, deployFromAddress, loadPointer, storePointer } from './global';
 import { DeployContractResponse } from '../interfaces/DeployContractResponse';
 
 export * from '../env/global';
@@ -111,25 +111,17 @@ export class BlockchainEnvironment {
     }
 
     public call(destinationContract: Address, calldata: BytesWriter): BytesReader {
-        /*if (destinationContract === this._callee) {
+        if (destinationContract === this._callee) {
             throw this.error('Cannot call self');
         }
 
-        const externalCalls = this.externalCalls.get(destinationContract);
-        const buffer = calldata.getBuffer();
-        externalCalls.push(buffer);
+        const call = new BytesWriter();
+        call.writeAddress(destinationContract);
+        call.writeBytesWithLength(calldata.getBuffer());
 
-        const response: Potential<Uint8Array> = this.getExternalCallResponse(
-            destinationContract,
-            externalCalls.length - 1,
-        );
-        if (!response) {
-            throw this.error('external call failed');
-        }
+        const response: Uint8Array = callContract(call.getBuffer());
 
-        return new BytesReader(response);*/
-
-        throw this.error('Not implemented');
+        return new BytesReader(response);
     }
 
     public addEvent(event: NetEvent): void {

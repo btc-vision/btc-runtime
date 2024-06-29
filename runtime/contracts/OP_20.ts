@@ -23,29 +23,28 @@ const transferSelector = encodeSelector('transfer');
 const transferFromSelector = encodeSelector('transferFrom');
 
 export abstract class OP_20 extends OP_NET implements IOP_20 {
-    public readonly decimals: u8 = 8;
-
-    public readonly name: string = `OP_20`;
-    public readonly symbol: string = `OP`;
-
     protected readonly allowanceMap: MultiAddressMemoryMap<Address, Address, MemorySlotData<u256>>;
     protected readonly balanceOfMap: AddressMemoryMap<Address, MemorySlotData<u256>>;
 
-    protected constructor(public readonly maxSupply: u256) {
+    protected constructor(
+        protected readonly maxSupply: u256,
+        protected readonly decimals: u8,
+        protected readonly name: string,
+        protected readonly symbol: string,
+    ) {
         super();
 
         this.allowanceMap = new MultiAddressMemoryMap<Address, Address, MemorySlotData<u256>>(
             Blockchain.nextPointer,
             u256.Zero,
         );
+
         this.balanceOfMap = new AddressMemoryMap<Address, MemorySlotData<u256>>(
             Blockchain.nextPointer,
             u256.Zero,
         );
 
-        const supplyPointer = Blockchain.nextPointer;
-        const supply: u256 = Blockchain.getStorageAt(supplyPointer, u256.Zero, u256.Zero);
-        this._totalSupply = new StoredU256(supplyPointer, u256.Zero, supply);
+        this._totalSupply = new StoredU256(Blockchain.nextPointer, u256.Zero, u256.Zero);
     }
 
     public _totalSupply: StoredU256;
@@ -156,10 +155,10 @@ export abstract class OP_20 extends OP_NET implements IOP_20 {
                 response.writeU8(this.decimals);
                 break;
             case encodeSelector('name'):
-                response.writeString(this.name);
+                response.writeStringWithLength(this.name);
                 break;
             case encodeSelector('symbol'):
-                response.writeString(this.symbol);
+                response.writeStringWithLength(this.symbol);
                 break;
             case encodeSelector('totalSupply'):
                 response.writeU256(this.totalSupply);
