@@ -11,8 +11,8 @@
 
 ## Introduction
 
-The OPNet Smart Contract Runtime is a WebAssembly runtime that is designed to help developers write smart contracts for the OPNet blockchain.
-The runtime is written in AssemblyScript, a subset of TypeScript that compiles to WebAssembly.
+The OPNet Smart Contract Runtime contains all the necessary components to effectively create smart contracts for Bitcoin
+L1. The runtime is written in AssemblyScript.
 
 ### Installation
 
