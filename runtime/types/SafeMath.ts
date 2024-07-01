@@ -64,7 +64,7 @@ export class SafeMath {
         for (let i = shift; i >= 0; i--) {
             if (u256.ge(n, d)) {
                 n = u256.sub(n, d);
-                result = u256.or(result, SafeMath.shl(new u256(1), i));
+                result = u256.or(result, SafeMath.shl(u256.One, i));
             }
             d = u256.shr(d, 1); // restore d to original by shifting right
         }
@@ -86,16 +86,23 @@ export class SafeMath {
         if (u256.gt(y, u256.fromU32(3))) {
             let z = y;
 
-            let x = SafeMath.add(SafeMath.div(y, u256.fromU32(2)), u256.fromU32(1));
+            let u246_2 = u256.fromU32(2);
+
+            let d = SafeMath.div(y, u246_2);
+            let x = SafeMath.add(d, u256.One);
+
             while (u256.lt(x, z)) {
                 z = x;
 
                 let u = SafeMath.div(y, x);
-                x = SafeMath.div(u256.add(u, x), u256.fromU32(2));
+                let y2 = u256.add(u, x);
+
+                x = SafeMath.div(y2, u246_2);
             }
+
             return z;
         } else if (!u256.eq(y, u256.Zero)) {
-            return u256.fromU32(1);
+            return u256.One;
         } else {
             return u256.Zero;
         }
