@@ -228,9 +228,7 @@ export abstract class OP_20 extends OP_NET implements IOP_20 {
         const caller = Blockchain.caller();
 
         if (onlyOwner) this.onlyOwner(callee);
-
         if (caller !== callee) throw new Revert(`callee != caller`);
-        if (callee !== this.owner) throw new Revert('Only indexers can mint tokens');
 
         if (!this.balanceOfMap.has(to)) {
             this.balanceOfMap.set(to, value);

@@ -17,3 +17,7 @@ export declare function deployFromAddress(data: Uint8Array): Uint8Array;
 // @ts-ignore
 @external('env', 'call')
 export declare function callContract(data: Uint8Array): Uint8Array;
+
+// @ts-ignore
+@external('env', 'log')
+export declare function log(data: Uint8Array): void;

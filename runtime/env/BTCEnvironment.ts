@@ -11,7 +11,7 @@ import { Potential } from '../lang/Definitions';
 import { Map } from '../generic/Map';
 import { OP_NET } from '../contracts/OP_NET';
 import { PointerStorage } from '../types';
-import { callContract, deploy, deployFromAddress, loadPointer, storePointer } from './global';
+import { callContract, deploy, deployFromAddress, loadPointer, log, storePointer } from './global';
 import { DeployContractResponse } from '../interfaces/DeployContractResponse';
 
 export * from '../env/global';
@@ -122,6 +122,14 @@ export class BlockchainEnvironment {
         const response: Uint8Array = callContract(call.getBuffer());
 
         return new BytesReader(response);
+    }
+
+    public log(data: string): void {
+        const writer = new BytesWriter();
+        writer.writeStringWithLength(data);
+
+        const buffer = writer.getBuffer();
+        log(buffer);
     }
 
     public addEvent(event: NetEvent): void {
