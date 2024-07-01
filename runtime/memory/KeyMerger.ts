@@ -24,7 +24,7 @@ export class KeyMerger<K extends string, K2 extends string, V extends MemorySlot
         const mergedKey: string = `${this.parentKey}${key2}`;
         const keyHash: MemorySlotPointer = encodePointer(mergedKey);
 
-        Blockchain.setStorageAt(this.pointer, keyHash, value, this.defaultValue);
+        Blockchain.setStorageAt(this.pointer, keyHash, value);
 
         return this;
     }

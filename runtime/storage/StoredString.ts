@@ -55,7 +55,7 @@ export class StoredString {
         // Save the initial chunk (first 28 bytes) in the header
         let bytesToWrite: u32 = this.min(remainingLength, 28);
         header = this.saveChunk(header, this._value, offset, bytesToWrite, 4);
-        Blockchain.setStorageAt(this.pointer, currentPointer, header, u256.Zero);
+        Blockchain.setStorageAt(this.pointer, currentPointer, header);
 
         remainingLength -= bytesToWrite;
         offset += bytesToWrite;
@@ -71,7 +71,7 @@ export class StoredString {
                 0,
             );
             currentPointer = u256.add(currentPointer, u256.One);
-            Blockchain.setStorageAt(this.pointer, currentPointer, storageValue, u256.Zero);
+            Blockchain.setStorageAt(this.pointer, currentPointer, storageValue);
 
             remainingLength -= bytesToWrite;
             offset += bytesToWrite;

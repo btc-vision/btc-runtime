@@ -17,7 +17,7 @@ export class AddressMemoryMap<K extends string, V extends MemorySlotData<u256>> 
 
     public set(key: K, value: V): this {
         const keyHash: MemorySlotPointer = encodePointer(key);
-        Blockchain.setStorageAt(this.pointer, keyHash, value, this.defaultValue);
+        Blockchain.setStorageAt(this.pointer, keyHash, value);
 
         return this;
     }

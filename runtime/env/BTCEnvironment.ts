@@ -221,10 +221,8 @@ export class BlockchainEnvironment {
         pointer: u16,
         keyPointer: MemorySlotPointer,
         value: MemorySlotData<u256>,
-        defaultValue: MemorySlotData<u256>,
     ): void {
         const pointerHash: u256 = encodePointerHash(pointer, keyPointer);
-        this.ensureStorageAtPointer(pointerHash, defaultValue);
 
         this._internalSetStorageAt(pointerHash, value);
     }
@@ -239,11 +237,6 @@ export class BlockchainEnvironment {
 
     public getWriteMethods(): Uint8Array {
         return ABIRegistry.getWriteMethods();
-    }
-
-    private purgeMemory(): void {
-        this.storage.clear();
-        this.events = [];
     }
 
     private error(msg: string): Error {
@@ -263,10 +256,6 @@ export class BlockchainEnvironment {
         }
 
         this.storage.set(pointerHash, value);
-
-        if (u256.eq(value, u256.Zero)) {
-            return;
-        }
 
         const writer: BytesWriter = new BytesWriter();
         writer.writeU256(pointerHash);
@@ -305,6 +294,10 @@ export class BlockchainEnvironment {
         defaultValue: MemorySlotData<u256>,
     ): void {
         if (!this.hasPointerStorageHash(pointerHash)) {
+            if (u256.eq(defaultValue, u256.Zero)) {
+                return;
+            }
+
             this._internalSetStorageAt(pointerHash, defaultValue);
         }
     }
