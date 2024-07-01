@@ -268,14 +268,10 @@ export abstract class OP_20 extends OP_NET implements IOP_20 {
         const newBalance: u256 = SafeMath.sub(balance, value);
         this.balanceOfMap.set(caller, newBalance);
 
-        if (!this.balanceOfMap.has(to)) {
-            this.balanceOfMap.set(to, value);
-        } else {
-            const toBalance: u256 = this.balanceOfMap.get(to);
-            const newToBalance: u256 = SafeMath.add(toBalance, value);
+        const toBalance: u256 = this.balanceOfMap.get(to);
+        const newToBalance: u256 = SafeMath.add(toBalance, value);
 
-            this.balanceOfMap.set(to, newToBalance);
-        }
+        this.balanceOfMap.set(to, newToBalance);
 
         this.createTransferEvent(caller, to, value);
 
@@ -342,19 +338,19 @@ export abstract class OP_20 extends OP_NET implements IOP_20 {
         this.emitEvent(burnEvent);
     }
 
-    private createApproveEvent(owner: Address, spender: Address, value: u256): void {
+    protected createApproveEvent(owner: Address, spender: Address, value: u256): void {
         const approveEvent = new ApproveEvent(owner, spender, value);
 
         this.emitEvent(approveEvent);
     }
 
-    private createMintEvent(owner: Address, value: u256): void {
+    protected createMintEvent(owner: Address, value: u256): void {
         const mintEvent = new MintEvent(owner, value);
 
         this.emitEvent(mintEvent);
     }
 
-    private createTransferEvent(from: Address, to: Address, value: u256): void {
+    protected createTransferEvent(from: Address, to: Address, value: u256): void {
         const transferEvent = new TransferEvent(from, to, value);
 
         this.emitEvent(transferEvent);
