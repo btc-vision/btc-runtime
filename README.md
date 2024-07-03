@@ -11,7 +11,7 @@
 
 ## Introduction
 
-The OPNet Smart Contract Runtime contains all the necessary components to effectively create smart contracts for Bitcoin
+The OPNet Smart Contract Runtime contains all the necessary components to effectively create smart contracts on Bitcoin
 L1. The runtime is written in AssemblyScript.
 
 ### Installation

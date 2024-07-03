@@ -81,6 +81,10 @@ export class BlockchainEnvironment {
         return this.currentBlock;
     }
 
+    public get blockNumberU64(): u64 {
+        return this.currentBlock.toU64();
+    }
+
     public callee(): Address {
         if (!this._callee) {
             throw this.error('Callee is required');
