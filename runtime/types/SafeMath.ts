@@ -19,6 +19,30 @@ export class SafeMath {
         return u256.sub(a, b);
     }
 
+    // Computes (a * b) % modulus with full precision
+    public static mulmod(a: u256, b: u256, modulus: u256): u256 {
+        if (u256.eq(modulus, u256.Zero)) throw new Error('SafeMath: modulo by zero');
+
+        const mul = SafeMath.mul(a, b);
+        return SafeMath.mod(mul, modulus);
+    }
+
+    @inline
+    @unsafe
+    @operator('%')
+    public static mod(a: u256, b: u256): u256 {
+        if (u256.eq(b, u256.Zero)) {
+            throw new Error('SafeMath: modulo by zero');
+        }
+
+        let result = a.clone();
+        while (u256.ge(result, b)) {
+            result = u256.sub(result, b);
+        }
+
+        return result;
+    }
+
     public static mul(a: u256, b: u256): u256 {
         if (a === SafeMath.ZERO || b === SafeMath.ZERO) {
             return SafeMath.ZERO;
@@ -37,7 +61,7 @@ export class SafeMath {
     @inline
     @unsafe
     @operator('/')
-    static div(a: u256, b: u256): u256 {
+    public static div(a: u256, b: u256): u256 {
         if (b.isZero()) {
             throw new Error('Division by zero');
         }
@@ -110,7 +134,7 @@ export class SafeMath {
 
     @inline
     @unsafe
-    static shl(value: u256, shift: i32): u256 {
+    public static shl(value: u256, shift: i32): u256 {
         if (shift == 0) {
             return value.clone();
         }
