@@ -1,8 +1,8 @@
 // SO IN TYPESCRIPT, WE CAN NOT USE TWO METHOD WITH THE SAME NAME. SO NOT ADDING THE TYPE TO THE HASH IS A DESIGN CHOICE.
 import { bytes32, bytes4 } from './bytes';
-import { Sha256 } from './sha256';
 import { MemorySlotPointer } from '../memory/MemorySlotPointer';
 import { u256 } from 'as-bignum/assembly';
+import { Sha256 } from './sha256';
 
 export type Selector = u32;
 

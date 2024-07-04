@@ -14,14 +14,6 @@ import { MultiAddressMemoryMap } from '../memory/MultiAddressMemoryMap';
 import { StoredU256 } from '../storage/StoredU256';
 import { ApproveEvent, BurnEvent, MintEvent, TransferEvent } from '../events/predefined';
 
-const allowanceSelector = encodeSelector('allowance');
-const approveSelector = encodeSelector('approve');
-const balanceOfSelector = encodeSelector('balanceOf');
-const burnSelector = encodeSelector('burn');
-const mintSelector = encodeSelector('mint');
-const transferSelector = encodeSelector('transfer');
-const transferFromSelector = encodeSelector('transferFrom');
-
 export abstract class OP_20 extends OP_NET implements IOP_20 {
     protected readonly allowanceMap: MultiAddressMemoryMap<Address, Address, MemorySlotData<u256>>;
     protected readonly balanceOfMap: AddressMemoryMap<Address, MemorySlotData<u256>>;
@@ -128,19 +120,19 @@ export abstract class OP_20 extends OP_NET implements IOP_20 {
 
     public callMethod(method: Selector, calldata: Calldata): BytesWriter {
         switch (method) {
-            case allowanceSelector:
+            case encodeSelector('allowance'):
                 return this.allowance(calldata);
-            case approveSelector:
+            case encodeSelector('approve'):
                 return this.approve(calldata);
-            case balanceOfSelector:
+            case encodeSelector('balanceOf'):
                 return this.balanceOf(calldata);
-            case burnSelector:
+            case encodeSelector('burn'):
                 return this.burn(calldata);
-            case mintSelector:
+            case encodeSelector('mint'):
                 return this.mint(calldata);
-            case transferSelector:
+            case encodeSelector('transfer'):
                 return this.transfer(calldata);
-            case transferFromSelector:
+            case encodeSelector('transferFrom'):
                 return this.transferFrom(calldata);
             default:
                 return super.callMethod(method, calldata);
@@ -174,14 +166,14 @@ export abstract class OP_20 extends OP_NET implements IOP_20 {
     }
 
     /** REDEFINED METHODS */
-    protected _allowance(owner: string, spender: string): u256 {
+    protected _allowance(owner: Address, spender: Address): u256 {
         const senderMap = this.allowanceMap.get(owner);
         if (!senderMap.has(spender)) throw new Revert();
 
         return senderMap.get(spender);
     }
 
-    protected _approve(spender: string, value: u256): boolean {
+    protected _approve(spender: Address, value: u256): boolean {
         const callee = Blockchain.callee();
 
         const senderMap = this.allowanceMap.get(callee);
@@ -225,10 +217,8 @@ export abstract class OP_20 extends OP_NET implements IOP_20 {
 
     protected _mint(to: Address, value: u256, onlyOwner: boolean = true): boolean {
         const callee = Blockchain.callee();
-        const caller = Blockchain.caller();
 
         if (onlyOwner) this.onlyOwner(callee);
-        if (caller !== callee) throw new Revert(`callee != caller`);
 
         if (!this.balanceOfMap.has(to)) {
             this.balanceOfMap.set(to, value);
@@ -305,27 +295,19 @@ export abstract class OP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _transferFrom(from: Address, to: Address, value: u256): boolean {
-        if (!this.allowanceMap.has(from)) throw new Revert();
-
         const spender = Blockchain.callee();
         if (Blockchain.caller() !== from) {
             throw new Revert('Not caller.');
         }
 
-        const fromAllowanceMap = this.allowanceMap.get(from);
-        const allowed: u256 = fromAllowanceMap.get(spender);
-        if (allowed < value) throw new Revert(`Insufficient allowance`);
-
         if (this.isSelf(spender)) throw new Revert('Can not transfer from self account');
 
-        const senderMap = this.allowanceMap.get(from);
-        if (!senderMap.has(spender)) throw new Revert();
+        const fromAllowanceMap = this.allowanceMap.get(from);
+        const allowed: u256 = fromAllowanceMap.get(spender);
+        if (allowed < value) throw new Revert(`Insufficient allowance ${allowed} < ${value}`);
 
-        const allowance: u256 = senderMap.get(spender);
-        if (allowance < value) throw new Revert(`Insufficient allowance`);
-
-        const newAllowance: u256 = SafeMath.sub(allowance, value);
-        senderMap.set(spender, newAllowance);
+        const newAllowance: u256 = SafeMath.sub(allowed, value);
+        fromAllowanceMap.set(from, newAllowance);
 
         this._unsafeTransferFrom(from, to, value);
 

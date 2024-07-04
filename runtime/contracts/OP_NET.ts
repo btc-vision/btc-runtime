@@ -7,10 +7,6 @@ import { encodeSelector, Selector } from '../math/abi';
 import { Revert } from '../types/Revert';
 import { MAX_EVENT_DATA_SIZE, NetEvent } from '../events/NetEvent';
 
-const isAddressOwnerSelector = encodeSelector('isAddressOwner');
-const addressSelector = encodeSelector('address');
-const ownerSelector = encodeSelector('owner');
-
 export class OP_NET implements IBTC {
     constructor() {}
 
@@ -24,7 +20,7 @@ export class OP_NET implements IBTC {
 
     public callMethod(method: Selector, calldata: Calldata): BytesWriter {
         switch (method) {
-            case isAddressOwnerSelector:
+            case encodeSelector('isAddressOwner'):
                 return this.isAddressOwner(calldata);
             default:
                 throw new Revert('Method not found');
@@ -35,10 +31,10 @@ export class OP_NET implements IBTC {
         const response = new BytesWriter();
 
         switch (method) {
-            case addressSelector:
+            case encodeSelector('address'):
                 response.writeAddress(this.address);
                 break;
-            case ownerSelector:
+            case encodeSelector('owner'):
                 response.writeAddress(this.owner);
                 break;
             default:

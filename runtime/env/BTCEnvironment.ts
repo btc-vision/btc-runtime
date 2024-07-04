@@ -11,7 +11,15 @@ import { Potential } from '../lang/Definitions';
 import { Map } from '../generic/Map';
 import { OP_NET } from '../contracts/OP_NET';
 import { PointerStorage } from '../types';
-import { callContract, deploy, deployFromAddress, loadPointer, log, storePointer } from './global';
+import {
+    callContract,
+    deploy,
+    deployFromAddress,
+    encodeAddress,
+    loadPointer,
+    log,
+    storePointer,
+} from './global';
 import { DeployContractResponse } from '../interfaces/DeployContractResponse';
 
 export * from '../env/global';
@@ -119,6 +127,10 @@ export class BlockchainEnvironment {
             throw this.error('Cannot call self');
         }
 
+        if (!destinationContract) {
+            throw this.error('Destination contract is required');
+        }
+
         const call = new BytesWriter();
         call.writeAddress(destinationContract);
         call.writeBytesWithLength(calldata.getBuffer());
@@ -162,6 +174,18 @@ export class BlockchainEnvironment {
         }
 
         return buffer.getBuffer();
+    }
+
+    public encodeVirtualAddress(virtualAddress: Uint8Array): Address {
+        const writer: BytesWriter = new BytesWriter();
+        writer.writeBytesWithLength(virtualAddress);
+
+        const buffer: Uint8Array = writer.getBuffer();
+        const cb: Potential<Uint8Array> = encodeAddress(buffer);
+        if (!cb) throw this.error('Failed to encode virtual address');
+
+        const reader: BytesReader = new BytesReader(cb as Uint8Array);
+        return reader.readAddress();
     }
 
     public deployContract(hash: u256, bytecode: Uint8Array): BytesReader {
