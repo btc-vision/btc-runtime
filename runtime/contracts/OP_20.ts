@@ -168,7 +168,6 @@ export abstract class OP_20 extends OP_NET implements IOP_20 {
     /** REDEFINED METHODS */
     protected _allowance(owner: Address, spender: Address): u256 {
         const senderMap = this.allowanceMap.get(owner);
-        if (!senderMap.has(spender)) throw new Revert();
 
         return senderMap.get(spender);
     }
