@@ -176,6 +176,17 @@ export class BytesReader {
         }
     }
 
+    public readAddressArray(): Address[] {
+        const length = this.readU16();
+        const result = new Array<Address>(length);
+
+        for (let i: u16 = 0; i < length; i++) {
+            result[i] = this.readAddress();
+        }
+
+        return result;
+    }
+
     private verifyChecksum(): void {
         const writtenChecksum = this.readU32();
 
