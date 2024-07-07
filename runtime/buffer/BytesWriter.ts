@@ -70,6 +70,16 @@ export class BytesWriter {
         this.currentOffset += 8;
     }
 
+    public writeAddressArray(value: Address[]): void {
+        if (value.length > 65535) throw new Revert('Array size is too large');
+
+        this.writeU16(value.length);
+
+        for (let i: i32 = 0; i < value.length; i++) {
+            this.writeAddress(value[i]);
+        }
+    }
+
     public writeStorage(storage: BlockchainStorage): void {
         this.writeU32(storage.size);
 
