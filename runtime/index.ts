@@ -47,3 +47,6 @@ export * from './storage/StoredString';
 
 /** Universal */
 export * from './universal/ABIRegistry';
+
+/** Shared libraries */
+export * from './shared-libraries/TransferHelper';
