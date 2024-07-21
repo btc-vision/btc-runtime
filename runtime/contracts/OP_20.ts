@@ -306,7 +306,9 @@ export abstract class OP_20 extends OP_NET implements IOP_20 {
         if (allowed < value) throw new Revert(`Insufficient allowance ${allowed} < ${value}`);
 
         const newAllowance: u256 = SafeMath.sub(allowed, value);
-        fromAllowanceMap.set(from, newAllowance);
+        fromAllowanceMap.set(spender, newAllowance);
+
+        this.allowanceMap.set(from, fromAllowanceMap);
 
         this._unsafeTransferFrom(from, to, value);
 
