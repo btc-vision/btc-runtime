@@ -8,7 +8,6 @@ import { encodePointerHash } from '../math/abi';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { MAX_EVENTS, NetEvent } from '../events/NetEvent';
 import { Potential } from '../lang/Definitions';
-import { Map } from '../generic/Map';
 import { OP_NET } from '../contracts/OP_NET';
 import { PointerStorage } from '../types';
 import {
@@ -21,6 +20,7 @@ import {
     storePointer,
 } from './global';
 import { DeployContractResponse } from '../interfaces/DeployContractResponse';
+import { MapU256 } from '../generic/MapU256';
 
 export * from '../env/global';
 
@@ -28,7 +28,7 @@ export * from '../env/global';
 export class BlockchainEnvironment {
     private static readonly runtimeException: string = 'RuntimeException';
 
-    private storage: PointerStorage = new Map();
+    private storage: PointerStorage = new MapU256();
     private events: NetEvent[] = [];
 
     private _callee: PotentialAddress = null;
@@ -226,14 +226,8 @@ export class BlockchainEnvironment {
         const pointerHash: MemorySlotPointer = encodePointerHash(pointer, subPointer);
         this.ensureStorageAtPointer(pointerHash, defaultValue);
 
-        // maybe find a better way for this
-        const allKeys: u256[] = this.storage.keys();
-        for (let i: i32 = 0; i < allKeys.length; i++) {
-            const v: u256 = allKeys[i];
-
-            if (u256.eq(v, pointerHash)) {
-                return this.storage.get(v);
-            }
+        if (this.storage.has(pointerHash)) {
+            return this.storage.get(pointerHash);
         }
 
         return defaultValue;
@@ -272,17 +266,6 @@ export class BlockchainEnvironment {
     }
 
     private _internalSetStorageAt(pointerHash: u256, value: MemorySlotData<u256>): void {
-        const keys: u256[] = this.storage.keys();
-
-        // Delete the old value, there is a bug with u256 and maps.
-        for (let i = 0; i < keys.length; i++) {
-            const key = keys[i];
-
-            if (u256.eq(key, pointerHash)) {
-                this.storage.delete(key);
-            }
-        }
-
         this.storage.set(pointerHash, value);
 
         const writer: BytesWriter = new BytesWriter();
@@ -294,14 +277,8 @@ export class BlockchainEnvironment {
     }
 
     private hasPointerStorageHash(pointer: MemorySlotPointer): bool {
-        const keys = this.storage.keys();
-
-        for (let i = 0; i < keys.length; i++) {
-            const key = keys[i];
-
-            if (u256.eq(key, pointer)) {
-                return true;
-            }
+        if (this.storage.has(pointer)) {
+            return true;
         }
 
         // we attempt to load the requested pointer.
