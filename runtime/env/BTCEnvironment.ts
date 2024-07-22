@@ -236,7 +236,8 @@ export class BlockchainEnvironment {
     public hasStorageAt(pointer: u16, subPointer: MemorySlotPointer): bool {
         // We mark zero as the default value for the storage, if something is 0, the storage slot get deleted or is non-existent
         const val: u256 = this.getStorageAt(pointer, subPointer, u256.Zero);
-        return val != u256.Zero;
+        
+        return u256.ne(val, u256.Zero);
     }
 
     public setStorageAt(
