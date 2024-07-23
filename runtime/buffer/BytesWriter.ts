@@ -308,12 +308,17 @@ export class BytesWriter {
         }
     }
 
+    private min(value1: i32, value2: i32): i32 {
+        return value1 < value2 ? value1 : value2;
+    }
+
     private fromAddress(value: Address): Uint8Array {
         if (value.length > i32(ADDRESS_BYTE_LENGTH)) {
             throw new Revert(`Address is too long ${value.length} > ${ADDRESS_BYTE_LENGTH} bytes`);
         }
 
-        const bytes: Uint8Array = new Uint8Array(value.length + 1);
+        const length: i32 = this.min(value.length + 1, ADDRESS_BYTE_LENGTH);
+        const bytes: Uint8Array = new Uint8Array(length);
         for (let i: i32 = 0; i < value.length; i++) {
             bytes[i] = value.charCodeAt(i);
         }
