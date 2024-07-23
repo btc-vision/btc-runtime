@@ -154,6 +154,7 @@ export class BytesWriter {
 
     public writeBytesWithLength(value: Uint8Array): void {
         const length: u32 = u32(value.byteLength);
+
         this.allocSafe(length + 4);
         this.writeU32(length);
 
@@ -312,13 +313,13 @@ export class BytesWriter {
             throw new Revert(`Address is too long ${value.length} > ${ADDRESS_BYTE_LENGTH} bytes`);
         }
 
-        const bytes: Uint8Array = new Uint8Array(ADDRESS_BYTE_LENGTH);
+        const bytes: Uint8Array = new Uint8Array(value.length + 1);
         for (let i: i32 = 0; i < value.length; i++) {
             bytes[i] = value.charCodeAt(i);
         }
 
-        for (let i: u8 = u8(value.length); i < ADDRESS_BYTE_LENGTH; i++) {
-            bytes[i] = 0;
+        if (value.length < i32(ADDRESS_BYTE_LENGTH)) {
+            bytes[value.length] = 0;
         }
 
         return bytes;
