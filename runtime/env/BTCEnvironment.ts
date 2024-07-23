@@ -157,13 +157,13 @@ export class BlockchainEnvironment {
     }
 
     public getEvents(): Uint8Array {
-        const eventLength: u8 = u8(this.events.length);
+        const eventLength: u16 = u16(this.events.length);
         if (eventLength > MAX_EVENTS) {
             throw this.error('Too many events');
         }
 
         const buffer: BytesWriter = new BytesWriter();
-        buffer.writeU8(eventLength);
+        buffer.writeU16(eventLength);
 
         for (let i: u8 = 0; i < eventLength; i++) {
             const event: NetEvent = this.events[i];
@@ -188,7 +188,7 @@ export class BlockchainEnvironment {
         return reader.readAddress();
     }
 
-    public deployContract(hash: u256, bytecode: Uint8Array): BytesReader {
+    public deployContract(hash: u256, bytecode: Uint8Array): DeployContractResponse {
         const writer = new BytesWriter();
         writer.writeU256(hash);
         writer.writeBytes(bytecode);
@@ -196,7 +196,11 @@ export class BlockchainEnvironment {
         const cb: Potential<Uint8Array> = deploy(writer.getBuffer());
         if (!cb) throw this.error('Failed to deploy contract');
 
-        return new BytesReader(cb as Uint8Array);
+        const reader: BytesReader = new BytesReader(cb as Uint8Array);
+        const virtualAddress: u256 = reader.readU256();
+        const contractAddress: Address = reader.readAddress();
+
+        return new DeployContractResponse(virtualAddress, contractAddress);
     }
 
     public deployContractFromExisting(
@@ -236,7 +240,7 @@ export class BlockchainEnvironment {
     public hasStorageAt(pointer: u16, subPointer: MemorySlotPointer): bool {
         // We mark zero as the default value for the storage, if something is 0, the storage slot get deleted or is non-existent
         const val: u256 = this.getStorageAt(pointer, subPointer, u256.Zero);
-        
+
         return u256.ne(val, u256.Zero);
     }
 

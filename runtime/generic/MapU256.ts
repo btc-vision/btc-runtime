@@ -14,7 +14,6 @@ export class MapU256 extends Map<u256, u256> {
     }
 
     public indexOf(pointerHash: u256): i32 {
-        // Delete the old value
         for (let i: i32 = 0; i < this._keys.length; i++) {
             const key = this._keys[i];
 

@@ -1,7 +1,7 @@
 import { BytesWriter } from '../buffer/BytesWriter';
 
 export const MAX_EVENT_DATA_SIZE: u32 = 352; // 352 bytes max per event.
-export const MAX_EVENTS: u8 = 8; // 8 events max per transactions.
+export const MAX_EVENTS: u16 = 1000; // 1000 events max per transactions.
 
 export abstract class NetEvent {
     protected constructor(
