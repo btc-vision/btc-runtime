@@ -26,7 +26,7 @@ export * from '../env/global';
 
 @final
 export class BlockchainEnvironment {
-	private static readonly MAX_U16: u16 = 65535;
+    private static readonly MAX_U16: u16 = 65535;
     private static readonly runtimeException: string = 'RuntimeException';
 
     private storage: PointerStorage = new MapU256();
@@ -61,11 +61,11 @@ export class BlockchainEnvironment {
     private _nextPointer: u16 = 0;
 
     public get nextPointer(): u16 {
-        if(_nextPointer == MAX_U16) {
-			throw this.error(`Out of storage pointer.`);
-		}
-		
-		this._nextPointer += 1;
+        if (this._nextPointer === BlockchainEnvironment.MAX_U16) {
+            throw this.error(`Out of storage pointer.`);
+        }
+
+        this._nextPointer += 1;
 
         return this._nextPointer;
     }
