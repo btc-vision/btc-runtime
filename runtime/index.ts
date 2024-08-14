@@ -44,6 +44,7 @@ export * from './memory/MultiAddressMemoryMap';
 /** Storage */
 export * from './storage/StoredU256';
 export * from './storage/StoredString';
+export * from './storage/Serializable';
 
 /** Universal */
 export * from './universal/ABIRegistry';
