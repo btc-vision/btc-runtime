@@ -3,6 +3,7 @@ import { Blockchain } from '../env';
 import { MemorySlotPointer } from '../memory/MemorySlotPointer';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { BytesReader } from '../buffer/BytesReader';
+import { Revert } from '../types/Revert';
 
 export abstract class Serializable {
     protected pointer: u16;
@@ -15,24 +16,16 @@ export abstract class Serializable {
     }
 
     public abstract get chunkCount(): i32;
-    public abstract get length(): i32;
     public abstract writeToBuffer(): BytesWriter;
     public abstract readFromBuffer(reader: BytesReader): void;
 
     public load() :void {
         const chunks: u256[] = [];
 
-        Blockchain.log(this.chunkCount.toString());
-
         for(let index:i32 = 0; index < this.chunkCount; index++){
-            Blockchain.log(this.pointer.toString());
-            Blockchain.log(this.subPointer.toString());
-            Blockchain.log(index.toString());
             const chunk: u256 = Blockchain.getStorageAt(this.pointer, u256.add(this.subPointer, u256.fromU32(index)), u256.Zero);
             chunks.push(chunk);
         }
-
-        Blockchain.log('out loop');
 
         const reader = this.chunksToBytes(chunks);
 
@@ -69,7 +62,11 @@ export abstract class Serializable {
     }
 
     protected chunksToBytes(chunks: u256[]): BytesReader {
-        const buffer: Uint8Array = new Uint8Array(this.length);
+        if(this.chunkCount >= 67108863) {
+            throw new Revert('Too many chunks received');
+        }
+
+        const buffer: Uint8Array = new Uint8Array(this.chunkCount * 32);
         let offset: i32 = 0;
 
         for (let indexChunk: i32 = 0; indexChunk < chunks.length; indexChunk++) {
