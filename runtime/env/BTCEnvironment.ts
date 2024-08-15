@@ -21,6 +21,7 @@ import {
 } from './global';
 import { DeployContractResponse } from '../interfaces/DeployContractResponse';
 import { MapU256 } from '../generic/MapU256';
+import { Blockchain } from './index';
 
 export * from '../env/global';
 
@@ -61,7 +62,7 @@ export class BlockchainEnvironment {
     private _nextPointer: u16 = 0;
 
     public get nextPointer(): u16 {
-        if(_nextPointer == MAX_U16) {
+        if(this._nextPointer === BlockchainEnvironment.MAX_U16) {
 			throw this.error(`Out of storage pointer.`);
 		}
 		
