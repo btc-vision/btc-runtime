@@ -21,13 +21,12 @@ import {
 } from './global';
 import { DeployContractResponse } from '../interfaces/DeployContractResponse';
 import { MapU256 } from '../generic/MapU256';
-import { Blockchain } from './index';
 
 export * from '../env/global';
 
 @final
 export class BlockchainEnvironment {
-	private static readonly MAX_U16: u16 = 65535;
+    private static readonly MAX_U16: u16 = 65535;
     private static readonly runtimeException: string = 'RuntimeException';
 
     private storage: PointerStorage = new MapU256();
@@ -65,7 +64,7 @@ export class BlockchainEnvironment {
         if(this._nextPointer === BlockchainEnvironment.MAX_U16) {
 			throw this.error(`Out of storage pointer.`);
 		}
-		
+
 		this._nextPointer += 1;
 
         return this._nextPointer;
