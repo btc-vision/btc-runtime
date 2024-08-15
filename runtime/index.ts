@@ -51,3 +51,4 @@ export * from './universal/ABIRegistry';
 
 /** Shared libraries */
 export * from './shared-libraries/TransferHelper';
+export * from './shared-libraries/OP20Utils';
