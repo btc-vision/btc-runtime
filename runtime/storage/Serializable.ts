@@ -29,8 +29,6 @@ export abstract class Serializable {
 
         const reader = this.chunksToBytes(chunks);
 
-        Blockchain.log('out chunks');
-
         this.readFromBuffer(reader);
     }
 
