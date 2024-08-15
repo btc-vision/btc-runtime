@@ -22,12 +22,21 @@ export abstract class Serializable {
     public load() :void {
         const chunks: u256[] = [];
 
+        Blockchain.log(this.chunkCount.toString());
+
         for(let index:i32 = 0; index < this.chunkCount; index++){
+            Blockchain.log(this.pointer.toString());
+            Blockchain.log(this.subPointer.toString());
+            Blockchain.log(index.toString());
             const chunk: u256 = Blockchain.getStorageAt(this.pointer, u256.add(this.subPointer, u256.fromU32(index)), u256.Zero);
             chunks.push(chunk);
         }
 
+        Blockchain.log('out loop');
+
         const reader = this.chunksToBytes(chunks);
+
+        Blockchain.log('out chunks');
 
         this.readFromBuffer(reader);
     }
