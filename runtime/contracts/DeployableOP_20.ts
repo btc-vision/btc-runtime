@@ -14,77 +14,49 @@ import { MultiAddressMemoryMap } from '../memory/MultiAddressMemoryMap';
 import { StoredU256 } from '../storage/StoredU256';
 import { ApproveEvent, BurnEvent, MintEvent, TransferEvent } from '../events/predefined';
 import { StoredString } from '../storage/StoredString';
+import { OP20InitParameters } from './interfaces/OP20InitParameters';
 
-export class OP20InitParameters {
-    readonly maxSupply: u256;
-    readonly decimals: u8;
-    readonly name: string;
-    readonly symbol: string;
-
-    constructor(maxSupply: u256, decimals: u8, name: string, symbol: string) {
-        this.maxSupply = maxSupply;
-        this.decimals = decimals;
-        this.name = name;
-        this.symbol = symbol;
-    }
-}
+const maxSupplyPointer: u16 = Blockchain.nextPointer;
+const decimalsPointer: u16 = Blockchain.nextPointer;
+const namePointer: u16 = Blockchain.nextPointer;
+const symbolPointer: u16 = Blockchain.nextPointer;
+const totalSupplyPointer: u16 = Blockchain.nextPointer;
+const allowanceMapPointer: u16 = Blockchain.nextPointer;
+const balanceOfMapPointer: u16 = Blockchain.nextPointer;
 
 export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     protected readonly allowanceMap: MultiAddressMemoryMap<Address, Address, MemorySlotData<u256>>;
     protected readonly balanceOfMap: AddressMemoryMap<Address, MemorySlotData<u256>>;
 
+    protected readonly _maxSupply: StoredU256;
+    protected readonly _decimals: StoredU256;
+    protected readonly _name: StoredString;
+    protected readonly _symbol: StoredString;
+
     protected constructor(params?: OP20InitParameters) {
         super();
 
-        if (params) {
-            this.instantiate(params);
-        } else {
-            this.instantiate(new OP20InitParameters(u256.Zero, 0, '', ''));
-        }
-
         this.allowanceMap = new MultiAddressMemoryMap<Address, Address, MemorySlotData<u256>>(
-            Blockchain.nextPointer,
+            allowanceMapPointer,
             u256.Zero,
         );
 
         this.balanceOfMap = new AddressMemoryMap<Address, MemorySlotData<u256>>(
-            Blockchain.nextPointer,
+            balanceOfMapPointer,
             u256.Zero,
         );
 
-        this._totalSupply = new StoredU256(Blockchain.nextPointer, u256.Zero, u256.Zero);
-    }
+        this._totalSupply = new StoredU256(totalSupplyPointer, u256.Zero, u256.Zero);
 
-    private _maxSupply: StoredU256 | undefined;
+        this._maxSupply = new StoredU256(maxSupplyPointer, u256.Zero, u256.Zero);
+        this._decimals = new StoredU256(decimalsPointer, u256.Zero, u256.Zero);
 
-    public get maxSupply(): u256 {
-        if (!this._maxSupply) throw new Revert('Max supply not set');
+        this._name = new StoredString(namePointer, '');
+        this._symbol = new StoredString(symbolPointer, '');
 
-        return this._maxSupply.value;
-    }
-
-    private _decimals: StoredU256 | undefined;
-
-    public get decimals(): u8 {
-        if (!this._decimals) throw new Revert('Decimals not set');
-
-        return u8(this._decimals.value);
-    }
-
-    private _name: StoredString | undefined;
-
-    public get name(): string {
-        if (!this._name) throw new Revert('Name not set');
-
-        return this._name.value;
-    }
-
-    private _symbol: StoredString | undefined;
-
-    public get symbol(): string {
-        if (!this._symbol) throw new Revert('Symbol not set');
-
-        return this._symbol.value;
+        if (params && this._maxSupply.value.isZero()) {
+            this.instantiate(params, true);
+        }
     }
 
     public _totalSupply: StoredU256;
@@ -93,24 +65,45 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         return this._totalSupply.value;
     }
 
-    public instantiate(params: OP20InitParameters): void {
-        this.onlyOwner(Blockchain.from());
+    public get maxSupply(): u256 {
+        if (!this._maxSupply) throw new Revert('Max supply not set');
 
-        this._maxSupply = new StoredU256(Blockchain.nextPointer, u256.Zero, u256.Zero);
-        if (u256.ne(this._maxSupply.value, u256.Zero)) {
+        return this._maxSupply.value;
+    }
+
+    public get decimals(): u8 {
+        if (!this._decimals) throw new Revert('Decimals not set');
+
+        return u8(this._decimals.value.toU32());
+    }
+
+    public get name(): string {
+        if (!this._name) throw new Revert('Name not set');
+
+        return this._name.value;
+    }
+
+    public get symbol(): string {
+        if (!this._symbol) throw new Revert('Symbol not set');
+
+        return this._symbol.value;
+    }
+
+    public instantiate(params: OP20InitParameters, skipOwnerVerification: boolean = false): void {
+        if (!skipOwnerVerification) this.onlyOwner(Blockchain.from());
+
+        if (!this._maxSupply.value.isZero()) {
             throw new Revert('Already initialized');
         }
 
+        if (params.decimals > 32) {
+            throw new Revert('Decimals can not be more than 32');
+        }
+
         this._maxSupply.value = params.maxSupply;
-
-        this._decimals = new StoredU256(
-            Blockchain.nextPointer,
-            u256.Zero,
-            u256.fromU32(u32(params.decimals)),
-        );
-
-        this._name = new StoredString(Blockchain.nextPointer, params.name);
-        this._symbol = new StoredString(Blockchain.nextPointer, params.symbol);
+        this._decimals.value = u256.fromU32(u32(params.decimals));
+        this._name.value = params.name;
+        this._symbol.value = params.symbol;
     }
 
     /** METHODS */

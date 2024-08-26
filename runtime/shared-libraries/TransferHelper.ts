@@ -1,4 +1,4 @@
-import { u256 } from 'as-bignum/assembly/integer/u256';
+import { u256 } from 'as-bignum/assembly';
 import { encodeSelector, Selector } from '../math/abi';
 import { Address } from '../types/Address';
 import { BytesWriter } from '../buffer/BytesWriter';
