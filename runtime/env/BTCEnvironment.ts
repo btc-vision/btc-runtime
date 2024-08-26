@@ -32,8 +32,8 @@ export class BlockchainEnvironment {
     private storage: PointerStorage = new MapU256();
     private events: NetEvent[] = [];
 
-    private _callee: PotentialAddress = null;
-    private _caller: PotentialAddress = null;
+    private _from: PotentialAddress = null;
+    private _sender: PotentialAddress = null;
     private currentBlock: u256 = u256.Zero;
 
     constructor() {}
@@ -61,11 +61,11 @@ export class BlockchainEnvironment {
     private _nextPointer: u16 = 0;
 
     public get nextPointer(): u16 {
-        if(this._nextPointer === BlockchainEnvironment.MAX_U16) {
-			throw this.error(`Out of storage pointer.`);
-		}
+        if (this._nextPointer === BlockchainEnvironment.MAX_U16) {
+            throw this.error(`Out of storage pointer.`);
+        }
 
-		this._nextPointer += 1;
+        this._nextPointer += 1;
 
         return this._nextPointer;
     }
@@ -98,27 +98,27 @@ export class BlockchainEnvironment {
         return this.currentBlock.toU64();
     }
 
-    public callee(): Address {
-        if (!this._callee) {
+    public from(): Address {
+        if (!this._from) {
             throw this.error('Callee is required');
         }
 
-        return this._callee as Address;
+        return this._from as Address;
     }
 
-    public caller(): Address {
-        if (!this._caller) {
+    public sender(): Address {
+        if (!this._sender) {
             throw this.error('Caller is required');
         }
 
-        return this._caller as Address;
+        return this._sender as Address;
     }
 
     public setEnvironment(data: Uint8Array): void {
         const reader: BytesReader = new BytesReader(data);
 
-        this._caller = reader.readAddress();
-        this._callee = reader.readAddress();
+        this._sender = reader.readAddress();
+        this._from = reader.readAddress();
         this.currentBlock = reader.readU256();
 
         this._owner = reader.readAddress();
@@ -128,7 +128,7 @@ export class BlockchainEnvironment {
     }
 
     public call(destinationContract: Address, calldata: BytesWriter): BytesReader {
-        if (destinationContract === this._callee) {
+        if (destinationContract === this._from) {
             throw this.error('Cannot call self');
         }
 

@@ -22,6 +22,8 @@ export class StoredU256 {
 
     @inline
     public set value(value: u256) {
+        if (u256.eq(value, this._value)) return;
+
         this._value = value;
 
         Blockchain.setStorageAt(this.pointer, this.subPointer, this._value);
