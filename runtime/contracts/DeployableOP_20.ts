@@ -33,7 +33,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     protected readonly _name: StoredString;
     protected readonly _symbol: StoredString;
 
-    protected constructor(params?: OP20InitParameters) {
+    protected constructor(params: OP20InitParameters | null = null) {
         super();
 
         this.allowanceMap = new MultiAddressMemoryMap<Address, Address, MemorySlotData<u256>>(
