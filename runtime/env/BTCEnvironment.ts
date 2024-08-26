@@ -32,7 +32,7 @@ export class BlockchainEnvironment {
     private storage: PointerStorage = new MapU256();
     private events: NetEvent[] = [];
 
-    private _from: PotentialAddress = null;
+    private _origin: PotentialAddress = null;
     private _sender: PotentialAddress = null;
     private currentBlock: u256 = u256.Zero;
 
@@ -98,12 +98,12 @@ export class BlockchainEnvironment {
         return this.currentBlock.toU64();
     }
 
-    public from(): Address {
-        if (!this._from) {
+    public origin(): Address {
+        if (!this._origin) {
             throw this.error('Callee is required');
         }
 
-        return this._from as Address;
+        return this._origin as Address;
     }
 
     public sender(): Address {
@@ -118,7 +118,7 @@ export class BlockchainEnvironment {
         const reader: BytesReader = new BytesReader(data);
 
         this._sender = reader.readAddress();
-        this._from = reader.readAddress();
+        this._origin = reader.readAddress();
         this.currentBlock = reader.readU256();
 
         this._owner = reader.readAddress();
@@ -128,7 +128,7 @@ export class BlockchainEnvironment {
     }
 
     public call(destinationContract: Address, calldata: BytesWriter): BytesReader {
-        if (destinationContract === this._from) {
+        if (destinationContract === this._origin) {
             throw this.error('Cannot call self');
         }
 
