@@ -31,12 +31,29 @@ export class BlockchainEnvironment {
 
     private storage: PointerStorage = new MapU256();
     private events: NetEvent[] = [];
-
-    private _origin: PotentialAddress = null;
-    private _sender: PotentialAddress = null;
     private currentBlock: u256 = u256.Zero;
 
     constructor() {}
+
+    private _origin: PotentialAddress = null;
+
+    public get origin(): Address {
+        if (!this._origin) {
+            throw this.error('Callee is required');
+        }
+
+        return this._origin as Address;
+    }
+
+    private _sender: PotentialAddress = null;
+
+    public get sender(): Address {
+        if (!this._sender) {
+            throw this.error('Caller is required');
+        }
+
+        return this._sender as Address;
+    }
 
     private _timestamp: u64 = 0;
 
@@ -96,22 +113,6 @@ export class BlockchainEnvironment {
 
     public get blockNumberU64(): u64 {
         return this.currentBlock.toU64();
-    }
-
-    public origin(): Address {
-        if (!this._origin) {
-            throw this.error('Callee is required');
-        }
-
-        return this._origin as Address;
-    }
-
-    public sender(): Address {
-        if (!this._sender) {
-            throw this.error('Caller is required');
-        }
-
-        return this._sender as Address;
     }
 
     public setEnvironment(data: Uint8Array): void {

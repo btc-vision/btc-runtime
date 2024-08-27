@@ -9,14 +9,12 @@ import { MAX_EVENT_DATA_SIZE, NetEvent } from '../events/NetEvent';
 import { StoredBoolean } from '../storage/StoredBoolean';
 
 export class OP_NET implements IBTC {
-    private readonly instantiated: StoredBoolean = new StoredBoolean(Blockchain.nextPointer, false);
+    protected readonly instantiated: StoredBoolean = new StoredBoolean(
+        Blockchain.nextPointer,
+        false,
+    );
 
-    constructor() {
-        if (!this.instantiated.value) {
-            this.instantiated.value = true;
-            this.onContractInstantiate();
-        }
-    }
+    constructor() {}
 
     public get address(): string {
         return Blockchain.contractAddress;
@@ -26,15 +24,22 @@ export class OP_NET implements IBTC {
         return Blockchain.owner;
     }
 
+    public get isInstantiated(): bool {
+        return this.instantiated.value;
+    }
+
+    public onInstantiated(): void {
+        if (!this.isInstantiated) {
+            this.instantiated.value = true;
+        }
+    }
+
     public callMethod(method: Selector, _calldata: Calldata): BytesWriter {
         switch (method) {
             default:
                 throw new Revert('Method not found');
         }
     }
-
-    // Overwrite this method in your contract
-    public onContractInstantiate(): void {}
 
     public callView(method: Selector): BytesWriter {
         const response = new BytesWriter();

@@ -90,11 +90,11 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     public instantiate(params: OP20InitParameters, skipOwnerVerification: boolean = false): void {
-        if (!skipOwnerVerification) this.onlyOwner(Blockchain.origin());
-
         if (!this._maxSupply.value.isZero()) {
             throw new Revert('Already initialized');
         }
+
+        if (!skipOwnerVerification) this.onlyOwner(Blockchain.origin);
 
         if (params.decimals > 32) {
             throw new Revert('Decimals can not be more than 32');
@@ -125,7 +125,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         const resp = this._approve(spender, value);
         response.writeBoolean(resp);
 
-        this.createApproveEvent(Blockchain.origin(), spender, value);
+        this.createApproveEvent(Blockchain.origin, spender, value);
 
         return response;
     }
@@ -234,7 +234,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _approve(spender: Address, value: u256): boolean {
-        const callee = Blockchain.origin();
+        const callee = Blockchain.origin;
 
         const senderMap = this.allowanceMap.get(callee);
         senderMap.set(spender, value);
@@ -254,8 +254,8 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             throw new Revert(`No tokens`);
         }
 
-        const callee = Blockchain.origin();
-        const caller = Blockchain.sender();
+        const callee = Blockchain.origin;
+        const caller = Blockchain.sender;
 
         if (onlyOwner) this.onlyOwner(callee); // only indexers can burn tokens
 
@@ -276,7 +276,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _mint(to: Address, value: u256, onlyOwner: boolean = true): boolean {
-        const callee = Blockchain.origin();
+        const callee = Blockchain.origin;
 
         if (onlyOwner) this.onlyOwner(callee);
 
@@ -299,7 +299,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _transfer(to: string, value: u256): boolean {
-        const caller = Blockchain.origin();
+        const caller = Blockchain.origin;
 
         if (!this.balanceOfMap.has(caller)) throw new Revert();
         if (this.isSelf(caller)) throw new Revert('Can not transfer from self account');
@@ -355,8 +355,8 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _transferFrom(from: Address, to: Address, value: u256): boolean {
-        const spender = Blockchain.origin();
-        if (Blockchain.sender() !== from) {
+        const spender = Blockchain.origin;
+        if (Blockchain.sender !== from) {
             throw new Revert('Not caller.');
         }
 
