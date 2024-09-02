@@ -356,9 +356,6 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
 
     protected _transferFrom(from: Address, to: Address, value: u256): boolean {
         const spender = Blockchain.origin;
-        if (Blockchain.sender !== from) {
-            throw new Revert('Not caller.');
-        }
 
         if (this.isSelf(spender)) throw new Revert('Can not transfer from self account');
 
