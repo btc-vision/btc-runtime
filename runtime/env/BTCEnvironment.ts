@@ -33,6 +33,8 @@ export class BlockchainEnvironment {
     private events: NetEvent[] = [];
     private currentBlock: u256 = u256.Zero;
 
+    private _selfContract: Potential<OP_NET> = null;
+
     constructor() {}
 
     private _origin: PotentialAddress = null;
@@ -68,7 +70,11 @@ export class BlockchainEnvironment {
             throw this.error('Contract is required');
         }
 
-        return this._contract();
+        if (!this._selfContract) {
+            this._selfContract = this._contract();
+        }
+
+        return this._selfContract as OP_NET;
     }
 
     public set contract(contract: () => OP_NET) {
@@ -126,6 +132,8 @@ export class BlockchainEnvironment {
         this._contractAddress = reader.readAddress();
 
         this._timestamp = reader.readU64();
+
+        this.contract;
     }
 
     public call(destinationContract: Address, calldata: BytesWriter): BytesReader {
