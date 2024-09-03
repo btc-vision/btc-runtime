@@ -9,6 +9,7 @@ import { cyrb53a } from '../math/cyrb53';
 import { Revert } from '../types/Revert';
 import { Map } from '../generic/Map';
 import { BlockchainStorage, PointerStorage } from '../types';
+import { ArrayBuffer } from 'arraybuffer';
 
 export enum BufferDataType {
     U8 = 0,
@@ -25,6 +26,7 @@ export enum BufferDataType {
 export class BytesWriter {
     private currentOffset: u32 = 0;
     private buffer: DataView;
+    private arrayBuffer: ArrayBuffer;
 
     private selectorDatatype: u8[] = [];
 
@@ -32,7 +34,8 @@ export class BytesWriter {
         length: i32 = 1,
         private readonly trackDataTypes: boolean = false,
     ) {
-        this.buffer = new DataView(new ArrayBuffer(length));
+        this.arrayBuffer = new ArrayBuffer(length);
+        this.buffer = new DataView(this.arrayBuffer);
     }
 
     public bufferLength(): u32 {
@@ -239,12 +242,8 @@ export class BytesWriter {
         }
     }
 
-    public getBuffer(clear: boolean = true): Uint8Array {
-        const buf = new Uint8Array(this.buffer.byteLength);
-        for (let i: u32 = 0; i < u32(this.buffer.byteLength); i++) {
-            buf[i] = this.buffer.getUint8(i);
-        }
-
+    public getBuffer(clear: boolean = false): Uint8Array {
+        const buf = Uint8Array.wrap(this.arrayBuffer);
         if (clear) this.clear();
 
         return buf;
@@ -341,6 +340,8 @@ export class BytesWriter {
     }
 
     private getDefaultBuffer(length: i32 = 1): DataView {
-        return new DataView(new ArrayBuffer(length));
+        this.arrayBuffer = new ArrayBuffer(length);
+
+        return new DataView(this.arrayBuffer);
     }
 }
