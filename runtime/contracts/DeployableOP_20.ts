@@ -1,20 +1,20 @@
-import { IOP_20 } from './interfaces/IOP_20';
 import { u256 } from 'as-bignum/assembly';
-import { Address } from '../types/Address';
 import { BytesWriter } from '../buffer/BytesWriter';
-import { Calldata } from '../universal/ABIRegistry';
-import { OP_NET } from './OP_NET';
+import { Blockchain } from '../env';
+import { ApproveEvent, BurnEvent, MintEvent, TransferEvent } from '../events/predefined';
+import { encodeSelector, Selector } from '../math/abi';
 import { AddressMemoryMap } from '../memory/AddressMemoryMap';
+import { MemorySlotData } from '../memory/MemorySlot';
+import { MultiAddressMemoryMap } from '../memory/MultiAddressMemoryMap';
+import { StoredString } from '../storage/StoredString';
+import { StoredU256 } from '../storage/StoredU256';
+import { Address } from '../types/Address';
 import { Revert } from '../types/Revert';
 import { SafeMath } from '../types/SafeMath';
-import { Blockchain } from '../env';
-import { MemorySlotData } from '../memory/MemorySlot';
-import { encodeSelector, Selector } from '../math/abi';
-import { MultiAddressMemoryMap } from '../memory/MultiAddressMemoryMap';
-import { StoredU256 } from '../storage/StoredU256';
-import { ApproveEvent, BurnEvent, MintEvent, TransferEvent } from '../events/predefined';
-import { StoredString } from '../storage/StoredString';
+import { Calldata } from '../universal/ABIRegistry';
+import { IOP_20 } from './interfaces/IOP_20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
+import { OP_NET } from './OP_NET';
 
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
 const decimalsPointer: u16 = Blockchain.nextPointer;
@@ -94,7 +94,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             throw new Revert('Already initialized');
         }
 
-        if (!skipOwnerVerification) this.onlyOwner(Blockchain.origin);
+        if (!skipOwnerVerification) this.onlyOwner(Blockchain.sender);
 
         if (params.decimals > 32) {
             throw new Revert('Decimals can not be more than 32');
@@ -125,7 +125,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         const resp = this._approve(spender, value);
         response.writeBoolean(resp);
 
-        this.createApproveEvent(Blockchain.origin, spender, value);
+        this.createApproveEvent(Blockchain.sender, spender, value);
 
         return response;
     }
@@ -234,7 +234,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _approve(spender: Address, value: u256): boolean {
-        const callee = Blockchain.origin;
+        const callee = Blockchain.sender;
 
         const senderMap = this.allowanceMap.get(callee);
         senderMap.set(spender, value);
@@ -254,8 +254,8 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             throw new Revert(`No tokens`);
         }
 
-        const callee = Blockchain.origin;
-        const caller = Blockchain.sender;
+        const callee = Blockchain.sender;
+        const caller = Blockchain.origin;
 
         if (onlyOwner) this.onlyOwner(callee); // only indexers can burn tokens
 
@@ -276,7 +276,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _mint(to: Address, value: u256, onlyOwner: boolean = true): boolean {
-        const callee = Blockchain.origin;
+        const callee = Blockchain.sender;
 
         if (onlyOwner) this.onlyOwner(callee);
 
@@ -299,12 +299,12 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _transfer(to: string, value: u256): boolean {
-        const caller = Blockchain.origin;
+        const callee = Blockchain.sender;
 
-        if (!this.balanceOfMap.has(caller)) throw new Revert();
-        if (this.isSelf(caller)) throw new Revert('Can not transfer from self account');
+        if (!this.balanceOfMap.has(callee)) throw new Revert();
+        if (this.isSelf(callee)) throw new Revert('Can not transfer from self account');
 
-        if (caller === to) {
+        if (callee === to) {
             throw new Revert(`Cannot transfer to self`);
         }
 
@@ -312,18 +312,18 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             throw new Revert(`Cannot transfer 0 tokens`);
         }
 
-        const balance: u256 = this.balanceOfMap.get(caller);
+        const balance: u256 = this.balanceOfMap.get(callee);
         if (balance < value) throw new Revert(`Insufficient balance`);
 
         const newBalance: u256 = SafeMath.sub(balance, value);
-        this.balanceOfMap.set(caller, newBalance);
+        this.balanceOfMap.set(callee, newBalance);
 
         const toBalance: u256 = this.balanceOfMap.get(to);
         const newToBalance: u256 = SafeMath.add(toBalance, value);
 
         this.balanceOfMap.set(to, newToBalance);
 
-        this.createTransferEvent(caller, to, value);
+        this.createTransferEvent(callee, to, value);
 
         return true;
     }
@@ -355,16 +355,14 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _transferFrom(from: Address, to: Address, value: u256): boolean {
-        const spender = Blockchain.origin;
-
-        if (this.isSelf(spender)) throw new Revert('Can not transfer from self account');
+        const callee = Blockchain.sender;
 
         const fromAllowanceMap = this.allowanceMap.get(from);
-        const allowed: u256 = fromAllowanceMap.get(spender);
+        const allowed: u256 = fromAllowanceMap.get(callee);
         if (allowed < value) throw new Revert(`Insufficient allowance ${allowed} < ${value}`);
 
         const newAllowance: u256 = SafeMath.sub(allowed, value);
-        fromAllowanceMap.set(spender, newAllowance);
+        fromAllowanceMap.set(callee, newAllowance);
 
         this.allowanceMap.set(from, fromAllowanceMap);
 

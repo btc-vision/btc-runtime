@@ -31,28 +31,28 @@ execution while integrating deeply with Bitcoin's decentralized architecture.
 
 ### Features
 
-- **AssemblyScript and WebAssembly:** Efficient and high-performance contract execution using WebAssembly.
-- **Bitcoin Integration:** Direct interaction with Bitcoin L1, enabling the creation of decentralized applications that
-  operate on the Bitcoin network.
-- **Comprehensive Storage Management:** Flexible and secure storage management using primary pointers and sub-pointers,
-  ensuring data integrity through cryptographic proofs.
-- **Event Handling:** Sophisticated event system for contract state changes, allowing easy tracking and logging of
-  contract activities.
+-   **AssemblyScript and WebAssembly:** Efficient and high-performance contract execution using WebAssembly.
+-   **Bitcoin Integration:** Direct interaction with Bitcoin L1, enabling the creation of decentralized applications that
+    operate on the Bitcoin network.
+-   **Comprehensive Storage Management:** Flexible and secure storage management using primary pointers and sub-pointers,
+    ensuring data integrity through cryptographic proofs.
+-   **Event Handling:** Sophisticated event system for contract state changes, allowing easy tracking and logging of
+    contract activities.
 
 ## Installation
 
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/btc-vision/btc-runtime.git
-   ```
+    ```bash
+    git clone https://github.com/btc-vision/btc-runtime.git
+    ```
 2. Navigate to the repository directory:
-   ```bash
-   cd btc-runtime
-   ```
+    ```bash
+    cd btc-runtime
+    ```
 3. Install the necessary dependencies:
-   ```bash
-   npm install
-   ```
+    ```bash
+    npm install
+    ```
 
 ## Core Concepts
 
@@ -97,7 +97,8 @@ contract follows the OP20 standard.
 ```typescript
 import { u128, u256 } from 'as-bignum/assembly';
 import {
-    Address, Blockchain,
+    Address,
+    Blockchain,
     BytesWriter,
     Calldata,
     encodeSelector,
@@ -128,7 +129,7 @@ export class MyToken extends DeployableOP_20 {
             this.instantiate(new OP20InitParameters(maxSupply, decimals, name, symbol));
 
             // Add your logic here. Eg, minting the initial supply:
-            // this._mint(Blockchain.origin, maxSupply);
+            // this._mint(Blockchain.sender, maxSupply);
         }
     }
 
@@ -175,11 +176,11 @@ class ComplexData extends Serializable {
 
 For more detailed explanations on specific topics, refer to the individual documentation files:
 
-- [Blockchain.md](docs/Blockchain.md)
-- [Contract.md](docs/Contract.md)
-- [Events.md](docs/Events.md)
-- [Pointers.md](docs/Pointers.md)
-- [Storage.md](docs/Storage.md)
+-   [Blockchain.md](docs/Blockchain.md)
+-   [Contract.md](docs/Contract.md)
+-   [Events.md](docs/Events.md)
+-   [Pointers.md](docs/Pointers.md)
+-   [Storage.md](docs/Storage.md)
 
 ## License
 

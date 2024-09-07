@@ -1,15 +1,17 @@
-import { Address, PotentialAddress } from '../types/Address';
-import { MemorySlotPointer } from '../memory/MemorySlotPointer';
-import { MemorySlotData } from '../memory/MemorySlot';
 import { u256 } from 'as-bignum/assembly';
-import { ABIRegistry } from '../universal/ABIRegistry';
 import { BytesReader } from '../buffer/BytesReader';
-import { encodePointerHash } from '../math/abi';
 import { BytesWriter } from '../buffer/BytesWriter';
-import { MAX_EVENTS, NetEvent } from '../events/NetEvent';
-import { Potential } from '../lang/Definitions';
 import { OP_NET } from '../contracts/OP_NET';
+import { MAX_EVENTS, NetEvent } from '../events/NetEvent';
+import { MapU256 } from '../generic/MapU256';
+import { DeployContractResponse } from '../interfaces/DeployContractResponse';
+import { Potential } from '../lang/Definitions';
+import { encodePointerHash } from '../math/abi';
+import { MemorySlotData } from '../memory/MemorySlot';
+import { MemorySlotPointer } from '../memory/MemorySlotPointer';
 import { PointerStorage } from '../types';
+import { Address, PotentialAddress } from '../types/Address';
+import { ABIRegistry } from '../universal/ABIRegistry';
 import {
     callContract,
     deploy,
@@ -19,8 +21,6 @@ import {
     log,
     storePointer,
 } from './global';
-import { DeployContractResponse } from '../interfaces/DeployContractResponse';
-import { MapU256 } from '../generic/MapU256';
 
 export * from '../env/global';
 
@@ -37,24 +37,24 @@ export class BlockchainEnvironment {
 
     constructor() {}
 
-    private _origin: PotentialAddress = null;
-
-    public get origin(): Address {
-        if (!this._origin) {
-            throw this.error('Callee is required');
-        }
-
-        return this._origin as Address;
-    }
-
     private _sender: PotentialAddress = null;
 
     public get sender(): Address {
         if (!this._sender) {
-            throw this.error('Caller is required');
+            throw this.error('Callee is required');
         }
 
         return this._sender as Address;
+    }
+
+    private _origin: PotentialAddress = null;
+
+    public get origin(): Address {
+        if (!this._origin) {
+            throw this.error('Caller is required');
+        }
+
+        return this._origin as Address;
     }
 
     private _timestamp: u64 = 0;

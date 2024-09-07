@@ -17,16 +17,17 @@ Solidity.
 
 #### **Best Practices**
 
-- **Do not use the constructor for variable initialization or one-time setup tasks.**
-- **Use a method like `onInstantiated` for logic that should only run once.** This method will check if the contract is
-  already instantiated and, if not, perform the necessary setup.
+-   **Do not use the constructor for variable initialization or one-time setup tasks.**
+-   **Use a method like `onInstantiated` for logic that should only run once.** This method will check if the contract is
+    already instantiated and, if not, perform the necessary setup.
 
 #### **Example: Proper Use of Constructor and `onInstantiated`**
 
 ```typescript
 import { u128, u256 } from 'as-bignum/assembly';
 import {
-    Address, Blockchain,
+    Address,
+    Blockchain,
     BytesWriter,
     Calldata,
     encodeSelector,
@@ -57,7 +58,7 @@ export class MyToken extends DeployableOP_20 {
             this.instantiate(new OP20InitParameters(maxSupply, decimals, name, symbol));
 
             // Add your logic here, such as minting the initial supply:
-            // this._mint(Blockchain.origin, maxSupply);
+            // this._mint(Blockchain.sender, maxSupply);
         }
     }
 
@@ -137,7 +138,7 @@ Blockchain.contract = () => {
     // DO NOT ADD CUSTOM LOGIC HERE.
 
     return contract;
-}
+};
 
 // VERY IMPORTANT
 export * from '@btc-vision/btc-runtime/runtime/exports';
@@ -145,8 +146,8 @@ export * from '@btc-vision/btc-runtime/runtime/exports';
 
 #### **Important Notes**
 
-- **DO NOT Modify `Blockchain.contract`:** This function is responsible for instantiating the contract. You should only
-  change the class name to match your contract. Adding custom logic here can lead to unexpected behavior and errors.
+-   **DO NOT Modify `Blockchain.contract`:** This function is responsible for instantiating the contract. You should only
+    change the class name to match your contract. Adding custom logic here can lead to unexpected behavior and errors.
 
 ### 3. **Understanding `defineSelectors`**
 
@@ -155,10 +156,10 @@ export * from '@btc-vision/btc-runtime/runtime/exports';
 The `defineSelectors` function is where you map contract methods and properties to specific selectors. These selectors
 allow external calls to interact with your contract's methods and retrieve its properties.
 
-- **Getter Selectors**: These are used for read-only methods that do not modify the contract state (
-  e.g., `name`, `symbol`, `totalSupply`).
-- **Method Selectors**: These are used for methods that may modify the contract state (
-  e.g., `mint`, `transfer`, `approve`).
+-   **Getter Selectors**: These are used for read-only methods that do not modify the contract state (
+    e.g., `name`, `symbol`, `totalSupply`).
+-   **Method Selectors**: These are used for methods that may modify the contract state (
+    e.g., `mint`, `transfer`, `approve`).
 
 #### **Adding New Methods**
 
@@ -166,31 +167,31 @@ To add new methods to your contract, you'll need to:
 
 1. **Define the selector in `defineSelectors`:**
 
-   ```typescript
-   ABIRegistry.defineMethodSelector('myNewMethod', true);
-   ```
+    ```typescript
+    ABIRegistry.defineMethodSelector('myNewMethod', true);
+    ```
 
 2. **Implement the method in your contract:**
 
-   ```typescript
-   public override callMethod(method: Selector, calldata: Calldata): BytesWriter {
-       switch (method) {
-           case encodeSelector('myNewMethod'):
-               return this.myNewMethod(calldata);
-           default:
-               return super.callMethod(method, calldata);
-       }
-   }
+    ```typescript
+    public override callMethod(method: Selector, calldata: Calldata): BytesWriter {
+        switch (method) {
+            case encodeSelector('myNewMethod'):
+                return this.myNewMethod(calldata);
+            default:
+                return super.callMethod(method, calldata);
+        }
+    }
 
-   private myNewMethod(calldata: Calldata): BytesWriter {
-       // Your method logic here
+    private myNewMethod(calldata: Calldata): BytesWriter {
+        // Your method logic here
 
-       const writer: BytesWriter = new BytesWriter();
-       writer.writeBoolean(true); // Example response
+        const writer: BytesWriter = new BytesWriter();
+        writer.writeBoolean(true); // Example response
 
-       return writer;
-   }
-   ```
+        return writer;
+    }
+    ```
 
 3. **For read-only methods, implement in `callView`:**
 
