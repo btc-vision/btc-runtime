@@ -34,8 +34,10 @@ export class BytesWriter {
         length: i32 = 1,
         private readonly trackDataTypes: boolean = false,
     ) {
-        this.arrayBuffer = new ArrayBuffer(length);
-        this.buffer = new DataView(this.arrayBuffer);
+        const arrayBuffer = new ArrayBuffer(length);
+	const buffer = new DataView(arrayBuffer);
+        this.arrayBuffer = arrayBuffer;
+        this.buffer = buffer;
     }
 
     public bufferLength(): u32 {

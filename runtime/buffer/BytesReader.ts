@@ -110,7 +110,7 @@ export class BytesReader {
         const length = this.readU32();
         const result: u256[] = new Array<u256>(length);
 
-        for (let i = 0; i < length; i++) {
+        for (let i: u32 = 0; i < length; i++) {
             result[i] = this.readU256();
         }
 
