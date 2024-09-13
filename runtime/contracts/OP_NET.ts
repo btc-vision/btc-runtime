@@ -1,12 +1,12 @@
-import { IBTC } from '../interfaces/IBTC';
-import { Address } from '../types/Address';
-import { Blockchain } from '../env';
-import { Calldata } from '../universal/ABIRegistry';
 import { BytesWriter } from '../buffer/BytesWriter';
-import { encodeSelector, Selector } from '../math/abi';
-import { Revert } from '../types/Revert';
+import { Blockchain } from '../env';
 import { MAX_EVENT_DATA_SIZE, NetEvent } from '../events/NetEvent';
+import { IBTC } from '../interfaces/IBTC';
+import { encodeSelector, Selector } from '../math/abi';
 import { StoredBoolean } from '../storage/StoredBoolean';
+import { Address } from '../types/Address';
+import { Revert } from '../types/Revert';
+import { Calldata } from '../universal/ABIRegistry';
 
 export class OP_NET implements IBTC {
     protected readonly instantiated: StoredBoolean = new StoredBoolean(

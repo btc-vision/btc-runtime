@@ -1,7 +1,7 @@
 import { u256 } from 'as-bignum/assembly';
+import { BytesWriter } from '../../buffer/BytesWriter';
 import { Address } from '../../types/Address';
 import { NetEvent } from '../NetEvent';
-import { BytesWriter } from '../../buffer/BytesWriter';
 
 @final
 export class ApproveEvent extends NetEvent {

@@ -20,7 +20,6 @@ export class StoredString {
         return this._value;
     }
 
-    @inline
     public set value(value: string) {
         this._value = value;
         this.save();

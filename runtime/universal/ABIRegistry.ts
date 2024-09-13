@@ -1,7 +1,7 @@
-import { encodeSelector, Selector } from '../math/abi';
 import { BytesReader } from '../buffer/BytesReader';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { Map } from '../generic/Map';
+import { encodeSelector, Selector } from '../math/abi';
 
 export type Calldata = NonNullable<BytesReader>;
 export type SelectorsMap = Map<u32, Uint8Array>;

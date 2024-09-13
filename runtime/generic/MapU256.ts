@@ -1,5 +1,5 @@
-import { Revert } from '../types/Revert';
 import { u256 } from 'as-bignum/assembly';
+import { Revert } from '../types/Revert';
 import { Map } from './Map';
 
 export class MapU256 extends Map<u256, u256> {

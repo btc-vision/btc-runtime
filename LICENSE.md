@@ -2,11 +2,11 @@
 
 ## 1. Definitions
 
-- **"Licensor"** refers to the owner(s) and creator(s) of the software. The owner of the github organization "
-  btc-vision", "BlobMaster41".
-- **"User"** refers to any person or entity that accesses or uses the software.
-- **"Software"** refers to the source code, binaries, and documentation, whether in electronic or printed format, made
-  available by Licensor.
+-   **"Licensor"** refers to the owner(s) and creator(s) of the software. The owner of the github organization "
+    btc-vision", "BlobMaster41".
+-   **"User"** refers to any person or entity that accesses or uses the software.
+-   **"Software"** refers to the source code, binaries, and documentation, whether in electronic or printed format, made
+    available by Licensor.
 
 ## 2. Grant of License
 
@@ -16,9 +16,9 @@ of the Software is permitted. The User may not copy, republish, or distribute th
 
 ## 3. Restrictions
 
-- **Commercial Use**: User is prohibited from using the Software for any commercial purposes.
-- **Claim of Ownership**: User acknowledges that the Software is the property of the Licensor and that they do not have
-  any ownership rights to the Software.
+-   **Commercial Use**: User is prohibited from using the Software for any commercial purposes.
+-   **Claim of Ownership**: User acknowledges that the Software is the property of the Licensor and that they do not have
+    any ownership rights to the Software.
 
 ## 4. Termination
 
@@ -60,4 +60,3 @@ User acknowledges that they have read this License, understand it, and agree to 
 User also agrees that this License is the complete and exclusive statement of the agreement between the Licensor and the
 User and supersedes all proposals or prior agreements, oral or written, and any other communications between the
 Licensor and the User relating to the subject matter of this License.
-

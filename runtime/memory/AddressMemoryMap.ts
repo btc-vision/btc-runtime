@@ -1,8 +1,8 @@
-import { MemorySlotPointer } from './MemorySlotPointer';
+import { u256 } from 'as-bignum/assembly';
 import { Blockchain } from '../env';
 import { encodePointer } from '../math/abi';
 import { MemorySlotData } from './MemorySlot';
-import { u256 } from 'as-bignum/assembly';
+import { MemorySlotPointer } from './MemorySlotPointer';
 
 @final
 export class AddressMemoryMap<K extends string, V extends MemorySlotData<u256>> {

@@ -1,8 +1,8 @@
-import { Calldata } from '../universal/ABIRegistry';
+import { BytesReader } from '../buffer/BytesReader';
+import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
 import { Selector } from '../math/abi';
-import { BytesWriter } from '../buffer/BytesWriter';
-import { BytesReader } from '../buffer/BytesReader';
+import { Calldata } from '../universal/ABIRegistry';
 
 export function readMethod(method: Selector, data: Uint8Array): Uint8Array {
     const calldata: Calldata = new BytesReader(data);

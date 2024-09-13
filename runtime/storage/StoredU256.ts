@@ -1,7 +1,7 @@
 import { u256 } from 'as-bignum/assembly';
-import { SafeMath } from '../types/SafeMath';
-import { MemorySlotPointer } from '../memory/MemorySlotPointer';
 import { Blockchain } from '../env';
+import { MemorySlotPointer } from '../memory/MemorySlotPointer';
+import { SafeMath } from '../types/SafeMath';
 
 @final
 export class StoredU256 {
@@ -20,7 +20,6 @@ export class StoredU256 {
         return this._value;
     }
 
-    @inline
     public set value(value: u256) {
         if (u256.eq(value, this._value)) {
             return;

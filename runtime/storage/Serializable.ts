@@ -1,16 +1,15 @@
 import { u256 } from 'as-bignum/assembly';
+import { BytesReader } from '../buffer/BytesReader';
+import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
 import { MemorySlotPointer } from '../memory/MemorySlotPointer';
-import { BytesWriter } from '../buffer/BytesWriter';
-import { BytesReader } from '../buffer/BytesReader';
 import { Revert } from '../types/Revert';
 
 export abstract class Serializable {
     protected pointer: u16;
-    protected subPointer:MemorySlotPointer;
+    protected subPointer: MemorySlotPointer;
 
-    protected constructor(pointer: u16,
-                          subPointer:MemorySlotPointer) {
+    protected constructor(pointer: u16, subPointer: MemorySlotPointer) {
         this.pointer = pointer;
         this.subPointer = subPointer;
     }
@@ -19,11 +18,15 @@ export abstract class Serializable {
     public abstract writeToBuffer(): BytesWriter;
     public abstract readFromBuffer(reader: BytesReader): void;
 
-    public load() :void {
+    public load(): void {
         const chunks: u256[] = [];
 
-        for(let index:i32 = 0; index < this.chunkCount; index++){
-            const chunk: u256 = Blockchain.getStorageAt(this.pointer, u256.add(this.subPointer, u256.fromU32(index)), u256.Zero);
+        for (let index: i32 = 0; index < this.chunkCount; index++) {
+            const chunk: u256 = Blockchain.getStorageAt(
+                this.pointer,
+                u256.add(this.subPointer, u256.fromU32(index)),
+                u256.Zero,
+            );
             chunks.push(chunk);
         }
 
@@ -60,7 +63,7 @@ export abstract class Serializable {
     }
 
     protected chunksToBytes(chunks: u256[]): BytesReader {
-        if(this.chunkCount >= 67108863) {
+        if (this.chunkCount >= 67108863) {
             throw new Revert('Too many chunks received');
         }
 

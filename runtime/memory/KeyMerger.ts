@@ -1,8 +1,8 @@
-import { MemorySlotData } from './MemorySlot';
 import { u256 } from 'as-bignum/assembly';
 import { Blockchain } from '../env';
-import { MemorySlotPointer } from './MemorySlotPointer';
 import { encodePointer } from '../math/abi';
+import { MemorySlotData } from './MemorySlot';
+import { MemorySlotPointer } from './MemorySlotPointer';
 
 @final
 export class KeyMerger<K extends string, K2 extends string, V extends MemorySlotData<u256>> {

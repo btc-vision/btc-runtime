@@ -1,6 +1,6 @@
 import { u256 } from 'as-bignum/assembly';
-import { NetEvent } from '../NetEvent';
 import { BytesWriter } from '../../buffer/BytesWriter';
+import { NetEvent } from '../NetEvent';
 
 @final
 export class BurnEvent extends NetEvent {

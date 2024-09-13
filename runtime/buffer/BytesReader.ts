@@ -1,8 +1,8 @@
-import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
-import { Selector } from '../math/abi';
 import { u256 } from 'as-bignum/assembly';
-import { Revert } from '../types/Revert';
 import { Map } from '../generic/Map';
+import { Selector } from '../math/abi';
+import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
+import { Revert } from '../types/Revert';
 
 @final
 export class BytesReader {

@@ -1,15 +1,15 @@
-import { u256 } from 'as-bignum/assembly';
-import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
-import { Selector } from '../math/abi';
-import { BytesReader } from './BytesReader';
-import { SelectorsMap } from '../universal/ABIRegistry';
-import { MemorySlotPointer } from '../memory/MemorySlotPointer';
-import { MemorySlotData } from '../memory/MemorySlot';
-import { cyrb53a } from '../math/cyrb53';
-import { Revert } from '../types/Revert';
-import { Map } from '../generic/Map';
-import { BlockchainStorage, PointerStorage } from '../types';
 import { ArrayBuffer } from 'arraybuffer';
+import { u256 } from 'as-bignum/assembly';
+import { Map } from '../generic/Map';
+import { Selector } from '../math/abi';
+import { cyrb53a } from '../math/cyrb53';
+import { MemorySlotData } from '../memory/MemorySlot';
+import { MemorySlotPointer } from '../memory/MemorySlotPointer';
+import { BlockchainStorage, PointerStorage } from '../types';
+import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
+import { Revert } from '../types/Revert';
+import { SelectorsMap } from '../universal/ABIRegistry';
+import { BytesReader } from './BytesReader';
 
 export enum BufferDataType {
     U8 = 0,
@@ -35,7 +35,7 @@ export class BytesWriter {
         private readonly trackDataTypes: boolean = false,
     ) {
         const arrayBuffer = new ArrayBuffer(length);
-	const buffer = new DataView(arrayBuffer);
+        const buffer = new DataView(arrayBuffer);
         this.arrayBuffer = arrayBuffer;
         this.buffer = buffer;
     }

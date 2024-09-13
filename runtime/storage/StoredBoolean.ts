@@ -17,7 +17,6 @@ export class StoredBoolean {
         return this._value.toBool();
     }
 
-    @inline
     public set value(value: bool) {
         this._value = value ? u256.One : u256.Zero;
 

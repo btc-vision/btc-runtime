@@ -1,8 +1,8 @@
-import { Address } from '../types/Address';
 import { u256 } from 'as-bignum/assembly';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
 import { encodeSelector, Selector } from '../math/abi';
+import { Address } from '../types/Address';
 
 export class OP20Utils {
     public static get BALANCE_OF_SELECTOR(): Selector {

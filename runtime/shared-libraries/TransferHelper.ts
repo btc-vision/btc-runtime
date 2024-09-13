@@ -1,8 +1,8 @@
 import { u256 } from 'as-bignum/assembly';
-import { encodeSelector, Selector } from '../math/abi';
-import { Address } from '../types/Address';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
+import { encodeSelector, Selector } from '../math/abi';
+import { Address } from '../types/Address';
 import { Revert } from '../types/Revert';
 
 export class TransferHelper {

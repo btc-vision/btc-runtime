@@ -1,6 +1,6 @@
-import { MemorySlotData } from './MemorySlot';
 import { u256 } from 'as-bignum/assembly';
 import { KeyMerger } from './KeyMerger';
+import { MemorySlotData } from './MemorySlot';
 
 @final
 export class MultiAddressMemoryMap<
