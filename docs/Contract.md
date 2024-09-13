@@ -58,7 +58,7 @@ export class MyToken extends DeployableOP_20 {
             this.instantiate(new OP20InitParameters(maxSupply, decimals, name, symbol));
 
             // Add your logic here, such as minting the initial supply:
-            // this._mint(Blockchain.sender, maxSupply);
+            // this._mint(Blockchain.msgSender, maxSupply);
         }
     }
 

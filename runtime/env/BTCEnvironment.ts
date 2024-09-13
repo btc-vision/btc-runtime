@@ -39,7 +39,7 @@ export class BlockchainEnvironment {
 
     private _sender: PotentialAddress = null;
 
-    public get sender(): Address {
+    public get msgSender(): Address {
         if (!this._sender) {
             throw this.error('Callee is required');
         }
@@ -49,7 +49,7 @@ export class BlockchainEnvironment {
 
     private _origin: PotentialAddress = null;
 
-    public get origin(): Address {
+    public get txOrigin(): Address {
         if (!this._origin) {
             throw this.error('Caller is required');
         }
@@ -137,7 +137,7 @@ export class BlockchainEnvironment {
     }
 
     public call(destinationContract: Address, calldata: BytesWriter): BytesReader {
-        if (destinationContract === this._origin) {
+        if (destinationContract === this._contractAddress) {
             throw this.error('Cannot call self');
         }
 

@@ -94,7 +94,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             throw new Revert('Already initialized');
         }
 
-        if (!skipOwnerVerification) this.onlyOwner(Blockchain.sender);
+        if (!skipOwnerVerification) this.onlyOwner(Blockchain.msgSender);
 
         if (params.decimals > 32) {
             throw new Revert('Decimals can not be more than 32');
@@ -125,7 +125,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         const resp = this._approve(spender, value);
         response.writeBoolean(resp);
 
-        this.createApproveEvent(Blockchain.sender, spender, value);
+        this.createApproveEvent(Blockchain.msgSender, spender, value);
 
         return response;
     }
@@ -234,7 +234,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _approve(spender: Address, value: u256): boolean {
-        const callee = Blockchain.sender;
+        const callee = Blockchain.msgSender;
 
         const senderMap = this.allowanceMap.get(callee);
         senderMap.set(spender, value);
@@ -254,8 +254,8 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             throw new Revert(`No tokens`);
         }
 
-        const callee = Blockchain.sender;
-        const caller = Blockchain.origin;
+        const callee = Blockchain.msgSender;
+        const caller = Blockchain.txOrigin;
 
         if (onlyOwner) this.onlyOwner(callee); // only indexers can burn tokens
 
@@ -276,7 +276,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _mint(to: Address, value: u256, onlyOwner: boolean = true): boolean {
-        const callee = Blockchain.sender;
+        const callee = Blockchain.msgSender;
 
         if (onlyOwner) this.onlyOwner(callee);
 
@@ -299,7 +299,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _transfer(to: string, value: u256): boolean {
-        const callee = Blockchain.sender;
+        const callee = Blockchain.msgSender;
 
         if (!this.balanceOfMap.has(callee)) throw new Revert();
         if (this.isSelf(callee)) throw new Revert('Can not transfer from self account');
@@ -355,7 +355,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _transferFrom(from: Address, to: Address, value: u256): boolean {
-        const callee = Blockchain.sender;
+        const callee = Blockchain.msgSender;
 
         const fromAllowanceMap = this.allowanceMap.get(from);
         const allowed: u256 = fromAllowanceMap.get(callee);

@@ -1,7 +1,7 @@
 ### Blockchain Documentation
 
 The `Blockchain` object is essential for executing smart contracts within the OP_NET runtime. It provides the
-necessary context, such as the transaction origin, sender, block details, and contract-specific information. This
+necessary context, such as the transaction txOrigin, msgSender, block details, and contract-specific information. This
 documentation covers the public properties and selected methods of the class, explaining their purpose and providing
 usage examples.
 
@@ -9,7 +9,7 @@ usage examples.
 
 #### Public Properties
 
-1. **sender**
+1. **msgSender**
 
     - **Type**: `Address`
     - **Description**: The address of the immediate caller (sender) of the transaction. This property is used to
@@ -17,11 +17,11 @@ usage examples.
       will throw an error.
     - **Usage Example**:
         ```typescript
-        let txSender: Address = Blockchain.sender;
+        let txSender: Address = Blockchain.msgSender;
         Blockchain.log(`Transaction Sender: ${txSender}`);
         ```
 
-2. **origin**
+2. **txOrigin**
 
     - **Type**: `Address`
     - **Description**: The address of the transaction origin, which is the initial sender of the transaction. It is
@@ -29,7 +29,7 @@ usage examples.
       throw an error.
     - **Usage Example**:
         ```typescript
-        let txOrigin: Address = Blockchain.origin;
+        let txOrigin: Address = Blockchain.txOrigin;
         Blockchain.log(`Transaction Origin: ${txOrigin}`);
         ```
 

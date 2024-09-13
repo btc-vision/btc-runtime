@@ -129,7 +129,7 @@ export class MyToken extends DeployableOP_20 {
             this.instantiate(new OP20InitParameters(maxSupply, decimals, name, symbol));
 
             // Add your logic here. Eg, minting the initial supply:
-            // this._mint(Blockchain.sender, maxSupply);
+            // this._mint(Blockchain.msgSender, maxSupply);
         }
     }
 
@@ -147,7 +147,7 @@ export class MyToken extends DeployableOP_20 {
 ```typescript
 class MyContract extends OP_NET {
     public someAction(): void {
-        const event = new CustomEvent(Blockchain.sender, u256.fromU32(100));
+        const event = new CustomEvent(Blockchain.msgSender, u256.fromU32(100));
         this.emitEvent(event);
     }
 }
