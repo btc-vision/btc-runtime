@@ -28,7 +28,7 @@ export * from '../env/global';
 export class BlockchainEnvironment {
     private static readonly MAX_U16: u16 = 65535;
     private static readonly runtimeException: string = 'RuntimeException';
-
+    public readonly DEAD_ADDRESS: Address = 'bc1dead';
     private storage: PointerStorage = new MapU256();
     private events: NetEvent[] = [];
     private currentBlock: u256 = u256.Zero;
@@ -37,24 +37,24 @@ export class BlockchainEnvironment {
 
     constructor() {}
 
-    private _origin: PotentialAddress = null;
+    private _txOrigin: PotentialAddress = null;
 
-    public get origin(): Address {
-        if (!this._origin) {
+    public get txOrigin(): Address {
+        if (!this._txOrigin) {
             throw this.error('Callee is required');
         }
 
-        return this._origin as Address;
+        return this._txOrigin as Address;
     }
 
-    private _sender: PotentialAddress = null;
+    private _msgSender: PotentialAddress = null;
 
-    public get sender(): Address {
-        if (!this._sender) {
+    public get msgSender(): Address {
+        if (!this._msgSender) {
             throw this.error('Caller is required');
         }
 
-        return this._sender as Address;
+        return this._msgSender as Address;
     }
 
     private _timestamp: u64 = 0;
@@ -124,8 +124,8 @@ export class BlockchainEnvironment {
     public setEnvironment(data: Uint8Array): void {
         const reader: BytesReader = new BytesReader(data);
 
-        this._sender = reader.readAddress();
-        this._origin = reader.readAddress();
+        this._msgSender = reader.readAddress();
+        this._txOrigin = reader.readAddress(); // "leftmost thing in the call chain"
         this.currentBlock = reader.readU256();
 
         this._owner = reader.readAddress();
@@ -137,7 +137,7 @@ export class BlockchainEnvironment {
     }
 
     public call(destinationContract: Address, calldata: BytesWriter): BytesReader {
-        if (destinationContract === this._origin) {
+        if (destinationContract === this._contractAddress) {
             throw this.error('Cannot call self');
         }
 

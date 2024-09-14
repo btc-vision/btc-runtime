@@ -94,7 +94,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             throw new Revert('Already initialized');
         }
 
-        if (!skipOwnerVerification) this.onlyOwner(Blockchain.origin);
+        if (!skipOwnerVerification) this.onlyOwner(Blockchain.txOrigin);
 
         if (params.decimals > 32) {
             throw new Revert('Decimals can not be more than 32');
@@ -117,15 +117,16 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     public approve(callData: Calldata): BytesWriter {
-        const response = new BytesWriter();
-
+        // Define the owner and spender
+        const owner = Blockchain.msgSender;
         const spender: Address = callData.readAddress();
         const value = callData.readU256();
 
-        const resp = this._approve(spender, value);
-        response.writeBoolean(resp);
+        // Response buffer
+        const response = new BytesWriter();
 
-        this.createApproveEvent(Blockchain.origin, spender, value);
+        const resp = this._approve(owner, spender, value);
+        response.writeBoolean(resp);
 
         return response;
     }
@@ -233,11 +234,15 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         return senderMap.get(spender);
     }
 
-    protected _approve(spender: Address, value: u256): boolean {
-        const callee = Blockchain.origin;
+    protected _approve(owner: Address, spender: Address, value: u256): boolean {
+        if (owner === Blockchain.DEAD_ADDRESS || spender === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Cannot approve from or to dead address');
+        }
 
-        const senderMap = this.allowanceMap.get(callee);
+        const senderMap = this.allowanceMap.get(owner);
         senderMap.set(spender, value);
+
+        this.createApproveEvent(owner, spender, value);
 
         return true;
     }
@@ -254,19 +259,16 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             throw new Revert(`No tokens`);
         }
 
-        const callee = Blockchain.origin;
-        const caller = Blockchain.sender;
-
-        if (onlyOwner) this.onlyOwner(callee); // only indexers can burn tokens
+        if (onlyOwner) this.onlyOwner(Blockchain.txOrigin); // only indexers can burn tokens
 
         if (this._totalSupply.value < value) throw new Revert(`Insufficient total supply.`);
-        if (!this.balanceOfMap.has(caller)) throw new Revert('Empty');
+        if (!this.balanceOfMap.has(Blockchain.msgSender)) throw new Revert('No balance');
 
-        const balance: u256 = this.balanceOfMap.get(caller);
+        const balance: u256 = this.balanceOfMap.get(Blockchain.msgSender);
         if (balance < value) throw new Revert(`Insufficient balance`);
 
         const newBalance: u256 = SafeMath.sub(balance, value);
-        this.balanceOfMap.set(caller, newBalance);
+        this.balanceOfMap.set(Blockchain.msgSender, newBalance);
 
         // @ts-ignore
         this._totalSupply -= value;
@@ -276,9 +278,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _mint(to: Address, value: u256, onlyOwner: boolean = true): boolean {
-        const callee = Blockchain.origin;
-
-        if (onlyOwner) this.onlyOwner(callee);
+        if (onlyOwner) this.onlyOwner(Blockchain.txOrigin);
 
         if (!this.balanceOfMap.has(to)) {
             this.balanceOfMap.set(to, value);
@@ -299,31 +299,27 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _transfer(to: string, value: u256): boolean {
-        const caller = Blockchain.origin;
+        const sender = Blockchain.msgSender;
 
-        if (!this.balanceOfMap.has(caller)) throw new Revert();
-        if (this.isSelf(caller)) throw new Revert('Can not transfer from self account');
-
-        if (caller === to) {
-            throw new Revert(`Cannot transfer to self`);
-        }
+        if (!this.balanceOfMap.has(sender)) throw new Revert();
+        if (this.isSelf(sender)) throw new Revert('Can not transfer from self account');
 
         if (u256.eq(value, u256.Zero)) {
             throw new Revert(`Cannot transfer 0 tokens`);
         }
 
-        const balance: u256 = this.balanceOfMap.get(caller);
+        const balance: u256 = this.balanceOfMap.get(sender);
         if (balance < value) throw new Revert(`Insufficient balance`);
 
         const newBalance: u256 = SafeMath.sub(balance, value);
-        this.balanceOfMap.set(caller, newBalance);
+        this.balanceOfMap.set(sender, newBalance);
 
         const toBalance: u256 = this.balanceOfMap.get(to);
         const newToBalance: u256 = SafeMath.add(toBalance, value);
 
         this.balanceOfMap.set(to, newToBalance);
 
-        this.createTransferEvent(caller, to, value);
+        this.createTransferEvent(sender, to, value);
 
         return true;
     }
@@ -337,7 +333,6 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             );
 
         const newBalance: u256 = SafeMath.sub(balance, value);
-
         this.balanceOfMap.set(from, newBalance);
 
         if (!this.balanceOfMap.has(to)) {
@@ -355,22 +350,30 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _transferFrom(from: Address, to: Address, value: u256): boolean {
-        const spender = Blockchain.origin;
+        if (to === Blockchain.DEAD_ADDRESS || from === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Cannot transfer to or from dead address');
+        }
 
-        if (this.isSelf(spender)) throw new Revert('Can not transfer from self account');
-
-        const fromAllowanceMap = this.allowanceMap.get(from);
-        const allowed: u256 = fromAllowanceMap.get(spender);
-        if (allowed < value) throw new Revert(`Insufficient allowance ${allowed} < ${value}`);
-
-        const newAllowance: u256 = SafeMath.sub(allowed, value);
-        fromAllowanceMap.set(spender, newAllowance);
-
-        this.allowanceMap.set(from, fromAllowanceMap);
-
+        this._spendAllowance(from, Blockchain.msgSender, value);
         this._unsafeTransferFrom(from, to, value);
 
         return true;
+    }
+
+    protected _spendAllowance(owner: Address, spender: Address, value: u256): void {
+        const ownerAllowanceMap = this.allowanceMap.get(owner);
+        const allowed: u256 = ownerAllowanceMap.get(spender);
+
+        if (allowed < value) {
+            throw new Revert(
+                `Insufficient allowance ${allowed} < ${value}. Spender: ${spender} - Owner: ${owner}`,
+            );
+        }
+
+        const newAllowance: u256 = SafeMath.sub(allowed, value);
+        ownerAllowanceMap.set(spender, newAllowance);
+
+        this.allowanceMap.set(owner, ownerAllowanceMap);
     }
 
     protected createBurnEvent(value: u256): void {

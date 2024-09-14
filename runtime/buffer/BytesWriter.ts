@@ -26,7 +26,6 @@ export enum BufferDataType {
 export class BytesWriter {
     private currentOffset: u32 = 0;
     private buffer: DataView;
-    private arrayBuffer: ArrayBuffer;
 
     private selectorDatatype: u8[] = [];
 
@@ -35,9 +34,8 @@ export class BytesWriter {
         private readonly trackDataTypes: boolean = false,
     ) {
         const arrayBuffer = new ArrayBuffer(length);
-	const buffer = new DataView(arrayBuffer);
-        this.arrayBuffer = arrayBuffer;
-        this.buffer = buffer;
+
+        this.buffer = new DataView(arrayBuffer);
     }
 
     public bufferLength(): u32 {
@@ -245,7 +243,12 @@ export class BytesWriter {
     }
 
     public getBuffer(clear: boolean = false): Uint8Array {
-        const buf = Uint8Array.wrap(this.arrayBuffer);
+        const buf = Uint8Array.wrap(
+            this.buffer.buffer,
+            this.buffer.byteOffset,
+            this.buffer.byteLength,
+        );
+
         if (clear) this.clear();
 
         return buf;
@@ -342,8 +345,6 @@ export class BytesWriter {
     }
 
     private getDefaultBuffer(length: i32 = 1): DataView {
-        this.arrayBuffer = new ArrayBuffer(length);
-
-        return new DataView(this.arrayBuffer);
+        return new DataView(new ArrayBuffer(length));
     }
 }
