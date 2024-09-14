@@ -4,10 +4,7 @@
     "description": "Bitcoin Smart Contract Runtime",
     "main": "btc/index.ts",
     "types": "btc/index.ts",
-    "scripts": {
-        "test": "jest",
-        "build": "asc runtime/index.ts --target release --measure -Ospeed --noAssert --optimizeLevel 3 --shrinkLevel 2 --converge --disable mutable-globals,sign-extension,nontrapping-f2i,bulk-memory --runtime stub --memoryBase 0 --lowMemoryLimit --uncheckedBehavior never --initialMemory 16 --maximumMemory 16 --exportRuntime"
-    },
+    "scripts": {},
     "keywords": [
         "bitcoin",
         "smart",
