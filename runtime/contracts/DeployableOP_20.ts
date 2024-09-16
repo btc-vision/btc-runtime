@@ -1,20 +1,20 @@
-import { IOP_20 } from './interfaces/IOP_20';
 import { u256 } from 'as-bignum/assembly';
-import { Address } from '../types/Address';
 import { BytesWriter } from '../buffer/BytesWriter';
-import { Calldata } from '../universal/ABIRegistry';
-import { OP_NET } from './OP_NET';
+import { Blockchain } from '../env';
+import { ApproveEvent, BurnEvent, MintEvent, TransferEvent } from '../events/predefined';
+import { encodeSelector, Selector } from '../math/abi';
 import { AddressMemoryMap } from '../memory/AddressMemoryMap';
+import { MemorySlotData } from '../memory/MemorySlot';
+import { MultiAddressMemoryMap } from '../memory/MultiAddressMemoryMap';
+import { StoredString } from '../storage/StoredString';
+import { StoredU256 } from '../storage/StoredU256';
+import { Address } from '../types/Address';
 import { Revert } from '../types/Revert';
 import { SafeMath } from '../types/SafeMath';
-import { Blockchain } from '../env';
-import { MemorySlotData } from '../memory/MemorySlot';
-import { encodeSelector, Selector } from '../math/abi';
-import { MultiAddressMemoryMap } from '../memory/MultiAddressMemoryMap';
-import { StoredU256 } from '../storage/StoredU256';
-import { ApproveEvent, BurnEvent, MintEvent, TransferEvent } from '../events/predefined';
-import { StoredString } from '../storage/StoredString';
+import { Calldata } from '../universal/ABIRegistry';
+import { IOP_20 } from './interfaces/IOP_20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
+import { OP_NET } from './OP_NET';
 
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
 const decimalsPointer: u16 = Blockchain.nextPointer;
@@ -94,7 +94,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             throw new Revert('Already initialized');
         }
 
-        if (!skipOwnerVerification) this.onlyOwner(Blockchain.txOrigin);
+        if (!skipOwnerVerification) this.onlyOwner(Blockchain.msgSender);
 
         if (params.decimals > 32) {
             throw new Revert('Decimals can not be more than 32');
@@ -259,7 +259,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             throw new Revert(`No tokens`);
         }
 
-        if (onlyOwner) this.onlyOwner(Blockchain.txOrigin); // only indexers can burn tokens
+        if (onlyOwner) this.onlyOwner(Blockchain.msgSender); // only indexers can burn tokens
 
         if (this._totalSupply.value < value) throw new Revert(`Insufficient total supply.`);
         if (!this.balanceOfMap.has(Blockchain.msgSender)) throw new Revert('No balance');
@@ -278,7 +278,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _mint(to: Address, value: u256, onlyOwner: boolean = true): boolean {
-        if (onlyOwner) this.onlyOwner(Blockchain.txOrigin);
+        if (onlyOwner) this.onlyOwner(Blockchain.msgSender);
 
         if (!this.balanceOfMap.has(to)) {
             this.balanceOfMap.set(to, value);
