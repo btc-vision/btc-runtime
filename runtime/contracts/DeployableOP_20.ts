@@ -259,7 +259,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             throw new Revert(`No tokens`);
         }
 
-        if (onlyOwner) this.onlyOwner(Blockchain.msgSender); // only indexers can burn tokens
+        if (onlyOwner) this.onlyOwner(Blockchain.msgSender);
 
         if (this._totalSupply.value < value) throw new Revert(`Insufficient total supply.`);
         if (!this.balanceOfMap.has(Blockchain.msgSender)) throw new Revert('No balance');
