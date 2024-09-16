@@ -286,7 +286,7 @@ export class BytesWriter {
     }
 
     public getSelectorDataType(): u64 {
-        let hash: u64 = 0;
+        const hash: u64 = 0;
         if (this.selectorDatatype.length === 0) return hash;
 
         return cyrb53a(this.selectorDatatype);

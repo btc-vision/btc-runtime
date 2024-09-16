@@ -2,7 +2,7 @@ export function cyrb53(str: string, seed: i32 = 0): i64 {
     let h1: i32 = 0xdeadbeef ^ seed;
     let h2: i32 = 0x41c6ce57 ^ seed;
     for (let i: i32 = 0; i < str.length; i++) {
-        let ch: i32 = str.charCodeAt(i);
+        const ch: i32 = str.charCodeAt(i);
         h1 = (h1 ^ ch) * 2654435761;
         h2 = (h2 ^ ch) * 1597334677;
     }
@@ -32,7 +32,7 @@ export function cyrb53a(str: u8[], seed: i32 = 0): u64 {
     let h2: u64 = u64(0x41c6ce57 ^ seed);
 
     for (let i: i32 = 0; i < str.length; i++) {
-        let ch: u64 = u64(str[i]);
+        const ch: u64 = u64(str[i]);
         h1 = imul64(h1 ^ ch, 0x85ebca77);
         h2 = imul64(h2 ^ ch, 0xc2b2ae3d);
     }
@@ -42,5 +42,7 @@ export function cyrb53a(str: u8[], seed: i32 = 0): u64 {
     h1 ^= h2 >> 16;
     h2 ^= h1 >> 16;
 
+    // We are sure that the result is within the range of u64.
+    // eslint-disable-next-line no-loss-of-precision
     return (2097152 * (h2 & 0xffffffffffffffff) + (h1 >> 11)) & 0xffffffffffffffff;
 }

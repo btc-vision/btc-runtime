@@ -35,8 +35,6 @@ export class BlockchainEnvironment {
 
     private _selfContract: Potential<OP_NET> = null;
 
-    constructor() {}
-
     private _txOrigin: PotentialAddress = null;
 
     public get txOrigin(): Address {
@@ -66,13 +64,7 @@ export class BlockchainEnvironment {
     private _contract: Potential<() => OP_NET> = null;
 
     public get contract(): OP_NET {
-        if (!this._contract) {
-            throw this.error('Contract is required');
-        }
-
-        if (!this._selfContract) {
-            this._selfContract = this._contract();
-        }
+        this.createContractIfNotExists();
 
         return this._selfContract as OP_NET;
     }
@@ -133,7 +125,7 @@ export class BlockchainEnvironment {
 
         this._timestamp = reader.readU64();
 
-        this.contract;
+        this.createContractIfNotExists();
     }
 
     public call(destinationContract: Address, calldata: BytesWriter): BytesReader {
@@ -278,6 +270,16 @@ export class BlockchainEnvironment {
 
     public getWriteMethods(): Uint8Array {
         return ABIRegistry.getWriteMethods();
+    }
+
+    private createContractIfNotExists(): void {
+        if (!this._contract) {
+            throw this.error('Contract is required');
+        }
+
+        if (!this._selfContract) {
+            this._selfContract = this._contract();
+        }
     }
 
     private error(msg: string): Error {
