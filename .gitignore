@@ -126,6 +126,7 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+yarn.lock
 
 contract/V1ERC20/account-sepolia.txt
 tools/db/dump.rdb

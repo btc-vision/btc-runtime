@@ -270,7 +270,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         const newBalance: u256 = SafeMath.sub(balance, value);
         this.balanceOfMap.set(Blockchain.msgSender, newBalance);
 
-        // @ts-ignore
+        // @ts-expect-error TODO: Fix the typing because this is valid assembly-script syntax
         this._totalSupply -= value;
 
         this.createBurnEvent(value);
@@ -289,7 +289,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             this.balanceOfMap.set(to, newToBalance);
         }
 
-        // @ts-ignore
+        // @ts-expect-error TODO: Fix the typing because this is valid assembly-script syntax
         this._totalSupply += value;
 
         if (this._totalSupply.value > this.maxSupply) throw new Revert('Max supply reached');

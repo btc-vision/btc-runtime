@@ -63,7 +63,7 @@ export class StoredString {
         // Save the remaining chunks in subsequent storage slots
         while (remainingLength > 0) {
             bytesToWrite = this.min(remainingLength, 32);
-            let storageValue: u256 = this.saveChunk(
+            const storageValue: u256 = this.saveChunk(
                 u256.Zero,
                 this._value,
                 offset,
@@ -86,9 +86,9 @@ export class StoredString {
         length: u32,
         storageOffset: u32,
     ): u256 {
-        let bytes = storage.toBytes(true);
+        const bytes = storage.toBytes(true);
         for (let i: u32 = 0; i < length; i++) {
-            let index: i32 = i32(offset + i);
+            const index: i32 = i32(offset + i);
             bytes[i + storageOffset] = u8(value.charCodeAt(index));
         }
         return u256.fromBytes(bytes, true);
@@ -113,7 +113,7 @@ export class StoredString {
         let remainingLength: u32 = length;
         let currentStorage: u256 = header;
 
-        let bytesToRead: u32 = this.min(remainingLength, 28);
+        const bytesToRead: u32 = this.min(remainingLength, 28);
         let str: string = this.loadChunk(currentStorage, 4, bytesToRead);
         remainingLength -= bytesToRead;
 
@@ -123,7 +123,7 @@ export class StoredString {
             currentStorage = Blockchain.getStorageAt(this.pointer, currentPointer, u256.Zero);
 
             // Extract the relevant portion of the string from the current storage slot
-            let bytesToRead: u32 = this.min(remainingLength, 32);
+            const bytesToRead: u32 = this.min(remainingLength, 32);
             str += this.loadChunk(currentStorage, 0, bytesToRead);
 
             remainingLength -= bytesToRead;

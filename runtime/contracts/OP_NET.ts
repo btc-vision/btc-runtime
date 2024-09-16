@@ -14,8 +14,6 @@ export class OP_NET implements IBTC {
         false,
     );
 
-    constructor() {}
-
     public get address(): string {
         return Blockchain.contractAddress;
     }

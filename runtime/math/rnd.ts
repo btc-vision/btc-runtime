@@ -7,8 +7,10 @@ let random_seeded = false;
 function murmurHash3(h: u64): u64 {
     // Force all bits of a hash block to avalanche
     h ^= h >> 33; // see: https://github.com/aappleby/smhasher
+    // eslint-disable-next-line no-loss-of-precision
     h *= 0xff51afd7ed558ccd;
     h ^= h >> 33;
+    // eslint-disable-next-line no-loss-of-precision
     h *= 0xc4ceb9fe1a85ec53;
     h ^= h >> 33;
     return h;
@@ -25,6 +27,8 @@ function seedRandom(value: i64): void {
     // Instead zero seed use golden ratio:
     // phi = (1 + sqrt(5)) / 2
     // trunc(2^64 / phi) = 0x9e3779b97f4a7c15
+
+    // eslint-disable-next-line no-loss-of-precision
     if (value == 0) value = 0x9e3779b97f4a7c15;
     random_state0_64 = murmurHash3(value);
     random_state1_64 = murmurHash3(~random_state0_64);
@@ -40,7 +44,7 @@ function seedRandom(value: i64): void {
 export function randomU64(seed: i64): u64 {
     if (!random_seeded) seedRandom(seed);
     let s1 = random_state0_64;
-    let s0 = random_state1_64;
+    const s0 = random_state1_64;
     random_state0_64 = s0;
     s1 ^= s1 << 23;
     s1 ^= s1 >> 17;
