@@ -15,7 +15,7 @@
     ],
     "homepage": "https://opnet.org",
     "author": "BlobMaster41",
-    "license": "LICENSE.MD",
+    "license": "MIT",
     "devDependencies": {
         "@types/node": "^22.5.5",
         "assemblyscript": "^0.27.25",
