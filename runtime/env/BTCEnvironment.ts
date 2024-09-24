@@ -1,4 +1,4 @@
-import { Address, PotentialAddress } from '../types/Address';
+import { Address, ADDRESS_BYTE_LENGTH, PotentialAddress } from '../types/Address';
 import { MemorySlotPointer } from '../memory/MemorySlotPointer';
 import { MemorySlotData } from '../memory/MemorySlot';
 import { u256 } from 'as-bignum/assembly';
@@ -137,7 +137,7 @@ export class BlockchainEnvironment {
             throw this.error('Destination contract is required');
         }
 
-        const call = new BytesWriter();
+        const call = new BytesWriter(ADDRESS_BYTE_LENGTH + calldata.bufferLength() + 4);
         call.writeAddress(destinationContract);
         call.writeBytesWithLength(calldata.getBuffer());
 
@@ -147,7 +147,7 @@ export class BlockchainEnvironment {
     }
 
     public log(data: string): void {
-        const writer = new BytesWriter();
+        const writer = new BytesWriter(data.length + 2);
         writer.writeStringWithLength(data);
 
         const buffer = writer.getBuffer();
@@ -175,7 +175,7 @@ export class BlockchainEnvironment {
             const event: NetEvent = this.events[i];
 
             buffer.writeStringWithLength(event.eventType);
-            buffer.writeU64(event.getEventDataSelector());
+            buffer.writeU64(0); //event.getEventDataSelector()
             buffer.writeBytesWithLength(event.getEventData());
         }
 
@@ -183,7 +183,7 @@ export class BlockchainEnvironment {
     }
 
     public encodeVirtualAddress(virtualAddress: Uint8Array): Address {
-        const writer: BytesWriter = new BytesWriter();
+        const writer: BytesWriter = new BytesWriter(virtualAddress.byteLength + 4);
         writer.writeBytesWithLength(virtualAddress);
 
         const buffer: Uint8Array = writer.getBuffer();
@@ -213,7 +213,7 @@ export class BlockchainEnvironment {
         existingAddress: Address,
         salt: u256,
     ): DeployContractResponse {
-        const writer = new BytesWriter();
+        const writer = new BytesWriter(ADDRESS_BYTE_LENGTH + 32);
         writer.writeAddress(existingAddress);
         writer.writeU256(salt);
 
@@ -289,7 +289,7 @@ export class BlockchainEnvironment {
     private _internalSetStorageAt(pointerHash: u256, value: MemorySlotData<u256>): void {
         this.storage.set(pointerHash, value);
 
-        const writer: BytesWriter = new BytesWriter();
+        const writer: BytesWriter = new BytesWriter(64);
         writer.writeU256(pointerHash);
         writer.writeU256(value);
 
@@ -303,7 +303,7 @@ export class BlockchainEnvironment {
         }
 
         // we attempt to load the requested pointer.
-        const writer = new BytesWriter();
+        const writer = new BytesWriter(32);
         writer.writeU256(pointer);
 
         const result: Uint8Array = loadPointer(writer.getBuffer());

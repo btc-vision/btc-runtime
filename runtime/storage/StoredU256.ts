@@ -163,21 +163,10 @@ export class StoredU256 {
 
     @inline
     @operator('**')
-    public pow(value: u256): this {
+    public pow(exponent: u256): this {
         this.ensureValue();
 
-        // code pow from scratch
-        let result: u256 = u256.One;
-
-        while (value > u256.Zero) {
-            if (u256.and(value, u256.One)) {
-                result = SafeMath.mul(result, this._value);
-            }
-
-            this._value = SafeMath.mul(this._value, this._value);
-            value = u256.shr(value, 1);
-        }
-
+        this._value = SafeMath.pow(this._value, exponent);
         Blockchain.setStorageAt(this.pointer, this.subPointer, this._value);
 
         return this;
@@ -188,21 +177,7 @@ export class StoredU256 {
     public mod(value: u256): this {
         this.ensureValue();
 
-        // code mod from scratch
-        let result: u256 = u256.Zero;
-        let base: u256 = this._value;
-        let exp: u256 = value;
-
-        while (exp > u256.Zero) {
-            if (u256.and(exp, u256.One)) {
-                result = SafeMath.add(result, base);
-            }
-
-            base = SafeMath.add(base, base);
-            exp = u256.shr(exp, 1);
-        }
-
-        this._value = result;
+        this._value = SafeMath.mod(this._value, value);
         Blockchain.setStorageAt(this.pointer, this.subPointer, this._value);
 
         return this;

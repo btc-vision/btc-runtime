@@ -108,7 +108,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
 
     /** METHODS */
     public allowance(callData: Calldata): BytesWriter {
-        const response = new BytesWriter();
+        const response = new BytesWriter(32);
 
         const resp = this._allowance(callData.readAddress(), callData.readAddress());
         response.writeU256(resp);
@@ -123,7 +123,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         const value = callData.readU256();
 
         // Response buffer
-        const response = new BytesWriter();
+        const response = new BytesWriter(1);
 
         const resp = this._approve(owner, spender, value);
         response.writeBoolean(resp);
@@ -132,7 +132,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     public balanceOf(callData: Calldata): BytesWriter {
-        const response = new BytesWriter();
+        const response = new BytesWriter(32);
         const address: Address = callData.readAddress();
         const resp = this._balanceOf(address);
 
@@ -142,7 +142,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     public burn(callData: Calldata): BytesWriter {
-        const response = new BytesWriter();
+        const response = new BytesWriter(1);
         const resp = this._burn(callData.readU256());
         response.writeBoolean(resp);
 
@@ -150,7 +150,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     public mint(callData: Calldata): BytesWriter {
-        const response = new BytesWriter();
+        const response = new BytesWriter(1);
         const resp = this._mint(callData.readAddress(), callData.readU256());
 
         response.writeBoolean(resp);
@@ -159,7 +159,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     public transfer(callData: Calldata): BytesWriter {
-        const response = new BytesWriter();
+        const response = new BytesWriter(1);
         const resp = this._transfer(callData.readAddress(), callData.readU256());
 
         response.writeBoolean(resp);
@@ -168,7 +168,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     public transferFrom(callData: Calldata): BytesWriter {
-        const response = new BytesWriter();
+        const response = new BytesWriter(1);
         const resp = this._transferFrom(
             callData.readAddress(),
             callData.readAddress(),
@@ -202,22 +202,27 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     public callView(method: Selector): BytesWriter {
-        const response = new BytesWriter();
+        let response: BytesWriter;
 
         switch (method) {
             case encodeSelector('decimals'):
+                response = new BytesWriter(1);
                 response.writeU8(this.decimals);
                 break;
             case encodeSelector('name'):
+                response = new BytesWriter(this.name.length + 1);
                 response.writeStringWithLength(this.name);
                 break;
             case encodeSelector('symbol'):
+                response = new BytesWriter(this.symbol.length + 1);
                 response.writeStringWithLength(this.symbol);
                 break;
             case encodeSelector('totalSupply'):
+                response = new BytesWriter(32);
                 response.writeU256(this.totalSupply);
                 break;
             case encodeSelector('maximumSupply'):
+                response = new BytesWriter(32);
                 response.writeU256(this.maxSupply);
                 break;
             default:

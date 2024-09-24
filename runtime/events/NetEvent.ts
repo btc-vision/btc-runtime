@@ -13,10 +13,6 @@ export abstract class NetEvent {
         return this.data.bufferLength();
     }
 
-    public getEventDataSelector(): u64 {
-        return this.data.getSelectorDataType();
-    }
-
     public getEventData(): Uint8Array {
         if (this.data.bufferLength() > MAX_EVENT_DATA_SIZE) {
             throw new Error('Event data length exceeds maximum length.');

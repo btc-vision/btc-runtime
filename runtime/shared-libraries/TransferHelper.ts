@@ -1,6 +1,6 @@
 import { u256 } from 'as-bignum/assembly';
 import { encodeSelector, Selector } from '../math/abi';
-import { Address } from '../types/Address';
+import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
 import { Revert } from '../types/Revert';
@@ -19,7 +19,7 @@ export class TransferHelper {
     }
 
     public static safeApprove(token: Address, spender: Address, amount: u256): void {
-        const calldata = new BytesWriter();
+        const calldata = new BytesWriter(4 + ADDRESS_BYTE_LENGTH + 32);
         calldata.writeSelector(this.APPROVE_SELECTOR);
         calldata.writeAddress(spender);
         calldata.writeU256(amount);
@@ -33,7 +33,7 @@ export class TransferHelper {
     }
 
     public static safeTransfer(token: Address, to: Address, amount: u256): void {
-        const calldata = new BytesWriter();
+        const calldata = new BytesWriter(4 + ADDRESS_BYTE_LENGTH + 32);
         calldata.writeSelector(this.TRANSFER_SELECTOR);
         calldata.writeAddress(to);
         calldata.writeU256(amount);
@@ -47,7 +47,7 @@ export class TransferHelper {
     }
 
     public static safeTransferFrom(token: Address, from: Address, to: Address, amount: u256): void {
-        const calldata = new BytesWriter();
+        const calldata = new BytesWriter(4 + ADDRESS_BYTE_LENGTH + ADDRESS_BYTE_LENGTH + 32);
         calldata.writeSelector(this.TRANSFER_FROM_SELECTOR);
 
         calldata.writeAddress(from);
