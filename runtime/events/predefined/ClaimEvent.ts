@@ -5,7 +5,7 @@ import { BytesWriter } from '../../buffer/BytesWriter';
 @final
 export class ClaimEvent extends NetEvent {
     constructor(amount: u256) {
-        const data: BytesWriter = new BytesWriter(1, true);
+        const data: BytesWriter = new BytesWriter(32);
         data.writeU256(amount);
 
         super('Claim', data);

@@ -1,5 +1,5 @@
 import { IBTC } from '../interfaces/IBTC';
-import { Address } from '../types/Address';
+import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
 import { Blockchain } from '../env';
 import { Calldata } from '../universal/ABIRegistry';
 import { BytesWriter } from '../buffer/BytesWriter';
@@ -40,13 +40,15 @@ export class OP_NET implements IBTC {
     }
 
     public callView(method: Selector): BytesWriter {
-        const response = new BytesWriter();
+        let response: BytesWriter;
 
         switch (method) {
             case encodeSelector('address'):
+                response = new BytesWriter(ADDRESS_BYTE_LENGTH);
                 response.writeAddress(this.address);
                 break;
             case encodeSelector('owner'):
+                response = new BytesWriter(ADDRESS_BYTE_LENGTH);
                 response.writeAddress(this.owner);
                 break;
             default:

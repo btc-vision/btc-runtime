@@ -43,6 +43,20 @@ export class SafeMath {
         return result;
     }
 
+    public static pow(base: u256, exponent: u256): u256 {
+        let result: u256 = u256.One;
+        while (exponent > u256.Zero) {
+            if (u256.and(exponent, u256.One)) {
+                result = SafeMath.mul(result, base);
+            }
+
+            base = SafeMath.mul(base, base);
+            exponent = u256.shr(exponent, 1);
+        }
+
+        return result;
+    }
+
     public static mul(a: u256, b: u256): u256 {
         if (a === SafeMath.ZERO || b === SafeMath.ZERO) {
             return SafeMath.ZERO;
@@ -82,7 +96,7 @@ export class SafeMath {
         let d = b.clone();
         let result = new u256();
 
-        let shift = u256.clz(d) - u256.clz(n);
+        const shift = u256.clz(d) - u256.clz(n);
         d = SafeMath.shl(d, shift); // align d with n by shifting left
 
         for (let i = shift; i >= 0; i--) {

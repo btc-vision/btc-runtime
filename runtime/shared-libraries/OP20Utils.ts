@@ -1,4 +1,4 @@
-import { Address } from '../types/Address';
+import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
 import { u256 } from 'as-bignum/assembly';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
@@ -10,7 +10,7 @@ export class OP20Utils {
     }
 
     public static balanceOf(token: Address, owner: Address): u256 {
-        const calldata: BytesWriter = new BytesWriter();
+        const calldata: BytesWriter = new BytesWriter(4 + ADDRESS_BYTE_LENGTH);
         calldata.writeSelector(OP20Utils.BALANCE_OF_SELECTOR);
         calldata.writeAddress(owner);
 
