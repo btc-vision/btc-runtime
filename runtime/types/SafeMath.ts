@@ -35,12 +35,9 @@ export class SafeMath {
             throw new Error('SafeMath: modulo by zero');
         }
 
-        let result = a.clone();
-        while (u256.ge(result, b)) {
-            result = u256.sub(result, b);
-        }
-
-        return result;
+        let divResult = SafeMath.div(a, b);
+        let product = SafeMath.mul(divResult, b);
+        return SafeMath.sub(a, product);
     }
 
     public static pow(base: u256, exponent: u256): u256 {
