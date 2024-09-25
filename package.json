@@ -23,7 +23,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/BlobMaster41/btc-runtime.git"
+        "url": "https://github.com/btc-vision/btc-runtime"
     },
     "type": "module",
     "files": [
