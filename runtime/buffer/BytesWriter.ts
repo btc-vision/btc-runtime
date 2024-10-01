@@ -259,7 +259,7 @@ export class BytesWriter {
 
     private resize(size: u32): void {
         abort(
-            `Buffer is getting resized. This is very bad for performance. Expected size: ${size} - Current size: ${this.buffer.byteLength}`,
+            `Buffer is getting resized. This is very bad for performance. Expected size: ${this.buffer.byteLength + size} - Current size: ${this.buffer.byteLength}`,
         );
 
         /*const buf: Uint8Array = new Uint8Array(u32(this.buffer.byteLength) + size);
