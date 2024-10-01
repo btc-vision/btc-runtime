@@ -20,16 +20,8 @@ export function getEvents(): Uint8Array {
     return Blockchain.getEvents();
 }
 
-export function getViewABI(): Uint8Array {
-    return Blockchain.getViewSelectors();
-}
-
 export function getMethodABI(): Uint8Array {
     return Blockchain.getMethodSelectors();
-}
-
-export function getWriteMethods(): Uint8Array {
-    return Blockchain.getWriteMethods();
 }
 
 export function setEnvironment(data: Uint8Array): void {

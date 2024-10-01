@@ -168,7 +168,7 @@ export class BlockchainEnvironment {
             throw this.error('Too many events');
         }
 
-        const buffer: BytesWriter = new BytesWriter();
+        const buffer: BytesWriter = new BytesWriter(this.getEventSize());
         buffer.writeU16(eventLength);
 
         for (let i: u8 = 0; i < eventLength; i++) {
@@ -195,7 +195,7 @@ export class BlockchainEnvironment {
     }
 
     public deployContract(hash: u256, bytecode: Uint8Array): DeployContractResponse {
-        const writer = new BytesWriter();
+        const writer = new BytesWriter(32 + bytecode.length);
         writer.writeU256(hash);
         writer.writeBytes(bytecode);
 
@@ -260,16 +260,19 @@ export class BlockchainEnvironment {
         this._internalSetStorageAt(pointerHash, value);
     }
 
-    public getViewSelectors(): Uint8Array {
-        return ABIRegistry.getViewSelectors();
-    }
-
     public getMethodSelectors(): Uint8Array {
         return ABIRegistry.getMethodSelectors();
     }
 
-    public getWriteMethods(): Uint8Array {
-        return ABIRegistry.getWriteMethods();
+    private getEventSize(): u32 {
+        let size: u32 = 2;
+
+        for (let i: u32 = 0; i < <u32>this.events.length; i++) {
+            const event: NetEvent = this.events[i];
+            size += 2 + event.eventType.length + 8 + event.length + 4;
+        }
+
+        return size;
     }
 
     private createContractIfNotExists(): void {

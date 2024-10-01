@@ -2,7 +2,6 @@ import { u256 } from 'as-bignum/assembly';
 import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
 import { Selector } from '../math/abi';
 import { BytesReader } from './BytesReader';
-import { SelectorsMap } from '../universal/ABIRegistry';
 import { Revert } from '../types/Revert';
 import { Map } from '../generic/Map';
 import { ArrayBuffer } from 'arraybuffer';
@@ -125,20 +124,17 @@ export class BytesWriter {
         this.writeString(value);
     }
 
-    public writeViewSelectorMap(map: SelectorsMap): void {
-        this.writeU16(u16(map.size));
-
-        const keys = map.keys();
-        for (let i = 0; i < keys.length; i++) {
-            const key: u32 = keys[i] as u32;
-            const value = map.get(key);
-
-            this.writeBytes(value);
-        }
-    }
-
     public writeAddressValueTupleMap(map: Map<Address, u256>): void {
         if (map.size > 65535) throw new Revert('Map size is too large');
+
+        /*const requiredSize: u32 = 2 + map.size * (ADDRESS_BYTE_LENGTH + 32);
+
+        if (this.buffer.byteLength < requiredSize) {
+            abort(
+                `This buffer is too small. Required size: ${requiredSize} - Current size: ${this.buffer.byteLength}`,
+            );
+        }*/
+
         this.writeU16(u16(map.size));
 
         const keys = map.keys();
@@ -154,9 +150,28 @@ export class BytesWriter {
     public writeLimitedAddressBytesMap(map: Map<Address, Uint8Array[]>): void {
         if (map.size > 8) throw new Revert('Too many contract called.'); // no more than 8 different contracts.
 
-        this.writeU8(u8(map.size));
+        /*let requiredSize: u32 = 1 + (map.size * ADDRESS_BYTE_LENGTH + 1);
+
+
+        for (let i = 0; i < map.size; i++) {
+            const address: Address = keys[i];
+            const calls: Uint8Array[] = map.get(address) || [];
+
+            for (let j: i32 = 0; j < calls.length; j++) {
+                requiredSize += 4 + calls[j].length;
+            }
+        }
+
+        if (this.buffer.byteLength < requiredSize) {
+            abort(
+                `This buffer is too small. Required size: ${requiredSize} - Current size: ${this.buffer.byteLength}`,
+            );
+        }*/
 
         const keys: Address[] = map.keys();
+
+        this.writeU8(u8(map.size));
+
         for (let i: i32 = 0; i < keys.length; i++) {
             const address: Address = keys[i];
             const calls: Uint8Array[] = map.get(address) || [];
@@ -243,17 +258,17 @@ export class BytesWriter {
     }
 
     private resize(size: u32): void {
-        //abort(
-        //    `Buffer is getting resized. This is very bad for performance. Expected size: ${size} - Current size: ${this.buffer.byteLength}`,
-        //);
-        
-        const buf: Uint8Array = new Uint8Array(u32(this.buffer.byteLength) + size);
+        abort(
+            `Buffer is getting resized. This is very bad for performance. Expected size: ${size} - Current size: ${this.buffer.byteLength}`,
+        );
+
+        /*const buf: Uint8Array = new Uint8Array(u32(this.buffer.byteLength) + size);
 
         for (let i: i32 = 0; i < this.buffer.byteLength; i++) {
             buf[i] = this.buffer.getUint8(i);
         }
 
-        this.buffer = new DataView(buf.buffer);
+        this.buffer = new DataView(buf.buffer);*/
     }
 
     private getDefaultBuffer(length: i32 = 1): DataView {
