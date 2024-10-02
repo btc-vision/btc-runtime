@@ -11,7 +11,7 @@ export class BytesWriter {
     private currentOffset: u32 = 0;
     private buffer: DataView;
 
-    constructor(length: i32 = 1) {
+    constructor(length: i32) {
         const arrayBuffer = new ArrayBuffer(length);
 
         this.buffer = new DataView(arrayBuffer);
