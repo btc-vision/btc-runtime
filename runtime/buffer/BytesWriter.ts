@@ -63,12 +63,7 @@ export class BytesWriter {
     }
 
     public writeU256(value: u256): void {
-        this.allocSafe(32);
-
-        const bytes = value.toUint8Array(true);
-        for (let i: i32 = 0; i < 32; i++) {
-            this.writeU8(bytes[i] || 0);
-        }
+        this.writeBytesU8Array(value.toBytes());
     }
 
     public writeTuple(value: u256[]): void {
@@ -81,19 +76,15 @@ export class BytesWriter {
     }
 
     public writeBytes(value: Uint8Array): void {
-        this.allocSafe(value.length);
-
-        for (let i = 0; i < value.length; i++) {
-            this.writeU8(value[i]);
-        }
+       this.writeBytesU8Array(changetype<u8[]>(value));
     }
 
+    @inline
     public writeBytesU8Array(value: u8[]): void {
         this.allocSafe(value.length);
-
-        for (let i = 0; i < value.length; i++) {
-            this.writeU8(value[i]);
-        }
+        const bytes = changetype<Uint8Array>(value).buffer;
+	memory.copy(changetype<usize>(this.buffer.buffer) + this.currentOffset, changetype<usize>(bytes), <usize>value.length);
+	this.currentOffset += value.length;
     }
 
     public writeBytesWithLength(value: Uint8Array): void {
@@ -196,7 +187,10 @@ export class BytesWriter {
     }
 
     public getBuffer(): Uint8Array {
-        return Uint8Array.wrap(this.buffer.buffer, this.buffer.byteOffset, this.buffer.byteLength);
+        const result = new Uint8Array(this.buffer.buffer.byteLength);
+	store<usize>(changetype<usize>(result), changetype<usize>(this.buffer.buffer));
+	store<usize>(changetype<usize>(result) + sizeof<usize>(), changetype<usize>(this.buffer.buffer));
+        return result;
     }
 
     public toBytesReader(): BytesReader {
