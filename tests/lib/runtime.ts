@@ -76,7 +76,7 @@ export class TestProgram extends EventEmitter {
   }
   call(data: number): void {}
   log(data: number) {
-    const msg = this.getStringFromPtr(msgPtr);
+    const msg = this.getStringFromPtr(data);
     this.emit('log', msg);
   }
   abort(msgPtr: number) {
@@ -96,7 +96,8 @@ export class TestProgram extends EventEmitter {
     (this as any).instance = await WebAssembly.instantiate(this.program, {
       env: {
         abort: (...args) => (this as any).abort(...args),
-        log: (...args) => (this as any).log(...args),
+        logStatic: (...args) => (this as any).log(...args),
+	log: (...args) => (this as any).log(...args),
         store: (...args) => (this as any).store(...args),
         deploy: (...args) => (this as any).deploy(...args),
         deployFromAddress: (...args) => (this as any).deployFromAddress(...args),

@@ -5,7 +5,7 @@
     "main": "btc/index.ts",
     "scripts": {
         "test": "ts-mocha tests/*.spec.ts",
-        "build": "cross-env node scripts/asc tests.ts"
+        "build": "cross-env node scripts/asc tests/tests.ts"
     },
     "types": "btc/index.ts",
     "keywords": [
