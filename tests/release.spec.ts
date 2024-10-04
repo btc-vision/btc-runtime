@@ -20,6 +20,7 @@ describe("btc-runtime", () => {
       const result = await program.run(s);
     });
   [
-    "test_encode"
+    "test_encode",
+    "test_log"
   ].forEach((v) => makeTest(v))
 });
