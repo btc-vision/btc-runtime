@@ -36,6 +36,15 @@ export const readArrayBuffer = (memory: WebAssembly.Memory, ptr: number) => {
   return new Uint8Array(ary.slice(ptr, ptr + length)).buffer;
 };
 
+export const readTypedArray = (memory: WebAssembly.Memory, ptr: number) => {
+  const view = Buffer.from(new Uint8Array(memory.buffer));
+  const buffer = view.readUInt32LE(ptr);
+  const length = view.readUInt32LE(ptr - 4);
+  const dataStart = view.readUInt32LE(ptr + 4);
+  const realLength = view.readUInt32LE(ptr + 8);
+  return new Uint8Array(new Buffer(new Uint8Array(memory.buffer)).slice(dataStart, dataStart + realLength)).buffer;
+};
+
 const stripHexPrefix = (s) => (s.substr(0, 2) === "0x" ? s.substr(2) : s);
 const addHexPrefix = (s) => (s.substr(0, 2) === "0x" ? s : "0x" + s);
 
@@ -75,7 +84,14 @@ export class TestProgram extends EventEmitter {
   deployFromAddress(data: number): void {
   }
   call(data: number): void {}
-  log(data: number) {
+  log(ptr: number): void {
+    const ary = readTypedArray(this.memory, ptr);
+    const view = Buffer.from(ary);
+    const len = view.readUInt16LE(0);
+    const msg = view.slice(2).toString('utf8');
+    this.emit('log', msg);
+  }
+  logStatic(data: number) {
     const msg = this.getStringFromPtr(data);
     this.emit('log', msg);
   }
@@ -96,7 +112,7 @@ export class TestProgram extends EventEmitter {
     (this as any).instance = await WebAssembly.instantiate(this.program, {
       env: {
         abort: (...args) => (this as any).abort(...args),
-        logStatic: (...args) => (this as any).log(...args),
+        logStatic: (...args) => (this as any).logStatic(...args),
 	log: (...args) => (this as any).log(...args),
         store: (...args) => (this as any).store(...args),
         deploy: (...args) => (this as any).deploy(...args),
