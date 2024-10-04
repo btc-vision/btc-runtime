@@ -3,8 +3,11 @@
     "version": "1.1.11",
     "description": "Bitcoin Smart Contract Runtime",
     "main": "btc/index.ts",
+    "scripts": {
+        "test": "ts-mocha tests/*.spec.ts",
+        "build": "cross-env node scripts/asc tests/tests.ts"
+    },
     "types": "btc/index.ts",
-    "scripts": {},
     "keywords": [
         "bitcoin",
         "smart",
@@ -19,7 +22,11 @@
     "devDependencies": {
         "@types/node": "^22.5.5",
         "assemblyscript": "^0.27.25",
-        "prettier": "^3.2.5"
+        "chai": "^4.5.0",
+        "cross-env": "^7.0.3",
+        "fs-extra": "^11.2.0",
+        "prettier": "^3.2.5",
+        "ts-mocha": "^10.0.0"
     },
     "repository": {
         "type": "git",
@@ -32,7 +39,8 @@
         "runtime/*.ts",
         "runtime/**/*.ts",
         "!**/*.js.map",
-        "!**/*.tsbuildinfo"
+        "!**/*.tsbuildinfo",
+        "test/*.ts"
     ],
     "dependencies": {
         "@assemblyscript/loader": "^0.27.25",
