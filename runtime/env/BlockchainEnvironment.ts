@@ -155,10 +155,10 @@ export class BlockchainEnvironment {
 
     public emit(event: NetEvent): void {
         const data = event.getEventData();
-        const buffer = new BytesWriter(32 + data.byteLength);
+        const buffer = new BytesWriter(event.eventType.length + 6 + data.byteLength);
 
         buffer.writeStringWithLength(event.eventType);
-        buffer.writeBytesWithLength(event.getEventData());
+        buffer.writeBytesWithLength(data);
 
         emit(buffer.getBuffer());
     }

@@ -64,7 +64,7 @@ export class BytesWriter {
     }
 
     public writeU256(value: u256): void {
-        this.writeBytesU8Array(value.toBytes());
+        this.writeBytesU8Array(value.toUint8Array());
     }
 
     public writeTuple(value: u256[]): void {
@@ -77,19 +77,16 @@ export class BytesWriter {
     }
 
     public writeBytes(value: Uint8Array): void {
-        this.writeBytesU8Array(changetype<u8[]>(value));
+        this.writeBytesU8Array(value);
     }
 
     @inline
-    public writeBytesU8Array(value: u8[]): void {
+    public writeBytesU8Array(value: Uint8Array): void {
         this.allocSafe(value.length);
-        const bytes = changetype<Uint8Array>(value).buffer;
-        memory.copy(
-            changetype<usize>(this.buffer.buffer) + this.currentOffset,
-            changetype<usize>(bytes),
-            <usize>value.length,
-        );
-        this.currentOffset += value.length;
+
+        for (let i = 0; i < value.length; i++) {
+            this.writeU8(value[i]);
+        }
     }
 
     public writeBytesWithLength(value: Uint8Array): void {
