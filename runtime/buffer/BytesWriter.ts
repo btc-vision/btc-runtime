@@ -10,10 +10,11 @@ import { ArrayBuffer } from 'arraybuffer';
 export class BytesWriter {
     private currentOffset: u32 = 0;
     private buffer: DataView;
-    private typedArray: Uint8Array;
+
+    private readonly typedArray: Uint8Array;
 
     constructor(length: i32) {
-        const typedArray = this.typedArray = new Uint8Array(length);
+        const typedArray = (this.typedArray = new Uint8Array(length));
         this.buffer = new DataView(typedArray.buffer);
     }
 
@@ -76,15 +77,19 @@ export class BytesWriter {
     }
 
     public writeBytes(value: Uint8Array): void {
-       this.writeBytesU8Array(changetype<u8[]>(value));
+        this.writeBytesU8Array(changetype<u8[]>(value));
     }
 
     @inline
     public writeBytesU8Array(value: u8[]): void {
         this.allocSafe(value.length);
         const bytes = changetype<Uint8Array>(value).buffer;
-	memory.copy(changetype<usize>(this.buffer.buffer) + this.currentOffset, changetype<usize>(bytes), <usize>value.length);
-	this.currentOffset += value.length;
+        memory.copy(
+            changetype<usize>(this.buffer.buffer) + this.currentOffset,
+            changetype<usize>(bytes),
+            <usize>value.length,
+        );
+        this.currentOffset += value.length;
     }
 
     public writeBytesWithLength(value: Uint8Array): void {
