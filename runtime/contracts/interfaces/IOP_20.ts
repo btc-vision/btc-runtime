@@ -1,6 +1,6 @@
 import { BytesWriter } from '../../buffer/BytesWriter';
-import { Calldata } from '../../universal/ABIRegistry';
 import { StoredU256 } from '../../storage/StoredU256';
+import { Calldata } from '../../types';
 
 export interface IOP_20 {
     readonly _totalSupply: StoredU256;
