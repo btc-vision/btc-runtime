@@ -35,8 +35,8 @@ export class SafeMath {
             throw new Error('SafeMath: modulo by zero');
         }
 
-        let divResult = SafeMath.div(a, b);
-        let product = SafeMath.mul(divResult, b);
+        const divResult = SafeMath.div(a, b);
+        const product = SafeMath.mul(divResult, b);
         return SafeMath.sub(a, product);
     }
 
@@ -121,16 +121,16 @@ export class SafeMath {
         if (u256.gt(y, u256.fromU32(3))) {
             let z = y;
 
-            let u246_2 = u256.fromU32(2);
+            const u246_2 = u256.fromU32(2);
 
-            let d = SafeMath.div(y, u246_2);
+            const d = SafeMath.div(y, u246_2);
             let x = SafeMath.add(d, u256.One);
 
             while (u256.lt(x, z)) {
                 z = x;
 
-                let u = SafeMath.div(y, x);
-                let y2 = u256.add(u, x);
+                const u = SafeMath.div(y, x);
+                const y2 = u256.add(u, x);
 
                 x = SafeMath.div(y2, u246_2);
             }
@@ -150,8 +150,8 @@ export class SafeMath {
             return value.clone();
         }
 
-        let totalBits = 256;
-        let bitsPerSegment = 64;
+        const totalBits = 256;
+        const bitsPerSegment = 64;
 
         // Normalize shift to be within 0-255 range
         shift &= 255;
@@ -161,12 +161,12 @@ export class SafeMath {
         }
 
         // Determine how many full 64-bit segments we are shifting
-        let segmentShift = (shift / bitsPerSegment) | 0;
-        let bitShift = shift % bitsPerSegment;
+        const segmentShift = (shift / bitsPerSegment) | 0;
+        const bitShift = shift % bitsPerSegment;
 
-        let segments = [value.lo1, value.lo2, value.hi1, value.hi2];
+        const segments = [value.lo1, value.lo2, value.hi1, value.hi2];
 
-        let result = new Array<u64>(4).fill(0);
+        const result = new Array<u64>(4).fill(0);
 
         for (let i = 0; i < segments.length; i++) {
             if (i + segmentShift < segments.length) {
