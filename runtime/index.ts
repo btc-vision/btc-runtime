@@ -19,9 +19,15 @@ export * from './interfaces/DeployContractResponse';
 export * from './events/NetEvent';
 export * from './events/predefined';
 
+/** Env */
+export * from './env/classes/UTXO';
+export * from './env/classes/Transaction';
+export * from './env/classes/Block';
+
 /** Types */
 export * from './generic/Map';
 export * from './interfaces/IBTC';
+export * from './types';
 
 /** Definitions */
 export * from './lang/Definitions';
@@ -48,9 +54,6 @@ export * from './storage/StoredU256';
 export * from './storage/StoredString';
 export * from './storage/StoredBoolean';
 export * from './storage/Serializable';
-
-/** Universal */
-export * from './universal/ABIRegistry';
 
 /** Shared libraries */
 export * from './shared-libraries/TransferHelper';

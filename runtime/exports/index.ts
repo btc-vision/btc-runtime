@@ -1,27 +1,21 @@
-import { Calldata } from '../universal/ABIRegistry';
 import { Blockchain } from '../env';
-import { Selector } from '../math/abi';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { BytesReader } from '../buffer/BytesReader';
+import { Selector } from '../math/abi';
+import { Calldata } from '../types';
 
-export function readMethod(method: Selector, data: Uint8Array): Uint8Array {
+export function execute(data: Uint8Array): Uint8Array {
     const calldata: Calldata = new BytesReader(data);
-    const result: BytesWriter = Blockchain.contract.callMethod(method, calldata);
+    const selector: Selector = calldata.readSelector();
+    const result: BytesWriter = Blockchain.contract.execute(selector, calldata);
 
     return result.getBuffer();
 }
 
-export function readView(method: Selector): Uint8Array {
-    const result: BytesWriter = Blockchain.contract.callView(method);
-    return result.getBuffer();
-}
+export function onDeploy(data: Uint8Array): void {
+    const calldata: Calldata = new BytesReader(data);
 
-export function getEvents(): Uint8Array {
-    return Blockchain.getEvents();
-}
-
-export function getMethodABI(): Uint8Array {
-    return Blockchain.getMethodSelectors();
+    Blockchain.contract.onDeployment(calldata);
 }
 
 export function setEnvironment(data: Uint8Array): void {

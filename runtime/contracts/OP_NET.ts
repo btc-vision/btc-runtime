@@ -1,19 +1,13 @@
 import { IBTC } from '../interfaces/IBTC';
 import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
 import { Blockchain } from '../env';
-import { Calldata } from '../universal/ABIRegistry';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { encodeSelector, Selector } from '../math/abi';
 import { Revert } from '../types/Revert';
 import { MAX_EVENT_DATA_SIZE, NetEvent } from '../events/NetEvent';
-import { StoredBoolean } from '../storage/StoredBoolean';
+import { Calldata } from '../types';
 
 export class OP_NET implements IBTC {
-    protected readonly instantiated: StoredBoolean = new StoredBoolean(
-        Blockchain.nextPointer,
-        false,
-    );
-
     public get address(): string {
         return Blockchain.contractAddress;
     }
@@ -22,24 +16,9 @@ export class OP_NET implements IBTC {
         return Blockchain.owner;
     }
 
-    public get isInstantiated(): bool {
-        return this.instantiated.value;
-    }
+    public onDeployment(_calldata: Calldata): void {}
 
-    public onInstantiated(): void {
-        if (!this.isInstantiated) {
-            this.instantiated.value = true;
-        }
-    }
-
-    public callMethod(method: Selector, _calldata: Calldata): BytesWriter {
-        switch (method) {
-            default:
-                throw new Revert('Method not found');
-        }
-    }
-
-    public callView(method: Selector): BytesWriter {
+    public execute(method: Selector, _calldata: Calldata): BytesWriter {
         let response: BytesWriter;
 
         switch (method) {
@@ -63,7 +42,7 @@ export class OP_NET implements IBTC {
             throw new Error('Event data length exceeds maximum length.');
         }
 
-        Blockchain.addEvent(event);
+        Blockchain.emit(event);
     }
 
     protected isSelf(address: Address): boolean {

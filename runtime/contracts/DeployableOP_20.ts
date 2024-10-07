@@ -11,10 +11,11 @@ import { StoredU256 } from '../storage/StoredU256';
 import { Address } from '../types/Address';
 import { Revert } from '../types/Revert';
 import { SafeMath } from '../types/SafeMath';
-import { Calldata } from '../universal/ABIRegistry';
+
 import { IOP_20 } from './interfaces/IOP_20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
+import { Calldata } from '../types';
 
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
 const decimalsPointer: u16 = Blockchain.nextPointer;
@@ -94,7 +95,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             throw new Revert('Already initialized');
         }
 
-        if (!skipOwnerVerification) this.onlyOwner(Blockchain.msgSender);
+        if (!skipOwnerVerification) this.onlyOwner(Blockchain.tx.sender);
 
         if (params.decimals > 32) {
             throw new Revert('Decimals can not be more than 32');
@@ -118,7 +119,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
 
     public approve(callData: Calldata): BytesWriter {
         // Define the owner and spender
-        const owner = Blockchain.msgSender;
+        const owner = Blockchain.tx.sender;
         const spender: Address = callData.readAddress();
         const value = callData.readU256();
 
@@ -180,28 +181,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         return response;
     }
 
-    public callMethod(method: Selector, calldata: Calldata): BytesWriter {
-        switch (method) {
-            case encodeSelector('allowance'):
-                return this.allowance(calldata);
-            case encodeSelector('approve'):
-                return this.approve(calldata);
-            case encodeSelector('balanceOf'):
-                return this.balanceOf(calldata);
-            case encodeSelector('burn'):
-                return this.burn(calldata);
-            case encodeSelector('mint'):
-                return this.mint(calldata);
-            case encodeSelector('transfer'):
-                return this.transfer(calldata);
-            case encodeSelector('transferFrom'):
-                return this.transferFrom(calldata);
-            default:
-                return super.callMethod(method, calldata);
-        }
-    }
-
-    public callView(method: Selector): BytesWriter {
+    public execute(method: Selector, calldata: Calldata): BytesWriter {
         let response: BytesWriter;
 
         switch (method) {
@@ -225,8 +205,22 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
                 response = new BytesWriter(32);
                 response.writeU256(this.maxSupply);
                 break;
+            case encodeSelector('allowance'):
+                return this.allowance(calldata);
+            case encodeSelector('approve'):
+                return this.approve(calldata);
+            case encodeSelector('balanceOf'):
+                return this.balanceOf(calldata);
+            case encodeSelector('burn'):
+                return this.burn(calldata);
+            case encodeSelector('mint'):
+                return this.mint(calldata);
+            case encodeSelector('transfer'):
+                return this.transfer(calldata);
+            case encodeSelector('transferFrom'):
+                return this.transferFrom(calldata);
             default:
-                return super.callView(method);
+                return super.execute(method, calldata);
         }
 
         return response;
@@ -264,16 +258,16 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             throw new Revert(`No tokens`);
         }
 
-        if (onlyOwner) this.onlyOwner(Blockchain.msgSender);
+        if (onlyOwner) this.onlyOwner(Blockchain.tx.sender);
 
         if (this._totalSupply.value < value) throw new Revert(`Insufficient total supply.`);
-        if (!this.balanceOfMap.has(Blockchain.msgSender)) throw new Revert('No balance');
+        if (!this.balanceOfMap.has(Blockchain.tx.sender)) throw new Revert('No balance');
 
-        const balance: u256 = this.balanceOfMap.get(Blockchain.msgSender);
+        const balance: u256 = this.balanceOfMap.get(Blockchain.tx.sender);
         if (balance < value) throw new Revert(`Insufficient balance`);
 
         const newBalance: u256 = SafeMath.sub(balance, value);
-        this.balanceOfMap.set(Blockchain.msgSender, newBalance);
+        this.balanceOfMap.set(Blockchain.tx.sender, newBalance);
 
         // @ts-expect-error TODO: Fix the typing because this is valid assembly-script syntax
         this._totalSupply -= value;
@@ -283,7 +277,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _mint(to: Address, value: u256, onlyOwner: boolean = true): boolean {
-        if (onlyOwner) this.onlyOwner(Blockchain.msgSender);
+        if (onlyOwner) this.onlyOwner(Blockchain.tx.sender);
 
         if (!this.balanceOfMap.has(to)) {
             this.balanceOfMap.set(to, value);
@@ -304,7 +298,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _transfer(to: string, value: u256): boolean {
-        const sender = Blockchain.msgSender;
+        const sender = Blockchain.tx.sender;
 
         if (!this.balanceOfMap.has(sender)) throw new Revert();
         if (this.isSelf(sender)) throw new Revert('Can not transfer from self account');
@@ -359,7 +353,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             throw new Revert('Cannot transfer to or from dead address');
         }
 
-        this._spendAllowance(from, Blockchain.msgSender, value);
+        this._spendAllowance(from, Blockchain.tx.sender, value);
         this._unsafeTransferFrom(from, to, value);
 
         return true;

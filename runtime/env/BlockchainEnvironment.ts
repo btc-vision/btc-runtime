@@ -1,12 +1,11 @@
-import { Address, ADDRESS_BYTE_LENGTH, PotentialAddress } from '../types/Address';
+import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
 import { MemorySlotPointer } from '../memory/MemorySlotPointer';
 import { MemorySlotData } from '../memory/MemorySlot';
 import { u256 } from 'as-bignum/assembly';
-import { ABIRegistry } from '../universal/ABIRegistry';
 import { BytesReader } from '../buffer/BytesReader';
 import { encodePointerHash } from '../math/abi';
 import { BytesWriter } from '../buffer/BytesWriter';
-import { MAX_EVENTS, NetEvent } from '../events/NetEvent';
+import { NetEvent } from '../events/NetEvent';
 import { Potential } from '../lang/Definitions';
 import { OP_NET } from '../contracts/OP_NET';
 import { PointerStorage } from '../types';
@@ -14,6 +13,7 @@ import {
     callContract,
     deploy,
     deployFromAddress,
+    emit,
     encodeAddress,
     loadPointer,
     log,
@@ -21,44 +21,44 @@ import {
 } from './global';
 import { DeployContractResponse } from '../interfaces/DeployContractResponse';
 import { MapU256 } from '../generic/MapU256';
+import { Block } from './classes/Block';
+import { Transaction } from './classes/Transaction';
 
 export * from '../env/global';
+
+export function runtimeError(msg: string): Error {
+    return new Error(`RuntimeException: ${msg}`);
+}
 
 @final
 export class BlockchainEnvironment {
     private static readonly MAX_U16: u16 = 65535;
-    private static readonly runtimeException: string = 'RuntimeException';
-    public readonly DEAD_ADDRESS: Address = 'bc1dead';
-    private storage: PointerStorage = new MapU256();
-    private events: NetEvent[] = [];
-    private currentBlock: u256 = u256.Zero;
 
+    public readonly DEAD_ADDRESS: Address = 'bc1dead';
+
+    private storage: PointerStorage = new MapU256();
     private _selfContract: Potential<OP_NET> = null;
 
-    private _txOrigin: PotentialAddress = null;
+    private _block: Potential<Block> = null;
 
-    public get txOrigin(): Address {
-        if (!this._txOrigin) {
-            throw this.error('Callee is required');
+    @inline
+    public get block(): Block {
+        if (!this._block) {
+            throw this.error('Block is required');
         }
 
-        return this._txOrigin as Address;
+        return this._block as Block;
     }
 
-    private _msgSender: PotentialAddress = null;
+    private _tx: Potential<Transaction> = null;
 
-    public get msgSender(): Address {
-        if (!this._msgSender) {
-            throw this.error('Caller is required');
+    @inline
+    public get tx(): Transaction {
+        if (!this._tx) {
+            throw this.error('Transaction is required');
         }
 
-        return this._msgSender as Address;
-    }
-
-    private _timestamp: u64 = 0;
-
-    public get timestamp(): u64 {
-        return this._timestamp;
+        return this._tx as Transaction;
     }
 
     private _contract: Potential<() => OP_NET> = null;
@@ -105,25 +105,24 @@ export class BlockchainEnvironment {
         return this._contractAddress as Address;
     }
 
-    public get blockNumber(): u256 {
-        return this.currentBlock;
-    }
-
-    public get blockNumberU64(): u64 {
-        return this.currentBlock.toU64();
-    }
-
     public setEnvironment(data: Uint8Array): void {
         const reader: BytesReader = new BytesReader(data);
 
-        this._msgSender = reader.readAddress();
-        this._txOrigin = reader.readAddress(); // "leftmost thing in the call chain"
-        this.currentBlock = reader.readU256();
+        this._tx = new Transaction(
+            reader.readAddress(),
+            reader.readAddress(),
+            reader.readBytes(32),
+        );
+
+        const currentBlock = reader.readU256();
 
         this._owner = reader.readAddress();
         this._contractAddress = reader.readAddress();
 
-        this._timestamp = reader.readU64();
+        const medianTimestamp = reader.readU64();
+        const safeRnd64 = reader.readU64();
+
+        this._block = new Block(currentBlock, medianTimestamp, safeRnd64);
 
         this.createContractIfNotExists();
     }
@@ -154,32 +153,14 @@ export class BlockchainEnvironment {
         log(buffer);
     }
 
-    public addEvent(event: NetEvent): void {
-        if (this.events.length >= i32(MAX_EVENTS)) {
-            throw this.error(`Too many events in the same transaction.`);
-        }
+    public emit(event: NetEvent): void {
+        const data = event.getEventData();
+        const buffer = new BytesWriter(32 + data.byteLength);
 
-        this.events.push(event);
-    }
+        buffer.writeStringWithLength(event.eventType);
+        buffer.writeBytesWithLength(event.getEventData());
 
-    public getEvents(): Uint8Array {
-        const eventLength: u16 = u16(this.events.length);
-        if (eventLength > MAX_EVENTS) {
-            throw this.error('Too many events');
-        }
-
-        const buffer: BytesWriter = new BytesWriter(this.getEventSize());
-        buffer.writeU16(eventLength);
-
-        for (let i: u8 = 0; i < eventLength; i++) {
-            const event: NetEvent = this.events[i];
-
-            buffer.writeStringWithLength(event.eventType);
-            buffer.writeU64(0); //event.getEventDataSelector()
-            buffer.writeBytesWithLength(event.getEventData());
-        }
-
-        return buffer.getBuffer();
+        emit(buffer.getBuffer());
     }
 
     public encodeVirtualAddress(virtualAddress: Uint8Array): Address {
@@ -260,21 +241,6 @@ export class BlockchainEnvironment {
         this._internalSetStorageAt(pointerHash, value);
     }
 
-    public getMethodSelectors(): Uint8Array {
-        return ABIRegistry.getMethodSelectors();
-    }
-
-    private getEventSize(): u32 {
-        let size: u32 = 2;
-
-        for (let i: u32 = 0; i < <u32>this.events.length; i++) {
-            const event: NetEvent = this.events[i];
-            size += 2 + event.eventType.length + 8 + event.length + 4;
-        }
-
-        return size;
-    }
-
     private createContractIfNotExists(): void {
         if (!this._contract) {
             throw this.error('Contract is required');
@@ -286,7 +252,7 @@ export class BlockchainEnvironment {
     }
 
     private error(msg: string): Error {
-        return new Error(`${BlockchainEnvironment.runtimeException}: ${msg}`);
+        return runtimeError(msg);
     }
 
     private _internalSetStorageAt(pointerHash: u256, value: MemorySlotData<u256>): void {
