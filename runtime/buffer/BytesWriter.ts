@@ -64,7 +64,12 @@ export class BytesWriter {
     }
 
     public writeU256(value: u256): void {
-        this.writeBytesU8Array(value.toUint8Array());
+        this.allocSafe(32);
+
+        const bytes = value.toUint8Array(true);
+        for (let i: i32 = 0; i < 32; i++) {
+            this.writeU8(bytes[i] || 0);
+        }
     }
 
     public writeTuple(value: u256[]): void {
@@ -77,11 +82,15 @@ export class BytesWriter {
     }
 
     public writeBytes(value: Uint8Array): void {
-        this.writeBytesU8Array(value);
+        this.allocSafe(value.length);
+
+        for (let i = 0; i < value.length; i++) {
+            this.writeU8(value[i]);
+        }
     }
 
     @inline
-    public writeBytesU8Array(value: Uint8Array): void {
+    public writeBytesU8Array(value: u8[]): void {
         this.allocSafe(value.length);
 
         for (let i = 0; i < value.length; i++) {
