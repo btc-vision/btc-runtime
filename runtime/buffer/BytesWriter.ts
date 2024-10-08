@@ -1,4 +1,4 @@
-import { u256 } from 'as-bignum/assembly';
+import { i128, u128, u256 } from 'as-bignum/assembly';
 import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
 import { Selector } from '../math/abi';
 import { BytesReader } from './BytesReader';
@@ -64,6 +64,24 @@ export class BytesWriter {
     }
 
     public writeU256(value: u256): void {
+        this.allocSafe(32);
+
+        const bytes = value.toUint8Array(true);
+        for (let i: i32 = 0; i < 32; i++) {
+            this.writeU8(bytes[i] || 0);
+        }
+    }
+
+    public writeI128(value: i128): void {
+        this.allocSafe(32);
+
+        const bytes = value.toUint8Array(true);
+        for (let i: i32 = 0; i < 32; i++) {
+            this.writeU8(bytes[i] || 0);
+        }
+    }
+
+    public writeU128(value: u128): void {
         this.allocSafe(32);
 
         const bytes = value.toUint8Array(true);

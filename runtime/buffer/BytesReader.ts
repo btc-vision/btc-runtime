@@ -1,6 +1,6 @@
 import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
 import { Selector } from '../math/abi';
-import { u256 } from 'as-bignum/assembly';
+import { i128, u128, u256 } from 'as-bignum/assembly';
 import { Revert } from '../types/Revert';
 import { Map } from '../generic/Map';
 import { TransactionInput, TransactionOutput } from '../env/classes/UTXO';
@@ -49,12 +49,46 @@ export class BytesReader {
     }
 
     public readU256(): u256 {
+        this.verifyEnd(this.currentOffset + 32);
+
+        const next32Bytes: u8[] = this.readBytesBE(32);
+
+        return u256.fromBytesBE(next32Bytes);
+    }
+
+    @inline
+    public readBytesBE(count: i32): u8[] {
         const next32Bytes: u8[] = [];
-        for (let i = 0; i < 32; i++) {
+        for (let i = 0; i < count; i++) {
             next32Bytes[i] = this.readU8();
         }
 
-        return u256.fromBytesBE(next32Bytes);
+        return next32Bytes;
+    }
+
+    public readI64(): i64 {
+        this.verifyEnd(this.currentOffset + 8);
+
+        const value = this.buffer.getInt64(this.currentOffset, true);
+        this.currentOffset += 8;
+
+        return value;
+    }
+
+    public readU128(): u128 {
+        this.verifyEnd(this.currentOffset + 16);
+
+        const next16Bytes: u8[] = this.readBytesBE(16);
+
+        return u128.fromBytesBE(next16Bytes);
+    }
+
+    public readI128(): i128 {
+        this.verifyEnd(this.currentOffset + 16);
+
+        const next16Bytes: u8[] = this.readBytesBE(16);
+
+        return i128.fromBytesBE(next16Bytes);
     }
 
     public readBytes(length: u32, zeroStop: boolean = false): Uint8Array {
