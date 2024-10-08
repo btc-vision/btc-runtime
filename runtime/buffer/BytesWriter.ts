@@ -242,7 +242,7 @@ export class BytesWriter {
     }
 
     private fromAddress(value: Address): Uint8Array {
-        if (value.length > i32(ADDRESS_BYTE_LENGTH)) {
+        if (value.length > ADDRESS_BYTE_LENGTH) {
             throw new Revert(`Address is too long ${value.length} > ${ADDRESS_BYTE_LENGTH} bytes`);
         }
 
@@ -252,7 +252,7 @@ export class BytesWriter {
             bytes[i] = value.charCodeAt(i);
         }
 
-        if (value.length < i32(ADDRESS_BYTE_LENGTH)) {
+        if (value.length < ADDRESS_BYTE_LENGTH) {
             bytes[value.length] = 0;
         }
 

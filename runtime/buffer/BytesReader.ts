@@ -187,7 +187,7 @@ export class BytesReader {
     }
 
     public readAddress(): Address {
-        return this.readString(ADDRESS_BYTE_LENGTH);
+        return this.readString(<u16>ADDRESS_BYTE_LENGTH);
     }
 
     public getOffset(): i32 {
