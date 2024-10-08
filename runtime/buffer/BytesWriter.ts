@@ -5,6 +5,7 @@ import { BytesReader } from './BytesReader';
 import { Revert } from '../types/Revert';
 import { Map } from '../generic/Map';
 import { ArrayBuffer } from 'arraybuffer';
+import { i256 } from '../math/i256';
 
 @final
 export class BytesWriter {
@@ -61,6 +62,15 @@ export class BytesWriter {
 
     public writeBoolean(value: boolean): void {
         this.writeU8(value ? 1 : 0);
+    }
+
+    public writeI256(value: i256): void {
+        this.allocSafe(32);
+
+        const bytes = value.toUint8Array(true);
+        for (let i: i32 = 0; i < 32; i++) {
+            this.writeU8(bytes[i] || 0);
+        }
     }
 
     public writeU256(value: u256): void {

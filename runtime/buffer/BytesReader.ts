@@ -5,6 +5,7 @@ import { Revert } from '../types/Revert';
 import { Map } from '../generic/Map';
 import { TransactionInput, TransactionOutput } from '../env/classes/UTXO';
 import { StaticArray } from 'staticarray';
+import { i256 } from '../math/i256';
 
 @final
 export class BytesReader {
@@ -170,6 +171,14 @@ export class BytesReader {
         }
 
         return result;
+    }
+
+    public readI256(): i256 {
+        this.verifyEnd(this.currentOffset + 32);
+
+        const next32Bytes: u8[] = this.readBytesBE(32);
+
+        return i256.fromBytesBE(next32Bytes);
     }
 
     public readTuple(): u256[] {
