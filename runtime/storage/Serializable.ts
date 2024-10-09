@@ -4,26 +4,29 @@ import { MemorySlotPointer } from '../memory/MemorySlotPointer';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { BytesReader } from '../buffer/BytesReader';
 import { Revert } from '../types/Revert';
+import { encodePointer } from '../math/abi';
 
 export abstract class Serializable {
     protected pointer: u16;
-    protected subPointer:MemorySlotPointer;
+    protected subPointer: MemorySlotPointer;
 
-    protected constructor(pointer: u16,
-                          subPointer:MemorySlotPointer) {
+    protected constructor(pointer: u16, subPointer: MemorySlotPointer) {
         this.pointer = pointer;
         this.subPointer = subPointer;
     }
 
     public abstract get chunkCount(): i32;
+
     public abstract writeToBuffer(): BytesWriter;
+
     public abstract readFromBuffer(reader: BytesReader): void;
 
-    public load() :void {
+    public load(): void {
         const chunks: u256[] = [];
 
-        for(let index:i32 = 0; index < this.chunkCount; index++){
-            const chunk: u256 = Blockchain.getStorageAt(this.pointer, u256.add(this.subPointer, u256.fromU32(index)), u256.Zero);
+        for (let index: i32 = 0; index < this.chunkCount; index++) {
+            const pointer = this.getPointer(u256.add(this.subPointer, u256.fromU32(index)));
+            const chunk: u256 = Blockchain.getStorageAt(pointer, u256.Zero);
             chunks.push(chunk);
         }
 
@@ -41,8 +44,7 @@ export abstract class Serializable {
 
         for (let index: i32 = 0; index < chunks.length; index++) {
             Blockchain.setStorageAt(
-                this.pointer,
-                u256.add(this.subPointer, u256.fromU32(index)),
+                this.getPointer(u256.add(this.subPointer, u256.fromU32(index))),
                 chunks[index],
             );
         }
@@ -60,7 +62,7 @@ export abstract class Serializable {
     }
 
     protected chunksToBytes(chunks: u256[]): BytesReader {
-        if(this.chunkCount >= 67108863) {
+        if (this.chunkCount >= 67108863) {
             throw new Revert('Too many chunks received');
         }
 
@@ -75,5 +77,13 @@ export abstract class Serializable {
         }
 
         return new BytesReader(buffer);
+    }
+
+    private getPointer(subPointer: u256): u256 {
+        const writer = new BytesWriter(34);
+        writer.writeU16(this.pointer);
+        writer.writeU256(subPointer);
+
+        return encodePointer(writer.getBuffer());
     }
 }

@@ -3,7 +3,6 @@ import { MemorySlotPointer } from '../memory/MemorySlotPointer';
 import { MemorySlotData } from '../memory/MemorySlot';
 import { u256 } from 'as-bignum/assembly';
 import { BytesReader } from '../buffer/BytesReader';
-import { encodePointerHash } from '../math/abi';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { NetEvent } from '../events/NetEvent';
 import { Potential } from '../lang/Definitions';
@@ -210,11 +209,9 @@ export class BlockchainEnvironment {
     }
 
     public getStorageAt(
-        pointer: u16,
-        subPointer: MemorySlotPointer,
+        pointerHash: MemorySlotPointer,
         defaultValue: MemorySlotData<u256>,
     ): MemorySlotData<u256> {
-        const pointerHash: MemorySlotPointer = encodePointerHash(pointer, subPointer);
         this.ensureStorageAtPointer(pointerHash, defaultValue);
 
         if (this.storage.has(pointerHash)) {
@@ -224,20 +221,14 @@ export class BlockchainEnvironment {
         return defaultValue;
     }
 
-    public hasStorageAt(pointer: u16, subPointer: MemorySlotPointer): bool {
+    public hasStorageAt(pointerHash: MemorySlotPointer): bool {
         // We mark zero as the default value for the storage, if something is 0, the storage slot get deleted or is non-existent
-        const val: u256 = this.getStorageAt(pointer, subPointer, u256.Zero);
+        const val: u256 = this.getStorageAt(pointerHash, u256.Zero);
 
         return u256.ne(val, u256.Zero);
     }
 
-    public setStorageAt(
-        pointer: u16,
-        keyPointer: MemorySlotPointer,
-        value: MemorySlotData<u256>,
-    ): void {
-        const pointerHash: u256 = encodePointerHash(pointer, keyPointer);
-
+    public setStorageAt(pointerHash: MemorySlotPointer, value: MemorySlotData<u256>): void {
         this._internalSetStorageAt(pointerHash, value);
     }
 

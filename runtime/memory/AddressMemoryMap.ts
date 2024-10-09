@@ -3,6 +3,7 @@ import { Blockchain } from '../env';
 import { encodePointer } from '../math/abi';
 import { MemorySlotData } from './MemorySlot';
 import { u256 } from 'as-bignum/assembly';
+import { BytesWriter } from '../buffer/BytesWriter';
 
 @final
 export class AddressMemoryMap<K extends string, V extends MemorySlotData<u256>> {
@@ -16,18 +17,22 @@ export class AddressMemoryMap<K extends string, V extends MemorySlotData<u256>> 
     }
 
     public set(key: K, value: V): this {
-        const keyHash: MemorySlotPointer = encodePointer(key);
-        Blockchain.setStorageAt(this.pointer, keyHash, value);
+        const keyHash: MemorySlotPointer = this.encodePointer(key);
+        Blockchain.setStorageAt(keyHash, value);
 
         return this;
     }
 
     public get(key: K): MemorySlotData<u256> {
-        return Blockchain.getStorageAt(this.pointer, encodePointer(key), this.defaultValue);
+        const keyHash: MemorySlotPointer = this.encodePointer(key);
+
+        return Blockchain.getStorageAt(keyHash, this.defaultValue);
     }
 
     public has(key: K): bool {
-        return Blockchain.hasStorageAt(this.pointer, encodePointer(key));
+        const keyHash: MemorySlotPointer = this.encodePointer(key);
+
+        return Blockchain.hasStorageAt(keyHash);
     }
 
     @unsafe
@@ -40,5 +45,13 @@ export class AddressMemoryMap<K extends string, V extends MemorySlotData<u256>> 
     @unsafe
     public clear(): void {
         throw new Error('Method not implemented.');
+    }
+
+    private encodePointer(key: K): MemorySlotPointer {
+        const writer = new BytesWriter(key.length + 2);
+        writer.writeU16(this.pointer);
+        writer.writeString(key);
+
+        return encodePointer(writer.getBuffer());
     }
 }

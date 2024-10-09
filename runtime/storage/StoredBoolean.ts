@@ -3,10 +3,14 @@ import { Blockchain } from '../env';
 
 @final
 export class StoredBoolean {
+    private readonly u256Pointer: u256;
+
     constructor(
         public pointer: u16,
         private defaultValue: bool,
-    ) {}
+    ) {
+        this.u256Pointer = u256.from(this.pointer);
+    }
 
     private _value: u256 = u256.Zero;
 
@@ -21,14 +25,14 @@ export class StoredBoolean {
     public set value(value: bool) {
         this._value = value ? u256.One : u256.Zero;
 
-        Blockchain.setStorageAt(this.pointer, u256.Zero, this._value);
+        Blockchain.setStorageAt(this.u256Pointer, this._value);
     }
 
     @inline
     public set(value: u256): this {
         this._value = value;
 
-        Blockchain.setStorageAt(this.pointer, u256.Zero, this._value);
+        Blockchain.setStorageAt(this.u256Pointer, this._value);
 
         return this;
     }
@@ -40,8 +44,7 @@ export class StoredBoolean {
 
     private ensureValue(): void {
         this._value = Blockchain.getStorageAt(
-            this.pointer,
-            u256.Zero,
+            this.u256Pointer,
             this.defaultValue ? u256.One : u256.Zero,
         );
     }

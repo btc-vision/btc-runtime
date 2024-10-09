@@ -3,6 +3,7 @@ import { u256 } from 'as-bignum/assembly';
 import { Blockchain } from '../env';
 import { MemorySlotPointer } from './MemorySlotPointer';
 import { encodePointer } from '../math/abi';
+import { BytesWriter } from '../buffer/BytesWriter';
 
 @final
 export class KeyMerger<K extends string, K2 extends string, V extends MemorySlotData<u256>> {
@@ -22,9 +23,9 @@ export class KeyMerger<K extends string, K2 extends string, V extends MemorySlot
 
     public set(key2: K2, value: V): this {
         const mergedKey: string = `${this.parentKey}${key2}`;
-        const keyHash: MemorySlotPointer = encodePointer(mergedKey);
+        const keyHash: MemorySlotPointer = this.encodePointer(mergedKey);
 
-        Blockchain.setStorageAt(this.pointer, keyHash, value);
+        Blockchain.setStorageAt(keyHash, value);
 
         return this;
     }
@@ -32,13 +33,13 @@ export class KeyMerger<K extends string, K2 extends string, V extends MemorySlot
     public get(key: K): MemorySlotData<u256> {
         const mergedKey: string = `${this.parentKey}${key}`;
 
-        return Blockchain.getStorageAt(this.pointer, encodePointer(mergedKey), this.defaultValue);
+        return Blockchain.getStorageAt(this.encodePointer(mergedKey), this.defaultValue);
     }
 
     public has(key: K): bool {
         const mergedKey: string = `${this.parentKey}${key}`;
 
-        return Blockchain.hasStorageAt(this.pointer, encodePointer(mergedKey));
+        return Blockchain.hasStorageAt(this.encodePointer(mergedKey));
     }
 
     @unsafe
@@ -49,5 +50,13 @@ export class KeyMerger<K extends string, K2 extends string, V extends MemorySlot
     @unsafe
     public clear(): void {
         throw new Error('Clear method not implemented.');
+    }
+
+    private encodePointer(key: string): MemorySlotPointer {
+        const writer = new BytesWriter(key.length + 2);
+        writer.writeU16(this.pointer);
+        writer.writeString(key);
+
+        return encodePointer(writer.getBuffer());
     }
 }

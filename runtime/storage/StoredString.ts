@@ -1,6 +1,8 @@
 import { u256 } from 'as-bignum/assembly';
 import { Blockchain } from '../env';
 import { SafeMath } from '../types/SafeMath';
+import { encodePointer } from '../math/abi';
+import { BytesWriter } from '../buffer/BytesWriter';
 
 @final
 export class StoredString {
@@ -30,8 +32,12 @@ export class StoredString {
         return a < b ? a : b;
     }
 
-    private max(a: u32, b: u32): u32 {
-        return a > b ? a : b;
+    private getPointer(key: u256): u256 {
+        const buf = new BytesWriter(34);
+        buf.writeU16(this.pointer);
+        buf.writeU256(key);
+
+        return encodePointer(buf.getBuffer());
     }
 
     private save(): void {
@@ -55,7 +61,7 @@ export class StoredString {
         // Save the initial chunk (first 28 bytes) in the header
         let bytesToWrite: u32 = this.min(remainingLength, 28);
         header = this.saveChunk(header, this._value, offset, bytesToWrite, 4);
-        Blockchain.setStorageAt(this.pointer, currentPointer, header);
+        Blockchain.setStorageAt(this.getPointer(currentPointer), header);
 
         remainingLength -= bytesToWrite;
         offset += bytesToWrite;
@@ -71,7 +77,7 @@ export class StoredString {
                 0,
             );
             currentPointer = u256.add(currentPointer, u256.One);
-            Blockchain.setStorageAt(this.pointer, currentPointer, storageValue);
+            Blockchain.setStorageAt(this.getPointer(currentPointer), storageValue);
 
             remainingLength -= bytesToWrite;
             offset += bytesToWrite;
@@ -95,7 +101,7 @@ export class StoredString {
     }
 
     private load(): void {
-        const header: u256 = Blockchain.getStorageAt(this.pointer, u256.Zero, u256.Zero);
+        const header: u256 = Blockchain.getStorageAt(this.getPointer(u256.Zero), u256.Zero);
         if (u256.eq(header, u256.Zero)) {
             if (this.defaultValue) {
                 this.value = this.defaultValue;
@@ -120,7 +126,7 @@ export class StoredString {
         while (remainingLength > 0) {
             // Move to the next storage slot
             currentPointer = u256.add(currentPointer, u256.One);
-            currentStorage = Blockchain.getStorageAt(this.pointer, currentPointer, u256.Zero);
+            currentStorage = Blockchain.getStorageAt(this.getPointer(currentPointer), u256.Zero);
 
             // Extract the relevant portion of the string from the current storage slot
             const bytesToRead: u32 = this.min(remainingLength, 32);
