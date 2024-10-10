@@ -4,7 +4,8 @@
     "description": "Bitcoin Smart Contract Runtime",
     "main": "btc/index.ts",
     "scripts": {
-        "build": "cross-env node scripts/asc tests/tests.ts"
+        "build": "cross-env node scripts/asc tests/tests.ts",
+        "test": "ts-mocha tests/**/*.spec.ts"
     },
     "types": "btc/index.ts",
     "keywords": [
