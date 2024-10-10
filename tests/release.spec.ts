@@ -22,6 +22,7 @@ describe("btc-runtime", () => {
   [
     "test_encode",
     "test_log",
-    "test_writeStringWithLength"
+    "test_writeStringWithLength",
+    "test_sha256"
   ].forEach((v) => makeTest(v))
 });

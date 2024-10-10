@@ -10,7 +10,7 @@ export function readMethod(data: Uint8Array): Uint8Array {
     const calldata: Calldata = new BytesReader(data);
     const result: BytesWriter = Blockchain.contract.callMethod(calldata);
     // new event dump
-    Blockchain.flushEvents();
+//    Blockchain.flushEvents();
     return result.getBuffer();
 }
 
@@ -20,9 +20,9 @@ export function readMethod(data: Uint8Array): Uint8Array {
 // }
 
 // older event dump
-// export function getEvents(): Uint8Array {
-//     return Blockchain.getEvents();
-// }
+export function getEvents(): Uint8Array {
+     return Blockchain.getEvents();
+}
 
 export function getMethodABI(): Uint8Array {
     return Blockchain.getMethodSelectors();

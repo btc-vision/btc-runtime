@@ -62,3 +62,5 @@ export * from './shared-libraries/OP20Utils';
 /** Utils */
 export * from './utils/hex';
 export * from './utils/box';
+export * from './utils/sha256';
+export * from './utils/b32';

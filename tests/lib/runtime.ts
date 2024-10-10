@@ -114,6 +114,7 @@ export class TestProgram extends EventEmitter {
         abort: (...args) => (this as any).abort(...args),
         logStatic: (...args) => (this as any).logStatic(...args),
 	log: (...args) => (this as any).log(...args),
+        load: (...args) => (this as any).load(...args),
         store: (...args) => (this as any).store(...args),
         deploy: (...args) => (this as any).deploy(...args),
         deployFromAddress: (...args) => (this as any).deployFromAddress(...args),
