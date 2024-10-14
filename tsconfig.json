@@ -1,9 +1,7 @@
 {
     "extends": "./node_modules/assemblyscript/std/assembly.json",
-    "include": [
-        "./*.ts",
-        "./**/*.ts",
-        "./runtime/**/*.ts",
-        "./runtime/*.ts"
-    ]
+    "include": ["./*.ts", "./**/*.ts", "./runtime/**/*.ts", "./runtime/*.ts"],
+    "compilerOptions": {
+        "preserveConstEnums": true
+    }
 }

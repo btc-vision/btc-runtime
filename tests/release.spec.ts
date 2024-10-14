@@ -1,8 +1,8 @@
+import { readFile } from 'fs-extra';
 import { TestProgram } from './lib';
-import fs from 'fs';
 
-import { describe, it } from 'mocha';
 import { ArrayBuffer } from 'arraybuffer';
+import { describe, it } from 'mocha';
 
 const makeProgram = (binary: ArrayBuffer) => {
     const program = new TestProgram(new Uint8Array(Array.from(binary)).buffer);
@@ -11,11 +11,11 @@ const makeProgram = (binary: ArrayBuffer) => {
 };
 
 describe('btc-runtime', () => {
-    const makeTest = (s: string) =>
+    const makeTest = (s) =>
         it(s, async () => {
-            const binary = fs.readFileSync('./build/tests.wasm');
+            const binary = await readFile('./build/tests.wasm');
             const program = makeProgram(binary);
-            await program.run(s);
+            const result = await program.run(s);
         });
     ['test_encode', 'test_log', 'test_writeStringWithLength'].forEach((v) => makeTest(v));
 });

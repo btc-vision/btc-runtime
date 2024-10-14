@@ -4,7 +4,8 @@
     "description": "Bitcoin Smart Contract Runtime",
     "main": "btc/index.ts",
     "scripts": {
-        "build": "cross-env node scripts/asc tests/tests.ts"
+        "build": "cross-env node scripts/asc tests/tests.ts",
+        "test": "ts-mocha tests/**/*.spec.ts"
     },
     "types": "btc/index.ts",
     "keywords": [
@@ -20,7 +21,7 @@
     "license": "MIT",
     "devDependencies": {
         "@types/mocha": "^10.0.8",
-        "@types/node": "^22.5.5",
+        "@types/node": "^22.7.5",
         "assemblyscript": "^0.27.30",
         "cross-env": "^7.0.3",
         "fs-extra": "^11.2.0",
@@ -45,8 +46,10 @@
         "@eslint/js": "^9.10.0",
         "as-bignum": "^0.3.0",
         "gulplog": "^2.2.0",
+        "mocha": "^10.7.3",
         "ts-node": "^10.9.2",
         "typescript": "^5.6.2",
-        "typescript-eslint": "^8.6.0"
+        "typescript-eslint": "^8.6.0",
+        "yargs": "^17.7.2"
     }
 }
