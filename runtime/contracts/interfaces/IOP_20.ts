@@ -16,6 +16,4 @@ export interface IOP_20 {
     allowance(callData: Calldata): BytesWriter;
 
     burn(callData: Calldata): BytesWriter;
-
-    mint(callData: Calldata): BytesWriter;
 }

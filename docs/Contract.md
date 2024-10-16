@@ -17,60 +17,61 @@ Solidity.
 
 #### **Best Practices**
 
-- **Do not use the constructor for variable initialization or one-time setup tasks.**
-- **Use a method like `onInstantiated` for logic that should only run once.** This method will check if the contract is
-  already instantiated and, if not, perform the necessary setup.
+-   **Do not use the constructor for variable initialization or one-time setup tasks.**
+-   **Use a method like `onDeployment` for logic that should only run once.** This method will check if the contract is
+    already instantiated and, if not, perform the necessary setup.
 
-#### **Example: Proper Use of Constructor and `onInstantiated`**
+#### **Example: Proper Use of Constructor and `onDeployment`**
 
 ```typescript
-import { u128, u256 } from 'as-bignum/assembly';
 import {
-    Address, Blockchain,
+    Address,
+    Blockchain,
     BytesWriter,
     Calldata,
+    DeployableOP_20,
     encodeSelector,
     Map,
     OP20InitParameters,
     Selector,
 } from '@btc-vision/btc-runtime/runtime';
-import { DeployableOP_20 } from '@btc-vision/btc-runtime/runtime/contracts/DeployableOP_20';
+import { u128, u256 } from 'as-bignum/assembly';
 
 @final
 export class MyToken extends DeployableOP_20 {
-    constructor() {
+    public constructor() {
         super();
 
-        // DO NOT USE TO DEFINE VARIABLES THAT ARE NOT CONSTANT.
+        // IMPORTANT. THIS WILL RUN EVERYTIME THE CONTRACT IS INTERACTED WITH. FOR SPECIFIC INITIALIZATION, USE "onDeployment" METHOD.
     }
 
-    // This is a Solidity-like constructor. This method will only run once.
-    public onInstantiated(): void {
-        if (!this.isInstantiated) {
-            super.onInstantiated(); // IMPORTANT: Call the parent class's onInstantiated.
+    // "solidityLikeConstructor" This is a solidity-like constructor. This method will only run once when the contract is deployed.
+    public override onDeployment(_calldata: Calldata): void {
+        const maxSupply: u256 = u128.fromString('100000000000000000000000000').toU256(); // Your max supply.
+        const decimals: u8 = 18; // Your decimals.
+        const name: string = 'MyToken'; // Your token name.
+        const symbol: string = 'TOKEN'; // Your token symbol.
 
-            const maxSupply: u256 = u128.fromString('100000000000000000000000000').toU256(); // Your max supply.
-            const decimals: u8 = 18; // Your decimals.
-            const name: string = 'MyToken'; // Your token name.
-            const symbol: string = 'TOKEN'; // Your token symbol.
+        this.instantiate(new OP20InitParameters(maxSupply, decimals, name, symbol));
 
-            this.instantiate(new OP20InitParameters(maxSupply, decimals, name, symbol));
-
-            // Add your logic here, such as minting the initial supply:
-            // this._mint(Blockchain.origin, maxSupply);
-        }
+        // Add your logic here. Eg, minting the initial supply:
+        this._mint(Blockchain.tx.origin, maxSupply);
     }
 
-    public override callMethod(method: Selector, calldata: Calldata): BytesWriter {
+    public override execute(method: Selector, calldata: Calldata): BytesWriter {
         switch (method) {
             case encodeSelector('airdrop'):
                 return this.airdrop(calldata);
+            case encodeSelector('airdropWithAmount'):
+                return this.airdropWithAmount(calldata);
             default:
-                return super.callMethod(method, calldata);
+                return super.execute(method, calldata);
         }
     }
 
     private airdrop(calldata: Calldata): BytesWriter {
+        this.onlyOwner(Blockchain.tx.sender);
+
         const drops: Map<Address, u256> = calldata.readAddressValueTuple();
 
         const addresses: Address[] = drops.keys();
@@ -78,10 +79,36 @@ export class MyToken extends DeployableOP_20 {
             const address = addresses[i];
             const amount = drops.get(address);
 
-            this._mint(address, amount);
+            this._mint(address, amount, false);
         }
 
-        const writer: BytesWriter = new BytesWriter();
+        const writer: BytesWriter = new BytesWriter(1);
+        writer.writeBoolean(true);
+
+        return writer;
+    }
+
+    private _optimizedMint(address: Address, amount: u256): void {
+        this.balanceOfMap.set(address, amount);
+
+        this._totalSupply.addNoCommit(amount);
+
+        this.createMintEvent(address, amount);
+    }
+
+    private airdropWithAmount(calldata: Calldata): BytesWriter {
+        this.onlyOwner(Blockchain.tx.sender);
+
+        const amount: u256 = calldata.readU256();
+        const addresses: Address[] = calldata.readAddressArray();
+
+        for (let i: i32 = 0; i < addresses.length; i++) {
+            this._optimizedMint(addresses[i], amount);
+        }
+
+        this._totalSupply.commit();
+
+        const writer: BytesWriter = new BytesWriter(1);
         writer.writeBoolean(true);
 
         return writer;
@@ -98,46 +125,16 @@ ecosystem.
 #### **Index Structure**
 
 ```typescript
-import { ABIRegistry, Blockchain } from '@btc-vision/btc-runtime/runtime';
+import { Blockchain } from '@btc-vision/btc-runtime/runtime';
 import { MyToken } from './contracts/MyToken';
 
-export function defineSelectors(): void {
-    /** OP_NET */
-    ABIRegistry.defineGetterSelector('address', false);
-    ABIRegistry.defineGetterSelector('owner', false);
-    ABIRegistry.defineMethodSelector('isAddressOwner', false);
-
-    /** OP_20 */
-    ABIRegistry.defineMethodSelector('allowance', false);
-    ABIRegistry.defineMethodSelector('approve', true);
-    ABIRegistry.defineMethodSelector('balanceOf', false);
-    ABIRegistry.defineMethodSelector('burn', true);
-    ABIRegistry.defineMethodSelector('mint', true);
-    ABIRegistry.defineMethodSelector('transfer', true);
-    ABIRegistry.defineMethodSelector('transferFrom', true);
-
-    ABIRegistry.defineGetterSelector('decimals', false);
-    ABIRegistry.defineGetterSelector('name', false);
-    ABIRegistry.defineGetterSelector('symbol', false);
-    ABIRegistry.defineGetterSelector('totalSupply', false);
-    ABIRegistry.defineGetterSelector('maxSupply', false);
-
-    /** Optional */
-    ABIRegistry.defineMethodSelector('airdrop', true);
-
-    // Define your selectors here.
-}
-
-// DO NOT TOUCH THIS PART.
+// DO NOT TOUCH TO THIS.
 Blockchain.contract = () => {
     // ONLY CHANGE THE CONTRACT CLASS NAME.
-    const contract = new MyToken();
-    contract.onInstantiated();
-
     // DO NOT ADD CUSTOM LOGIC HERE.
 
-    return contract;
-}
+    return new MyToken();
+};
 
 // VERY IMPORTANT
 export * from '@btc-vision/btc-runtime/runtime/exports';
@@ -145,8 +142,8 @@ export * from '@btc-vision/btc-runtime/runtime/exports';
 
 #### **Important Notes**
 
-- **DO NOT Modify `Blockchain.contract`:** This function is responsible for instantiating the contract. You should only
-  change the class name to match your contract. Adding custom logic here can lead to unexpected behavior and errors.
+-   **DO NOT Modify `Blockchain.contract`:** This function is responsible for instantiating the contract. You should only
+    change the class name to match your contract. Adding custom logic here can lead to unexpected behavior and errors.
 
 ### 3. **Understanding `defineSelectors`**
 
@@ -155,10 +152,10 @@ export * from '@btc-vision/btc-runtime/runtime/exports';
 The `defineSelectors` function is where you map contract methods and properties to specific selectors. These selectors
 allow external calls to interact with your contract's methods and retrieve its properties.
 
-- **Getter Selectors**: These are used for read-only methods that do not modify the contract state (
-  e.g., `name`, `symbol`, `totalSupply`).
-- **Method Selectors**: These are used for methods that may modify the contract state (
-  e.g., `mint`, `transfer`, `approve`).
+-   **Getter Selectors**: These are used for read-only methods that do not modify the contract state (
+    e.g., `name`, `symbol`, `totalSupply`).
+-   **Method Selectors**: These are used for methods that may modify the contract state (
+    e.g., `mint`, `transfer`, `approve`).
 
 #### **Adding New Methods**
 
@@ -166,31 +163,31 @@ To add new methods to your contract, you'll need to:
 
 1. **Define the selector in `defineSelectors`:**
 
-   ```typescript
-   ABIRegistry.defineMethodSelector('myNewMethod', true);
-   ```
+    ```typescript
+    ABIRegistry.defineMethodSelector('myNewMethod', true);
+    ```
 
 2. **Implement the method in your contract:**
 
-   ```typescript
-   public override callMethod(method: Selector, calldata: Calldata): BytesWriter {
-       switch (method) {
-           case encodeSelector('myNewMethod'):
-               return this.myNewMethod(calldata);
-           default:
-               return super.callMethod(method, calldata);
-       }
-   }
+    ```typescript
+    public override callMethod(method: Selector, calldata: Calldata): BytesWriter {
+        switch (method) {
+            case encodeSelector('myNewMethod'):
+                return this.myNewMethod(calldata);
+            default:
+                return super.callMethod(method, calldata);
+        }
+    }
 
-   private myNewMethod(calldata: Calldata): BytesWriter {
-       // Your method logic here
+    private myNewMethod(calldata: Calldata): BytesWriter {
+        // Your method logic here
 
-       const writer: BytesWriter = new BytesWriter();
-       writer.writeBoolean(true); // Example response
+        const writer: BytesWriter = new BytesWriter();
+        writer.writeBoolean(true); // Example response
 
-       return writer;
-   }
-   ```
+        return writer;
+    }
+    ```
 
 3. **For read-only methods, implement in `callView`:**
 
