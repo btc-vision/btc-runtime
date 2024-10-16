@@ -12,10 +12,10 @@ import { Address } from '../types/Address';
 import { Revert } from '../types/Revert';
 import { SafeMath } from '../types/SafeMath';
 
+import { Calldata } from '../types';
 import { IOP_20 } from './interfaces/IOP_20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
-import { Calldata } from '../types';
 
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
 const decimalsPointer: u16 = Blockchain.nextPointer;
@@ -150,15 +150,6 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         return response;
     }
 
-    public mint(callData: Calldata): BytesWriter {
-        const response = new BytesWriter(1);
-        const resp = this._mint(callData.readAddress(), callData.readU256());
-
-        response.writeBoolean(resp);
-
-        return response;
-    }
-
     public transfer(callData: Calldata): BytesWriter {
         const response = new BytesWriter(1);
         const resp = this._transfer(callData.readAddress(), callData.readU256());
@@ -213,8 +204,6 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
                 return this.balanceOf(calldata);
             case encodeSelector('burn'):
                 return this.burn(calldata);
-            case encodeSelector('mint'):
-                return this.mint(calldata);
             case encodeSelector('transfer'):
                 return this.transfer(calldata);
             case encodeSelector('transferFrom'):
