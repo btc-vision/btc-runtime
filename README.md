@@ -31,28 +31,28 @@ execution while integrating deeply with Bitcoin's decentralized architecture.
 
 ### Features
 
-- **AssemblyScript and WebAssembly:** Efficient and high-performance contract execution using WebAssembly.
-- **Bitcoin Integration:** Direct interaction with Bitcoin L1, enabling the creation of decentralized applications that
-  operate on the Bitcoin network.
-- **Comprehensive Storage Management:** Flexible and secure storage management using primary pointers and sub-pointers,
-  ensuring data integrity through cryptographic proofs.
-- **Event Handling:** Sophisticated event system for contract state changes, allowing easy tracking and logging of
-  contract activities.
+-   **AssemblyScript and WebAssembly:** Efficient and high-performance contract execution using WebAssembly.
+-   **Bitcoin Integration:** Direct interaction with Bitcoin L1, enabling the creation of decentralized applications that
+    operate on the Bitcoin network.
+-   **Comprehensive Storage Management:** Flexible and secure storage management using primary pointers and sub-pointers,
+    ensuring data integrity through cryptographic proofs.
+-   **Event Handling:** Sophisticated event system for contract state changes, allowing easy tracking and logging of
+    contract activities.
 
 ## Installation
 
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/btc-vision/btc-runtime.git
-   ```
+    ```bash
+    git clone https://github.com/btc-vision/btc-runtime.git
+    ```
 2. Navigate to the repository directory:
-   ```bash
-   cd btc-runtime
-   ```
+    ```bash
+    cd btc-runtime
+    ```
 3. Install the necessary dependencies:
-   ```bash
-   npm install
-   ```
+    ```bash
+    npm install
+    ```
 
 ## Core Concepts
 
@@ -95,59 +95,94 @@ Here is a real-world example of how to create a basic token contract using the O
 contract follows the OP20 standard.
 
 ```typescript
-import { u128, u256 } from 'as-bignum/assembly';
 import {
-    Address, Blockchain,
+    Address,
+    Blockchain,
     BytesWriter,
     Calldata,
+    DeployableOP_20,
     encodeSelector,
     Map,
     OP20InitParameters,
     Selector,
 } from '@btc-vision/btc-runtime/runtime';
-import { DeployableOP_20 } from '@btc-vision/btc-runtime/runtime/contracts/DeployableOP_20';
+import { u128, u256 } from 'as-bignum/assembly';
 
 @final
 export class MyToken extends DeployableOP_20 {
-    constructor() {
+    public constructor() {
         super();
 
-        // DO NOT USE TO DEFINE VARIABLE THAT ARE NOT CONSTANT. SEE "solidityLikeConstructor" BELOW.
+        // IMPORTANT. THIS WILL RUN EVERYTIME THE CONTRACT IS INTERACTED WITH. FOR SPECIFIC INITIALIZATION, USE "onDeployment" METHOD.
     }
 
-    // "solidityLikeConstructor" This is a solidity-like constructor. This method will only run once.
-    public onInstantiated(): void {
-        if (!this.isInstantiated) {
-            super.onInstantiated(); // IMPORTANT.
+    // "solidityLikeConstructor" This is a solidity-like constructor. This method will only run once when the contract is deployed.
+    public override onDeployment(_calldata: Calldata): void {
+        const maxSupply: u256 = u128.fromString('100000000000000000000000000').toU256(); // Your max supply.
+        const decimals: u8 = 18; // Your decimals.
+        const name: string = 'MyToken'; // Your token name.
+        const symbol: string = 'TOKEN'; // Your token symbol.
 
-            const maxSupply: u256 = u128.fromString('100000000000000000000000000').toU256(); // Your max supply.
-            const decimals: u8 = 18; // Your decimals.
-            const name: string = 'MyToken'; // Your token name.
-            const symbol: string = 'TOKEN'; // Your token symbol.
+        this.instantiate(new OP20InitParameters(maxSupply, decimals, name, symbol));
 
-            this.instantiate(new OP20InitParameters(maxSupply, decimals, name, symbol));
-
-            // Add your logic here. Eg, minting the initial supply:
-            // this._mint(Blockchain.origin, maxSupply);
-        }
+        // Add your logic here. Eg, minting the initial supply:
+        this._mint(Blockchain.tx.origin, maxSupply);
     }
 
-    public override callMethod(method: Selector, calldata: Calldata): BytesWriter {
+    public override execute(method: Selector, calldata: Calldata): BytesWriter {
         switch (method) {
+            case encodeSelector('airdrop'):
+                return this.airdrop(calldata);
+            case encodeSelector('airdropWithAmount'):
+                return this.airdropWithAmount(calldata);
             default:
-                return super.callMethod(method, calldata);
+                return super.execute(method, calldata);
         }
     }
-}
-```
 
-### Emitting Events
+    private airdrop(calldata: Calldata): BytesWriter {
+        this.onlyOwner(Blockchain.tx.sender);
 
-```typescript
-class MyContract extends OP_NET {
-    public someAction(): void {
-        const event = new CustomEvent(Blockchain.sender, u256.fromU32(100));
-        this.emitEvent(event);
+        const drops: Map<Address, u256> = calldata.readAddressValueTuple();
+
+        const addresses: Address[] = drops.keys();
+        for (let i: i32 = 0; i < addresses.length; i++) {
+            const address = addresses[i];
+            const amount = drops.get(address);
+
+            this._mint(address, amount, false);
+        }
+
+        const writer: BytesWriter = new BytesWriter(1);
+        writer.writeBoolean(true);
+
+        return writer;
+    }
+
+    private _optimizedMint(address: Address, amount: u256): void {
+        this.balanceOfMap.set(address, amount);
+
+        this._totalSupply.addNoCommit(amount);
+
+        this.createMintEvent(address, amount);
+    }
+
+    private airdropWithAmount(calldata: Calldata): BytesWriter {
+        this.onlyOwner(Blockchain.tx.sender);
+
+        const amount: u256 = calldata.readU256();
+        const addresses: Address[] = calldata.readAddressArray();
+
+        for (let i: i32 = 0; i < addresses.length; i++) {
+            this._optimizedMint(addresses[i], amount);
+        }
+
+        this._totalSupply.commit();
+
+        const writer: BytesWriter = new BytesWriter(1);
+        writer.writeBoolean(true);
+
+        return writer;
     }
 }
 ```
@@ -175,11 +210,11 @@ class ComplexData extends Serializable {
 
 For more detailed explanations on specific topics, refer to the individual documentation files:
 
-- [Blockchain.md](docs/Blockchain.md)
-- [Contract.md](docs/Contract.md)
-- [Events.md](docs/Events.md)
-- [Pointers.md](docs/Pointers.md)
-- [Storage.md](docs/Storage.md)
+-   [Blockchain.md](docs/Blockchain.md)
+-   [Contract.md](docs/Contract.md)
+-   [Events.md](docs/Events.md)
+-   [Pointers.md](docs/Pointers.md)
+-   [Storage.md](docs/Storage.md)
 
 ## License
 
