@@ -40,6 +40,30 @@ export class SafeMath {
         return SafeMath.sub(a, product);
     }
 
+    public static modInverse(k: u256, p: u256): u256 {
+        let s = u256.Zero;
+        let old_s = u256.One;
+        let r = p;
+        let old_r = k;
+
+        while (!r.isZero()) {
+            const quotient = SafeMath.div(old_r, r);
+            const r_copy = r;
+            r = SafeMath.sub(old_r, SafeMath.mul(quotient, r));
+            old_r = r_copy;
+
+            const s_copy = s;
+            s = SafeMath.sub(old_s, SafeMath.mul(quotient, s));
+            old_s = s_copy;
+        }
+
+        return SafeMath.mod(old_s, p);
+    }
+
+    public static isEven(a: u256): bool {
+        return u256.and(a, u256.One) == u256.Zero;
+    }
+
     public static pow(base: u256, exponent: u256): u256 {
         let result: u256 = u256.One;
         while (exponent > u256.Zero) {

@@ -1,4 +1,5 @@
 import { Box } from './box';
+import { String } from 'string';
 
 export function arrayBufferToArray(data: ArrayBuffer): Array<u8> {
     const result = new Array<u8>(data.byteLength);
@@ -65,7 +66,7 @@ function prefixChk(prefix: ArrayBuffer): u32 {
     for (let i: i32 = 0; i < prefix.byteLength; ++i) {
         const c = load<u8>(changetype<usize>(prefix) + <usize>i);
         if (c < <u8>33 || c > <u8>126) {
-            throw new Error('Invalid prefix (' + prefix + ')');
+            throw new Error('Invalid prefix (' + String.UTF8.decode(prefix) + ')');
         }
 
         chk = polymodStep(chk) ^ (c >> 5);

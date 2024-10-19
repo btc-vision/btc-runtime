@@ -162,9 +162,10 @@ export class BlockchainEnvironment {
         emit(buffer.getBuffer());
     }
 
-    public encodeVirtualAddress(virtualAddress: Uint8Array): Address {
-        const writer: BytesWriter = new BytesWriter(virtualAddress.byteLength + 4);
-        writer.writeBytesWithLength(virtualAddress);
+    public encodeVirtualAddress(virtualAddress: u8[]): Address {
+        const writer: BytesWriter = new BytesWriter(virtualAddress.length + 4);
+        writer.writeU32(virtualAddress.length);
+        writer.writeBytesU8Array(virtualAddress);
 
         const buffer: Uint8Array = writer.getBuffer();
         const cb: Potential<Uint8Array> = encodeAddress(buffer);

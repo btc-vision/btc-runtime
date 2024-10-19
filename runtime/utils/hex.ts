@@ -25,7 +25,7 @@ const hexLookupTable: StaticArray<u8> = [
 ];
 
 export function encodeHexUTF8(start: usize, len: usize): ArrayBuffer {
-    let result = new ArrayBuffer(2 + <i32>len * 2);
+    const result = new ArrayBuffer(2 + <i32>len * 2);
     store<u16>(changetype<usize>(result), <u16>0x7830);
     for (let i: usize = 0; i < len; i++) {
         store<u16>(

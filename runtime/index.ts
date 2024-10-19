@@ -46,6 +46,7 @@ export * from './math/cyrb53';
 export * from './math/sha256';
 export * from './math/rnd';
 export * from './math/i256';
+export * from './secp256k1/ECPoint';
 
 /** Memory */
 export * from './memory/AddressMemoryMap';
