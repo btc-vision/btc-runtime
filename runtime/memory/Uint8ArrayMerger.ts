@@ -21,8 +21,8 @@ export class Uint8ArrayMerger<V extends MemorySlotData<u256>> {
         this.parentKey = parent;
     }
 
-    public set(key2: Uint8Array, value: V): this {
-        const keyHash: MemorySlotPointer = this.getKeyHash(key2);
+    public set(key: Uint8Array, value: V): this {
+        const keyHash: MemorySlotPointer = this.getKeyHash(key);
         Blockchain.setStorageAt(keyHash, value);
 
         return this;
