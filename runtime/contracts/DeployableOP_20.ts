@@ -27,7 +27,7 @@ const balanceOfMapPointer: u16 = Blockchain.nextPointer;
 
 export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     protected readonly allowanceMap: MultiAddressMemoryMap<Address, Address, MemorySlotData<u256>>;
-    protected readonly balanceOfMap: AddressMemoryMap<Address, MemorySlotData<u256>>;
+    protected readonly balanceOfMap: AddressMemoryMap<MemorySlotData<u256>>;
 
     protected readonly _maxSupply: StoredU256;
     protected readonly _decimals: StoredU256;
@@ -42,7 +42,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             u256.Zero,
         );
 
-        this.balanceOfMap = new AddressMemoryMap<Address, MemorySlotData<u256>>(
+        this.balanceOfMap = new AddressMemoryMap<MemorySlotData<u256>>(
             balanceOfMapPointer,
             u256.Zero,
         );

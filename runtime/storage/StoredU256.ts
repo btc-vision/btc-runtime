@@ -47,6 +47,11 @@ export class StoredU256 {
     }
 
     @inline
+    public toString(): string {
+        return this._value.toString();
+    }
+
+    @inline
     @operator('+')
     public add(value: u256): this {
         this.ensureValue();
