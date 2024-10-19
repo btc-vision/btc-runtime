@@ -262,19 +262,4 @@ export class BytesReader {
 
         return result;
     }
-
-    private verifyChecksum(): void {
-        const writtenChecksum = this.readU32();
-
-        let checksum: u32 = 0;
-        for (let i = 0; i < this.buffer.byteLength; i++) {
-            checksum += this.buffer.getUint8(i);
-        }
-
-        checksum = checksum % 2 ** 32;
-
-        if (checksum !== writtenChecksum) {
-            throw new Error('Invalid checksum for buffer');
-        }
-    }
 }
