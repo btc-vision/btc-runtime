@@ -306,9 +306,6 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         const newToBalance: u256 = SafeMath.add(toBalance, value);
 
         this.balanceOfMap.set(to, newToBalance);
-        
-        Blockchain.log(`Transfer from ${sender} to ${to} with value ${value}`);
-
         this.createTransferEvent(sender, to, value);
 
         return true;
