@@ -127,7 +127,7 @@ export class BlockchainEnvironment {
     }
 
     public call(destinationContract: Address, calldata: BytesWriter): BytesReader {
-        if (destinationContract === this._contractAddress) {
+        if (destinationContract === this.contractAddress) {
             throw this.error('Cannot call self');
         }
 

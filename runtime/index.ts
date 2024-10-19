@@ -55,6 +55,7 @@ export * from './memory/MemorySlot';
 export * from './memory/MemorySlotPointer';
 export * from './memory/KeyMerger';
 export * from './memory/MultiAddressMemoryMap';
+export * from './memory/Uint8ArrayMerger';
 
 /** Storage */
 export * from './storage/StoredU256';

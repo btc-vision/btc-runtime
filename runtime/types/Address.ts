@@ -81,6 +81,42 @@ export class Address extends Uint8Array {
     }
 
     @inline
+    @operator('<')
+    public lessThan(a: Address): bool {
+        for (let i = 0; i < this.length; i++) {
+            if (this[i] < a[i]) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    @inline
+    @operator('>')
+    public greaterThan(a: Address): bool {
+        for (let i = 0; i < this.length; i++) {
+            if (this[i] > a[i]) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    @inline
+    @operator('<=')
+    public lessThanOrEqual(a: Address): bool {
+        return this.lessThan(a) || this.equals(a);
+    }
+
+    @inline
+    @operator('>=')
+    public greaterThanOrEqual(a: Address): bool {
+        return this.greaterThan(a) || this.equals(a);
+    }
+
+    @inline
     @operator('!=')
     public notEquals(a: Address): bool {
         return !this.equals(a);
