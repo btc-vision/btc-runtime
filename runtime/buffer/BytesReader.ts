@@ -230,7 +230,12 @@ export class BytesReader {
     }
 
     public readAddress(): Address {
-        return this.readString(<u16>ADDRESS_BYTE_LENGTH);
+        const bytes: Address = new Address();
+        for (let i: u32 = 0; i < ADDRESS_BYTE_LENGTH; i++) {
+            bytes[i] = this.readU8();
+        }
+
+        return bytes;
     }
 
     public getOffset(): i32 {

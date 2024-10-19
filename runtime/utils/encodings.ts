@@ -1,12 +1,7 @@
-import { u128, u256 } from 'as-bignum/assembly';
-import { MemorySlotPointer } from "../../memory/MemorySlotPointer";
+import { u256 } from 'as-bignum/assembly';
+import { MemorySlotPointer } from '../memory/MemorySlotPointer';
 
-import {
-    b32decode as _b32decode,
-    bech32m as _bech32m,
-    toWords,
-    fromWords,
-} from '../../utils/b32';
+import { b32decode as _b32decode, bech32m as _bech32m, fromWords, toWords } from './b32';
 
 export function bech32m(v: u256): string {
     return String.UTF8.decode(_bech32m(String.UTF8.encode('bc'), toWords(toArrayBuffer(v))));
@@ -23,7 +18,7 @@ export function arrayBufferToArray(data: ArrayBuffer): Array<u8> {
     return result;
 }
 
-export function toArrayBuffer<T>(data: T): ArrayBuffer {
+export function toArrayBuffer<T extends u256>(data: T): ArrayBuffer {
     const bytes = data.toBytes();
     return changetype<Uint8Array>(bytes).buffer;
 }
@@ -36,8 +31,7 @@ export function primitiveToBuffer<T>(value: T): ArrayBuffer {
 
 export function fromArrayBuffer(data: ArrayBuffer): MemorySlotPointer {
     if (data.byteLength === 0) return u256.Zero;
-    const result = u256.fromBytes(changetype<u8[]>(Uint8Array.wrap(data)));
-    return result;
+    return u256.fromBytes(changetype<u8[]>(Uint8Array.wrap(data)));
 }
 
 export function concat(a: ArrayBuffer, b: ArrayBuffer): ArrayBuffer {
@@ -49,15 +43,4 @@ export function concat(a: ArrayBuffer, b: ArrayBuffer): ArrayBuffer {
         <usize>b.byteLength,
     );
     return result;
-}
-
-export function splitU256(v: u256): Array<u128> {
-    const result = new Array<u128>(2);
-    result[0] = (v >> 128).toU128();
-    result[1] = (v & u256.fromU128(u128.Max)).toU128();
-    return result;
-}
-
-export function joinU256(a: u128, b: u128): u256 {
-    return (u256.fromU128(a) << 128) | b;
 }

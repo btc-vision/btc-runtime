@@ -8,11 +8,11 @@ import { MAX_EVENT_DATA_SIZE, NetEvent } from '../events/NetEvent';
 import { Calldata } from '../types';
 
 export class OP_NET implements IBTC {
-    public get address(): string {
+    public get address(): Address {
         return Blockchain.contractAddress;
     }
 
-    public get owner(): string {
+    public get owner(): Address {
         return Blockchain.owner;
     }
 

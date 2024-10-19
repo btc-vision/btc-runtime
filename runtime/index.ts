@@ -45,6 +45,8 @@ export * from './math/i256';
 
 /** Memory */
 export * from './memory/AddressMemoryMap';
+export * from './memory/StringMemoryMap';
+export * from './memory/MultiStringMemoryMap';
 export * from './memory/MemorySlot';
 export * from './memory/MemorySlotPointer';
 export * from './memory/KeyMerger';
@@ -56,10 +58,15 @@ export * from './storage/StoredString';
 export * from './storage/StoredBoolean';
 export * from './storage/Serializable';
 
+export * from './storage/StorageBacked';
+export * from './storage/StorageSlot';
+export * from './storage/StorageStruct';
+export * from './storage/StorageLayout';
+export * from './storage/StorageValue';
+
 /** Shared libraries */
 export * from './shared-libraries/TransferHelper';
 export * from './shared-libraries/OP20Utils';
 
 /** Utils */
-export * from './utils/hex';
-export * from './utils/box';
+export * from './utils';

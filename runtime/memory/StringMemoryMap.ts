@@ -6,7 +6,7 @@ import { u256 } from 'as-bignum/assembly';
 import { BytesWriter } from '../buffer/BytesWriter';
 
 @final
-export class AddressMemoryMap<K extends Uint8Array, V extends MemorySlotData<u256>> {
+export class StringMemoryMap<K extends string, V extends MemorySlotData<u256>> {
     public pointer: u16;
 
     constructor(
@@ -50,7 +50,7 @@ export class AddressMemoryMap<K extends Uint8Array, V extends MemorySlotData<u25
     private encodePointer(key: K): MemorySlotPointer {
         const writer = new BytesWriter(key.length + 2);
         writer.writeU16(this.pointer);
-        writer.writeBytes(key);
+        writer.writeString(key);
 
         return encodePointer(writer.getBuffer());
     }

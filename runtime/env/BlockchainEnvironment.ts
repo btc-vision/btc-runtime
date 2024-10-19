@@ -33,7 +33,7 @@ export function runtimeError(msg: string): Error {
 export class BlockchainEnvironment {
     private static readonly MAX_U16: u16 = 65535;
 
-    public readonly DEAD_ADDRESS: Address = 'bc1dead';
+    public readonly DEAD_ADDRESS: Address = new Address(); // 0 value address
 
     private storage: PointerStorage = new MapU256();
     private _selfContract: Potential<OP_NET> = null;
@@ -279,12 +279,14 @@ export class BlockchainEnvironment {
         pointerHash: MemorySlotPointer,
         defaultValue: MemorySlotData<u256>,
     ): void {
-        if (!this.hasPointerStorageHash(pointerHash)) {
-            if (u256.eq(defaultValue, u256.Zero)) {
-                return;
-            }
-
-            this._internalSetStorageAt(pointerHash, defaultValue);
+        if (this.hasPointerStorageHash(pointerHash)) {
+            return;
         }
+
+        if (u256.eq(defaultValue, u256.Zero)) {
+            return;
+        }
+
+        this._internalSetStorageAt(pointerHash, defaultValue);
     }
 }

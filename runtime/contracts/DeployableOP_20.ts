@@ -286,7 +286,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         return true;
     }
 
-    protected _transfer(to: string, value: u256): boolean {
+    protected _transfer(to: Address, value: u256): boolean {
         const sender = Blockchain.tx.sender;
 
         if (!this.balanceOfMap.has(sender)) throw new Revert();

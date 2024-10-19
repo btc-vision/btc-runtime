@@ -269,22 +269,14 @@ export class BytesWriter {
         return value1 < value2 ? value1 : value2;
     }
 
-    private fromAddress(value: Address): Uint8Array {
-        if (value.length > ADDRESS_BYTE_LENGTH) {
-            throw new Revert(`Address is too long ${value.length} > ${ADDRESS_BYTE_LENGTH} bytes`);
+    private fromAddress(pubKey: Address): Uint8Array {
+        if (pubKey.byteLength > ADDRESS_BYTE_LENGTH) {
+            throw new Revert(
+                `Address is too long ${pubKey.byteLength} > ${ADDRESS_BYTE_LENGTH} bytes`,
+            );
         }
 
-        const length: i32 = this.min(value.length + 1, ADDRESS_BYTE_LENGTH);
-        const bytes: Uint8Array = new Uint8Array(length);
-        for (let i: i32 = 0; i < value.length; i++) {
-            bytes[i] = value.charCodeAt(i);
-        }
-
-        if (value.length < ADDRESS_BYTE_LENGTH) {
-            bytes[value.length] = 0;
-        }
-
-        return bytes;
+        return pubKey;
     }
 
     private resize(size: u32): void {
