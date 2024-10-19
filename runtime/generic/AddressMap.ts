@@ -39,7 +39,7 @@ export class AddressMap<V> extends Map<Address, V> {
     public get(key: Address): V {
         const index: i32 = this.indexOf(key);
         if (index == -1) {
-            throw new Revert('Key not found in map');
+            throw new Revert('Key not found in map (AddressMap)');
         }
         return this._values[index];
     }
@@ -54,9 +54,5 @@ export class AddressMap<V> extends Map<Address, V> {
         this._values.splice(index, 1);
 
         return true;
-    }
-
-    public getAddresses(): Address[] {
-        return this._keys;
     }
 }

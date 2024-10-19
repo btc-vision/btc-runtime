@@ -39,7 +39,7 @@ export class Map<K, V> {
     public get(key: K): V {
         const index: i32 = this.indexOf(key);
         if (index == -1) {
-            throw new Revert('Key not found in map');
+            throw new Revert('Key not found in map (Map)');
         }
         return this._values[index];
     }

@@ -38,7 +38,7 @@ export class MapU256 extends Map<u256, u256> {
     public get(key: u256): u256 {
         const index: i32 = this.indexOf(key);
         if (index == -1) {
-            throw new Revert('Key not found in map');
+            throw new Revert('Key not found in map (u256)');
         }
         return this._values[index];
     }
