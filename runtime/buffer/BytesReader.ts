@@ -2,10 +2,10 @@ import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
 import { Selector } from '../math/abi';
 import { i128, u128, u256 } from 'as-bignum/assembly';
 import { Revert } from '../types/Revert';
-import { Map } from '../generic/Map';
 import { TransactionInput, TransactionOutput } from '../env/classes/UTXO';
 import { StaticArray } from 'staticarray';
 import { i256 } from '../math/i256';
+import { AddressMap } from '../generic/AddressMap';
 
 @final
 export class BytesReader {
@@ -107,8 +107,8 @@ export class BytesReader {
         return bytes;
     }
 
-    public readMultiBytesAddressMap(): Map<Address, Uint8Array[]> {
-        const map: Map<Address, Uint8Array[]> = new Map<Address, Uint8Array[]>();
+    public readMultiBytesAddressMap(): AddressMap<Uint8Array[]> {
+        const map: AddressMap<Uint8Array[]> = new AddressMap<Uint8Array[]>();
         const size: u8 = this.readU8();
 
         if (size > 8) throw new Revert('Too many contract called.');
@@ -192,9 +192,9 @@ export class BytesReader {
         return result;
     }
 
-    public readAddressValueTuple(): Map<Address, u256> {
+    public readAddressValueTuple(): AddressMap<u256> {
         const length: u16 = this.readU16();
-        const result = new Map<Address, u256>();
+        const result = new AddressMap<u256>();
 
         for (let i: u16 = 0; i < length; i++) {
             const address = this.readAddress();
@@ -231,7 +231,7 @@ export class BytesReader {
 
     public readAddress(): Address {
         const bytes: Address = new Address();
-        for (let i: u32 = 0; i < ADDRESS_BYTE_LENGTH; i++) {
+        for (let i: u32 = 0; i < u32(ADDRESS_BYTE_LENGTH); i++) {
             bytes[i] = this.readU8();
         }
 

@@ -13,6 +13,7 @@ export * from './buffer/BytesReader';
 export * from './buffer/BytesWriter';
 
 /** Interfaces */
+export * from './interfaces/IBTC';
 export * from './interfaces/DeployContractResponse';
 
 /** Events */
@@ -24,9 +25,12 @@ export * from './env/classes/UTXO';
 export * from './env/classes/Transaction';
 export * from './env/classes/Block';
 
-/** Types */
+/** Maps */
 export * from './generic/Map';
-export * from './interfaces/IBTC';
+export * from './generic/MapU256';
+export * from './generic/AddressMap';
+
+/** Types */
 export * from './types';
 
 /** Definitions */

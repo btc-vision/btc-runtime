@@ -17,9 +17,9 @@ Solidity.
 
 #### **Best Practices**
 
--   **Do not use the constructor for variable initialization or one-time setup tasks.**
--   **Use a method like `onDeployment` for logic that should only run once.** This method will check if the contract is
-    already instantiated and, if not, perform the necessary setup.
+- **Do not use the constructor for variable initialization or one-time setup tasks.**
+- **Use a method like `onDeployment` for logic that should only run once.** This method will check if the contract is
+  already instantiated and, if not, perform the necessary setup.
 
 #### **Example: Proper Use of Constructor and `onDeployment`**
 
@@ -34,6 +34,7 @@ import {
     Map,
     OP20InitParameters,
     Selector,
+    AddressMap
 } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from 'as-bignum/assembly';
 
@@ -72,7 +73,7 @@ export class MyToken extends DeployableOP_20 {
     private airdrop(calldata: Calldata): BytesWriter {
         this.onlyOwner(Blockchain.tx.sender);
 
-        const drops: Map<Address, u256> = calldata.readAddressValueTuple();
+        const drops: AddressMap<u256> = calldata.readAddressValueTuple();
 
         const addresses: Address[] = drops.keys();
         for (let i: i32 = 0; i < addresses.length; i++) {
@@ -142,8 +143,8 @@ export * from '@btc-vision/btc-runtime/runtime/exports';
 
 #### **Important Notes**
 
--   **DO NOT Modify `Blockchain.contract`:** This function is responsible for instantiating the contract. You should only
-    change the class name to match your contract. Adding custom logic here can lead to unexpected behavior and errors.
+- **DO NOT Modify `Blockchain.contract`:** This function is responsible for instantiating the contract. You should only
+  change the class name to match your contract. Adding custom logic here can lead to unexpected behavior and errors.
 
 ### 3. **Understanding `defineSelectors`**
 
@@ -152,10 +153,10 @@ export * from '@btc-vision/btc-runtime/runtime/exports';
 The `defineSelectors` function is where you map contract methods and properties to specific selectors. These selectors
 allow external calls to interact with your contract's methods and retrieve its properties.
 
--   **Getter Selectors**: These are used for read-only methods that do not modify the contract state (
-    e.g., `name`, `symbol`, `totalSupply`).
--   **Method Selectors**: These are used for methods that may modify the contract state (
-    e.g., `mint`, `transfer`, `approve`).
+- **Getter Selectors**: These are used for read-only methods that do not modify the contract state (
+  e.g., `name`, `symbol`, `totalSupply`).
+- **Method Selectors**: These are used for methods that may modify the contract state (
+  e.g., `mint`, `transfer`, `approve`).
 
 #### **Adding New Methods**
 
@@ -238,7 +239,7 @@ public override callMethod(method: Selector, calldata: Calldata): BytesWriter {
 }
 
 private airdrop(calldata: Calldata): BytesWriter {
-    const drops: Map<Address, u256> = calldata.readAddressValueTuple();
+    const drops: AddressMap<u256> = calldata.readAddressValueTuple();
 
     const addresses: Address[] = drops.keys();
     for (let i: i32 = 0; i < addresses.length; i++) {

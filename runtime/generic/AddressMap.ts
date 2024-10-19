@@ -1,23 +1,11 @@
 import { Revert } from '../types/Revert';
+import { Map } from './Map';
+import { Address } from '../types/Address';
 
-export class Map<K, V> {
-    protected _keys: K[] = [];
-    protected _values: V[] = [];
-
-    public get size(): i32 {
-        return this._keys.length;
-    }
-
-    public keys(): K[] {
-        return this._keys;
-    }
-
-    public values(): V[] {
-        return this._values;
-    }
-
-    public set(key: K, value: V): void {
-        const index: i32 = this.indexOf(key);
+@final
+export class AddressMap<V> extends Map<Address, V> {
+    public set(key: Address, value: V): void {
+        const index: i32 = this._keys.indexOf(key);
         if (index == -1) {
             this._keys.push(key);
             this._values.push(value);
@@ -26,9 +14,11 @@ export class Map<K, V> {
         }
     }
 
-    public indexOf(key: K): i32 {
+    public indexOf(address: Address): i32 {
         for (let i: i32 = 0; i < this._keys.length; i++) {
-            if (this._keys[i] == key) {
+            const key = this._keys[i];
+
+            if (address.equals(key)) {
                 return i;
             }
         }
@@ -36,7 +26,17 @@ export class Map<K, V> {
         return -1;
     }
 
-    public get(key: K): V {
+    public has(key: Address): bool {
+        for (let i: i32 = 0; i < this._keys.length; i++) {
+            if (key.equals(this._keys[i])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public get(key: Address): V {
         const index: i32 = this.indexOf(key);
         if (index == -1) {
             throw new Revert('Key not found in map');
@@ -44,11 +44,7 @@ export class Map<K, V> {
         return this._values[index];
     }
 
-    public has(key: K): bool {
-        return this.indexOf(key) != -1;
-    }
-
-    public delete(key: K): bool {
+    public delete(key: Address): bool {
         const index: i32 = this.indexOf(key);
         if (index == -1) {
             return false;
@@ -56,11 +52,11 @@ export class Map<K, V> {
 
         this._keys.splice(index, 1);
         this._values.splice(index, 1);
+
         return true;
     }
 
-    public clear(): void {
-        this._keys = [];
-        this._values = [];
+    public getAddresses(): Address[] {
+        return this._keys;
     }
 }

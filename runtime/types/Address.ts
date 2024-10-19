@@ -13,8 +13,31 @@ export class Address extends Uint8Array {
         this.prefix = String.UTF8.encode('bc');
     }
 
+    @inline
     public toBech32m(): string {
         return String.UTF8.decode(_bech32m(this.prefix, toWords(this.buffer)));
+    }
+
+    @inline
+    @operator('==')
+    public equals(a: Address): bool {
+        if (a.length != this.length) {
+            return false;
+        }
+
+        for (let i = 0; i < this.length; i++) {
+            if (this[i] != a[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    @inline
+    @operator('!=')
+    public notEquals(a: Address): bool {
+        return !this.equals(a);
     }
 }
 

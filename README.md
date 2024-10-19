@@ -31,13 +31,13 @@ execution while integrating deeply with Bitcoin's decentralized architecture.
 
 ### Features
 
--   **AssemblyScript and WebAssembly:** Efficient and high-performance contract execution using WebAssembly.
--   **Bitcoin Integration:** Direct interaction with Bitcoin L1, enabling the creation of decentralized applications that
-    operate on the Bitcoin network.
--   **Comprehensive Storage Management:** Flexible and secure storage management using primary pointers and sub-pointers,
-    ensuring data integrity through cryptographic proofs.
--   **Event Handling:** Sophisticated event system for contract state changes, allowing easy tracking and logging of
-    contract activities.
+- **AssemblyScript and WebAssembly:** Efficient and high-performance contract execution using WebAssembly.
+- **Bitcoin Integration:** Direct interaction with Bitcoin L1, enabling the creation of decentralized applications that
+  operate on the Bitcoin network.
+- **Comprehensive Storage Management:** Flexible and secure storage management using primary pointers and sub-pointers,
+  ensuring data integrity through cryptographic proofs.
+- **Event Handling:** Sophisticated event system for contract state changes, allowing easy tracking and logging of
+  contract activities.
 
 ## Installation
 
@@ -105,6 +105,7 @@ import {
     Map,
     OP20InitParameters,
     Selector,
+    AddressMap
 } from '@btc-vision/btc-runtime/runtime';
 import { u128, u256 } from 'as-bignum/assembly';
 
@@ -143,7 +144,7 @@ export class MyToken extends DeployableOP_20 {
     private airdrop(calldata: Calldata): BytesWriter {
         this.onlyOwner(Blockchain.tx.sender);
 
-        const drops: Map<Address, u256> = calldata.readAddressValueTuple();
+        const drops: AddressMap<u256> = calldata.readAddressValueTuple();
 
         const addresses: Address[] = drops.keys();
         for (let i: i32 = 0; i < addresses.length; i++) {
@@ -210,11 +211,11 @@ class ComplexData extends Serializable {
 
 For more detailed explanations on specific topics, refer to the individual documentation files:
 
--   [Blockchain.md](docs/Blockchain.md)
--   [Contract.md](docs/Contract.md)
--   [Events.md](docs/Events.md)
--   [Pointers.md](docs/Pointers.md)
--   [Storage.md](docs/Storage.md)
+- [Blockchain.md](docs/Blockchain.md)
+- [Contract.md](docs/Contract.md)
+- [Events.md](docs/Events.md)
+- [Pointers.md](docs/Pointers.md)
+- [Storage.md](docs/Storage.md)
 
 ## License
 

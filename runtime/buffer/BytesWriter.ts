@@ -3,9 +3,9 @@ import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
 import { Selector } from '../math/abi';
 import { BytesReader } from './BytesReader';
 import { Revert } from '../types/Revert';
-import { Map } from '../generic/Map';
 import { ArrayBuffer } from 'arraybuffer';
 import { i256 } from '../math/i256';
+import { AddressMap } from '../generic/AddressMap';
 
 @final
 export class BytesWriter {
@@ -154,7 +154,7 @@ export class BytesWriter {
         this.writeString(value);
     }
 
-    public writeAddressValueTupleMap(map: Map<Address, u256>): void {
+    public writeAddressValueTupleMap(map: AddressMap<u256>): void {
         if (map.size > 65535) throw new Revert('Map size is too large');
 
         /*const requiredSize: u32 = 2 + map.size * (ADDRESS_BYTE_LENGTH + 32);
@@ -177,7 +177,7 @@ export class BytesWriter {
         }
     }
 
-    public writeLimitedAddressBytesMap(map: Map<Address, Uint8Array[]>): void {
+    public writeLimitedAddressBytesMap(map: AddressMap<Uint8Array[]>): void {
         if (map.size > 8) throw new Revert('Too many contract called.'); // no more than 8 different contracts.
 
         /*let requiredSize: u32 = 1 + (map.size * ADDRESS_BYTE_LENGTH + 1);
