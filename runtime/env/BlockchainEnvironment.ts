@@ -33,7 +33,7 @@ export function runtimeError(msg: string): Error {
 export class BlockchainEnvironment {
     private static readonly MAX_U16: u16 = 65535;
 
-    public readonly DEAD_ADDRESS: Address = new Address(); // 0 value address
+    public readonly DEAD_ADDRESS: Address = Address.dead();
 
     private storage: PointerStorage = new MapU256();
     private _selfContract: Potential<OP_NET> = null;
