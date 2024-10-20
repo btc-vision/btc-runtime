@@ -22,10 +22,6 @@ export class OP_NET implements IBTC {
         let response: BytesWriter;
 
         switch (method) {
-            case encodeSelector('address'):
-                response = new BytesWriter(ADDRESS_BYTE_LENGTH);
-                response.writeAddress(this.address);
-                break;
             case encodeSelector('owner'):
                 response = new BytesWriter(ADDRESS_BYTE_LENGTH);
                 response.writeAddress(this.owner);
