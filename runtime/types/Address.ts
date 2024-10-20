@@ -81,9 +81,15 @@ export class Address extends Uint8Array {
 
     @operator('<')
     public lessThan(a: Address): bool {
-        for (let i = 0; i < this.length; i++) {
-            if (this[i] < a[i]) {
-                return true;
+        // Compare the two addresses byte-by-byte, treating them as big-endian uint256
+        for (let i = 0; i < 32; i++) {
+            const thisByte = this[i];
+            const aByte = a[i];
+
+            if (thisByte < aByte) {
+                return true; // this is less than a
+            } else if (thisByte > aByte) {
+                return false; // this is greater than or equal to a
             }
         }
 
@@ -92,9 +98,15 @@ export class Address extends Uint8Array {
 
     @operator('>')
     public greaterThan(a: Address): bool {
-        for (let i = 0; i < this.length; i++) {
-            if (this[i] > a[i]) {
-                return true;
+        // Compare the two addresses byte-by-byte, treating them as big-endian uint256
+        for (let i = 0; i < 32; i++) {
+            const thisByte = this[i];
+            const aByte = a[i];
+
+            if (thisByte > aByte) {
+                return true; // this is greater than a
+            } else if (thisByte < aByte) {
+                return false; // this is less than or equal to a
             }
         }
 

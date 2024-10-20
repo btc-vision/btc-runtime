@@ -4,7 +4,6 @@ import { Blockchain } from '../env';
 import { ApproveEvent, BurnEvent, MintEvent, TransferEvent } from '../events/predefined';
 import { encodeSelector, Selector } from '../math/abi';
 import { AddressMemoryMap } from '../memory/AddressMemoryMap';
-import { MemorySlotData } from '../memory/MemorySlot';
 import { MultiAddressMemoryMap } from '../memory/MultiAddressMemoryMap';
 import { StoredString } from '../storage/StoredString';
 import { StoredU256 } from '../storage/StoredU256';
@@ -26,8 +25,8 @@ const allowanceMapPointer: u16 = Blockchain.nextPointer;
 const balanceOfMapPointer: u16 = Blockchain.nextPointer;
 
 export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
-    protected readonly allowanceMap: MultiAddressMemoryMap<Address, Address, MemorySlotData<u256>>;
-    protected readonly balanceOfMap: AddressMemoryMap<MemorySlotData<u256>>;
+    protected readonly allowanceMap: MultiAddressMemoryMap<u256>;
+    protected readonly balanceOfMap: AddressMemoryMap<u256>;
 
     protected readonly _maxSupply: StoredU256;
     protected readonly _decimals: StoredU256;
@@ -37,15 +36,9 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     protected constructor(params: OP20InitParameters | null = null) {
         super();
 
-        this.allowanceMap = new MultiAddressMemoryMap<Address, Address, MemorySlotData<u256>>(
-            allowanceMapPointer,
-            u256.Zero,
-        );
+        this.allowanceMap = new MultiAddressMemoryMap<u256>(allowanceMapPointer, u256.Zero);
 
-        this.balanceOfMap = new AddressMemoryMap<MemorySlotData<u256>>(
-            balanceOfMapPointer,
-            u256.Zero,
-        );
+        this.balanceOfMap = new AddressMemoryMap<u256>(balanceOfMapPointer, u256.Zero);
 
         this._totalSupply = new StoredU256(totalSupplyPointer, u256.Zero, u256.Zero);
 

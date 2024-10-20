@@ -1,13 +1,13 @@
 import { MemorySlotData } from './MemorySlot';
 import { u256 } from 'as-bignum/assembly';
 import { Uint8ArrayMerger } from './Uint8ArrayMerger';
+import { Address } from '../types/Address';
 
 @final
-export class MultiAddressMemoryMap<
-    K extends Uint8Array,
-    K2 extends Uint8Array,
-    V extends MemorySlotData<u256>,
-> extends Map<K, Uint8ArrayMerger<V>> {
+export class MultiAddressMemoryMap<V extends MemorySlotData<u256>> extends Map<
+    Address,
+    Uint8ArrayMerger<V>
+> {
     public pointer: u16;
 
     constructor(
@@ -19,13 +19,13 @@ export class MultiAddressMemoryMap<
         this.pointer = pointer;
     }
 
-    public get(key: K): Uint8ArrayMerger<V> {
+    public get(key: Address): Uint8ArrayMerger<V> {
         this.createKeyMerger(key);
 
         return super.get(key);
     }
 
-    public setUpperKey(key: K, key2: K2, value: V): this {
+    public setUpperKey(key: Address, key2: Address, value: V): this {
         this.createKeyMerger(key);
 
         const subMap = super.get(key);
@@ -36,17 +36,17 @@ export class MultiAddressMemoryMap<
         return this;
     }
 
-    public set(key: K, value: Uint8ArrayMerger<V>): this {
+    public set(key: Address, value: Uint8ArrayMerger<V>): this {
         this.createKeyMerger(key);
 
         return <this>super.set(key, value);
     }
 
-    public has(key: K): bool {
+    public has(key: Address): bool {
         return super.has(key);
     }
 
-    public delete(key: K): bool {
+    public delete(key: Address): bool {
         return super.delete(key);
     }
 
@@ -54,7 +54,7 @@ export class MultiAddressMemoryMap<
         super.clear();
     }
 
-    private createKeyMerger(key: K): void {
+    private createKeyMerger(key: Address): void {
         if (!super.has(key)) {
             super.set(key, new Uint8ArrayMerger<V>(key, this.pointer, this.defaultValue));
         }
