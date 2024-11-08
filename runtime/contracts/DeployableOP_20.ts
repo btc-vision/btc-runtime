@@ -216,8 +216,12 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _approve(owner: Address, spender: Address, value: u256): boolean {
-        if (owner === Blockchain.DEAD_ADDRESS || spender === Blockchain.DEAD_ADDRESS) {
-            throw new Revert('Cannot approve from or to dead address');
+        if (owner === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Address can not be dead address');
+        }
+
+        if (spender === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Spender cannot be dead address');
         }
 
         const senderMap = this.allowanceMap.get(owner);
