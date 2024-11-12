@@ -232,9 +232,14 @@ export class BlockchainEnvironment {
         return defaultValue;
     }
 
-    public getNextPointerGreaterThan(targetPointer: MemorySlotPointer, lte: boolean = true): MemorySlotData<u256> {
-        const writer = new BytesWriter(33);
+    public getNextPointerGreaterThan(
+        targetPointer: MemorySlotPointer,
+        valueAtLeast: u256,
+        lte: boolean = true,
+    ): MemorySlotData<u256> {
+        const writer = new BytesWriter(65);
         writer.writeU256(targetPointer);
+        writer.writeU256(valueAtLeast);
         writer.writeBoolean(lte);
 
         const result: Uint8Array = nextPointerGreaterThan(writer.getBuffer());
