@@ -53,10 +53,9 @@ export class KeyMerger<K extends string, K2 extends string, V extends MemorySlot
     }
 
     private encodePointer(key: string): MemorySlotPointer {
-        const writer = new BytesWriter(key.length + 2);
-        writer.writeU16(this.pointer);
+        const writer = new BytesWriter(key.length);
         writer.writeString(key);
 
-        return encodePointer(writer.getBuffer());
+        return encodePointer(this.pointer, writer.getBuffer());
     }
 }

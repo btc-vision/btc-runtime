@@ -51,7 +51,7 @@ export class Uint8ArrayMerger<V extends MemorySlotData<u256>> {
     }
 
     private getKeyHash(key: Uint8Array): MemorySlotPointer {
-        const writer: BytesWriter = new BytesWriter(key.byteLength + 2 + this.parentKey.byteLength);
+        const writer: BytesWriter = new BytesWriter(key.byteLength + this.parentKey.byteLength);
 
         writer.writeBytes(this.parentKey);
         writer.writeBytes(key);
@@ -60,8 +60,6 @@ export class Uint8ArrayMerger<V extends MemorySlotData<u256>> {
     }
 
     private encodePointer(writer: BytesWriter): MemorySlotPointer {
-        writer.writeU16(this.pointer);
-
-        return encodePointer(writer.getBuffer());
+        return encodePointer(this.pointer, writer.getBuffer());
     }
 }

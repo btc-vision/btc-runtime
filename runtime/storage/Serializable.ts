@@ -80,10 +80,9 @@ export abstract class Serializable {
     }
 
     private getPointer(subPointer: u256): u256 {
-        const writer = new BytesWriter(34);
-        writer.writeU16(this.pointer);
+        const writer = new BytesWriter(32);
         writer.writeU256(subPointer);
 
-        return encodePointer(writer.getBuffer());
+        return encodePointer(this.pointer, writer.getBuffer());
     }
 }

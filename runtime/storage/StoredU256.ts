@@ -14,11 +14,10 @@ export class StoredU256 {
         public subPointer: MemorySlotPointer,
         private defaultValue: u256,
     ) {
-        const writer = new BytesWriter(34);
-        writer.writeU16(pointer);
+        const writer = new BytesWriter(32);
         writer.writeU256(subPointer);
 
-        this.u256Pointer = encodePointer(writer.getBuffer());
+        this.u256Pointer = encodePointer(pointer, writer.getBuffer());
     }
 
     private _value: u256 = u256.Zero;

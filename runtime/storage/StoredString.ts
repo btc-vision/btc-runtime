@@ -33,11 +33,10 @@ export class StoredString {
     }
 
     private getPointer(key: u256): u256 {
-        const buf = new BytesWriter(34);
-        buf.writeU16(this.pointer);
+        const buf = new BytesWriter(32);
         buf.writeU256(key);
 
-        return encodePointer(buf.getBuffer());
+        return encodePointer(this.pointer, buf.getBuffer());
     }
 
     private save(): void {

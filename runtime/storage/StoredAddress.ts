@@ -14,10 +14,9 @@ export class StoredAddress {
         defaultValue: Address,
     ) {
         const writer = new BytesWriter(32);
-        writer.writeU16(pointer);
 
         this.defaultValue = u256.fromBytes(defaultValue);
-        this.addressPointer = encodePointer(writer.getBuffer());
+        this.addressPointer = encodePointer(pointer, writer.getBuffer());
     }
 
     private _value: Address = new Address();

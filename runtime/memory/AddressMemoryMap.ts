@@ -49,10 +49,9 @@ export class AddressMemoryMap<V extends MemorySlotData<u256>> {
     }
 
     private encodePointer(key: Address): MemorySlotPointer {
-        const writer = new BytesWriter(key.length + 2);
-        writer.writeU16(this.pointer);
+        const writer = new BytesWriter(key.length);
         writer.writeBytes(key);
 
-        return encodePointer(writer.getBuffer());
+        return encodePointer(this.pointer, writer.getBuffer());
     }
 }

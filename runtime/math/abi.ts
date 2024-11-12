@@ -12,8 +12,17 @@ export function encodeSelector(name: string): Selector {
     return bytes4(hash);
 }
 
-export function encodePointer(typed: Uint8Array): MemorySlotPointer {
+export function encodePointer(uniqueIdentifier: u16, typed: Uint8Array): MemorySlotPointer {
     const hash = Sha256.hash(typed);
 
-    return bytes32(hash);
+    const finalPointer = new Uint8Array(32);
+    finalPointer[0] = uniqueIdentifier & 0xff;
+    finalPointer[1] = (uniqueIdentifier >> 8) & 0xff;
+
+    for (let i = 0; i < 30; i++) {
+        // drop the last two bytes
+        finalPointer[i + 2] = hash[i];
+    }
+
+    return bytes32(finalPointer);
 }
