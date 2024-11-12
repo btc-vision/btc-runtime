@@ -3,6 +3,10 @@
 export declare function loadPointer(data: Uint8Array): Uint8Array;
 
 // @ts-ignore
+@external('env', 'nextPointerGreaterThan')
+export declare function nextPointerGreaterThan(data: Uint8Array): Uint8Array;
+
+// @ts-ignore
 @external('env', 'store')
 export declare function storePointer(data: Uint8Array): Uint8Array;
 

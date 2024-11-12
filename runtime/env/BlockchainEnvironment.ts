@@ -16,6 +16,7 @@ import {
     encodeAddress,
     loadPointer,
     log,
+    nextPointerGreaterThan,
     storePointer,
     validateBitcoinAddress,
 } from './global';
@@ -229,6 +230,17 @@ export class BlockchainEnvironment {
         }
 
         return defaultValue;
+    }
+
+    public getNextPointerGreaterThan(targetPointer: MemorySlotPointer, lte: boolean = true): MemorySlotData<u256> {
+        const writer = new BytesWriter(33);
+        writer.writeU256(targetPointer);
+        writer.writeBoolean(lte);
+
+        const result: Uint8Array = nextPointerGreaterThan(writer.getBuffer());
+        const reader: BytesReader = new BytesReader(result);
+
+        return reader.readU256();
     }
 
     public hasStorageAt(pointerHash: MemorySlotPointer): bool {
