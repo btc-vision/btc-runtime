@@ -17,6 +17,7 @@ import {
     loadPointer,
     log,
     storePointer,
+    validateBitcoinAddress,
 } from './global';
 import { DeployContractResponse } from '../interfaces/DeployContractResponse';
 import { MapU256 } from '../generic/MapU256';
@@ -160,6 +161,14 @@ export class BlockchainEnvironment {
         buffer.writeBytesWithLength(data);
 
         emit(buffer.getBuffer());
+    }
+
+    public validateBitcoinAddress(address: string): bool {
+        const writer = new BytesWriter(address.length);
+        writer.writeString(address);
+
+        const reader = new BytesReader(validateBitcoinAddress(writer.getBuffer()));
+        return reader.readBoolean();
     }
 
     public encodeVirtualAddress(virtualAddress: u8[]): Address {

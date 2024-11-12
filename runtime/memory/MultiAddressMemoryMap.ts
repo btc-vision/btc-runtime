@@ -25,17 +25,6 @@ export class MultiAddressMemoryMap<V extends MemorySlotData<u256>> extends Map<
         return super.get(key);
     }
 
-    public setUpperKey(key: Address, key2: Address, value: V): this {
-        this.createKeyMerger(key);
-
-        const subMap = super.get(key);
-        if (subMap) {
-            subMap.set(key2, value);
-        }
-
-        return this;
-    }
-
     public set(key: Address, value: Uint8ArrayMerger<V>): this {
         this.createKeyMerger(key);
 
