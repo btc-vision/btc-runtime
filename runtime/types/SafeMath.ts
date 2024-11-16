@@ -1,5 +1,7 @@
 import { u256 } from 'as-bignum/assembly';
 
+const MAX_UINT256 = u256.Max; // Maximum value for u256
+
 export class SafeMath {
     public static ZERO: u256 = u256.fromU32(0);
 
@@ -27,7 +29,6 @@ export class SafeMath {
         return SafeMath.mod(mul, modulus);
     }
 
-    @inline
     @unsafe
     @operator('%')
     public static mod(a: u256, b: u256): u256 {
@@ -66,10 +67,21 @@ export class SafeMath {
 
     public static pow(base: u256, exponent: u256): u256 {
         let result: u256 = u256.One;
+
         while (u256.gt(exponent, u256.Zero)) {
             if (u256.ne(u256.and(exponent, u256.One), u256.Zero)) {
+                // Check for potential overflow before multiplication
+                if (u256.ne(base, u256.Zero) && u256.gt(result, SafeMath.div(MAX_UINT256, base))) {
+                    throw new Error('Overflow occurred during multiplication (result * base)');
+                }
                 result = SafeMath.mul(result, base);
             }
+
+            // Check for potential overflow before squaring base
+            if (u256.ne(base, u256.Zero) && u256.gt(base, SafeMath.div(MAX_UINT256, base))) {
+                throw new Error('Overflow occurred during multiplication (base * base)');
+            }
+
             base = SafeMath.mul(base, base);
             exponent = u256.shr(exponent, 1);
         }
@@ -91,7 +103,6 @@ export class SafeMath {
         return c;
     }
 
-    @inline
     @unsafe
     @operator('/')
     public static div(a: u256, b: u256): u256 {
@@ -137,7 +148,6 @@ export class SafeMath {
         return u256.gt(a, b) ? a : b;
     }
 
-    @inline
     @unsafe
     public static sqrt(y: u256): u256 {
         if (u256.gt(y, u256.fromU32(3))) {
@@ -165,7 +175,6 @@ export class SafeMath {
         }
     }
 
-    @inline
     @unsafe
     public static shl(value: u256, shift: i32): u256 {
         if (shift == 0) {
@@ -223,7 +232,6 @@ export class SafeMath {
      * @param value The value to increment
      * @returns The incremented value
      */
-    @inline
     static inc(value: u256): u256 {
         return value.preInc();
     }
