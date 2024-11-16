@@ -66,15 +66,13 @@ export class SafeMath {
 
     public static pow(base: u256, exponent: u256): u256 {
         let result: u256 = u256.One;
-        while (exponent > u256.Zero) {
-            if (u256.and(exponent, u256.One)) {
+        while (u256.gt(exponent, u256.Zero)) {
+            if (u256.ne(u256.and(exponent, u256.One), u256.Zero)) {
                 result = SafeMath.mul(result, base);
             }
-
             base = SafeMath.mul(base, base);
             exponent = u256.shr(exponent, 1);
         }
-
         return result;
     }
 
