@@ -9,7 +9,7 @@ export class StoredBoolean {
         public pointer: u16,
         private defaultValue: bool,
     ) {
-        this.u256Pointer = u256.from(this.pointer);
+        this.u256Pointer = u256.from(pointer);
     }
 
     private _value: u256 = u256.Zero;
