@@ -3,7 +3,6 @@ import { Selector } from '../math/abi';
 import { i128, u128, u256 } from 'as-bignum/assembly';
 import { Revert } from '../types/Revert';
 import { TransactionInput, TransactionOutput } from '../env/classes/UTXO';
-import { StaticArray } from 'staticarray';
 import { i256 } from '../math/i256';
 import { AddressMap } from '../generic/AddressMap';
 
@@ -143,9 +142,9 @@ export class BytesReader {
         return String.UTF8.decode(bytes.buffer);
     }
 
-    public readTransactionInputs(): StaticArray<TransactionInput> {
+    public readTransactionInputs(): TransactionInput[] {
         const length = this.readU8();
-        const result = new StaticArray<TransactionInput>(length);
+        const result = new Array<TransactionInput>(length);
 
         for (let i: u16 = 0; i < length; i++) {
             const txId = this.readBytes(32);
@@ -158,13 +157,13 @@ export class BytesReader {
         return result;
     }
 
-    public readTransactionOutputs(): StaticArray<TransactionOutput> {
+    public readTransactionOutputs(): TransactionOutput[] {
         const length = this.readU8();
-        const result = new StaticArray<TransactionOutput>(length);
+        const result = new Array<TransactionOutput>(length);
 
         for (let i: u16 = 0; i < length; i++) {
             const index = this.readU8();
-            const scriptPubKey = this.readBytesWithLength();
+            const scriptPubKey = this.readStringWithLength();
             const value = this.readU64();
 
             result[i] = new TransactionOutput(index, scriptPubKey, value);

@@ -1,7 +1,6 @@
 import { Address } from '../../types/Address';
 import { TransactionInput, TransactionOutput } from './UTXO';
 import { Potential } from '../../lang/Definitions';
-import { StaticArray } from 'staticarray';
 import { BytesReader } from '../../buffer/BytesReader';
 import { inputs, outputs } from '../global';
 
@@ -13,33 +12,39 @@ export class Transaction {
         public readonly id: Uint8Array,
     ) {}
 
-    private _inputs: Potential<StaticArray<TransactionInput>> = null;
+    private _inputs: Potential<TransactionInput[]> = null;
 
-    public get inputs(): StaticArray<TransactionInput> {
+    public get inputs(): TransactionInput[] {
         if (!this._inputs) {
-            this._inputs = this.loadInputs();
+            const inputs = this.loadInputs();
+            this._inputs = inputs;
+
+            return inputs;
         }
 
-        return this._inputs;
+        return this._inputs as TransactionInput[];
     }
 
-    private _outputs: Potential<StaticArray<TransactionOutput>> = null;
+    private _outputs: Potential<TransactionOutput[]> = null;
 
-    public get outputs(): StaticArray<TransactionOutput> {
+    public get outputs(): TransactionOutput[] {
         if (!this._outputs) {
-            this._outputs = this.loadOutputs();
+            const outputs = this.loadOutputs();
+            this._outputs = outputs;
+
+            return outputs;
         }
 
-        return this._outputs;
+        return this._outputs as TransactionOutput[];
     }
 
-    private loadInputs(): StaticArray<TransactionInput> {
+    private loadInputs(): TransactionInput[] {
         const buffer = new BytesReader(inputs());
 
         return buffer.readTransactionInputs();
     }
 
-    private loadOutputs(): StaticArray<TransactionOutput> {
+    private loadOutputs(): TransactionOutput[] {
         const buffer = new BytesReader(outputs());
 
         return buffer.readTransactionOutputs();

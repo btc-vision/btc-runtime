@@ -37,9 +37,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         super();
 
         this.allowanceMap = new MultiAddressMemoryMap<u256>(allowanceMapPointer, u256.Zero);
-
         this.balanceOfMap = new AddressMemoryMap<u256>(balanceOfMapPointer, u256.Zero);
-
         this._totalSupply = new StoredU256(totalSupplyPointer, u256.Zero, u256.Zero);
 
         this._maxSupply = new StoredU256(maxSupplyPointer, u256.Zero, u256.Zero);

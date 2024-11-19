@@ -223,4 +223,23 @@ export class SafeMath {
     static inc(value: u256): u256 {
         return value.preInc();
     }
+
+    /**
+     * Approximates the binary logarithm (log2) of a u256 integer.
+     * @param x - The input value for which to calculate log2(x).
+     * @returns The approximate log2(x) as u256.
+     */
+    @unsafe
+    public static approximateLog2(x: u256): u256 {
+        // Count the position of the highest bit set
+        let n: u256 = u256.Zero;
+        let value = x;
+
+        while (u256.gt(value, u256.One)) {
+            value = u256.shr(value, 1);
+            n = SafeMath.add(n, u256.One);
+        }
+
+        return n;
+    }
 }

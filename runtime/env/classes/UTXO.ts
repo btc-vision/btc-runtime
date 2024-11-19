@@ -11,7 +11,7 @@ export class TransactionInput {
 export class TransactionOutput {
     public constructor(
         public readonly index: u8,
-        public readonly scriptPubKey: Uint8Array,
+        public readonly to: string,
         public readonly value: u64,
     ) {}
 }
