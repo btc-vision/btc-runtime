@@ -15,38 +15,51 @@ export abstract class Serializable {
         this.subPointer = subPointer;
     }
 
-    public abstract get chunkCount(): i32;
+    // Max of 8160 bytes
+    public abstract get chunkCount(): u8;
 
     public abstract writeToBuffer(): BytesWriter;
 
     public abstract readFromBuffer(reader: BytesReader): void;
 
-    public load(): void {
+    public abstract exists(chunk: u256, index: u8): boolean;
+
+    public load(): boolean {
         const chunks: u256[] = [];
 
-        for (let index: i32 = 0; index < this.chunkCount; index++) {
-            const pointer = this.getPointer(u256.add(this.subPointer, u256.fromU32(index)));
+        for (let index: u8 = 0; index < this.chunkCount; index++) {
+            const pointer = this.getPointer(this.subPointer, index);
             const chunk: u256 = Blockchain.getStorageAt(pointer, u256.Zero);
+
+            if (!this.exists(chunk, index)) {
+                return false;
+            }
+
             chunks.push(chunk);
         }
 
         const reader = this.chunksToBytes(chunks);
-
         this.readFromBuffer(reader);
+
+        return true;
     }
 
     public save(): void {
         const writer: BytesWriter = this.writeToBuffer();
-
         const buffer = writer.getBuffer();
-
         const chunks: u256[] = this.bytesToChunks(buffer);
 
-        for (let index: i32 = 0; index < chunks.length; index++) {
-            Blockchain.setStorageAt(
-                this.getPointer(u256.add(this.subPointer, u256.fromU32(index))),
-                chunks[index],
+        if (chunks.length !== this.chunkCount) {
+            throw new Revert(
+                'Invalid chunk count, expected ' +
+                    this.chunkCount.toString() +
+                    ' but got ' +
+                    chunks.length.toString(),
             );
+        }
+
+        for (let index: i32 = 0; index < chunks.length; index++) {
+            Blockchain.setStorageAt(this.getPointer(this.subPointer, index), chunks[index]);
         }
     }
 
@@ -54,6 +67,10 @@ export abstract class Serializable {
         const chunks: u256[] = [];
 
         for (let index: i32 = 0; index < buffer.byteLength; index += 32) {
+            if (chunks.length === 255) {
+                throw new Revert('Too many chunks to save');
+            }
+
             const chunk = buffer.slice(index, index + 32);
             chunks.push(u256.fromBytes(chunk, true));
         }
@@ -79,9 +96,12 @@ export abstract class Serializable {
         return new BytesReader(buffer);
     }
 
-    private getPointer(subPointer: u256): u256 {
+    protected getPointer(subPointer: u256, index: u8): u256 {
         const writer = new BytesWriter(32);
         writer.writeU256(subPointer);
+
+        // Discard the first byte for offset.
+        writer.writeU8At(index, 0);
 
         return encodePointer(this.pointer, writer.getBuffer());
     }

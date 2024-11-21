@@ -13,7 +13,7 @@ export function encodeSelector(name: string): Selector {
 }
 
 export function encodePointer(uniqueIdentifier: u16, typed: Uint8Array): MemorySlotPointer {
-    const hash = Sha256.hash(typed);
+    const hash: Uint8Array = typed.length !== 32 ? Sha256.hash(typed) : typed;
 
     const finalPointer = new Uint8Array(32);
     finalPointer[0] = uniqueIdentifier & 0xff;

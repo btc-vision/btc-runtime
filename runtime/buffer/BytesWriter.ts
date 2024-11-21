@@ -73,6 +73,10 @@ export class BytesWriter {
         }
     }
 
+    public writeU8At(value: u8, offset: u32): void {
+        this.buffer.setUint8(offset, value);
+    }
+
     public writeU256(value: u256): void {
         this.allocSafe(32);
 
