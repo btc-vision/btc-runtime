@@ -96,10 +96,10 @@ export class BytesWriter {
     }
 
     public writeU128(value: u128): void {
-        this.allocSafe(32);
+        this.allocSafe(16);
 
         const bytes = value.toUint8Array(true);
-        for (let i: i32 = 0; i < 32; i++) {
+        for (let i: i32 = 0; i < 16; i++) {
             this.writeU8(bytes[i] || 0);
         }
     }
@@ -110,6 +110,17 @@ export class BytesWriter {
 
         for (let i = 0; i < value.length; i++) {
             this.writeU256(value[i]);
+        }
+    }
+
+    public writeU128Array(value: u128[]): void {
+        if (value.length > 65535) throw new Revert('Array size is too large');
+
+        this.allocSafe(2 + value.length * 16);
+        this.writeU32(u16(value.length));
+
+        for (let i = 0; i < value.length; i++) {
+            this.writeU128(value[i]);
         }
     }
 

@@ -18,6 +18,8 @@ export class OP_NET implements IBTC {
 
     public onDeployment(_calldata: Calldata): void {}
 
+    public onExecutionCompleted(): void {}
+
     public execute(method: Selector, _calldata: Calldata): BytesWriter {
         let response: BytesWriter;
 

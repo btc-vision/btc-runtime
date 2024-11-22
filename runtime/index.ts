@@ -46,6 +46,7 @@ export * from './math/cyrb53';
 export * from './math/sha256';
 export * from './math/rnd';
 export * from './math/i256';
+//export * from './math/u160'; Broken at the moment
 export * from './secp256k1/ECPoint';
 
 /** Memory */
@@ -60,6 +61,10 @@ export * from './memory/Uint8ArrayMerger';
 
 /** Storage */
 export * from './storage/StoredU256';
+export * from './storage/StoredU64';
+export * from './storage/StoredU16Array';
+export * from './storage/StoredU128Array';
+export * from './storage/StoredU256Array';
 export * from './storage/StoredString';
 export * from './storage/StoredAddress';
 export * from './storage/StoredBoolean';

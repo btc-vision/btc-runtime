@@ -1,10 +1,18 @@
-import { u256 } from 'as-bignum/assembly';
+import { u128, u256 } from 'as-bignum/assembly';
 
 export class SafeMath {
     public static ZERO: u256 = u256.fromU32(0);
 
     public static add(a: u256, b: u256): u256 {
         const c: u256 = u256.add(a, b);
+        if (c < a) {
+            throw new Error('SafeMath: addition overflow');
+        }
+        return c;
+    }
+
+    public static add128(a: u128, b: u128): u128 {
+        const c: u128 = u128.add(a, b);
         if (c < a) {
             throw new Error('SafeMath: addition overflow');
         }
@@ -26,6 +34,14 @@ export class SafeMath {
         }
 
         return u256.sub(a, b);
+    }
+
+    public static sub128(a: u128, b: u128): u128 {
+        if (a < b) {
+            throw new Error('SafeMath: subtraction overflow');
+        }
+
+        return u128.sub(a, b);
     }
 
     public static sub64(a: u64, b: u64): u64 {
@@ -106,6 +122,56 @@ export class SafeMath {
         }
 
         return c;
+    }
+
+    public static mul128(a: u128, b: u128): u128 {
+        if (a === u128.Zero || b === u128.Zero) {
+            return u128.Zero;
+        }
+
+        const c: u128 = u128.mul(a, b);
+        const d: u128 = SafeMath.div128(c, a);
+
+        if (u128.ne(d, b)) {
+            throw new Error('SafeMath: multiplication overflow');
+        }
+
+        return c;
+    }
+
+    public static div128(a: u128, b: u128): u128 {
+        if (b.isZero()) {
+            throw new Error('Division by zero');
+        }
+
+        if (a.isZero()) {
+            return new u128();
+        }
+
+        if (u128.lt(a, b)) {
+            return new u128(); // Return 0 if a < b
+        }
+
+        if (u128.eq(a, b)) {
+            return new u128(1); // Return 1 if a == b
+        }
+
+        let n = a.clone();
+        let d = b.clone();
+        let result = new u128();
+
+        const shift = u128.clz(d) - u128.clz(n);
+        d = SafeMath.shl128(d, shift); // align d with n by shifting left
+
+        for (let i = shift; i >= 0; i--) {
+            if (u128.ge(n, d)) {
+                n = u128.sub(n, d);
+                result = u128.or(result, SafeMath.shl128(u128.One, i));
+            }
+            d = u128.shr(d, 1); // restore d to original by shifting right
+        }
+
+        return result;
     }
 
     @unsafe
@@ -214,6 +280,41 @@ export class SafeMath {
         }
 
         return new u256(result[0], result[1], result[2], result[3]);
+    }
+
+    public static shl128(value: u128, shift: i32): u128 {
+        if (shift == 0) {
+            return value.clone();
+        }
+
+        const totalBits = 256;
+        const bitsPerSegment = 64;
+
+        // Normalize shift to be within 0-255 range
+        shift &= 255;
+
+        if (shift >= totalBits) {
+            return new u128(); // Shift size larger than width results in zero
+        }
+
+        // Determine how many full 64-bit segments we are shifting
+        const segmentShift = (shift / bitsPerSegment) | 0;
+        const bitShift = shift % bitsPerSegment;
+
+        const segments = [value.lo, value.hi];
+
+        const result = new Array<u64>(2).fill(0);
+
+        for (let i = 0; i < segments.length; i++) {
+            if (i + segmentShift < segments.length) {
+                result[i + segmentShift] |= segments[i] << bitShift;
+            }
+            if (bitShift != 0 && i + segmentShift + 1 < segments.length) {
+                result[i + segmentShift + 1] |= segments[i] >>> (bitsPerSegment - bitShift);
+            }
+        }
+
+        return new u128(result[0], result[1]);
     }
 
     public static and(a: u256, b: u256): u256 {

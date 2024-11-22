@@ -191,6 +191,17 @@ export class BytesReader {
         return result;
     }
 
+    public readU128Array(): u128[] {
+        const length = this.readU16();
+        const result: u128[] = new Array<u128>(length);
+
+        for (let i: u16 = 0; i < length; i++) {
+            result[i] = this.readU128();
+        }
+
+        return result;
+    }
+
     public readAddressValueTuple(): AddressMap<u256> {
         const length: u16 = this.readU16();
         const result = new AddressMap<u256>();

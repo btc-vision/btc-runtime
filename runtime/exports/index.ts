@@ -9,6 +9,8 @@ export function execute(data: Uint8Array): Uint8Array {
     const selector: Selector = calldata.readSelector();
     const result: BytesWriter = Blockchain.contract.execute(selector, calldata);
 
+    Blockchain.contract.onExecutionCompleted();
+
     return result.getBuffer();
 }
 

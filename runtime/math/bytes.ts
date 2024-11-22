@@ -1,4 +1,4 @@
-import { u256 } from 'as-bignum/assembly';
+import { u128, u256 } from 'as-bignum/assembly';
 
 export function bytes(number: u256[]): Uint8Array {
     const result = new Uint8Array(32 * number.length);
@@ -27,6 +27,15 @@ export function bytes8(number: Uint8Array): u64 {
         (u64(number[6]) << 8) |
         u64(number[7])
     );
+}
+
+export function bytes16(buffer: Uint8Array): u128 {
+    // Make sure that the buffer is 16 bytes long.
+    if (buffer.length !== 16) {
+        buffer = buffer.slice(0, 16);
+    }
+
+    return u128.fromBytes(buffer);
 }
 
 export function bytes32(number: Uint8Array): u256 {
