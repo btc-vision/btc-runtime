@@ -11,12 +11,29 @@ export class SafeMath {
         return c;
     }
 
+    public static add64(a: u64, b: u64): u64 {
+        const c: u64 = a + b;
+
+        if (c < a) {
+            throw new Error('SafeMath: addition overflow');
+        }
+        return c;
+    }
+
     public static sub(a: u256, b: u256): u256 {
         if (a < b) {
             throw new Error('SafeMath: subtraction overflow');
         }
 
         return u256.sub(a, b);
+    }
+
+    public static sub64(a: u64, b: u64): u64 {
+        if (a < b) {
+            throw new Error('SafeMath: subtraction overflow');
+        }
+
+        return a - b;
     }
 
     // Computes (a * b) % modulus with full precision
