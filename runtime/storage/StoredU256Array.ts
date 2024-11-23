@@ -25,7 +25,7 @@ export class StoredU256Array {
     private _isChangedStartIndex: bool = false; // Indicates if the startIndex has been modified
 
     // Define a maximum allowed length to prevent excessive storage usage
-    private readonly MAX_LENGTH: u64 = 1_000_000_000; // Example maximum length
+    private readonly MAX_LENGTH: u64 = u64.MAX_VALUE - 1;
 
     /**
      * @constructor
@@ -58,12 +58,6 @@ export class StoredU256Array {
 
         this._length = storedLengthAndStartIndex.lo1; // Bytes 0-7: length
         this._startIndex = storedLengthAndStartIndex.lo2; // Bytes 8-15: startIndex
-
-        // Preload values based on the initial length
-        const slotCount: u32 = <u32>((this._length + 1) / 2);
-        for (let i: u32 = 0; i < slotCount; i++) {
-            this.ensureValues(i);
-        }
     }
 
     /**
@@ -343,6 +337,10 @@ export class StoredU256Array {
     @inline
     public getLength(): u64 {
         return this._length;
+    }
+
+    public startingIndex(): u64 {
+        return this._startIndex;
     }
 
     /**
