@@ -1,6 +1,6 @@
+import { u128, u256 } from 'as-bignum/assembly';
 import { Blockchain } from '../env';
 import { BytesWriter } from '../buffer/BytesWriter';
-import { u128, u256 } from 'as-bignum/assembly';
 import { SafeMath } from '../types/SafeMath';
 import { Revert } from '../types/Revert';
 
@@ -13,10 +13,10 @@ export class StoredU128Array {
     private readonly baseU256Pointer: u256;
     private readonly lengthPointer: u256;
 
-    // Internal cache for multiple storage slots, each holding two u128 values
-    private _values: Array<u128[]> = []; // Each element is an array of two u128s
-    private _isLoaded: Array<bool> = []; // Indicates if the corresponding slot is loaded
-    private _isChanged: Array<bool> = []; // Indicates if the corresponding slot has been modified
+    // Internal cache for storage slots, each holding two u128 values
+    private _values: Map<u64, u128[]> = new Map(); // Map from slotIndex to array of two u128s
+    private _isLoaded: Set<u64> = new Set(); // Set of slotIndexes that are loaded
+    private _isChanged: Set<u64> = new Set(); // Set of slotIndexes that are modified
 
     // Internal variables for length and startIndex management
     private _length: u64 = 0; // Current length of the array
@@ -38,14 +38,10 @@ export class StoredU128Array {
         public subPointer: Uint8Array,
         private defaultValue: u256,
     ) {
-        if (subPointer.length !== 20) {
-            throw new Revert('Invalid subPointer length, expected 20 bytes');
-        }
-
         // Initialize the base u256 pointer using the primary pointer and subPointer
         const writer = new BytesWriter(32);
         writer.writeU16(pointer);
-        writer.writeBytes(subPointer); // offset is 22 bytes from the start of the
+        writer.writeBytes(subPointer);
 
         // Initialize the length pointer (slot 0) where both length and startIndex are stored
         const baseU256Pointer = u256.fromBytes(writer.getBuffer(), true);
@@ -63,40 +59,41 @@ export class StoredU128Array {
     /**
      * @method get
      * @description Retrieves the u128 value at the specified global index.
-     * @param {u32} index - The global index (0 to ∞) of the u128 value to retrieve.
+     * @param {u64} index - The global index (0 to ∞) of the u128 value to retrieve.
      * @returns {u128} - The u128 value at the specified index.
      */
     @inline
-    public get(index: u32): u128 {
+    public get(index: u64): u128 {
         assert(index < this._length, 'Index out of bounds');
-        const effectiveIndex: u64 = this._startIndex + <u64>index;
-        const wrappedIndex: u64 =
-            effectiveIndex < this.MAX_LENGTH ? effectiveIndex : effectiveIndex % this.MAX_LENGTH;
-        const slotIndex: u32 = <u32>(wrappedIndex / 2); // Each slot holds two u128s
-        const subIndex: u8 = <u8>(wrappedIndex % 2); // 0 or 1
+        const slotIndex: u32 = <u32>(index / 2); // Each slot holds two u128s
+        const subIndex: u8 = <u8>(index % 2); // 0 or 1
         this.ensureValues(slotIndex);
-        return this._values[slotIndex][subIndex];
+        const slotValues = this._values.get(slotIndex);
+        if (slotValues) {
+            return slotValues[subIndex];
+        } else {
+            return u128.Zero; // Should not happen, as ensureValues should have loaded it
+        }
     }
 
     /**
      * @method set
      * @description Sets the u128 value at the specified global index.
-     * @param {u32} index - The global index (0 to ∞) of the u128 value to set.
+     * @param {u64} index - The global index (0 to ∞) of the u128 value to set.
      * @param {u128} value - The u128 value to assign.
      */
     @inline
-    public set(index: u32, value: u128): void {
+    public set(index: u64, value: u128): void {
         assert(index < this._length, 'Index exceeds current array length');
-        const effectiveIndex: u64 = this._startIndex + <u64>index;
-        const wrappedIndex: u64 =
-            effectiveIndex < this.MAX_LENGTH ? effectiveIndex : effectiveIndex % this.MAX_LENGTH;
-        const slotIndex: u32 = <u32>(wrappedIndex / 2);
-        const subIndex: u8 = <u8>(wrappedIndex % 2);
+        const slotIndex: u32 = <u32>(index / 2);
+        const subIndex: u8 = <u8>(index % 2);
         this.ensureValues(slotIndex);
-
-        if (!u128.eq(this._values[slotIndex][subIndex], value)) {
-            this._values[slotIndex][subIndex] = value;
-            this._isChanged[slotIndex] = true;
+        const slotValues = this._values.get(slotIndex);
+        if (slotValues) {
+            if (!u128.eq(slotValues[subIndex], value)) {
+                slotValues[subIndex] = value;
+                this._isChanged.add(slotIndex);
+            }
         }
     }
 
@@ -119,12 +116,15 @@ export class StoredU128Array {
         const slotIndex: u32 = <u32>(wrappedIndex / 2);
         const subIndex: u8 = <u8>(wrappedIndex % 2);
 
-        // Ensure internal arrays can accommodate the new slot
+        // Ensure the slot is loaded
         this.ensureValues(slotIndex);
 
         // Set the new value in the appropriate sub-index
-        this._values[slotIndex][subIndex] = value;
-        this._isChanged[slotIndex] = true;
+        const slotValues = this._values.get(slotIndex);
+        if (slotValues) {
+            slotValues[subIndex] = value;
+            this._isChanged.add(slotIndex);
+        }
 
         // Increment the length
         this._length += 1;
@@ -134,25 +134,25 @@ export class StoredU128Array {
     /**
      * @method delete
      * @description Deletes the u128 value at the specified index by setting it to zero. Does not reorder the array.
-     * @param {u32} index - The global index of the u128 value to delete.
+     * @param {u64} index - The global index of the u128 value to delete.
      */
-    public delete(index: u32): void {
+    public delete(index: u64): void {
         if (index >= this._length) {
             // If the index is out of bounds, revert the transaction
             throw new Revert('Delete operation failed: Index out of bounds.');
         }
 
-        const effectiveIndex: u64 = this._startIndex + <u64>index;
-        const wrappedIndex: u64 =
-            effectiveIndex < this.MAX_LENGTH ? effectiveIndex : effectiveIndex % this.MAX_LENGTH;
-        const slotIndex: u32 = <u32>(wrappedIndex / 2);
-        const subIndex: u8 = <u8>(wrappedIndex % 2);
+        const slotIndex: u32 = <u32>(index / 2);
+        const subIndex: u8 = <u8>(index % 2);
         this.ensureValues(slotIndex);
 
-        // Set the targeted u128 to zero
-        if (!u128.eq(this._values[slotIndex][subIndex], u128.Zero)) {
-            this._values[slotIndex][subIndex] = u128.Zero;
-            this._isChanged[slotIndex] = true;
+        const slotValues = this._values.get(slotIndex);
+        if (slotValues) {
+            // Set the targeted u128 to zero
+            if (!u128.eq(slotValues[subIndex], u128.Zero)) {
+                slotValues[subIndex] = u128.Zero;
+                this._isChanged.add(slotIndex);
+            }
         }
     }
 
@@ -171,10 +171,13 @@ export class StoredU128Array {
         const subIndex: u8 = <u8>(currentStartIndex % 2);
         this.ensureValues(slotIndex);
 
-        // Set the current start element to zero
-        if (!u128.eq(this._values[slotIndex][subIndex], u128.Zero)) {
-            this._values[slotIndex][subIndex] = u128.Zero;
-            this._isChanged[slotIndex] = true;
+        const slotValues = this._values.get(slotIndex);
+        if (slotValues) {
+            // Set the current start element to zero
+            if (!u128.eq(slotValues[subIndex], u128.Zero)) {
+                slotValues[subIndex] = u128.Zero;
+                this._isChanged.add(slotIndex);
+            }
         }
 
         // Decrement the length
@@ -196,15 +199,14 @@ export class StoredU128Array {
      */
     public save(): void {
         // Save all changed slots
-        const slotCount: u32 = <u32>((this._length + 1) / 2);
-        for (let slotIndex: u32 = 0; slotIndex < slotCount; slotIndex++) {
-            if (this._isChanged[slotIndex]) {
-                const packed = this.packValues(slotIndex);
-                const storagePointer = this.calculateStoragePointer(slotIndex);
-                Blockchain.setStorageAt(storagePointer, packed);
-                this._isChanged[slotIndex] = false;
-            }
+        const values = this._isChanged.values();
+        for (let i: u32 = 0; i < <u32>values.length; i++) {
+            const slotIndex = values[i];
+            const packed = this.packValues(slotIndex);
+            const storagePointer = this.calculateStoragePointer(slotIndex);
+            Blockchain.setStorageAt(storagePointer, packed);
         }
+        this._isChanged.clear();
 
         // Save length and startIndex if changed
         if (this._isChangedLength || this._isChangedStartIndex) {
@@ -222,8 +224,10 @@ export class StoredU128Array {
      * @description Deletes all storage slots by setting them to zero, including the length and startIndex slots.
      */
     public deleteAll(): void {
-        const slotCount: u32 = <u32>((this._length + 1) / 2);
-        for (let slotIndex: u32 = 0; slotIndex < slotCount; slotIndex++) {
+        // Iterate over all loaded slots and clear them
+        const keys = this._values.keys();
+        for (let i = 0; i < keys.length; i++) {
+            const slotIndex = keys[i];
             const storagePointer = this.calculateStoragePointer(slotIndex);
             Blockchain.setStorageAt(storagePointer, u256.Zero);
         }
@@ -237,9 +241,9 @@ export class StoredU128Array {
         this._isChangedStartIndex = false;
 
         // Clear internal caches
-        this._values = [];
-        this._isLoaded = [];
-        this._isChanged = [];
+        this._values.clear();
+        this._isLoaded.clear();
+        this._isChanged.clear();
     }
 
     /**
@@ -251,7 +255,7 @@ export class StoredU128Array {
     @inline
     public setMultiple(startIndex: u32, values: u128[]): void {
         for (let i: u32 = 0; i < values.length; i++) {
-            this.set(startIndex + i, values[i]);
+            this.set(<u64>(startIndex + i), values[i]);
         }
     }
 
@@ -267,7 +271,7 @@ export class StoredU128Array {
         assert(startIndex + count <= this._length, 'Requested range exceeds array length');
         const result: u128[] = new Array<u128>(count);
         for (let i: u32 = 0; i < count; i++) {
-            result[i] = this.get(startIndex + i);
+            result[i] = this.get(<u64>(startIndex + i));
         }
         return result;
     }
@@ -281,7 +285,7 @@ export class StoredU128Array {
     public toString(): string {
         let str = '[';
         for (let i: u32 = 0; i < this._length; i++) {
-            const value = this.get(i);
+            const value = this.get(<u64>i);
             str += value.toString();
             if (i !== this._length - 1) {
                 str += ', ';
@@ -301,11 +305,12 @@ export class StoredU128Array {
         const bytes: u8[] = new Array<u8>();
         const slotCount: u32 = <u32>((this._length + 1) / 2);
 
-        for (let slotIndex: u32 = 0; slotIndex < slotCount; slotIndex++) {
-            const packed = this.packValues(slotIndex);
+        for (let i: u32 = 0; i < slotCount; i++) {
+            this.ensureValues(i);
+            const packed = this.packValues(i);
             const slotBytes = packed.toBytes();
-            for (let i: u32 = 0; i < slotBytes.length; i++) {
-                bytes.push(slotBytes[i]);
+            for (let j: u32 = 0; j < slotBytes.length; j++) {
+                bytes.push(slotBytes[j]);
             }
         }
         return bytes;
@@ -317,18 +322,13 @@ export class StoredU128Array {
      */
     @inline
     public reset(): void {
-        const slotCount: u32 = <u32>((this._length + 1) / 2);
-        for (let slotIndex: u32 = 0; slotIndex < slotCount; slotIndex++) {
-            this._values[slotIndex][0] = u128.Zero;
-            this._values[slotIndex][1] = u128.Zero;
-            this._isChanged[slotIndex] = true;
-        }
-
         // Reset the length and startIndex to zero
         this._length = 0;
         this._startIndex = 0;
         this._isChangedLength = true;
         this._isChangedStartIndex = true;
+
+        this.save();
     }
 
     /**
@@ -353,7 +353,7 @@ export class StoredU128Array {
 
         if (newLength < this._length) {
             // Truncate the array if newLength is smaller
-            for (let i: u32 = <u32>newLength; i < <u32>this._length; i++) {
+            for (let i: u64 = newLength; i < this._length; i++) {
                 this.delete(i);
             }
         }
@@ -369,21 +369,12 @@ export class StoredU128Array {
      * @param {u32} slotIndex - The index of the storage slot.
      */
     private ensureValues(slotIndex: u32): void {
-        // Initialize arrays if necessary
-        while (slotIndex >= <u32>this._isLoaded.length) {
-            this._isLoaded.push(false);
-            this._isChanged.push(false);
-            const newSlotValues: u128[] = new Array<u128>(2);
-            newSlotValues[0] = u128.Zero;
-            newSlotValues[1] = u128.Zero;
-            this._values.push(newSlotValues);
-        }
-
-        if (!this._isLoaded[slotIndex]) {
+        if (!this._isLoaded.has(slotIndex)) {
             const storagePointer = this.calculateStoragePointer(slotIndex);
             const storedU256: u256 = Blockchain.getStorageAt(storagePointer, this.defaultValue);
-            this._values[slotIndex] = this.unpackU256(storedU256);
-            this._isLoaded[slotIndex] = true;
+            const slotValues = this.unpackU256(storedU256);
+            this._values.set(slotIndex, slotValues);
+            this._isLoaded.add(slotIndex);
         }
     }
 
@@ -391,11 +382,15 @@ export class StoredU128Array {
      * @private
      * @method packValues
      * @description Packs the two cached u128 values into a single u256 for storage.
-     * @param {u32} slotIndex - The index of the storage slot.
+     * @param {u64} slotIndex - The index of the storage slot.
      * @returns {u256} - The packed u256 value.
      */
-    private packValues(slotIndex: u32): u256 {
-        const values = this._values[slotIndex];
+    private packValues(slotIndex: u64): u256 {
+        const values = this._values.get(slotIndex);
+        if (!values) {
+            // Should not happen, as ensureValues should have loaded it
+            return u256.Zero;
+        }
         const packed = new u256();
 
         // Assign first u128
@@ -432,10 +427,10 @@ export class StoredU128Array {
      * @private
      * @method calculateStoragePointer
      * @description Calculates the storage pointer for a given slot index by incrementing the base pointer.
-     * @param {u32} slotIndex - The index of the storage slot.
+     * @param {u64} slotIndex - The index of the storage slot.
      * @returns {u256} - The calculated storage pointer.
      */
-    private calculateStoragePointer(slotIndex: u32): u256 {
-        return SafeMath.add(this.baseU256Pointer, u256.fromU32(slotIndex + 1));
+    private calculateStoragePointer(slotIndex: u64): u256 {
+        return SafeMath.add(this.baseU256Pointer, u256.fromU64(slotIndex + 1));
     }
 }
