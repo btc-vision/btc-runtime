@@ -19,6 +19,7 @@ import {
     nextPointerGreaterThan,
     storePointer,
     validateBitcoinAddress,
+    verifySchnorrSignature,
 } from './global';
 import { DeployContractResponse } from '../interfaces/DeployContractResponse';
 import { MapU256 } from '../generic/MapU256';
@@ -246,6 +247,22 @@ export class BlockchainEnvironment {
         const reader: BytesReader = new BytesReader(result);
 
         return reader.readU256();
+    }
+
+    public verifySchnorrSignature(
+        publicKey: Address,
+        signature: Uint8Array,
+        hash: Uint8Array,
+    ): boolean {
+        const writer = new BytesWriter(128);
+        writer.writeBytes(publicKey);
+        writer.writeBytes(signature);
+        writer.writeBytes(hash);
+
+        const result: Uint8Array = verifySchnorrSignature(writer.getBuffer());
+
+        const reader = new BytesReader(result);
+        return reader.readBoolean();
     }
 
     public hasStorageAt(pointerHash: MemorySlotPointer): bool {

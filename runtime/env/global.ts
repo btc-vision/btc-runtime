@@ -53,3 +53,7 @@ export declare function inputs(): Uint8Array;
 // @ts-ignore
 @external('env', 'outputs')
 export declare function outputs(): Uint8Array;
+
+// @ts-ignore
+@external('env', 'verifySchnorrSignature')
+export declare function verifySchnorrSignature(data: Uint8Array): Uint8Array;
