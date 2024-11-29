@@ -49,7 +49,7 @@ export class BytesWriter {
     public writeAddressArray(value: Address[]): void {
         if (value.length > 65535) throw new Revert('Array size is too large');
 
-        this.writeU16(value.length);
+        this.writeU16(u16(value.length));
 
         for (let i: i32 = 0; i < value.length; i++) {
             this.writeAddress(value[i]);
