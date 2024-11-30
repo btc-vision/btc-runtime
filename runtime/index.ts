@@ -63,6 +63,7 @@ export * from './memory/Uint8ArrayMerger';
 export * from './storage/StoredU256';
 export * from './storage/StoredU64';
 export * from './storage/StoredU16Array';
+export * from './storage/StoredBooleanArray';
 export * from './storage/StoredU128Array';
 export * from './storage/StoredU256Array';
 export * from './storage/StoredString';

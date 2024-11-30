@@ -246,6 +246,19 @@ export class StoredU128Array {
         this._isChanged.clear();
     }
 
+    public deleteLast(): void {
+        if (this._length === 0) {
+            throw new Revert('DeleteLast operation failed: Array is empty.');
+        }
+
+        const lastIndex = this._length - 1;
+        this.delete(lastIndex);
+
+        // Decrement the length
+        this._length -= 1;
+        this._isChangedLength = true;
+    }
+
     /**
      * @method setMultiple
      * @description Sets multiple u128 values starting from a specific global index.

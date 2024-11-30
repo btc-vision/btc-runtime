@@ -365,6 +365,19 @@ export class StoredU16Array {
         this._isChangedLength = true;
     }
 
+    public deleteLast(): void {
+        if (this._length === 0) {
+            throw new Revert('DeleteLast operation failed: Array is empty.');
+        }
+
+        const index = this._length - 1;
+        this.delete(index);
+
+        // Decrement the length
+        this._length -= 1;
+        this._isChangedLength = true;
+    }
+
     /**
      * @private
      * @method ensureValues
