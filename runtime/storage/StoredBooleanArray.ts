@@ -67,7 +67,7 @@ export class StoredBooleanArray {
         assert(index < this._length, 'Index out of bounds');
 
         const slotIndex: u64 = index / 256; // Each slot holds 256 bits
-        const bitIndex: u8 = <u8>(index % 256); // 0 to 255
+        const bitIndex: u16 = <u16>(index % 256); // 0 to 255
         this.ensureValues(slotIndex);
         const slotValue = this._values.get(slotIndex);
         if (slotValue) {
@@ -87,7 +87,7 @@ export class StoredBooleanArray {
     public set(index: u64, value: bool): void {
         assert(index < this._length, 'Index exceeds current array length');
         const slotIndex: u64 = index / 256;
-        const bitIndex: u8 = <u8>(index % 256);
+        const bitIndex: u16 = <u16>(index % 256);
         this.ensureValues(slotIndex);
 
         const slotValue = this._values.get(slotIndex);
@@ -145,7 +145,7 @@ export class StoredBooleanArray {
         }
 
         const slotIndex: u64 = index / 256;
-        const bitIndex: u8 = <u8>(index % 256);
+        const bitIndex: u16 = <u16>(index % 256);
         this.ensureValues(slotIndex);
 
         const slotValue = this._values.get(slotIndex);
@@ -170,7 +170,7 @@ export class StoredBooleanArray {
 
         const currentStartIndex: u64 = this._startIndex;
         const slotIndex: u64 = currentStartIndex / 256;
-        const bitIndex: u8 = <u8>(currentStartIndex % 256);
+        const bitIndex: u16 = <u16>(currentStartIndex % 256);
         this.ensureValues(slotIndex);
 
         const slotValue = this._values.get(slotIndex);
@@ -436,10 +436,10 @@ export class StoredBooleanArray {
      * @method getBit
      * @description Retrieves the bit value at the specified bit index from the u256 value.
      * @param {u256} value - The u256 value containing the bits.
-     * @param {u8} bitIndex - The index of the bit to retrieve (0-255).
+     * @param {u16} bitIndex - The index of the bit to retrieve (0-255).
      * @returns {bool} - The value of the bit at the specified index.
      */
-    private getBit(value: u256, bitIndex: u8): bool {
+    private getBit(value: u256, bitIndex: u16): bool {
         assert(bitIndex < 256, 'Bit index out of range');
 
         if (bitIndex < 64) {
@@ -458,10 +458,10 @@ export class StoredBooleanArray {
      * @method setBit
      * @description Sets the bit value at the specified bit index in the u256 value.
      * @param {u256} value - The u256 value containing the bits.
-     * @param {u8} bitIndex - The index of the bit to set (0-255).
+     * @param {u16} bitIndex - The index of the bit to set (0-255).
      * @param {bool} bitValue - The value to set (true or false).
      */
-    private setBit(value: u256, bitIndex: u8, bitValue: bool): void {
+    private setBit(value: u256, bitIndex: u16, bitValue: bool): void {
         assert(bitIndex < 256, 'Bit index out of range');
 
         if (bitIndex < 64) {
