@@ -331,7 +331,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _transferFrom(from: Address, to: Address, value: u256): boolean {
-        if (to === Blockchain.DEAD_ADDRESS || from === Blockchain.DEAD_ADDRESS) {
+        if (from === Blockchain.DEAD_ADDRESS) {
             throw new Revert('Cannot transfer to or from dead address');
         }
 
