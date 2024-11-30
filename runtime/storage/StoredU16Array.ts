@@ -25,7 +25,7 @@ export class StoredU16Array {
     private _isChangedStartIndex: bool = false; // Indicates if the startIndex has been modified
 
     // Define a maximum allowed length to prevent excessive storage usage
-    private readonly MAX_LENGTH: u64 = u64.MAX_VALUE - 1;
+    private readonly MAX_LENGTH: u64 = u64(u32.MAX_VALUE - 1); // we need to check what happen in overflow situation to be able to set it to u64.MAX_VALUE
 
     /**
      * @constructor
