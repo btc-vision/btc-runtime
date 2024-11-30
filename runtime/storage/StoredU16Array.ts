@@ -258,9 +258,14 @@ export class StoredU16Array {
     @inline
     public getAll(startIndex: u64, count: u64): u16[] {
         assert(startIndex + count <= this._length, 'Requested range exceeds array length');
-        const result: u16[] = new Array<u16>(count);
+
+        if (u32.MAX_VALUE < count) {
+            throw new Revert('Requested range exceeds maximum allowed value.');
+        }
+
+        const result: u16[] = new Array<u16>(count as u32);
         for (let i: u64 = 0; i < count; i++) {
-            result[i] = this.get(startIndex + i);
+            result[i as u32] = this.get(startIndex + i);
         }
         return result;
     }
