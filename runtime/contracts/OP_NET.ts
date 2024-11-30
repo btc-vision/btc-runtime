@@ -12,8 +12,8 @@ export class OP_NET implements IBTC {
         return Blockchain.contractAddress;
     }
 
-    public get owner(): Address {
-        return Blockchain.owner;
+    public get contractDeployer(): Address {
+        return Blockchain.contractDeployer;
     }
 
     public onDeployment(_calldata: Calldata): void {}
@@ -26,7 +26,7 @@ export class OP_NET implements IBTC {
         switch (method) {
             case encodeSelector('owner'):
                 response = new BytesWriter(ADDRESS_BYTE_LENGTH);
-                response.writeAddress(this.owner);
+                response.writeAddress(this.contractDeployer);
                 break;
             default:
                 throw new Revert('Method not found');
@@ -47,8 +47,8 @@ export class OP_NET implements IBTC {
         return this.address === address;
     }
 
-    protected onlyOwner(caller: Address): void {
-        if (this.owner !== caller) {
+    protected onlyDeployer(caller: Address): void {
+        if (this.contractDeployer !== caller) {
             throw new Revert('Only owner can call this method');
         }
     }

@@ -87,14 +87,14 @@ export class BlockchainEnvironment {
         return this._nextPointer;
     }
 
-    public _owner: Potential<Address> = null;
+    public _contractDeployer: Potential<Address> = null;
 
-    public get owner(): Address {
-        if (!this._owner) {
-            throw this.error('Owner is required');
+    public get contractDeployer(): Address {
+        if (!this._contractDeployer) {
+            throw this.error('Deployer is required');
         }
 
-        return this._owner as Address;
+        return this._contractDeployer as Address;
     }
 
     public _contractAddress: Potential<Address> = null;
@@ -118,7 +118,7 @@ export class BlockchainEnvironment {
 
         const currentBlock = reader.readU256();
 
-        this._owner = reader.readAddress();
+        this._contractDeployer = reader.readAddress();
         this._contractAddress = reader.readAddress();
 
         const medianTimestamp = reader.readU64();

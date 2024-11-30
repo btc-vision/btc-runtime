@@ -6,6 +6,7 @@ import { BytesReader } from '../buffer/BytesReader';
 import { Revert } from '../types/Revert';
 import { encodePointer } from '../math/abi';
 
+// Similar to a struct in Solidity. (Use in worst case scenario, consume a lot of gas)
 export abstract class Serializable {
     protected pointer: u16;
     protected subPointer: MemorySlotPointer;
@@ -58,7 +59,7 @@ export abstract class Serializable {
             );
         }
 
-        for (let index: i32 = 0; index < chunks.length; index++) {
+        for (let index: u8 = 0; index < u8(chunks.length); index++) {
             Blockchain.setStorageAt(this.getPointer(this.subPointer, index), chunks[index]);
         }
     }
@@ -79,7 +80,8 @@ export abstract class Serializable {
     }
 
     protected chunksToBytes(chunks: u256[]): BytesReader {
-        if (this.chunkCount >= 67108863) {
+        if (this.chunkCount >= u8(255)) {
+            //67108863
             throw new Revert('Too many chunks received');
         }
 

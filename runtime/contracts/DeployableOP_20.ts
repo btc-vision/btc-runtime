@@ -86,7 +86,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             throw new Revert('Already initialized');
         }
 
-        if (!skipOwnerVerification) this.onlyOwner(Blockchain.tx.sender);
+        if (!skipOwnerVerification) this.onlyDeployer(Blockchain.tx.sender);
 
         if (params.decimals > 32) {
             throw new Revert('Decimals can not be more than 32');
@@ -237,12 +237,12 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         return this.balanceOfMap.get(owner);
     }
 
-    protected _burn(value: u256, onlyOwner: boolean = true): boolean {
+    protected _burn(value: u256, onlyDeployer: boolean = true): boolean {
         if (u256.eq(value, u256.Zero)) {
             throw new Revert(`No tokens`);
         }
 
-        if (onlyOwner) this.onlyOwner(Blockchain.tx.sender);
+        if (onlyDeployer) this.onlyDeployer(Blockchain.tx.sender);
 
         if (this._totalSupply.value < value) throw new Revert(`Insufficient total supply.`);
         if (!this.balanceOfMap.has(Blockchain.tx.sender)) throw new Revert('No balance');
@@ -260,8 +260,8 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         return true;
     }
 
-    protected _mint(to: Address, value: u256, onlyOwner: boolean = true): boolean {
-        if (onlyOwner) this.onlyOwner(Blockchain.tx.sender);
+    protected _mint(to: Address, value: u256, onlyDeployer: boolean = true): boolean {
+        if (onlyDeployer) this.onlyDeployer(Blockchain.tx.sender);
 
         if (!this.balanceOfMap.has(to)) {
             this.balanceOfMap.set(to, value);
