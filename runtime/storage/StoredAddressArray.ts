@@ -110,6 +110,17 @@ export class StoredAddressArray {
     }
 
     /**
+     * @method contains
+     * @description Determines whether the array contains the specified Address value.
+     * @param {Address} value - The Address value to locate.
+     * @returns {boolean} - True if the Address value is found; otherwise, false.
+     */
+    @inline
+    public contains(value: Address): boolean {
+        return this.indexOf(value) !== -1;
+    }
+
+    /**
      * @method push
      * @description Appends a new u256 value to the end of the array.
      * @param {u256} value - The u256 value to append.
