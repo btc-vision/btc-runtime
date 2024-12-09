@@ -70,6 +70,7 @@ export * from './storage/StoredString';
 export * from './storage/StoredAddress';
 export * from './storage/StoredBoolean';
 export * from './storage/Serializable';
+export * from './storage/StoredAddressArray';
 
 export * from './storage/StorageBacked';
 export * from './storage/StorageSlot';
