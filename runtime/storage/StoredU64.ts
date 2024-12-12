@@ -2,7 +2,7 @@ import { MemorySlotPointer } from '../memory/MemorySlotPointer';
 import { Blockchain } from '../env';
 import { encodePointer } from '../math/abi';
 import { BytesWriter } from '../buffer/BytesWriter';
-import { u256 } from 'as-bignum/assembly';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 
 /**
  * @class StoredU64

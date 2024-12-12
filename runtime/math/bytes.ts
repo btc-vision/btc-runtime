@@ -1,4 +1,4 @@
-import { u128, u256 } from 'as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 export function bytes(number: u256[]): Uint8Array {
     const result = new Uint8Array(32 * number.length);

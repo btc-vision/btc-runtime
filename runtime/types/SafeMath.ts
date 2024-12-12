@@ -1,4 +1,4 @@
-import { u128, u256 } from 'as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 export class SafeMath {
     public static ZERO: u256 = u256.fromU32(0);
@@ -267,17 +267,7 @@ export class SafeMath {
         const bitShift = shift % bitsPerSegment;
 
         const segments = [value.lo1, value.lo2, value.hi1, value.hi2];
-
-        const result = new Array<u64>(4).fill(0);
-
-        for (let i = 0; i < segments.length; i++) {
-            if (i + segmentShift < segments.length) {
-                result[i + segmentShift] |= segments[i] << bitShift;
-            }
-            if (bitShift != 0 && i + segmentShift + 1 < segments.length) {
-                result[i + segmentShift + 1] |= segments[i] >>> (bitsPerSegment - bitShift);
-            }
-        }
+        const result = SafeMath.shlSegment(segments, segmentShift, bitShift, bitsPerSegment, 4);
 
         return new u256(result[0], result[1], result[2], result[3]);
     }
@@ -302,17 +292,7 @@ export class SafeMath {
         const bitShift = shift % bitsPerSegment;
 
         const segments = [value.lo, value.hi];
-
-        const result = new Array<u64>(2).fill(0);
-
-        for (let i = 0; i < segments.length; i++) {
-            if (i + segmentShift < segments.length) {
-                result[i + segmentShift] |= segments[i] << bitShift;
-            }
-            if (bitShift != 0 && i + segmentShift + 1 < segments.length) {
-                result[i + segmentShift + 1] |= segments[i] >>> (bitsPerSegment - bitShift);
-            }
-        }
+        const result = SafeMath.shlSegment(segments, segmentShift, bitShift, bitsPerSegment, 2);
 
         return new u128(result[0], result[1]);
     }
@@ -329,8 +309,58 @@ export class SafeMath {
         return u256.xor(a, b);
     }
 
-    public static shr(a: u256, b: u32): u256 {
-        return u256.shr(a, b);
+    public static shr(a: u256, shift: i32): u256 {
+        shift &= 255;
+        if (shift == 0) return a;
+
+        const w = shift >>> 6; // how many full 64-bit words to drop
+        const b = shift & 63; // how many bits to shift within a word
+
+        // Extract the words
+        let lo1 = a.lo1;
+        let lo2 = a.lo2;
+        let hi1 = a.hi1;
+        let hi2 = a.hi2;
+
+        // Shift words down by w words
+        // For w = 1, move lo2->lo1, hi1->lo2, hi2->hi1, and hi2 = 0
+        // For w = 2, move hi1->lo1, hi2->lo2, and zeros in hi1, hi2
+        // For w = 3, move hi2->lo1 and zeros in others
+        // For w >= 4, everything is zero.
+        if (w >= 4) {
+            // Shifting by >= 256 bits zeros out everything
+            return u256.Zero;
+        } else if (w == 3) {
+            lo1 = hi2;
+            lo2 = 0;
+            hi1 = 0;
+            hi2 = 0;
+        } else if (w == 2) {
+            lo1 = hi1;
+            lo2 = hi2;
+            hi1 = 0;
+            hi2 = 0;
+        } else if (w == 1) {
+            lo1 = lo2;
+            lo2 = hi1;
+            hi1 = hi2;
+            hi2 = 0;
+        }
+
+        // Now apply the bit shift b
+        if (b > 0) {
+            // Bring down bits from the higher word
+            const carryLo2 = hi1 << (64 - b);
+            const carryLo1 = lo2 << (64 - b);
+            const carryHi1 = hi2 << (64 - b);
+
+            lo1 = (lo1 >>> b) | carryLo1;
+            lo2 = (lo2 >>> b) | carryLo2;
+            hi1 = (hi1 >>> b) | carryHi1;
+            hi2 = hi2 >>> b;
+        }
+
+        return new u256(lo1, lo2, hi1, hi2);
     }
 
     /**
@@ -359,5 +389,26 @@ export class SafeMath {
         }
 
         return n;
+    }
+
+    private static shlSegment(
+        segments: u64[],
+        segmentShift: i32,
+        bitShift: i32,
+        bitsPerSegment: i32,
+        fillCount: u8,
+    ): u64[] {
+        const result = new Array<u64>(fillCount).fill(0);
+
+        for (let i = 0; i < segments.length; i++) {
+            if (i + segmentShift < segments.length) {
+                result[i + segmentShift] |= segments[i] << bitShift;
+            }
+            if (bitShift != 0 && i + segmentShift + 1 < segments.length) {
+                result[i + segmentShift + 1] |= segments[i] >>> (bitsPerSegment - bitShift);
+            }
+        }
+
+        return result;
     }
 }

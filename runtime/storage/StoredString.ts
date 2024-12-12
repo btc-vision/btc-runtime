@@ -1,4 +1,4 @@
-import { u256 } from 'as-bignum/assembly';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 import { Blockchain } from '../env';
 import { SafeMath } from '../types/SafeMath';
 import { encodePointer } from '../math/abi';

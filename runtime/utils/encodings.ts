@@ -1,4 +1,4 @@
-import { u256 } from 'as-bignum/assembly';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 import { MemorySlotPointer } from '../memory/MemorySlotPointer';
 
 import { b32decode as _b32decode, bech32m as _bech32m, fromWords, toWords } from './b32';

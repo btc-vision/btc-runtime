@@ -1,6 +1,6 @@
 import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
 import { Selector } from '../math/abi';
-import { i128, u128, u256 } from 'as-bignum/assembly';
+import { i128, u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { Revert } from '../types/Revert';
 import { TransactionInput, TransactionOutput } from '../env/classes/UTXO';
 import { i256 } from '../math/i256';

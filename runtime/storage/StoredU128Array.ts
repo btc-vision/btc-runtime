@@ -1,4 +1,4 @@
-import { u128, u256 } from 'as-bignum/assembly';
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { Blockchain } from '../env';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { SafeMath } from '../types/SafeMath';
@@ -110,9 +110,8 @@ export class StoredU128Array {
         }
 
         const newIndex: u64 = this._length;
-        const effectiveIndex: u64 = this._startIndex + newIndex;
         const wrappedIndex: u64 =
-            effectiveIndex < this.MAX_LENGTH ? effectiveIndex : effectiveIndex % this.MAX_LENGTH;
+            newIndex < this.MAX_LENGTH ? newIndex : newIndex % this.MAX_LENGTH;
         const slotIndex: u32 = <u32>(wrappedIndex / 2);
         const subIndex: u8 = <u8>(wrappedIndex % 2);
 

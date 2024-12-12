@@ -1,7 +1,7 @@
 import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
 import { MemorySlotPointer } from '../memory/MemorySlotPointer';
 import { MemorySlotData } from '../memory/MemorySlot';
-import { u256 } from 'as-bignum/assembly';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 import { BytesReader } from '../buffer/BytesReader';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { NetEvent } from '../events/NetEvent';

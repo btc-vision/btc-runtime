@@ -1,5 +1,5 @@
 import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
-import { u256 } from 'as-bignum/assembly';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
 import { encodeSelector, Selector } from '../math/abi';

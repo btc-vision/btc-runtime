@@ -1,4 +1,4 @@
-import { i128, u128 } from 'as-bignum/assembly';
+import { i128, u128 } from '@btc-vision/as-bignum/assembly';
 import { __carry, __uadd64, __umulh64 } from 'as-bignum/assembly/globals';
 
 @lazy const HEX_CHARS = '0123456789abcdef';

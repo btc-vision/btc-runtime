@@ -1,5 +1,5 @@
 import { MemorySlotData } from './MemorySlot';
-import { u256 } from 'as-bignum/assembly';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 import { Uint8ArrayMerger } from './Uint8ArrayMerger';
 import { Address } from '../types/Address';
 

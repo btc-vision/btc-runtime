@@ -1,4 +1,4 @@
-import { i128, u128, u256 } from 'as-bignum/assembly';
+import { i128, u128, u256 } from '@btc-vision/as-bignum/assembly';
 
 export class i256 {
 

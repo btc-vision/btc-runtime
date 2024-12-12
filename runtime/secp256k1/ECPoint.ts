@@ -1,4 +1,4 @@
-import { u256 } from 'as-bignum/assembly';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 import { SafeMath } from '../types/SafeMath';
 
 // secp256k1 curve parameters (using little-endian byte arrays)
