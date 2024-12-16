@@ -238,7 +238,7 @@ export class BlockchainEnvironment {
         valueAtLeast: u256,
         lte: boolean = true,
     ): MemorySlotData<u256> {
-        const writer = new BytesWriter(UINT256_BYTE_LENGTH + UINT256_BYTE_LENGTH + BOOLEAN_BYTE_LENGTH);
+        const writer = new BytesWriter(UINT256_BYTE_LENGTH * 2 + BOOLEAN_BYTE_LENGTH);
         writer.writeU256(targetPointer);
         writer.writeU256(valueAtLeast);
         writer.writeBoolean(lte);
