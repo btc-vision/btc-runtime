@@ -92,6 +92,35 @@ export class StoredAddressArray {
     }
 
     /**
+     * @method indexOf
+     * @description Searches for the first occurrence of the specified Address value and returns its index.
+     * @param {Address} value - The Address value to locate.
+     * @returns {i64} - The index of the first occurrence of the Address value, or -1 if not found.
+     */
+    @inline
+    public indexOf(value: Address): i64 {
+            for (let i: u64 = 0; i < this._length; i++) {
+                    const currentValue = this.get(i);
+                    if (currentValue == value) {
+                            // MAX_LENGTH is u32.MAX_VALUE - 1, so we can safely cast to i64
+                            return i;
+                    }
+            }
+            return -1;
+    }
+
+    /**
+     * @method contains
+     * @description Determines whether the array contains the specified Address value.
+     * @param {Address} value - The Address value to locate.
+     * @returns {boolean} - True if the Address value is found; otherwise, false.
+     */
+    @inline
+    public contains(value: Address): boolean {
+        return this.indexOf(value) !== -1;
+    }
+
+    /**
      * @method push
      * @description Appends a new u256 value to the end of the array.
      * @param {u256} value - The u256 value to append.
@@ -121,6 +150,10 @@ export class StoredAddressArray {
         this._isChangedLength = true;
     }
 
+    /**
+     * @method deleteLast
+     * @description Delete the last element from the array and decrement the length. It sets the last element to default value if not already set to default.
+     */
     public deleteLast(): void {
         if (this._length === 0) {
             throw new Revert('Delete operation failed: Array is empty.');
@@ -141,6 +174,11 @@ export class StoredAddressArray {
         this._isChangedLength = true;
     }
 
+    /**
+     * @method setStartingIndex
+     * @description Sets the starting index of the array.
+     * @param {u64} index - The new starting index to set.
+     */
     public setStartingIndex(index: u64): void {
         this._startIndex = index;
         this._isChangedStartIndex = true;
