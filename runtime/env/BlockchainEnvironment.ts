@@ -10,13 +10,11 @@ import { OP_NET } from '../contracts/OP_NET';
 import { PointerStorage } from '../types';
 import {
     callContract,
-    deploy,
     deployFromAddress,
     emit,
     encodeAddress,
     loadPointer,
     log,
-    nextPointerGreaterThan,
     storePointer,
     validateBitcoinAddress,
     verifySchnorrSignature,
@@ -186,7 +184,7 @@ export class BlockchainEnvironment {
         return reader.readAddress();
     }
 
-    public deployContract(hash: u256, bytecode: Uint8Array): DeployContractResponse {
+    /*public deployContract(hash: u256, bytecode: Uint8Array): DeployContractResponse {
         const writer = new BytesWriter(32 + bytecode.length);
         writer.writeU256(hash);
         writer.writeBytes(bytecode);
@@ -199,7 +197,7 @@ export class BlockchainEnvironment {
         const contractAddress: Address = reader.readAddress();
 
         return new DeployContractResponse(virtualAddress, contractAddress);
-    }
+    }*/
 
     public deployContractFromExisting(
         existingAddress: Address,
@@ -220,6 +218,7 @@ export class BlockchainEnvironment {
         return new DeployContractResponse(virtualAddress, contractAddress);
     }
 
+    // TODO: Change MemorySlotData type to a Uint8Array instead of a u256.
     public getStorageAt(
         pointerHash: MemorySlotPointer,
         defaultValue: MemorySlotData<u256>,
@@ -233,7 +232,7 @@ export class BlockchainEnvironment {
         return defaultValue;
     }
 
-    public getNextPointerGreaterThan(
+    /*public getNextPointerGreaterThan(
         targetPointer: MemorySlotPointer,
         valueAtLeast: u256,
         lte: boolean = true,
@@ -247,7 +246,7 @@ export class BlockchainEnvironment {
         const reader: BytesReader = new BytesReader(result);
 
         return reader.readU256();
-    }
+    }*/
 
     public verifySchnorrSignature(
         publicKey: Address,
@@ -265,6 +264,7 @@ export class BlockchainEnvironment {
         return reader.readBoolean();
     }
 
+    // TODO: Change MemorySlotData type to a Uint8Array instead of a u256.
     public hasStorageAt(pointerHash: MemorySlotPointer): bool {
         // We mark zero as the default value for the storage, if something is 0, the storage slot get deleted or is non-existent
         const val: u256 = this.getStorageAt(pointerHash, u256.Zero);

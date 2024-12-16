@@ -7,7 +7,8 @@ import { Revert } from '../types/Revert';
 
 /**
  * @class StoredAddressArray
- * @description Manages an array of u256 values across multiple storage slots. Each slot holds one u256 value.
+ * @description Manages an array of Address values across multiple storage slots.
+ * Each slot holds one Address (stored as u256 in storage).
  */
 @final
 export class StoredAddressArray {
@@ -15,7 +16,7 @@ export class StoredAddressArray {
     private readonly lengthPointer: u256;
 
     // Internal cache for storage slots
-    private _values: Map<u64, Address> = new Map(); // Map from slotIndex to u256 value
+    private _values: Map<u64, Address> = new Map(); // Map from slotIndex to Address value
     private _isLoaded: Set<u64> = new Set(); // Set of slotIndexes that are loaded
     private _isChanged: Set<u64> = new Set(); // Set of slotIndexes that are modified
 
@@ -26,25 +27,24 @@ export class StoredAddressArray {
     private _isChangedStartIndex: bool = false; // Indicates if the startIndex has been modified
 
     // Define a maximum allowed length to prevent excessive storage usage
-    private readonly MAX_LENGTH: u64 = u64(u32.MAX_VALUE - 1); // we need to check what happen in overflow situation to be able to set it to u64.MAX_VALUE
+    private readonly MAX_LENGTH: u64 = u64(u32.MAX_VALUE - 1);
 
     /**
      * @constructor
      * @param {u16} pointer - The primary pointer identifier.
      * @param {Uint8Array} subPointer - The sub-pointer for memory slot addressing.
-     * @param {u256} defaultValue - The default u256 value if storage is uninitialized.
+     * @param {Address} defaultValue - The default Address value if storage is uninitialized.
      */
     constructor(
         public pointer: u16,
         public subPointer: Uint8Array,
         private defaultValue: Address,
     ) {
-        // Initialize the base u256 pointer using the primary pointer and subPointer
+        // Initialize the base pointer
         const writer = new BytesWriter(32);
         writer.writeU16(pointer);
         writer.writeBytes(subPointer);
 
-        // Initialize the base and length pointers
         const baseU256Pointer = u256.fromBytes(writer.getBuffer(), true);
         const lengthPointer = baseU256Pointer.clone();
 
@@ -60,7 +60,7 @@ export class StoredAddressArray {
     /**
      * @method get
      * @description Retrieves the Address value at the specified global index.
-     * @param {u64} index - The global index (0 to ∞) of the Address value to retrieve.
+     * @param {u64} index - The global index of the Address to retrieve.
      * @returns {Address} - The Address value at the specified index.
      */
     @inline
@@ -75,7 +75,7 @@ export class StoredAddressArray {
     /**
      * @method set
      * @description Sets the Address value at the specified global index.
-     * @param {u64} index - The global index (0 to ∞) of the Address value to set.
+     * @param {u64} index - The global index of the Address to set.
      * @param {Address} value - The Address value to assign.
      */
     @inline
@@ -94,26 +94,25 @@ export class StoredAddressArray {
     /**
      * @method indexOf
      * @description Searches for the first occurrence of the specified Address value and returns its index.
-     * @param {Address} value - The Address value to locate.
-     * @returns {i64} - The index of the first occurrence of the Address value, or -1 if not found.
+     * @param {Address} value - The Address to locate.
+     * @returns {i64} - The index of the first occurrence, or -1 if not found.
      */
     @inline
     public indexOf(value: Address): i64 {
-            for (let i: u64 = 0; i < this._length; i++) {
-                    const currentValue = this.get(i);
-                    if (currentValue == value) {
-                            // MAX_LENGTH is u32.MAX_VALUE - 1, so we can safely cast to i64
-                            return i;
-                    }
+        for (let i: u64 = 0; i < this._length; i++) {
+            const currentValue = this.get(i);
+            if (currentValue == value) {
+                return i64(i);
             }
-            return -1;
+        }
+        return -1;
     }
 
     /**
      * @method contains
      * @description Determines whether the array contains the specified Address value.
-     * @param {Address} value - The Address value to locate.
-     * @returns {boolean} - True if the Address value is found; otherwise, false.
+     * @param {Address} value - The Address to locate.
+     * @returns {boolean} - True if found; otherwise, false.
      */
     @inline
     public contains(value: Address): boolean {
@@ -122,8 +121,8 @@ export class StoredAddressArray {
 
     /**
      * @method push
-     * @description Appends a new u256 value to the end of the array.
-     * @param {u256} value - The u256 value to append.
+     * @description Appends a new Address value to the end of the array.
+     * @param {Address} value - The Address to append.
      */
     public push(value: Address): void {
         if (this._length >= this.MAX_LENGTH) {
@@ -133,26 +132,21 @@ export class StoredAddressArray {
         }
 
         const newIndex: u64 = this._length;
-        const effectiveIndex: u64 = this._startIndex + newIndex;
         const wrappedIndex: u64 =
-            effectiveIndex < this.MAX_LENGTH ? effectiveIndex : effectiveIndex % this.MAX_LENGTH;
+            newIndex < this.MAX_LENGTH ? newIndex : newIndex % this.MAX_LENGTH;
         const slotIndex: u32 = <u32>wrappedIndex;
 
-        // Ensure the slot is loaded
         this.ensureValues(slotIndex);
-
-        // Set the new value
         this._values.set(slotIndex, value);
         this._isChanged.add(slotIndex);
 
-        // Increment the length
         this._length += 1;
         this._isChangedLength = true;
     }
 
     /**
      * @method deleteLast
-     * @description Delete the last element from the array and decrement the length. It sets the last element to default value if not already set to default.
+     * @description Deletes the last element from the array.
      */
     public deleteLast(): void {
         if (this._length === 0) {
@@ -169,7 +163,6 @@ export class StoredAddressArray {
             this._isChanged.add(slotIndex);
         }
 
-        // Decrement the length
         this._length -= 1;
         this._isChangedLength = true;
     }
@@ -177,7 +170,7 @@ export class StoredAddressArray {
     /**
      * @method setStartingIndex
      * @description Sets the starting index of the array.
-     * @param {u64} index - The new starting index to set.
+     * @param {u64} index - The new starting index.
      */
     public setStartingIndex(index: u64): void {
         this._startIndex = index;
@@ -186,8 +179,8 @@ export class StoredAddressArray {
 
     /**
      * @method delete
-     * @description Deletes the Address value at the specified index by setting it to zero. Does not reorder the array.
-     * @param {u64} index - The global index of the u256 value to delete.
+     * @description Deletes the Address value at the specified index by setting it to defaultValue.
+     * @param {u64} index - The global index of the Address value to delete.
      */
     public delete(index: u64): void {
         if (index >= this._length) {
@@ -206,8 +199,7 @@ export class StoredAddressArray {
 
     /**
      * @method shift
-     * @description Removes the first element of the array by setting it to this.defaultValue, decrementing the length, and incrementing the startIndex.
-     *              If the startIndex reaches the maximum value of u64, it wraps around to 0.
+     * @description Removes the first element of the array.
      */
     public shift(): void {
         if (this._length === 0) {
@@ -224,7 +216,6 @@ export class StoredAddressArray {
             this._isChanged.add(slotIndex);
         }
 
-        // Decrement the length
         this._length -= 1;
         this._isChangedLength = true;
 
@@ -239,7 +230,7 @@ export class StoredAddressArray {
 
     /**
      * @method save
-     * @description Persists all cached u256 values, the length, and the startIndex to their respective storage slots if any have been modified.
+     * @description Persists all changes to storage.
      */
     public save(): void {
         // Save all changed slots
@@ -265,10 +256,10 @@ export class StoredAddressArray {
 
     /**
      * @method deleteAll
-     * @description Deletes all storage slots by setting them to this.defaultValue, including the length and startIndex slots.
+     * @description Deletes the entire array and resets length and startIndex.
      */
     public deleteAll(): void {
-        // Iterate over all loaded slots and clear them
+        // Clear all loaded slots
         const keys = this._values.keys();
         for (let i = 0; i < keys.length; i++) {
             const slotIndex = keys[i];
@@ -276,7 +267,7 @@ export class StoredAddressArray {
             Blockchain.setStorageAt(storagePointer, u256.fromBytes(this.defaultValue));
         }
 
-        // Reset the length and startIndex to zero
+        // Reset the length and startIndex
         const zeroLengthAndStartIndex = u256.Zero;
         Blockchain.setStorageAt(this.lengthPointer, zeroLengthAndStartIndex);
         this._length = 0;
@@ -292,9 +283,9 @@ export class StoredAddressArray {
 
     /**
      * @method setMultiple
-     * @description Sets multiple u256 values starting from a specific global index.
+     * @description Sets multiple Address values starting from a specific global index.
      * @param {u32} startIndex - The starting global index.
-     * @param {u256[]} values - An array of u256 values to set.
+     * @param {Address[]} values - An array of Address values to set.
      */
     @inline
     public setMultiple(startIndex: u32, values: Address[]): void {
@@ -305,10 +296,10 @@ export class StoredAddressArray {
 
     /**
      * @method getAll
-     * @description Retrieves a range of values starting from a specific global index.
-     * @param {u32} startIndex - The starting global index.
-     * @param {u32} count - The number of values to retrieve.
-     * @returns {Address[]} - An array containing the retrieved Address values.
+     * @description Retrieves a range of Address values.
+     * @param {u32} startIndex - The start index.
+     * @param {u32} count - The number of items to get.
+     * @returns {Address[]} - The requested Address values.
      */
     @inline
     public getAll(startIndex: u32, count: u32): Address[] {
@@ -322,8 +313,8 @@ export class StoredAddressArray {
 
     /**
      * @method toString
-     * @description Returns a string representation of all cached values.
-     * @returns {string} - A string in the format "[value0, value1, ..., valueN]".
+     * @description Returns a string representation of the array.
+     * @returns {string} - A string of the form "[addr0, addr1, ...]".
      */
     @inline
     public toString(): string {
@@ -342,7 +333,7 @@ export class StoredAddressArray {
     /**
      * @method toBytes
      * @description Returns the packed Address values as a byte array.
-     * @returns {u8[]} - The packed values in byte form.
+     * @returns {u8[]} - The packed byte array.
      */
     @inline
     public toBytes(): u8[] {
@@ -351,7 +342,7 @@ export class StoredAddressArray {
             this.ensureValues(i);
             const value = this._values.get(i);
             if (value) {
-                const valueBytes = value;
+                const valueBytes = value; // Address is assumed to be or contain a Uint8Array
                 for (let j: u32 = 0; j < valueBytes.length; j++) {
                     bytes.push(valueBytes[j]);
                 }
@@ -362,16 +353,14 @@ export class StoredAddressArray {
 
     /**
      * @method reset
-     * @description Resets all cached u256 values to zero and marks them as changed, including resetting the length and startIndex.
+     * @description Resets the array by clearing all elements and resetting length and startIndex to zero.
      */
     @inline
     public reset(): void {
-        // Reset the length and startIndex to zero
         this._length = 0;
         this._startIndex = 0;
         this._isChangedLength = true;
         this._isChangedStartIndex = true;
-
         this.save();
     }
 
@@ -396,8 +385,8 @@ export class StoredAddressArray {
 
     /**
      * @method setLength
-     * @description Sets the length of the array.
-     * @param {u64} newLength - The new length to set.
+     * @description Sets the length of the array, truncating if necessary.
+     * @param {u64} newLength - The new length.
      */
     public setLength(newLength: u64): void {
         if (newLength > this.MAX_LENGTH) {
@@ -418,15 +407,15 @@ export class StoredAddressArray {
     /**
      * @private
      * @method ensureValues
-     * @description Loads and caches the u256 value from the specified storage slot.
+     * @description Loads and caches the Address from the specified storage slot if not already loaded.
      * @param {u32} slotIndex - The index of the storage slot.
      */
     private ensureValues(slotIndex: u32): void {
         if (!this._isLoaded.has(slotIndex)) {
             const storagePointer = this.calculateStoragePointer(slotIndex);
-            const storedU256 = Blockchain.getStorageAt(storagePointer, u256.Zero);
+            const storedU256: u256 = Blockchain.getStorageAt(storagePointer, u256.Zero);
             const storedAddress: Address =
-                storedU256 === u256.Zero ? this.defaultValue : new Address(storedU256.toBytes());
+                storedU256 == u256.Zero ? this.defaultValue : new Address(storedU256.toBytes());
             this._values.set(slotIndex, storedAddress);
             this._isLoaded.add(slotIndex);
         }
@@ -435,13 +424,13 @@ export class StoredAddressArray {
     /**
      * @private
      * @method calculateStoragePointer
-     * @description Calculates the storage pointer for a given slot index by incrementing the base pointer.
-     * @param {u32} slotIndex - The index of the storage slot.
+     * @description Calculates the storage pointer for a given slot index.
+     * @param {u64} slotIndex - The index of the storage slot.
      * @returns {u256} - The calculated storage pointer.
      */
     private calculateStoragePointer(slotIndex: u64): u256 {
         // Each slot is identified by baseU256Pointer + slotIndex + 1
-        // Slot 0: baseU256Pointer + 1 (first element)
+        // Slot 0: baseU256Pointer + 1
         // Slot 1: baseU256Pointer + 2, etc.
         return SafeMath.add(this.baseU256Pointer, u256.fromU64(slotIndex + 1));
     }
