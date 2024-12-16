@@ -1,8 +1,8 @@
 import { u256 } from '@btc-vision/as-bignum/assembly';
-import { Blockchain } from '../env';
 import { BytesWriter } from '../buffer/BytesWriter';
-import { SafeMath } from '../types/SafeMath';
+import { Blockchain } from '../env';
 import { Revert } from '../types/Revert';
+import { SafeMath } from '../types/SafeMath';
 
 /**
  * @class StoredBooleanArray
@@ -33,11 +33,7 @@ export class StoredBooleanArray {
      * @param {Uint8Array} subPointer - The sub-pointer for memory slot addressing.
      * @param {u256} defaultValue - The default u256 value if storage is uninitialized.
      */
-    constructor(
-        public pointer: u16,
-        public subPointer: Uint8Array,
-        private defaultValue: u256,
-    ) {
+    constructor(public pointer: u16, public subPointer: Uint8Array, private defaultValue: u256) {
         // Initialize the base u256 pointer using the primary pointer and subPointer
         const writer = new BytesWriter(32);
         writer.writeU16(pointer);

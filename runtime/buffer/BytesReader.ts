@@ -1,10 +1,22 @@
-import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
-import { Selector } from '../math/abi';
 import { i128, u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { Revert } from '../types/Revert';
 import { TransactionInput, TransactionOutput } from '../env/classes/UTXO';
-import { i256 } from '../math/i256';
 import { AddressMap } from '../generic/AddressMap';
+import { Selector } from '../math/abi';
+import { i256 } from '../math/i256';
+import { Address } from '../types/Address';
+import { Revert } from '../types/Revert';
+import {
+    ADDRESS_BYTE_LENGTH,
+    I128_BYTE_LENGTH,
+    I256_BYTE_LENGTH,
+    I64_BYTE_LENGTH,
+    U128_BYTE_LENGTH,
+    U16_BYTE_LENGTH,
+    U256_BYTE_LENGTH,
+    U32_BYTE_LENGTH,
+    U64_BYTE_LENGTH,
+    U8_BYTE_LENGTH,
+} from '../utils/lengths';
 
 @final
 export class BytesReader {
@@ -17,41 +29,41 @@ export class BytesReader {
     }
 
     public readU8(): u8 {
-        this.verifyEnd(this.currentOffset + 1);
+        this.verifyEnd(this.currentOffset + U8_BYTE_LENGTH);
 
-        return this.buffer.getUint8(this.currentOffset++);
+        return this.buffer.getUint8(this.currentOffset + U8_BYTE_LENGTH);
     }
 
     public readU16(): u16 {
-        this.verifyEnd(this.currentOffset + 2);
+        this.verifyEnd(this.currentOffset + U16_BYTE_LENGTH);
 
         const value = this.buffer.getUint16(this.currentOffset, true);
-        this.currentOffset += 2;
+        this.currentOffset += U16_BYTE_LENGTH;
 
         return value;
     }
 
     public readU32(le: boolean = true): u32 {
-        this.verifyEnd(this.currentOffset + 4);
+        this.verifyEnd(this.currentOffset + U32_BYTE_LENGTH);
 
         const value = this.buffer.getUint32(this.currentOffset, le);
-        this.currentOffset += 4;
+        this.currentOffset += U32_BYTE_LENGTH;
         return value;
     }
 
     public readU64(): u64 {
-        this.verifyEnd(this.currentOffset + 8);
+        this.verifyEnd(this.currentOffset + U64_BYTE_LENGTH);
 
         const value = this.buffer.getUint64(this.currentOffset, true);
-        this.currentOffset += 8;
+        this.currentOffset += U64_BYTE_LENGTH;
 
         return value;
     }
 
     public readU256(): u256 {
-        this.verifyEnd(this.currentOffset + 32);
+        this.verifyEnd(this.currentOffset + U256_BYTE_LENGTH);
 
-        const next32Bytes: u8[] = this.readBytesBE(32);
+        const next32Bytes: u8[] = this.readBytesBE(U256_BYTE_LENGTH);
 
         return u256.fromBytesBE(next32Bytes);
     }
@@ -67,26 +79,26 @@ export class BytesReader {
     }
 
     public readI64(): i64 {
-        this.verifyEnd(this.currentOffset + 8);
+        this.verifyEnd(this.currentOffset + I64_BYTE_LENGTH);
 
         const value = this.buffer.getInt64(this.currentOffset, true);
-        this.currentOffset += 8;
+        this.currentOffset += I64_BYTE_LENGTH;
 
         return value;
     }
 
     public readU128(): u128 {
-        this.verifyEnd(this.currentOffset + 16);
+        this.verifyEnd(this.currentOffset + U128_BYTE_LENGTH);
 
-        const next16Bytes: u8[] = this.readBytesBE(16);
+        const next16Bytes: u8[] = this.readBytesBE(U128_BYTE_LENGTH);
 
         return u128.fromBytesBE(next16Bytes);
     }
 
     public readI128(): i128 {
-        this.verifyEnd(this.currentOffset + 16);
+        this.verifyEnd(this.currentOffset + I128_BYTE_LENGTH);
 
-        const next16Bytes: u8[] = this.readBytesBE(16);
+        const next16Bytes: u8[] = this.readBytesBE(I128_BYTE_LENGTH);
 
         return i128.fromBytesBE(next16Bytes);
     }
@@ -173,9 +185,9 @@ export class BytesReader {
     }
 
     public readI256(): i256 {
-        this.verifyEnd(this.currentOffset + 32);
+        this.verifyEnd(this.currentOffset + I256_BYTE_LENGTH);
 
-        const next32Bytes: u8[] = this.readBytesBE(32);
+        const next32Bytes: u8[] = this.readBytesBE(I256_BYTE_LENGTH);
 
         return i256.fromBytesBE(next32Bytes);
     }

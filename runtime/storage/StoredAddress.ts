@@ -1,7 +1,7 @@
 import { u256 } from '@btc-vision/as-bignum/assembly';
+import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
 import { encodePointer } from '../math/abi';
-import { BytesWriter } from '../buffer/BytesWriter';
 import { Address } from '../types/Address';
 
 @final
@@ -9,10 +9,7 @@ export class StoredAddress {
     private readonly addressPointer: u256;
     private readonly defaultValue: u256;
 
-    constructor(
-        public pointer: u16,
-        defaultValue: Address,
-    ) {
+    constructor(public pointer: u16, defaultValue: Address) {
         const writer = new BytesWriter(32);
 
         this.defaultValue = u256.fromBytes(defaultValue);

@@ -1,11 +1,12 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { U256_BYTE_LENGTH } from '../utils/lengths';
 
 export function bytes(number: u256[]): Uint8Array {
-    const result = new Uint8Array(32 * number.length);
-    for (let i: u8 = 0; i < 32; i++) {
+    const result = new Uint8Array(U256_BYTE_LENGTH * number.length);
+    for (let i: u8 = 0; i < U256_BYTE_LENGTH; i++) {
         const num: Uint8Array = number[31 - i].toUint8Array();
         for (let j: u8 = 0; j < u8(number.length); j++) {
-            result[i + j * 32] = num[i];
+            result[i + j * U256_BYTE_LENGTH] = num[i];
         }
     }
 

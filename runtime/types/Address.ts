@@ -1,8 +1,7 @@
 import { Potential } from '../lang/Definitions';
-import { bech32m as _bech32m, toWords } from '../utils/b32';
 import { decodeHexArray, encodeHexFromBuffer } from '../utils';
-
-export const ADDRESS_BYTE_LENGTH: i32 = 32;
+import { bech32m as _bech32m, toWords } from '../utils/b32';
+import { ADDRESS_BYTE_LENGTH } from '../utils/lengths';
 
 @final
 export class Address extends Uint8Array {
@@ -53,7 +52,7 @@ export class Address extends Uint8Array {
      * @returns {void}
      */
     public newSet(publicKey: u8[]): void {
-        if (publicKey.length !== 32) {
+        if (publicKey.length !== ADDRESS_BYTE_LENGTH) {
             throw new Error('Invalid public key length');
         }
 
@@ -82,7 +81,7 @@ export class Address extends Uint8Array {
     @operator('<')
     public lessThan(a: Address): bool {
         // Compare the two addresses byte-by-byte, treating them as big-endian uint256
-        for (let i = 0; i < 32; i++) {
+        for (let i = 0; i < ADDRESS_BYTE_LENGTH; i++) {
             const thisByte = this[i];
             const aByte = a[i];
 
@@ -99,7 +98,7 @@ export class Address extends Uint8Array {
     @operator('>')
     public greaterThan(a: Address): bool {
         // Compare the two addresses byte-by-byte, treating them as big-endian uint256
-        for (let i = 0; i < 32; i++) {
+        for (let i = 0; i < ADDRESS_BYTE_LENGTH; i++) {
             const thisByte = this[i];
             const aByte = a[i];
 
