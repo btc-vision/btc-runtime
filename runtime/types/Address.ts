@@ -1,8 +1,7 @@
 import { Potential } from '../lang/Definitions';
-import { bech32m as _bech32m, toWords } from '../utils/b32';
 import { decodeHexArray, encodeHexFromBuffer } from '../utils';
-
-export const ADDRESS_BYTE_LENGTH: i32 = 32;
+import { bech32m as _bech32m, toWords } from '../utils/b32';
+import { ADDRESS_BYTE_LENGTH } from '../utils/lengths';
 
 @final
 export class Address extends Uint8Array {

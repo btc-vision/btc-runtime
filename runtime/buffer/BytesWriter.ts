@@ -1,11 +1,12 @@
 import { i128, u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
-import { Selector } from '../math/abi';
-import { BytesReader } from './BytesReader';
-import { Revert } from '../types/Revert';
 import { ArrayBuffer } from 'arraybuffer';
-import { i256 } from '../math/i256';
 import { AddressMap } from '../generic/AddressMap';
+import { Selector } from '../math/abi';
+import { i256 } from '../math/i256';
+import { Address } from '../types/Address';
+import { Revert } from '../types/Revert';
+import { ADDRESS_BYTE_LENGTH } from '../utils/lengths';
+import { BytesReader } from './BytesReader';
 
 @final
 export class BytesWriter {
@@ -296,7 +297,9 @@ export class BytesWriter {
 
     private resize(size: u32): void {
         abort(
-            `Buffer is getting resized. This is very bad for performance. Expected size: ${this.buffer.byteLength + size} - Current size: ${this.buffer.byteLength}`,
+            `Buffer is getting resized. This is very bad for performance. Expected size: ${
+                this.buffer.byteLength + size
+            } - Current size: ${this.buffer.byteLength}`,
         );
 
         /*const buf: Uint8Array = new Uint8Array(u32(this.buffer.byteLength) + size);

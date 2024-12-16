@@ -12,6 +12,7 @@ import { Revert } from '../types/Revert';
 import { SafeMath } from '../types/SafeMath';
 
 import { Calldata } from '../types';
+import { BOOLEAN_BYTE_LENGTH, UINT256_BYTE_LENGTH } from '../utils/lengths';
 import { IOP_20 } from './interfaces/IOP_20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
@@ -100,7 +101,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
 
     /** METHODS */
     public allowance(callData: Calldata): BytesWriter {
-        const response = new BytesWriter(32);
+        const response = new BytesWriter(UINT256_BYTE_LENGTH);
 
         const resp = this._allowance(callData.readAddress(), callData.readAddress());
         response.writeU256(resp);
@@ -115,7 +116,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         const value = callData.readU256();
 
         // Response buffer
-        const response = new BytesWriter(1);
+        const response = new BytesWriter(BOOLEAN_BYTE_LENGTH);
 
         const resp = this._approve(owner, spender, value);
         response.writeBoolean(resp);
@@ -124,7 +125,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     public balanceOf(callData: Calldata): BytesWriter {
-        const response = new BytesWriter(32);
+        const response = new BytesWriter(UINT256_BYTE_LENGTH);
         const address: Address = callData.readAddress();
         const resp = this._balanceOf(address);
 
@@ -134,7 +135,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     public burn(callData: Calldata): BytesWriter {
-        const response = new BytesWriter(1);
+        const response = new BytesWriter(BOOLEAN_BYTE_LENGTH);
         const resp = this._burn(callData.readU256());
         response.writeBoolean(resp);
 
@@ -142,7 +143,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     public transfer(callData: Calldata): BytesWriter {
-        const response = new BytesWriter(1);
+        const response = new BytesWriter(BOOLEAN_BYTE_LENGTH);
         const resp = this._transfer(callData.readAddress(), callData.readU256());
 
         response.writeBoolean(resp);
@@ -151,7 +152,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     public transferFrom(callData: Calldata): BytesWriter {
-        const response = new BytesWriter(1);
+        const response = new BytesWriter(BOOLEAN_BYTE_LENGTH);
         const resp = this._transferFrom(
             callData.readAddress(),
             callData.readAddress(),
@@ -168,7 +169,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
 
         switch (method) {
             case encodeSelector('decimals'):
-                response = new BytesWriter(1);
+                response = new BytesWriter(BOOLEAN_BYTE_LENGTH);
                 response.writeU8(this.decimals);
                 break;
             case encodeSelector('name'):
@@ -180,11 +181,11 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
                 response.writeStringWithLength(this.symbol);
                 break;
             case encodeSelector('totalSupply'):
-                response = new BytesWriter(32);
+                response = new BytesWriter(UINT256_BYTE_LENGTH);
                 response.writeU256(this.totalSupply);
                 break;
             case encodeSelector('maximumSupply'):
-                response = new BytesWriter(32);
+                response = new BytesWriter(UINT256_BYTE_LENGTH);
                 response.writeU256(this.maxSupply);
                 break;
             case encodeSelector('allowance'):
