@@ -1,11 +1,12 @@
-import { IBTC } from '../interfaces/IBTC';
-import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
-import { Blockchain } from '../env';
 import { BytesWriter } from '../buffer/BytesWriter';
-import { encodeSelector, Selector } from '../math/abi';
-import { Revert } from '../types/Revert';
+import { Blockchain } from '../env';
 import { MAX_EVENT_DATA_SIZE, NetEvent } from '../events/NetEvent';
+import { IBTC } from '../interfaces/IBTC';
+import { encodeSelector, Selector } from '../math/abi';
 import { Calldata } from '../types';
+import { Address } from '../types/Address';
+import { Revert } from '../types/Revert';
+import { ADDRESS_BYTE_LENGTH } from '../utils/lengths';
 
 export class OP_NET implements IBTC {
     public get address(): Address {

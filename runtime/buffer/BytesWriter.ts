@@ -1,11 +1,22 @@
 import { i128, u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
-import { Selector } from '../math/abi';
-import { BytesReader } from './BytesReader';
-import { Revert } from '../types/Revert';
 import { ArrayBuffer } from 'arraybuffer';
-import { i256 } from '../math/i256';
 import { AddressMap } from '../generic/AddressMap';
+import { Selector } from '../math/abi';
+import { i256 } from '../math/i256';
+import { Address } from '../types/Address';
+import { Revert } from '../types/Revert';
+import {
+    ADDRESS_BYTE_LENGTH,
+    I128_BYTE_LENGTH,
+    I256_BYTE_LENGTH,
+    U128_BYTE_LENGTH,
+    U16_BYTE_LENGTH,
+    U256_BYTE_LENGTH,
+    U32_BYTE_LENGTH,
+    U64_BYTE_LENGTH,
+    U8_BYTE_LENGTH,
+} from '../utils/lengths';
+import { BytesReader } from './BytesReader';
 
 @final
 export class BytesWriter {
@@ -24,26 +35,26 @@ export class BytesWriter {
     }
 
     public writeU8(value: u8): void {
-        this.allocSafe(1);
-        this.buffer.setUint8(this.currentOffset++, value);
+        this.allocSafe(U8_BYTE_LENGTH);
+        this.buffer.setUint8(this.currentOffset + U8_BYTE_LENGTH, value);
     }
 
     public writeU16(value: u16): void {
-        this.allocSafe(2);
+        this.allocSafe(U16_BYTE_LENGTH);
         this.buffer.setUint16(this.currentOffset, value, true);
-        this.currentOffset += 2;
+        this.currentOffset += U16_BYTE_LENGTH;
     }
 
     public writeU32(value: u32, le: boolean = true): void {
-        this.allocSafe(4);
+        this.allocSafe(U32_BYTE_LENGTH);
         this.buffer.setUint32(this.currentOffset, value, le);
-        this.currentOffset += 4;
+        this.currentOffset += U32_BYTE_LENGTH;
     }
 
     public writeU64(value: u64): void {
-        this.allocSafe(8);
+        this.allocSafe(U64_BYTE_LENGTH);
         this.buffer.setUint64(this.currentOffset, value || 0, true);
-        this.currentOffset += 8;
+        this.currentOffset += U64_BYTE_LENGTH;
     }
 
     public writeAddressArray(value: Address[]): void {
@@ -65,10 +76,10 @@ export class BytesWriter {
     }
 
     public writeI256(value: i256): void {
-        this.allocSafe(32);
+        this.allocSafe(I256_BYTE_LENGTH);
 
         const bytes = value.toUint8Array(true);
-        for (let i: i32 = 0; i < 32; i++) {
+        for (let i: i32 = 0; i < I256_BYTE_LENGTH; i++) {
             this.writeU8(bytes[i] || 0);
         }
     }
@@ -78,34 +89,34 @@ export class BytesWriter {
     }
 
     public writeU256(value: u256): void {
-        this.allocSafe(32);
+        this.allocSafe(U256_BYTE_LENGTH);
 
         const bytes = value.toUint8Array(true);
-        for (let i: i32 = 0; i < 32; i++) {
+        for (let i: i32 = 0; i < U256_BYTE_LENGTH; i++) {
             this.writeU8(bytes[i] || 0);
         }
     }
 
     public writeI128(value: i128): void {
-        this.allocSafe(32);
+        this.allocSafe(I128_BYTE_LENGTH);
 
         const bytes = value.toUint8Array(true);
-        for (let i: i32 = 0; i < 32; i++) {
+        for (let i: i32 = 0; i < I128_BYTE_LENGTH; i++) {
             this.writeU8(bytes[i] || 0);
         }
     }
 
     public writeU128(value: u128): void {
-        this.allocSafe(16);
+        this.allocSafe(U128_BYTE_LENGTH);
 
         const bytes = value.toUint8Array(true);
-        for (let i: i32 = 0; i < 16; i++) {
+        for (let i: i32 = 0; i < U128_BYTE_LENGTH; i++) {
             this.writeU8(bytes[i] || 0);
         }
     }
 
     public writeTuple(value: u256[]): void {
-        this.allocSafe(4 + value.length * 32);
+        this.allocSafe(U32_BYTE_LENGTH + value.length * U256_BYTE_LENGTH);
         this.writeU32(u32(value.length));
 
         for (let i = 0; i < value.length; i++) {
@@ -116,7 +127,7 @@ export class BytesWriter {
     public writeU128Array(value: u128[]): void {
         if (value.length > 65535) throw new Revert('Array size is too large');
 
-        this.allocSafe(2 + value.length * 16);
+        this.allocSafe(U16_BYTE_LENGTH + value.length * U128_BYTE_LENGTH);
         this.writeU32(u16(value.length));
 
         for (let i = 0; i < value.length; i++) {
@@ -144,7 +155,7 @@ export class BytesWriter {
     public writeBytesWithLength(value: Uint8Array): void {
         const length: u32 = u32(value.length);
 
-        this.allocSafe(length + 4);
+        this.allocSafe(length + U32_BYTE_LENGTH);
         this.writeU32(length);
 
         for (let i: u32 = 0; i < length; i++) {
@@ -172,7 +183,7 @@ export class BytesWriter {
     public writeAddressValueTupleMap(map: AddressMap<u256>): void {
         if (map.size > 65535) throw new Revert('Map size is too large');
 
-        /*const requiredSize: u32 = 2 + map.size * (ADDRESS_BYTE_LENGTH + 32);
+        /*const requiredSize: u32 = U16_BYTE_LENGTH + map.size * (ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH);
 
         if (this.buffer.byteLength < requiredSize) {
             abort(
@@ -195,7 +206,7 @@ export class BytesWriter {
     public writeLimitedAddressBytesMap(map: AddressMap<Uint8Array[]>): void {
         if (map.size > 8) throw new Revert('Too many contract called.'); // no more than 8 different contracts.
 
-        /*let requiredSize: u32 = 1 + (map.size * ADDRESS_BYTE_LENGTH + 1);
+        /*let requiredSize: u32 = U8_BYTE_LENGTH + (map.size * ADDRESS_BYTE_LENGTH + U8_BYTE_LENGTH);
 
 
         for (let i = 0; i < map.size; i++) {
@@ -296,7 +307,9 @@ export class BytesWriter {
 
     private resize(size: u32): void {
         abort(
-            `Buffer is getting resized. This is very bad for performance. Expected size: ${this.buffer.byteLength + size} - Current size: ${this.buffer.byteLength}`,
+            `Buffer is getting resized. This is very bad for performance. Expected size: ${
+                this.buffer.byteLength + size
+            } - Current size: ${this.buffer.byteLength}`,
         );
 
         /*const buf: Uint8Array = new Uint8Array(u32(this.buffer.byteLength) + size);

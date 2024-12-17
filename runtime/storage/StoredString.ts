@@ -1,15 +1,13 @@
 import { u256 } from '@btc-vision/as-bignum/assembly';
-import { Blockchain } from '../env';
-import { SafeMath } from '../types/SafeMath';
-import { encodePointer } from '../math/abi';
 import { BytesWriter } from '../buffer/BytesWriter';
+import { Blockchain } from '../env';
+import { encodePointer } from '../math/abi';
+import { SafeMath } from '../types/SafeMath';
+import { UINT256_BYTE_LENGTH } from '../utils/lengths';
 
 @final
 export class StoredString {
-    constructor(
-        public pointer: u16,
-        private defaultValue?: string,
-    ) {}
+    constructor(public pointer: u16, private defaultValue?: string) {}
 
     private _value: string = '';
 
@@ -33,7 +31,7 @@ export class StoredString {
     }
 
     private getPointer(key: u256): u256 {
-        const buf = new BytesWriter(32);
+        const buf = new BytesWriter(UINT256_BYTE_LENGTH);
         buf.writeU256(key);
 
         return encodePointer(this.pointer, buf.getBuffer());

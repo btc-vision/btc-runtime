@@ -1,10 +1,11 @@
 import { u256 } from '@btc-vision/as-bignum/assembly';
-import { Blockchain } from '../env';
-import { MemorySlotPointer } from '../memory/MemorySlotPointer';
-import { BytesWriter } from '../buffer/BytesWriter';
 import { BytesReader } from '../buffer/BytesReader';
-import { Revert } from '../types/Revert';
+import { BytesWriter } from '../buffer/BytesWriter';
+import { Blockchain } from '../env';
 import { encodePointer } from '../math/abi';
+import { MemorySlotPointer } from '../memory/MemorySlotPointer';
+import { Revert } from '../types/Revert';
+import { UINT256_BYTE_LENGTH } from '../utils/lengths';
 
 // Similar to a struct in Solidity. (Use in worst case scenario, consume a lot of gas)
 export abstract class Serializable {
@@ -99,7 +100,7 @@ export abstract class Serializable {
     }
 
     protected getPointer(subPointer: u256, index: u8): u256 {
-        const writer = new BytesWriter(32);
+        const writer = new BytesWriter(UINT256_BYTE_LENGTH);
         writer.writeU256(subPointer);
 
         // Discard the first byte for offset.

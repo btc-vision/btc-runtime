@@ -1,9 +1,10 @@
 import { u256 } from '@btc-vision/as-bignum/assembly';
-import { SafeMath } from '../types/SafeMath';
-import { MemorySlotPointer } from '../memory/MemorySlotPointer';
+import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
 import { encodePointer } from '../math/abi';
-import { BytesWriter } from '../buffer/BytesWriter';
+import { MemorySlotPointer } from '../memory/MemorySlotPointer';
+import { SafeMath } from '../types/SafeMath';
+import { UINT256_BYTE_LENGTH } from '../utils/lengths';
 
 @final
 export class StoredU256 {
@@ -14,7 +15,7 @@ export class StoredU256 {
         public subPointer: MemorySlotPointer,
         private defaultValue: u256,
     ) {
-        const writer = new BytesWriter(32);
+        const writer = new BytesWriter(UINT256_BYTE_LENGTH);
         writer.writeU256(subPointer);
 
         this.u256Pointer = encodePointer(pointer, writer.getBuffer());

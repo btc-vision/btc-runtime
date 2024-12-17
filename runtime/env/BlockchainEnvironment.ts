@@ -1,13 +1,18 @@
-import { Address, ADDRESS_BYTE_LENGTH } from '../types/Address';
-import { MemorySlotPointer } from '../memory/MemorySlotPointer';
-import { MemorySlotData } from '../memory/MemorySlot';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { BytesReader } from '../buffer/BytesReader';
 import { BytesWriter } from '../buffer/BytesWriter';
-import { NetEvent } from '../events/NetEvent';
-import { Potential } from '../lang/Definitions';
 import { OP_NET } from '../contracts/OP_NET';
+import { NetEvent } from '../events/NetEvent';
+import { MapU256 } from '../generic/MapU256';
+import { DeployContractResponse } from '../interfaces/DeployContractResponse';
+import { Potential } from '../lang/Definitions';
+import { MemorySlotData } from '../memory/MemorySlot';
+import { MemorySlotPointer } from '../memory/MemorySlotPointer';
 import { PointerStorage } from '../types';
+import { Address } from '../types/Address';
+import { ADDRESS_BYTE_LENGTH, UINT256_BYTE_LENGTH } from '../utils/lengths';
+import { Block } from './classes/Block';
+import { Transaction } from './classes/Transaction';
 import {
     callContract,
     deployFromAddress,
@@ -19,10 +24,6 @@ import {
     validateBitcoinAddress,
     verifySchnorrSignature,
 } from './global';
-import { DeployContractResponse } from '../interfaces/DeployContractResponse';
-import { MapU256 } from '../generic/MapU256';
-import { Block } from './classes/Block';
-import { Transaction } from './classes/Transaction';
 
 export * from '../env/global';
 
@@ -185,7 +186,7 @@ export class BlockchainEnvironment {
     }
 
     /*public deployContract(hash: u256, bytecode: Uint8Array): DeployContractResponse {
-        const writer = new BytesWriter(32 + bytecode.length);
+        const writer = new BytesWriter(UINT256_BYTE_LENGTH + bytecode.length);
         writer.writeU256(hash);
         writer.writeBytes(bytecode);
 
@@ -203,7 +204,7 @@ export class BlockchainEnvironment {
         existingAddress: Address,
         salt: u256,
     ): DeployContractResponse {
-        const writer = new BytesWriter(ADDRESS_BYTE_LENGTH + 32);
+        const writer = new BytesWriter(ADDRESS_BYTE_LENGTH + UINT256_BYTE_LENGTH);
         writer.writeAddress(existingAddress);
         writer.writeU256(salt);
 
@@ -237,7 +238,7 @@ export class BlockchainEnvironment {
         valueAtLeast: u256,
         lte: boolean = true,
     ): MemorySlotData<u256> {
-        const writer = new BytesWriter(65);
+        const writer = new BytesWriter(UINT256_BYTE_LENGTH * 2 + BOOLEAN_BYTE_LENGTH);
         writer.writeU256(targetPointer);
         writer.writeU256(valueAtLeast);
         writer.writeBoolean(lte);
@@ -253,7 +254,7 @@ export class BlockchainEnvironment {
         signature: Uint8Array,
         hash: Uint8Array,
     ): boolean {
-        const writer = new BytesWriter(128);
+        const writer = new BytesWriter(ADDRESS_BYTE_LENGTH + 64 + 32);
         writer.writeBytes(publicKey);
         writer.writeBytes(signature);
         writer.writeBytes(hash);
@@ -293,7 +294,7 @@ export class BlockchainEnvironment {
     private _internalSetStorageAt(pointerHash: u256, value: MemorySlotData<u256>): void {
         this.storage.set(pointerHash, value);
 
-        const writer: BytesWriter = new BytesWriter(64);
+        const writer: BytesWriter = new BytesWriter(UINT256_BYTE_LENGTH * 2);
         writer.writeU256(pointerHash);
         writer.writeU256(value);
 
@@ -307,7 +308,7 @@ export class BlockchainEnvironment {
         }
 
         // we attempt to load the requested pointer.
-        const writer = new BytesWriter(32);
+        const writer = new BytesWriter(UINT256_BYTE_LENGTH);
         writer.writeU256(pointer);
 
         const result: Uint8Array = loadPointer(writer.getBuffer());
