@@ -128,7 +128,7 @@ export class BytesWriter {
         if (value.length > 65535) throw new Revert('Array size is too large');
 
         this.allocSafe(U16_BYTE_LENGTH + value.length * U128_BYTE_LENGTH);
-        this.writeU32(u16(value.length));
+        this.writeU16(u16(value.length));
 
         for (let i = 0; i < value.length; i++) {
             this.writeU128(value[i]);
