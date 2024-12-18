@@ -3,7 +3,7 @@ import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
 import { encodePointer } from '../math/abi';
 import { MemorySlotPointer } from '../memory/MemorySlotPointer';
-import { UINT256_BYTE_LENGTH } from '../utils/lengths';
+import { U256_BYTE_LENGTH } from '../utils/lengths';
 
 /**
  * @class StoredU64
@@ -33,7 +33,7 @@ export class StoredU64 {
         public subPointer: MemorySlotPointer,
         private defaultValue: u256,
     ) {
-        const writer = new BytesWriter(UINT256_BYTE_LENGTH);
+        const writer = new BytesWriter(U256_BYTE_LENGTH);
         writer.writeU256(subPointer);
 
         this.u256Pointer = encodePointer(pointer, writer.getBuffer());

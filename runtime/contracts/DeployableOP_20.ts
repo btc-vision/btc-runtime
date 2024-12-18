@@ -12,7 +12,7 @@ import { Revert } from '../types/Revert';
 import { SafeMath } from '../types/SafeMath';
 
 import { Calldata } from '../types';
-import { BOOLEAN_BYTE_LENGTH, UINT256_BYTE_LENGTH } from '../utils/lengths';
+import { BOOLEAN_BYTE_LENGTH, U256_BYTE_LENGTH } from '../utils/lengths';
 import { IOP_20 } from './interfaces/IOP_20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
@@ -101,7 +101,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
 
     /** METHODS */
     public allowance(callData: Calldata): BytesWriter {
-        const response = new BytesWriter(UINT256_BYTE_LENGTH);
+        const response = new BytesWriter(U256_BYTE_LENGTH);
 
         const resp = this._allowance(callData.readAddress(), callData.readAddress());
         response.writeU256(resp);
@@ -125,7 +125,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     public balanceOf(callData: Calldata): BytesWriter {
-        const response = new BytesWriter(UINT256_BYTE_LENGTH);
+        const response = new BytesWriter(U256_BYTE_LENGTH);
         const address: Address = callData.readAddress();
         const resp = this._balanceOf(address);
 
@@ -181,11 +181,11 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
                 response.writeStringWithLength(this.symbol);
                 break;
             case encodeSelector('totalSupply'):
-                response = new BytesWriter(UINT256_BYTE_LENGTH);
+                response = new BytesWriter(U256_BYTE_LENGTH);
                 response.writeU256(this.totalSupply);
                 break;
             case encodeSelector('maximumSupply'):
-                response = new BytesWriter(UINT256_BYTE_LENGTH);
+                response = new BytesWriter(U256_BYTE_LENGTH);
                 response.writeU256(this.maxSupply);
                 break;
             case encodeSelector('allowance'):

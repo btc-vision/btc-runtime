@@ -4,7 +4,7 @@ import { Blockchain } from '../env';
 import { encodeSelector, Selector } from '../math/abi';
 import { Address } from '../types/Address';
 import { Revert } from '../types/Revert';
-import { ADDRESS_BYTE_LENGTH, SELECTOR_BYTE_LENGTH, UINT256_BYTE_LENGTH } from '../utils/lengths';
+import { ADDRESS_BYTE_LENGTH, SELECTOR_BYTE_LENGTH, U256_BYTE_LENGTH } from '../utils/lengths';
 
 export class TransferHelper {
     public static get APPROVE_SELECTOR(): Selector {
@@ -21,7 +21,7 @@ export class TransferHelper {
 
     public static safeApprove(token: Address, spender: Address, amount: u256): void {
         const calldata = new BytesWriter(
-            SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH + UINT256_BYTE_LENGTH,
+            SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH,
         );
         calldata.writeSelector(this.APPROVE_SELECTOR);
         calldata.writeAddress(spender);
@@ -37,7 +37,7 @@ export class TransferHelper {
 
     public static safeTransfer(token: Address, to: Address, amount: u256): void {
         const calldata = new BytesWriter(
-            SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH + UINT256_BYTE_LENGTH,
+            SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH,
         );
         calldata.writeSelector(this.TRANSFER_SELECTOR);
         calldata.writeAddress(to);
@@ -53,7 +53,7 @@ export class TransferHelper {
 
     public static safeTransferFrom(token: Address, from: Address, to: Address, amount: u256): void {
         const calldata = new BytesWriter(
-            SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH * 2 + UINT256_BYTE_LENGTH,
+            SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH,
         );
         calldata.writeSelector(this.TRANSFER_FROM_SELECTOR);
         calldata.writeAddress(from);
