@@ -3,7 +3,7 @@ import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
 import { encodePointer } from '../math/abi';
 import { SafeMath } from '../types/SafeMath';
-import { UINT256_BYTE_LENGTH } from '../utils/lengths';
+import { U256_BYTE_LENGTH } from '../utils/lengths';
 
 @final
 export class StoredString {
@@ -31,7 +31,7 @@ export class StoredString {
     }
 
     private getPointer(key: u256): u256 {
-        const buf = new BytesWriter(UINT256_BYTE_LENGTH);
+        const buf = new BytesWriter(U256_BYTE_LENGTH);
         buf.writeU256(key);
 
         return encodePointer(this.pointer, buf.getBuffer());

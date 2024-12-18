@@ -4,7 +4,7 @@ import { Blockchain } from '../env';
 import { encodePointer } from '../math/abi';
 import { MemorySlotPointer } from '../memory/MemorySlotPointer';
 import { SafeMath } from '../types/SafeMath';
-import { UINT256_BYTE_LENGTH } from '../utils/lengths';
+import { U256_BYTE_LENGTH } from '../utils/lengths';
 
 @final
 export class StoredU256 {
@@ -15,7 +15,7 @@ export class StoredU256 {
         public subPointer: MemorySlotPointer,
         private defaultValue: u256,
     ) {
-        const writer = new BytesWriter(UINT256_BYTE_LENGTH);
+        const writer = new BytesWriter(U256_BYTE_LENGTH);
         writer.writeU256(subPointer);
 
         this.u256Pointer = encodePointer(pointer, writer.getBuffer());
