@@ -36,7 +36,8 @@ export class BytesWriter {
 
     public writeU8(value: u8): void {
         this.allocSafe(U8_BYTE_LENGTH);
-        this.buffer.setUint8(this.currentOffset + U8_BYTE_LENGTH, value);
+        this.buffer.setUint8(this.currentOffset, value);
+        this.currentOffset += U8_BYTE_LENGTH;
     }
 
     public writeU16(value: u16): void {
