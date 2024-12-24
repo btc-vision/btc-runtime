@@ -108,7 +108,7 @@ export class StoredU16Array {
         const newIndex: u64 = this._length;
         const wrappedIndex: u64 =
             newIndex < this.MAX_LENGTH ? newIndex : newIndex % this.MAX_LENGTH;
-        
+
         const slotIndex: u64 = wrappedIndex / 16;
         const subIndex: u8 = <u8>(wrappedIndex % 16);
 
@@ -354,11 +354,9 @@ export class StoredU16Array {
             throw new Revert('SetLength operation failed: Length exceeds maximum allowed value.');
         }
 
-        if (newLength < this._length) {
-            // Truncate the array if newLength is smaller
-            for (let i: u64 = newLength; i < this._length; i++) {
-                this.delete(i);
-            }
+        if (newLength > this._startIndex) {
+            this._startIndex = newLength;
+            this._isChangedStartIndex = true;
         }
 
         this._length = newLength;

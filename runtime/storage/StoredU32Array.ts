@@ -353,12 +353,12 @@ export class StoredU32Array {
         if (newLength > this.MAX_LENGTH) {
             throw new Revert('SetLength operation failed: Length exceeds maximum allowed value.');
         }
-        if (newLength < this._length) {
-            // Truncate the array if newLength is smaller
-            for (let i: u64 = newLength; i < this._length; i++) {
-                this.delete(i);
-            }
+
+        if (newLength > this._startIndex) {
+            this._startIndex = newLength;
+            this._isChangedStartIndex = true;
         }
+
         this._length = newLength;
         this._isChangedLength = true;
     }
