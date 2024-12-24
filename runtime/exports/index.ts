@@ -18,6 +18,7 @@ export function onDeploy(data: Uint8Array): void {
     const calldata: Calldata = new BytesReader(data);
 
     Blockchain.contract.onDeployment(calldata);
+    Blockchain.contract.onExecutionCompleted();
 }
 
 export function setEnvironment(data: Uint8Array): void {
