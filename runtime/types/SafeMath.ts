@@ -411,4 +411,12 @@ export class SafeMath {
 
         return result;
     }
+    
+    public static pow10(exponent: u8): u256 {
+        let result: u256 = u256.One;
+        for (let i: u8 = 0; i < exponent; i++) {
+            result = SafeMath.mul(result, u256.fromU32(10));
+        }
+        return result;
+    }
 }

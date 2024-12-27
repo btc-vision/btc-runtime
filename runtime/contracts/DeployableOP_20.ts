@@ -309,10 +309,11 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     @unsafe
     protected _unsafeTransferFrom(from: Address, to: Address, value: u256): boolean {
         const balance: u256 = this.balanceOfMap.get(from);
-        if (balance < value)
+        if (balance < value) {
             throw new Revert(
-                `TransferFrom insufficient balance of ${from} is ${balance} and value is ${value}`,
+                `TransferFrom insufficient balance of ${from.toHex()} is ${balance} and value is ${value}`,
             );
+        }
 
         const newBalance: u256 = SafeMath.sub(balance, value);
         this.balanceOfMap.set(from, newBalance);
