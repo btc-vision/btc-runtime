@@ -1,29 +1,28 @@
 import { u256 } from '@btc-vision/as-bignum/assembly';
-import { Blockchain } from '../env';
-import { BytesWriter } from '../buffer/BytesWriter';
-import { SafeMath } from '../types/SafeMath';
-import { Revert } from '../types/Revert';
+import { BytesWriter } from '../../buffer/BytesWriter';
+import { Blockchain } from '../../env';
+import { Revert } from '../../types/Revert';
+import { SafeMath } from '../../types/SafeMath';
 
 /**
- * @class StoredU32Array
- * @description Manages an array of u32 values across multiple storage slots.
- * Each slot holds **eight** u32 values packed into a single u256.
+ * @class StoredU8Array
+ * @description Manages an array of u8 values across multiple storage slots. Each slot holds thirty-two u8 values packed into a u256.
  */
 @final
-export class StoredU32Array {
+export class StoredU8Array {
     private readonly baseU256Pointer: u256;
     private readonly lengthPointer: u256;
 
     // Internal cache for storage slots
-    private _values: Map<u64, u32[]> = new Map(); // Map from slotIndex to array of eight u32s
+    private _values: Map<u64, u8[]> = new Map(); // Map from slotIndex to array of thirty-two u8s
     private _isLoaded: Set<u64> = new Set(); // Set of slotIndexes that are loaded
     private _isChanged: Set<u64> = new Set(); // Set of slotIndexes that are modified
 
     // Internal variables for length and startIndex management
     private _length: u64 = 0; // Current length of the array
     private _startIndex: u64 = 0; // Starting index of the array
-    private _isChangedLength: bool = false; // Indicates if the length has been modified
-    private _isChangedStartIndex: bool = false; // Indicates if the startIndex has been modified
+    private _isChangedLength: bool = false;
+    private _isChangedStartIndex: bool = false;
 
     // Define a maximum allowed length to prevent excessive storage usage
     private readonly MAX_LENGTH: u64 = u64(u32.MAX_VALUE - 1);
@@ -39,36 +38,35 @@ export class StoredU32Array {
         public subPointer: Uint8Array,
         private defaultValue: u256,
     ) {
-        // Initialize the base pointer using the primary pointer and subPointer
+        // Initialize the base u256 pointer using the primary pointer and subPointer
         const writer = new BytesWriter(32);
         writer.writeU16(pointer);
         writer.writeBytes(subPointer);
 
         const baseU256Pointer = u256.fromBytes(writer.getBuffer(), true);
+        const lengthPointer = baseU256Pointer.clone();
+
+        // Load the current length and startIndex from storage
+        const storedLengthAndStartIndex: u256 = Blockchain.getStorageAt(lengthPointer, u256.Zero);
+        this.lengthPointer = lengthPointer;
         this.baseU256Pointer = baseU256Pointer;
 
-        // We’ll reuse the same pointer for length & startIndex
-        const lengthPointer = baseU256Pointer.clone();
-        this.lengthPointer = lengthPointer;
-
-        // Load current length + startIndex from storage
-        const storedLengthAndStartIndex: u256 = Blockchain.getStorageAt(lengthPointer, u256.Zero);
-        this._length = storedLengthAndStartIndex.lo1; // Bytes 0-7: length (u64)
-        this._startIndex = storedLengthAndStartIndex.lo2; // Bytes 8-15: startIndex (u64)
+        this._length = storedLengthAndStartIndex.lo1; // Bytes 0-7: length
+        this._startIndex = storedLengthAndStartIndex.lo2; // Bytes 8-15: startIndex
     }
 
     /**
      * @method get
-     * @description Retrieves the u32 value at the specified global index.
-     * @param {u64} index - The global index (0 to ∞) of the u32 value to retrieve.
-     * @returns {u32} - The u32 value at the specified index.
+     * @description Retrieves the u8 value at the specified global index.
+     * @param {u64} index - The global index (0 to ∞) of the u8 value to retrieve.
+     * @returns {u8} - The u8 value at the specified index.
      */
     @inline
-    public get(index: u64): u32 {
+    public get(index: u64): u8 {
         assert(index < this._length, 'Index out of bounds');
 
-        const slotIndex: u64 = index / 8; // Each slot holds 8 u32s
-        const subIndex: u8 = <u8>(index % 8); // 0..7
+        const slotIndex: u64 = index / 32; // Each slot holds thirty-two u8s
+        const subIndex: u8 = <u8>(index % 32);
         this.ensureValues(slotIndex);
         const slotValues = this._values.get(slotIndex);
         return slotValues ? slotValues[subIndex] : 0;
@@ -76,17 +74,18 @@ export class StoredU32Array {
 
     /**
      * @method set
-     * @description Sets the u32 value at the specified global index.
-     * @param {u64} index - The global index (0 to ∞) of the u32 value to set.
-     * @param {u32} value - The u32 value to assign.
+     * @description Sets the u8 value at the specified global index.
+     * @param {u64} index - The global index (0 to ∞) of the u8 value to set.
+     * @param {u8} value - The u8 value to assign.
      */
     @inline
-    public set(index: u64, value: u32): void {
+    public set(index: u64, value: u8): void {
         assert(index < this._length, 'Index exceeds current array length');
-        const slotIndex: u64 = index / 8;
-        const subIndex: u8 = <u8>(index % 8);
 
+        const slotIndex: u64 = index / 32;
+        const subIndex: u8 = <u8>(index % 32);
         this.ensureValues(slotIndex);
+
         const slotValues = this._values.get(slotIndex);
         if (slotValues && slotValues[subIndex] !== value) {
             slotValues[subIndex] = value;
@@ -96,10 +95,10 @@ export class StoredU32Array {
 
     /**
      * @method push
-     * @description Appends a new u32 value to the end of the array.
-     * @param {u32} value - The u32 value to append.
+     * @description Appends a new u8 value to the end of the array.
+     * @param {u8} value - The u8 value to append.
      */
-    public push(value: u32): void {
+    public push(value: u8): void {
         if (this._length >= this.MAX_LENGTH) {
             throw new Revert(
                 'Push operation failed: Array has reached its maximum allowed length.',
@@ -110,36 +109,33 @@ export class StoredU32Array {
         const wrappedIndex: u64 =
             newIndex < this.MAX_LENGTH ? newIndex : newIndex % this.MAX_LENGTH;
 
-        const slotIndex: u64 = wrappedIndex / 8;
-        const subIndex: u8 = <u8>(wrappedIndex % 8);
+        const slotIndex: u64 = wrappedIndex / 32;
+        const subIndex: u8 = <u8>(wrappedIndex % 32);
 
-        // Ensure the slot is loaded
         this.ensureValues(slotIndex);
 
-        // Set the new value
         const slotValues = this._values.get(slotIndex);
         if (slotValues) {
             slotValues[subIndex] = value;
             this._isChanged.add(slotIndex);
         }
 
-        // Increment the length
         this._length += 1;
         this._isChangedLength = true;
     }
 
     /**
      * @method delete
-     * @description Deletes the u32 value at the specified index by setting it to zero (does not reorder).
-     * @param {u64} index - The global index of the u32 value to delete.
+     * @description Deletes the u8 value at the specified index by setting it to zero. Does not reorder the array.
+     * @param {u64} index - The global index of the u8 value to delete.
      */
     public delete(index: u64): void {
         if (index >= this._length) {
             throw new Revert('Delete operation failed: Index out of bounds.');
         }
 
-        const slotIndex: u64 = index / 8;
-        const subIndex: u8 = <u8>(index % 8);
+        const slotIndex: u64 = index / 32;
+        const subIndex: u8 = <u8>(index % 32);
         this.ensureValues(slotIndex);
 
         const slotValues = this._values.get(slotIndex);
@@ -151,8 +147,8 @@ export class StoredU32Array {
 
     /**
      * @method shift
-     * @description Removes the first element of the array by zeroing it out, decrementing length,
-     * and incrementing the startIndex (with wrap-around).
+     * @description Removes the first element of the array by setting it to zero, decrementing the length,
+     *              and incrementing the startIndex (with wrap-around if needed).
      */
     public shift(): void {
         if (this._length === 0) {
@@ -160,21 +156,19 @@ export class StoredU32Array {
         }
 
         const currentStartIndex: u64 = this._startIndex;
-        const slotIndex: u64 = currentStartIndex / 8;
-        const subIndex: u8 = <u8>(currentStartIndex % 8);
-
+        const slotIndex: u64 = currentStartIndex / 32;
+        const subIndex: u8 = <u8>(currentStartIndex % 32);
         this.ensureValues(slotIndex);
+
         const slotValues = this._values.get(slotIndex);
         if (slotValues && slotValues[subIndex] !== 0) {
             slotValues[subIndex] = 0;
             this._isChanged.add(slotIndex);
         }
 
-        // Decrement length
         this._length -= 1;
         this._isChangedLength = true;
 
-        // Increment startIndex with wrap-around
         if (this._startIndex < this.MAX_LENGTH - 1) {
             this._startIndex += 1;
         } else {
@@ -185,10 +179,10 @@ export class StoredU32Array {
 
     /**
      * @method save
-     * @description Persists all modified slots and the current length/startIndex into storage.
+     * @description Persists all cached u8 values, the length, and the startIndex to their respective storage slots if any have been modified.
      */
     public save(): void {
-        // Save changed slots
+        // Save all changed slots
         const changedSlots = this._isChanged.values();
         for (let i = 0; i < changedSlots.length; i++) {
             const slotIndex = changedSlots[i];
@@ -198,12 +192,11 @@ export class StoredU32Array {
         }
         this._isChanged.clear();
 
-        // Save length + startIndex if changed
+        // Save length and startIndex if changed
         if (this._isChangedLength || this._isChangedStartIndex) {
             const packedLengthAndStartIndex = new u256();
             packedLengthAndStartIndex.lo1 = this._length;
             packedLengthAndStartIndex.lo2 = this._startIndex;
-
             Blockchain.setStorageAt(this.lengthPointer, packedLengthAndStartIndex);
             this._isChangedLength = false;
             this._isChangedStartIndex = false;
@@ -212,10 +205,10 @@ export class StoredU32Array {
 
     /**
      * @method deleteAll
-     * @description Deletes all storage slots and resets length/startIndex to zero.
+     * @description Deletes all storage slots by setting them to zero, including the length and startIndex slots.
      */
     public deleteAll(): void {
-        // Clear loaded slots from storage
+        // Iterate over all loaded slots and clear them
         const keys = this._values.keys();
         for (let i = 0; i < keys.length; i++) {
             const slotIndex = keys[i];
@@ -223,14 +216,14 @@ export class StoredU32Array {
             Blockchain.setStorageAt(storagePointer, u256.Zero);
         }
 
-        // Reset length + startIndex
+        // Reset length and startIndex
         Blockchain.setStorageAt(this.lengthPointer, u256.Zero);
         this._length = 0;
         this._startIndex = 0;
         this._isChangedLength = false;
         this._isChangedStartIndex = false;
 
-        // Clear caches
+        // Clear internal caches
         this._values.clear();
         this._isLoaded.clear();
         this._isChanged.clear();
@@ -238,12 +231,12 @@ export class StoredU32Array {
 
     /**
      * @method setMultiple
-     * @description Sets multiple u32 values starting at a given global index.
+     * @description Sets multiple u8 values starting from a specific global index.
      * @param {u64} startIndex - The starting global index.
-     * @param {u32[]} values - The array of u32 values to set.
+     * @param {u8[]} values - An array of u8 values to set.
      */
     @inline
-    public setMultiple(startIndex: u64, values: u32[]): void {
+    public setMultiple(startIndex: u64, values: u8[]): void {
         for (let i: u64 = 0; i < values.length; i++) {
             this.set(startIndex + i, values[i]);
         }
@@ -251,20 +244,19 @@ export class StoredU32Array {
 
     /**
      * @method getAll
-     * @description Retrieves a consecutive range of u32 values starting at a given global index.
+     * @description Retrieves a range of u8 values starting from a specific global index.
      * @param {u64} startIndex - The starting global index.
-     * @param {u64} count - The number of u32 values to retrieve.
-     * @returns {u32[]} - The requested slice of the array.
+     * @param {u64} count - The number of u8 values to retrieve.
+     * @returns {u8[]} - An array containing the retrieved u8 values.
      */
     @inline
-    public getAll(startIndex: u64, count: u64): u32[] {
+    public getAll(startIndex: u64, count: u64): u8[] {
         assert(startIndex + count <= this._length, 'Requested range exceeds array length');
-
         if (u32.MAX_VALUE < count) {
             throw new Revert('Requested range exceeds maximum allowed value.');
         }
 
-        const result: u32[] = new Array<u32>(count as u32);
+        const result: u8[] = new Array<u8>(count as u32);
         for (let i: u64 = 0; i < count; i++) {
             result[i as u32] = this.get(startIndex + i);
         }
@@ -273,8 +265,8 @@ export class StoredU32Array {
 
     /**
      * @method toString
-     * @description Returns a string representation of all cached u32 values.
-     * @returns {string} - A string in the format "[val0, val1, ..., valN]".
+     * @description Returns a string representation of all cached u8 values.
+     * @returns {string} - A string in the format "[value0, value1, ..., valueN]".
      */
     @inline
     public toString(): string {
@@ -292,13 +284,13 @@ export class StoredU32Array {
 
     /**
      * @method toBytes
-     * @description Packs all cached slots into u256 and returns them as a byte array.
+     * @description Returns the packed u256 values as a byte array.
      * @returns {u8[]} - The packed u256 values in byte form.
      */
     @inline
     public toBytes(): u8[] {
         const bytes: u8[] = new Array<u8>();
-        const slotCount: u64 = (this._length + 7) / 8; // each slot has 8 values
+        const slotCount: u64 = (this._length + 31) / 32;
 
         for (let slotIndex: u64 = 0; slotIndex < slotCount; slotIndex++) {
             this.ensureValues(slotIndex);
@@ -313,7 +305,7 @@ export class StoredU32Array {
 
     /**
      * @method reset
-     * @description Zeros out the entire array and resets length/startIndex to zero, persisting changes immediately.
+     * @description Resets all cached u8 values to zero and marks them as changed, including resetting the length and startIndex.
      */
     @inline
     public reset(): void {
@@ -326,8 +318,8 @@ export class StoredU32Array {
 
     /**
      * @method getLength
-     * @description Returns the current length of the array.
-     * @returns {u64} - The length.
+     * @description Retrieves the current length of the array.
+     * @returns {u64} - The current length.
      */
     @inline
     public getLength(): u64 {
@@ -336,17 +328,16 @@ export class StoredU32Array {
 
     /**
      * @method startingIndex
-     * @description Returns the current starting index of the array.
-     * @returns {u64} - The startIndex.
+     * @description Retrieves the current starting index of the array.
+     * @returns {u64} - The starting index.
      */
-    @inline
     public startingIndex(): u64 {
         return this._startIndex;
     }
 
     /**
      * @method setLength
-     * @description Adjusts the length of the array (may truncate if newLength < currentLength).
+     * @description Sets the length of the array.
      * @param {u64} newLength - The new length to set.
      */
     public setLength(newLength: u64): void {
@@ -354,6 +345,7 @@ export class StoredU32Array {
             throw new Revert('SetLength operation failed: Length exceeds maximum allowed value.');
         }
 
+        // If newLength is bigger than _startIndex, adjust startIndex
         if (newLength > this._startIndex) {
             this._startIndex = newLength;
             this._isChangedStartIndex = true;
@@ -365,7 +357,7 @@ export class StoredU32Array {
 
     /**
      * @method deleteLast
-     * @description Deletes the last element of the array by setting it to zero and decrementing the length.
+     * @description Removes the last element of the array by setting it to zero and decrementing the length.
      */
     public deleteLast(): void {
         if (this._length === 0) {
@@ -382,8 +374,8 @@ export class StoredU32Array {
     /**
      * @private
      * @method ensureValues
-     * @description Loads the slot data from storage if not already in cache.
-     * @param {u64} slotIndex - The slot index.
+     * @description Loads and caches the u8 values from the specified storage slot if not already loaded.
+     * @param {u64} slotIndex - The index of the storage slot.
      */
     private ensureValues(slotIndex: u64): void {
         if (!this._isLoaded.has(slotIndex)) {
@@ -398,9 +390,9 @@ export class StoredU32Array {
     /**
      * @private
      * @method packValues
-     * @description Packs eight u32 values into a single u256 (lo1, lo2, hi1, hi2).
-     * @param {u64} slotIndex - The slot index.
-     * @returns {u256} - The packed u256.
+     * @description Packs the thirty-two cached u8 values into a single u256 for storage.
+     * @param {u64} slotIndex - The index of the storage slot.
+     * @returns {u256} - The packed u256 value.
      */
     private packValues(slotIndex: u64): u256 {
         const values = this._values.get(slotIndex);
@@ -409,23 +401,49 @@ export class StoredU32Array {
         }
         const packed = new u256();
 
-        // Each 64 bits can store two u32:
-        // lo1 = (values[0], values[1])
-        // lo2 = (values[2], values[3])
-        // hi1 = (values[4], values[5])
-        // hi2 = (values[6], values[7])
+        // Pack values[0..7]   into lo1
+        packed.lo1 =
+            (u64(values[0]) << 56) |
+            (u64(values[1]) << 48) |
+            (u64(values[2]) << 40) |
+            (u64(values[3]) << 32) |
+            (u64(values[4]) << 24) |
+            (u64(values[5]) << 16) |
+            (u64(values[6]) << 8) |
+            u64(values[7]);
 
-        // Pack into lo1
-        packed.lo1 = (u64(values[0]) << 32) | (u64(values[1]) & 0xffffffff);
+        // Pack values[8..15]  into lo2
+        packed.lo2 =
+            (u64(values[8]) << 56) |
+            (u64(values[9]) << 48) |
+            (u64(values[10]) << 40) |
+            (u64(values[11]) << 32) |
+            (u64(values[12]) << 24) |
+            (u64(values[13]) << 16) |
+            (u64(values[14]) << 8) |
+            u64(values[15]);
 
-        // Pack into lo2
-        packed.lo2 = (u64(values[2]) << 32) | (u64(values[3]) & 0xffffffff);
+        // Pack values[16..23] into hi1
+        packed.hi1 =
+            (u64(values[16]) << 56) |
+            (u64(values[17]) << 48) |
+            (u64(values[18]) << 40) |
+            (u64(values[19]) << 32) |
+            (u64(values[20]) << 24) |
+            (u64(values[21]) << 16) |
+            (u64(values[22]) << 8) |
+            u64(values[23]);
 
-        // Pack into hi1
-        packed.hi1 = (u64(values[4]) << 32) | (u64(values[5]) & 0xffffffff);
-
-        // Pack into hi2
-        packed.hi2 = (u64(values[6]) << 32) | (u64(values[7]) & 0xffffffff);
+        // Pack values[24..31] into hi2
+        packed.hi2 =
+            (u64(values[24]) << 56) |
+            (u64(values[25]) << 48) |
+            (u64(values[26]) << 40) |
+            (u64(values[27]) << 32) |
+            (u64(values[28]) << 24) |
+            (u64(values[29]) << 16) |
+            (u64(values[30]) << 8) |
+            u64(values[31]);
 
         return packed;
     }
@@ -433,25 +451,52 @@ export class StoredU32Array {
     /**
      * @private
      * @method unpackU256
-     * @description Unpacks a u256 into an array of eight u32 values.
-     * @param {u256} storedU256 - The stored u256 data.
-     * @returns {u32[]} - The array of eight u32s.
+     * @description Unpacks a u256 value into an array of thirty-two u8s.
+     * @param {u256} storedU256 - The u256 value to unpack.
+     * @returns {u8[]} - An array of thirty-two u8 values.
      */
-    private unpackU256(storedU256: u256): u32[] {
-        const values: u32[] = new Array<u32>(8);
+    private unpackU256(storedU256: u256): u8[] {
+        const values: u8[] = new Array<u8>(32);
 
-        // Extract each pair of u32 from lo1, lo2, hi1, hi2
-        values[0] = u32(storedU256.lo1 >> 32);
-        values[1] = u32(storedU256.lo1 & 0xffffffff);
+        // Unpack lo1 into values[0..7]
+        values[0] = u8(storedU256.lo1 >> 56);
+        values[1] = u8((storedU256.lo1 >> 48) & 0xff);
+        values[2] = u8((storedU256.lo1 >> 40) & 0xff);
+        values[3] = u8((storedU256.lo1 >> 32) & 0xff);
+        values[4] = u8((storedU256.lo1 >> 24) & 0xff);
+        values[5] = u8((storedU256.lo1 >> 16) & 0xff);
+        values[6] = u8((storedU256.lo1 >> 8) & 0xff);
+        values[7] = u8(storedU256.lo1 & 0xff);
 
-        values[2] = u32(storedU256.lo2 >> 32);
-        values[3] = u32(storedU256.lo2 & 0xffffffff);
+        // Unpack lo2 into values[8..15]
+        values[8] = u8(storedU256.lo2 >> 56);
+        values[9] = u8((storedU256.lo2 >> 48) & 0xff);
+        values[10] = u8((storedU256.lo2 >> 40) & 0xff);
+        values[11] = u8((storedU256.lo2 >> 32) & 0xff);
+        values[12] = u8((storedU256.lo2 >> 24) & 0xff);
+        values[13] = u8((storedU256.lo2 >> 16) & 0xff);
+        values[14] = u8((storedU256.lo2 >> 8) & 0xff);
+        values[15] = u8(storedU256.lo2 & 0xff);
 
-        values[4] = u32(storedU256.hi1 >> 32);
-        values[5] = u32(storedU256.hi1 & 0xffffffff);
+        // Unpack hi1 into values[16..23]
+        values[16] = u8(storedU256.hi1 >> 56);
+        values[17] = u8((storedU256.hi1 >> 48) & 0xff);
+        values[18] = u8((storedU256.hi1 >> 40) & 0xff);
+        values[19] = u8((storedU256.hi1 >> 32) & 0xff);
+        values[20] = u8((storedU256.hi1 >> 24) & 0xff);
+        values[21] = u8((storedU256.hi1 >> 16) & 0xff);
+        values[22] = u8((storedU256.hi1 >> 8) & 0xff);
+        values[23] = u8(storedU256.hi1 & 0xff);
 
-        values[6] = u32(storedU256.hi2 >> 32);
-        values[7] = u32(storedU256.hi2 & 0xffffffff);
+        // Unpack hi2 into values[24..31]
+        values[24] = u8(storedU256.hi2 >> 56);
+        values[25] = u8((storedU256.hi2 >> 48) & 0xff);
+        values[26] = u8((storedU256.hi2 >> 40) & 0xff);
+        values[27] = u8((storedU256.hi2 >> 32) & 0xff);
+        values[28] = u8((storedU256.hi2 >> 24) & 0xff);
+        values[29] = u8((storedU256.hi2 >> 16) & 0xff);
+        values[30] = u8((storedU256.hi2 >> 8) & 0xff);
+        values[31] = u8(storedU256.hi2 & 0xff);
 
         return values;
     }
@@ -459,12 +504,12 @@ export class StoredU32Array {
     /**
      * @private
      * @method calculateStoragePointer
-     * @description Derives the storage pointer for a slot index by adding (slotIndex + 1) to the base pointer.
-     * @param {u64} slotIndex - The slot index.
-     * @returns {u256} - The resulting storage pointer.
+     * @description Calculates the storage pointer for a given slot index by incrementing the base pointer.
+     * @param {u64} slotIndex - The index of the storage slot.
+     * @returns {u256} - The calculated storage pointer.
      */
     private calculateStoragePointer(slotIndex: u64): u256 {
-        // We offset by +1 so we don't collide with the length pointer (stored at basePointer itself).
+        // Each slot is identified by baseU256Pointer + slotIndex + 1
         return SafeMath.add(this.baseU256Pointer, u256.fromU64(slotIndex + 1));
     }
 }

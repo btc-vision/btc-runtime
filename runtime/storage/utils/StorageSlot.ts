@@ -1,8 +1,8 @@
 import { u256 } from '@btc-vision/as-bignum/assembly';
-import { BlockchainEnvironment } from '../env/BlockchainEnvironment';
-import { Sha256 } from '../math/sha256';
-import { MemorySlotPointer } from '../memory/MemorySlotPointer';
-import { Box, concat, fromArrayBuffer, toArrayBuffer } from '../utils';
+import { BlockchainEnvironment } from '../../env/BlockchainEnvironment';
+import { Sha256 } from '../../math/sha256';
+import { MemorySlotPointer } from '../../memory/MemorySlotPointer';
+import { Box, concat, fromArrayBuffer, toArrayBuffer } from '../../utils';
 
 export function toBuffer<T>(v: T): ArrayBuffer {
     const result = new ArrayBuffer(sizeof<T>());

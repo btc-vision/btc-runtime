@@ -62,22 +62,26 @@ export * from './memory/Uint8ArrayMerger';
 /** Storage */
 export * from './storage/StoredU256';
 export * from './storage/StoredU64';
-export * from './storage/StoredU16Array';
-export * from './storage/StoredU32Array';
-export * from './storage/StoredBooleanArray';
-export * from './storage/StoredU128Array';
-export * from './storage/StoredU256Array';
 export * from './storage/StoredString';
 export * from './storage/StoredAddress';
 export * from './storage/StoredBoolean';
 export * from './storage/Serializable';
-export * from './storage/StoredAddressArray';
 
-export * from './storage/StorageBacked';
-export * from './storage/StorageSlot';
-export * from './storage/StorageStruct';
-export * from './storage/StorageLayout';
-export * from './storage/StorageValue';
+/** Arrays */
+export * from './storage/arrays/StoredAddressArray';
+export * from './storage/arrays/StoredU8Array';
+export * from './storage/arrays/StoredU16Array';
+export * from './storage/arrays/StoredU32Array';
+export * from './storage/arrays/StoredBooleanArray';
+export * from './storage/arrays/StoredU128Array';
+export * from './storage/arrays/StoredU256Array';
+
+/** Storage Utils */
+export * from './storage/utils/StorageBacked';
+export * from './storage/utils/StorageSlot';
+export * from './storage/utils/StorageStruct';
+export * from './storage/utils/StorageLayout';
+export * from './storage/utils/StorageValue';
 
 /** Shared libraries */
 export * from './shared-libraries/TransferHelper';

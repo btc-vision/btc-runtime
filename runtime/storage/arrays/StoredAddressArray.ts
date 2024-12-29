@@ -1,9 +1,9 @@
 import { u256 } from '@btc-vision/as-bignum/assembly';
-import { BytesWriter } from '../buffer/BytesWriter';
-import { Blockchain } from '../env';
-import { Address } from '../types/Address';
-import { Revert } from '../types/Revert';
-import { SafeMath } from '../types/SafeMath';
+import { BytesWriter } from '../../buffer/BytesWriter';
+import { Blockchain } from '../../env';
+import { Address } from '../../types/Address';
+import { Revert } from '../../types/Revert';
+import { SafeMath } from '../../types/SafeMath';
 
 /**
  * @class StoredAddressArray
@@ -35,7 +35,11 @@ export class StoredAddressArray {
      * @param {Uint8Array} subPointer - The sub-pointer for memory slot addressing.
      * @param {Address} defaultValue - The default Address value if storage is uninitialized.
      */
-    constructor(public pointer: u16, public subPointer: Uint8Array, private defaultValue: Address) {
+    constructor(
+        public pointer: u16,
+        public subPointer: Uint8Array,
+        private defaultValue: Address,
+    ) {
         // Initialize the base pointer
         const writer = new BytesWriter(32);
         writer.writeU16(pointer);
