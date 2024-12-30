@@ -391,6 +391,139 @@ export class SafeMath {
         return n;
     }
 
+    public static bitLength256(x: u256): u32 {
+        // If zero => bitlength is 0
+        if (u256.eq(x, u256.Zero)) {
+            return 0;
+        }
+
+        // hi2 != 0 => top 64 bits => bit positions 192..255
+        if (x.hi2 != 0) {
+            const partial: u32 = SafeMath.bitLength64(x.hi2);
+            return 192 + partial;
+        }
+
+        // hi1 != 0 => next 64 bits => bit positions 128..191
+        if (x.hi1 != 0) {
+            const partial: u32 = SafeMath.bitLength64(x.hi1);
+            return 128 + partial;
+        }
+
+        // lo2 != 0 => next 64 bits => bit positions 64..127
+        if (x.lo2 != 0) {
+            const partial: u32 = SafeMath.bitLength64(x.lo2);
+            return 64 + partial;
+        }
+
+        // else in lo1 => bit positions 0..63
+        return SafeMath.bitLength64(x.lo1);
+    }
+
+    public static approxLog(x: u256): u256 {
+        // If x == 0 or x == 1, return 0 (ln(1)=0, ln(0) is undefined but we treat as 0)
+        if (x.isZero() || u256.eq(x, u256.One)) {
+            return u256.Zero;
+        }
+
+        // 1) Find bit length
+        const bitLen: u32 = SafeMath.bitLength256(x);
+        // if bitLen=0 or 1 => that implies x <=1, but we already handled x=0,1 => just safe-check
+        if (bitLen <= 1) {
+            return u256.Zero;
+        }
+
+        // 2) ln(x) ~ (bitLen - 1) * ln(2)
+        // We'll store ln(2) in a scaled integer. e.g., LN2_SCALED = 693147 => ln(2)*1e6
+        const LN2_SCALED: u64 = 693147; // approximate ln(2)*1e6
+        const log2Count: u64 = (bitLen - 1) as u64; // integer part of log2(x)
+
+        // Multiply in pure integer
+        return SafeMath.mul(u256.fromU64(log2Count), u256.fromU64(LN2_SCALED));
+    }
+
+    /**
+     * Return ln(x) * 1e6 for x>1. If x==0 or 1, returns 0.
+     * Uses: ln(x) = (k * ln(2)) + ln(1 + r),
+     *   where k = floor(log2(x)) and r = (x - 2^k)/2^k
+     */
+    @unsafe // UNTESTED.
+    public static preciseLog(x: u256): u256 {
+        if (x.isZero() || u256.eq(x, u256.One)) {
+            return u256.Zero;
+        }
+
+        const bitLen = SafeMath.bitLength256(x);
+        if (bitLen <= 1) {
+            return u256.Zero;
+        }
+
+        // integer part of log2(x)
+        const k: u32 = bitLen - 1;
+        const LN2_SCALED = u256.fromU64(693147); // ln(2)*1e6
+        const base: u256 = SafeMath.mul(u256.fromU32(k), LN2_SCALED);
+
+        // 2^k
+        const pow2k = SafeMath.shl(u256.One, <i32>k);
+        const xPrime = SafeMath.sub(x, pow2k); // leftover
+
+        if (xPrime.isZero()) {
+            // x was exactly 2^k => no fractional part
+            return base;
+        }
+
+        // rScaled = ((x - 2^k)*1e6)/2^k
+        const xPrimeTimes1e6 = SafeMath.mul(xPrime, u256.fromU64(1_000_000));
+        const rScaled = SafeMath.div(xPrimeTimes1e6, pow2k); // 0..999999
+
+        // approximate ln(1 + r)
+        const frac: u64 = SafeMath.polyLn1p3(rScaled.toU64());
+
+        return SafeMath.add(base, u256.fromU64(frac));
+    }
+
+    public static pow10(exponent: u8): u256 {
+        let result: u256 = u256.One;
+        for (let i: u8 = 0; i < exponent; i++) {
+            result = SafeMath.mul(result, u256.fromU32(10));
+        }
+        return result;
+    }
+
+    /**
+     * polyLn1p3: 3-term polynomial for ln(1 + z), with z in [0,1).
+     * rScaled = z * 1e6
+     * returns (ln(1+z)) in scale=1e6
+     */
+    // UNTESTED.
+    @unsafe
+    public static polyLn1p3(rScaled: u64): u64 {
+        // term1 = z
+        const term1: u64 = rScaled;
+
+        // term2 => z^2/2
+        const z2 = term1 * term1; // up to 1e12
+        const z2Div = (z2 / 1_000_000) >>> 1; // divide by scale and by 2
+
+        // term3 => z^3/3
+        const z3 = z2 * term1; // up to 1e18
+        const z3Div = z3 / (1_000_000 * 1_000_000) / 3; // => scale
+
+        // ln(1+z) ~ z - z^2/2 + z^3/3
+        return term1 - z2Div + z3Div;
+    }
+
+    private static bitLength64(value: u64): u32 {
+        if (value == 0) return 0;
+
+        let count: u32 = 0;
+        let temp = value;
+        while (temp > 0) {
+            temp >>>= 1; // logical shift right
+            count++;
+        }
+        return count;
+    }
+
     private static shlSegment(
         segments: u64[],
         segmentShift: i32,
@@ -409,14 +542,6 @@ export class SafeMath {
             }
         }
 
-        return result;
-    }
-    
-    public static pow10(exponent: u8): u256 {
-        let result: u256 = u256.One;
-        for (let i: u8 = 0; i < exponent; i++) {
-            result = SafeMath.mul(result, u256.fromU32(10));
-        }
         return result;
     }
 }
