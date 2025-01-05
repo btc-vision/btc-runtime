@@ -12,10 +12,11 @@ import { Revert } from '../types/Revert';
 import { SafeMath } from '../types/SafeMath';
 
 import { Calldata } from '../types';
-import { BOOLEAN_BYTE_LENGTH, U256_BYTE_LENGTH } from '../utils/lengths';
+import { ADDRESS_BYTE_LENGTH, BOOLEAN_BYTE_LENGTH, U256_BYTE_LENGTH } from '../utils';
 import { IOP_20 } from './interfaces/IOP_20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
+import { sha256 } from '../env/global';
 
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
 const decimalsPointer: u16 = Blockchain.nextPointer;
@@ -124,6 +125,20 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         return response;
     }
 
+    public approveFrom(callData: Calldata): BytesWriter {
+        const response = new BytesWriter(BOOLEAN_BYTE_LENGTH);
+        const owner: Address = Blockchain.tx.origin;
+        const spender: Address = callData.readAddress();
+        const value: u256 = callData.readU256();
+
+        const signature = callData.readBytes(64);
+
+        const resp = this._approveFrom(owner, spender, value, signature);
+        response.writeBoolean(resp);
+
+        return response;
+    }
+
     public balanceOf(callData: Calldata): BytesWriter {
         const response = new BytesWriter(U256_BYTE_LENGTH);
         const address: Address = callData.readAddress();
@@ -192,6 +207,8 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
                 return this.allowance(calldata);
             case encodeSelector('approve'):
                 return this.approve(calldata);
+            case encodeSelector('approveFrom'):
+                return this.approveFrom(calldata);
             case encodeSelector('balanceOf'):
                 return this.balanceOf(calldata);
             case encodeSelector('burn'):
@@ -212,6 +229,34 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         const senderMap = this.allowanceMap.get(owner);
 
         return senderMap.get(spender);
+    }
+
+    protected _approveFrom(owner: Address, spender: Address, value: u256, signature: Uint8Array): boolean {
+        if (owner === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Address can not be dead address');
+        }
+
+        if (spender === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Spender cannot be dead address');
+        }
+
+        // Regenerate the hash
+        const writer = new BytesWriter(ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH);
+        writer.writeAddress(owner);
+        writer.writeAddress(spender);
+        writer.writeU256(value);
+
+        const hash = sha256(writer.getBuffer());
+        if (!Blockchain.verifySchnorrSignature(owner, signature, hash)) {
+            throw new Revert('ApproveFrom: Invalid signature');
+        }
+
+        const senderMap = this.allowanceMap.get(owner);
+        senderMap.set(spender, value);
+
+        this.createApproveEvent(owner, spender, value);
+
+        return true;
     }
 
     protected _approve(owner: Address, spender: Address, value: u256): boolean {
