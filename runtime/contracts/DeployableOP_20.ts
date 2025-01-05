@@ -131,7 +131,10 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         const spender: Address = callData.readAddress();
         const value: u256 = callData.readU256();
 
-        const signature = callData.readBytes(64);
+        const signature = callData.readBytesWithLength();
+        if (signature.length !== 64) {
+            throw new Revert('Invalid signature length');
+        }
 
         const resp = this._approveFrom(owner, spender, value, signature);
         response.writeBoolean(resp);
