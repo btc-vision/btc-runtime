@@ -6,7 +6,7 @@ import { encodeSelector, Selector } from '../math/abi';
 import { Calldata } from '../types';
 import { Address } from '../types/Address';
 import { Revert } from '../types/Revert';
-import { ADDRESS_BYTE_LENGTH } from '../utils/lengths';
+import { ADDRESS_BYTE_LENGTH } from '../utils';
 
 export class OP_NET implements IBTC {
     public get address(): Address {
@@ -17,9 +17,11 @@ export class OP_NET implements IBTC {
         return Blockchain.contractDeployer;
     }
 
-    public onDeployment(_calldata: Calldata): void {}
+    public onDeployment(_calldata: Calldata): void {
+    }
 
-    public onExecutionCompleted(): void {}
+    public onExecutionCompleted(): void {
+    }
 
     public execute(method: Selector, _calldata: Calldata): BytesWriter {
         let response: BytesWriter;

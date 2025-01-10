@@ -206,19 +206,19 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
                 response = new BytesWriter(U256_BYTE_LENGTH);
                 response.writeU256(this.maxSupply);
                 break;
-            case encodeSelector('allowance'):
+            case encodeSelector('allowance(address,address)'):
                 return this.allowance(calldata);
-            case encodeSelector('approve'):
+            case encodeSelector('approve(address,uint256)'):
                 return this.approve(calldata);
-            case encodeSelector('approveFrom'):
+            case encodeSelector('approveFrom(address,address,uint256,bytes)'):
                 return this.approveFrom(calldata);
-            case encodeSelector('balanceOf'):
+            case encodeSelector('balanceOf(address)'):
                 return this.balanceOf(calldata);
-            case encodeSelector('burn'):
+            case encodeSelector('burn(uint256)'):
                 return this.burn(calldata);
-            case encodeSelector('transfer'):
+            case encodeSelector('transfer(address,uint256)'):
                 return this.transfer(calldata);
-            case encodeSelector('transferFrom'):
+            case encodeSelector('transferFrom(address,address,uint256)'):
                 return this.transferFrom(calldata);
             default:
                 return super.execute(method, calldata);
