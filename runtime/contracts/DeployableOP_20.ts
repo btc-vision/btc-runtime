@@ -17,6 +17,7 @@ import { IOP_20 } from './interfaces/IOP_20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
 import { sha256 } from '../env/global';
+import { ApproveStr, TransferFromStr, TransferStr } from '../shared-libraries/TransferHelper';
 
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
 const decimalsPointer: u16 = Blockchain.nextPointer;
@@ -208,7 +209,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
                 break;
             case encodeSelector('allowance(address,address)'):
                 return this.allowance(calldata);
-            case encodeSelector('approve(address,uint256)'):
+            case encodeSelector(ApproveStr):
                 return this.approve(calldata);
             case encodeSelector('approveFrom(address,address,uint256,bytes)'):
                 return this.approveFrom(calldata);
@@ -216,9 +217,9 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
                 return this.balanceOf(calldata);
             case encodeSelector('burn(uint256)'):
                 return this.burn(calldata);
-            case encodeSelector('transfer(address,uint256)'):
+            case encodeSelector(TransferStr):
                 return this.transfer(calldata);
-            case encodeSelector('transferFrom(address,address,uint256)'):
+            case encodeSelector(TransferFromStr):
                 return this.transferFrom(calldata);
             default:
                 return super.execute(method, calldata);

@@ -4,19 +4,23 @@ import { Blockchain } from '../env';
 import { encodeSelector, Selector } from '../math/abi';
 import { Address } from '../types/Address';
 import { Revert } from '../types/Revert';
-import { ADDRESS_BYTE_LENGTH, SELECTOR_BYTE_LENGTH, U256_BYTE_LENGTH } from '../utils/lengths';
+import { ADDRESS_BYTE_LENGTH, SELECTOR_BYTE_LENGTH, U256_BYTE_LENGTH } from '../utils';
+
+export const TransferStr = 'transfer(address,uint256)';
+export const ApproveStr = 'approve(address,uint256)';
+export const TransferFromStr = 'transferFrom(address,address,uint256)';
 
 export class TransferHelper {
     public static get APPROVE_SELECTOR(): Selector {
-        return encodeSelector('approve');
+        return encodeSelector(ApproveStr);
     }
 
     public static get TRANSFER_SELECTOR(): Selector {
-        return encodeSelector('transfer');
+        return encodeSelector(TransferStr);
     }
 
     public static get TRANSFER_FROM_SELECTOR(): Selector {
-        return encodeSelector('transferFrom');
+        return encodeSelector(TransferFromStr);
     }
 
     public static safeApprove(token: Address, spender: Address, amount: u256): void {
