@@ -3,11 +3,11 @@ import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
 import { encodeSelector, Selector } from '../math/abi';
 import { Address } from '../types/Address';
-import { ADDRESS_BYTE_LENGTH, SELECTOR_BYTE_LENGTH } from '../utils/lengths';
+import { ADDRESS_BYTE_LENGTH, SELECTOR_BYTE_LENGTH } from '../utils';
 
 export class OP20Utils {
     public static get BALANCE_OF_SELECTOR(): Selector {
-        return encodeSelector('balanceOf');
+        return encodeSelector('balanceOf(address)');
     }
 
     public static balanceOf(token: Address, owner: Address): u256 {
