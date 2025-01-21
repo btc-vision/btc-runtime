@@ -38,6 +38,7 @@ export * from './lang/Definitions';
 export * from './types/Address';
 export * from './types/Revert';
 export * from './types/SafeMath';
+export * from './types/SafeMathI128';
 
 /** Math */
 export * from './math/abi';
