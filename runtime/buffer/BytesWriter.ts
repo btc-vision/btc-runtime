@@ -2,20 +2,18 @@ import { i128, u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { ArrayBuffer } from 'arraybuffer';
 import { AddressMap } from '../generic/AddressMap';
 import { Selector } from '../math/abi';
-import { i256 } from '../math/i256';
 import { Address } from '../types/Address';
 import { Revert } from '../types/Revert';
 import {
     ADDRESS_BYTE_LENGTH,
     I128_BYTE_LENGTH,
-    I256_BYTE_LENGTH,
     U128_BYTE_LENGTH,
     U16_BYTE_LENGTH,
     U256_BYTE_LENGTH,
     U32_BYTE_LENGTH,
     U64_BYTE_LENGTH,
     U8_BYTE_LENGTH,
-} from '../utils/lengths';
+} from '../utils';
 import { BytesReader } from './BytesReader';
 
 @final
@@ -74,15 +72,6 @@ export class BytesWriter {
 
     public writeBoolean(value: boolean): void {
         this.writeU8(value ? 1 : 0);
-    }
-
-    public writeI256(value: i256): void {
-        this.allocSafe(I256_BYTE_LENGTH);
-
-        const bytes = value.toUint8Array(true);
-        for (let i: i32 = 0; i < I256_BYTE_LENGTH; i++) {
-            this.writeU8(bytes[i] || 0);
-        }
     }
 
     public writeU8At(value: u8, offset: u32): void {

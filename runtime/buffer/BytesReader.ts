@@ -2,13 +2,11 @@ import { i128, u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { TransactionInput, TransactionOutput } from '../env/classes/UTXO';
 import { AddressMap } from '../generic/AddressMap';
 import { Selector } from '../math/abi';
-import { i256 } from '../math/i256';
 import { Address } from '../types/Address';
 import { Revert } from '../types/Revert';
 import {
     ADDRESS_BYTE_LENGTH,
     I128_BYTE_LENGTH,
-    I256_BYTE_LENGTH,
     I64_BYTE_LENGTH,
     U128_BYTE_LENGTH,
     U16_BYTE_LENGTH,
@@ -16,7 +14,7 @@ import {
     U32_BYTE_LENGTH,
     U64_BYTE_LENGTH,
     U8_BYTE_LENGTH,
-} from '../utils/lengths';
+} from '../utils';
 
 @final
 export class BytesReader {
@@ -185,14 +183,6 @@ export class BytesReader {
         }
 
         return result;
-    }
-
-    public readI256(): i256 {
-        this.verifyEnd(this.currentOffset + I256_BYTE_LENGTH);
-
-        const next32Bytes: u8[] = this.readBytesBE(I256_BYTE_LENGTH);
-
-        return i256.fromBytesBE(next32Bytes);
     }
 
     public readTuple(): u256[] {

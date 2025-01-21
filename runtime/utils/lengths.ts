@@ -8,7 +8,6 @@ export const U32_BYTE_LENGTH: i32 = 4;
 export const U16_BYTE_LENGTH: i32 = 2;
 export const U8_BYTE_LENGTH: i32 = 1;
 
-export const I256_BYTE_LENGTH: i32 = 32;
 export const I128_BYTE_LENGTH: i32 = 16;
 export const I64_BYTE_LENGTH: i32 = 8;
 export const I32_BYTE_LENGTH: i32 = 4;
