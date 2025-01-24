@@ -81,12 +81,12 @@ export abstract class Serializable {
     }
 
     protected chunksToBytes(chunks: u256[]): BytesReader {
-        if (this.chunkCount >= u8(255)) {
+        if (chunks.length >= 255) {
             //67108863
             throw new Revert('Too many chunks received');
         }
 
-        const buffer: Uint8Array = new Uint8Array(this.chunkCount * 32);
+        const buffer: Uint8Array = new Uint8Array(i32(this.chunkCount) * 32);
         let offset: i32 = 0;
 
         for (let indexChunk: i32 = 0; indexChunk < chunks.length; indexChunk++) {
