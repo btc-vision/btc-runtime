@@ -1,29 +1,19 @@
 import { u256 } from '@btc-vision/as-bignum/assembly';
+import { Address } from '../types/Address';
+import { DeployContractResponse } from '../interfaces/DeployContractResponse';
 import { BytesReader } from '../buffer/BytesReader';
 import { BytesWriter } from '../buffer/BytesWriter';
-import { OP_NET } from '../contracts/OP_NET';
 import { NetEvent } from '../events/NetEvent';
-import { MapU256 } from '../generic/MapU256';
-import { DeployContractResponse } from '../interfaces/DeployContractResponse';
-import { Potential } from '../lang/Definitions';
-import { MemorySlotData } from '../memory/MemorySlot';
 import { MemorySlotPointer } from '../memory/MemorySlotPointer';
+import { MemorySlotData } from '../memory/MemorySlot';
 import { PointerStorage } from '../types';
-import { Address } from '../types/Address';
-import { ADDRESS_BYTE_LENGTH, U256_BYTE_LENGTH } from '../utils/lengths';
+import { MapU256 } from '../generic/MapU256';
+import { Potential } from '../lang/Definitions';
+import { OP_NET } from '../contracts/OP_NET';
 import { Block } from './classes/Block';
 import { Transaction } from './classes/Transaction';
-import {
-    callContract,
-    deployFromAddress,
-    emit,
-    encodeAddress,
-    loadPointer,
-    log,
-    storePointer,
-    validateBitcoinAddress,
-    verifySchnorrSignature,
-} from './global';
+import { loadPointer, storePointer } from './global';
+import { U256_BYTE_LENGTH } from '../utils';
 
 export * from '../env/global';
 
@@ -31,17 +21,15 @@ export function runtimeError(msg: string): Error {
     return new Error(`RuntimeException: ${msg}`);
 }
 
-@final
-export class BlockchainEnvironment {
-    private static readonly MAX_U16: u16 = 65535;
+export class BlockchainEnvironment {//extends BlockchainEnvironment {
+    protected static readonly MAX_U16: u16 = 65535;
 
     public readonly DEAD_ADDRESS: Address = Address.dead();
 
-    private storage: PointerStorage = new MapU256();
-    private _selfContract: Potential<OP_NET> = null;
+    protected storage: PointerStorage = new MapU256();
+    protected _selfContract: Potential<OP_NET> = null;
 
-    private _block: Potential<Block> = null;
-
+    protected _block: Potential<Block> = null;
     @inline
     public get block(): Block {
         if (!this._block) {
@@ -51,7 +39,7 @@ export class BlockchainEnvironment {
         return this._block as Block;
     }
 
-    private _tx: Potential<Transaction> = null;
+    protected _tx: Potential<Transaction> = null;
 
     @inline
     public get tx(): Transaction {
@@ -62,7 +50,7 @@ export class BlockchainEnvironment {
         return this._tx as Transaction;
     }
 
-    private _contract: Potential<() => OP_NET> = null;
+    protected _contract: Potential<() => OP_NET> = null;
 
     public get contract(): OP_NET {
         this.createContractIfNotExists();
@@ -74,7 +62,7 @@ export class BlockchainEnvironment {
         this._contract = contract;
     }
 
-    private _nextPointer: u16 = 0;
+    protected _nextPointer: u16 = 0;
 
     public get nextPointer(): u16 {
         if (this._nextPointer === BlockchainEnvironment.MAX_U16) {
@@ -125,156 +113,7 @@ export class BlockchainEnvironment {
 
         this._block = new Block(currentBlock, medianTimestamp, safeRnd64);
 
-        this.createContractIfNotExists();
-    }
-
-    public call(destinationContract: Address, calldata: BytesWriter): BytesReader {
-        if (destinationContract === this.contractAddress) {
-            throw this.error('Cannot call self');
-        }
-
-        if (!destinationContract) {
-            throw this.error('Destination contract is required');
-        }
-
-        const call = new BytesWriter(ADDRESS_BYTE_LENGTH + calldata.bufferLength() + 4);
-        call.writeAddress(destinationContract);
-        call.writeBytesWithLength(calldata.getBuffer());
-
-        const response: Uint8Array = callContract(call.getBuffer());
-
-        return new BytesReader(response);
-    }
-
-    public log(data: string): void {
-        const writer = new BytesWriter(data.length + 2);
-        writer.writeStringWithLength(data);
-
-        const buffer = writer.getBuffer();
-        log(buffer);
-    }
-
-    public emit(event: NetEvent): void {
-        const data = event.getEventData();
-        const buffer = new BytesWriter(event.eventType.length + 6 + data.byteLength);
-
-        buffer.writeStringWithLength(event.eventType);
-        buffer.writeBytesWithLength(data);
-
-        emit(buffer.getBuffer());
-    }
-
-    public validateBitcoinAddress(address: string): bool {
-        const writer = new BytesWriter(address.length);
-        writer.writeString(address);
-
-        const reader = new BytesReader(validateBitcoinAddress(writer.getBuffer()));
-        return reader.readBoolean();
-    }
-
-    public encodeVirtualAddress(virtualAddress: u8[]): Address {
-        const writer: BytesWriter = new BytesWriter(virtualAddress.length + 4);
-        writer.writeU32(virtualAddress.length);
-        writer.writeBytesU8Array(virtualAddress);
-
-        const buffer: Uint8Array = writer.getBuffer();
-        const cb: Potential<Uint8Array> = encodeAddress(buffer);
-        if (!cb) throw this.error('Failed to encode virtual address');
-
-        const reader: BytesReader = new BytesReader(cb as Uint8Array);
-        return reader.readAddress();
-    }
-
-    /*public deployContract(hash: u256, bytecode: Uint8Array): DeployContractResponse {
-        const writer = new BytesWriter(U256_BYTE_LENGTH + bytecode.length);
-        writer.writeU256(hash);
-        writer.writeBytes(bytecode);
-
-        const cb: Potential<Uint8Array> = deploy(writer.getBuffer());
-        if (!cb) throw this.error('Failed to deploy contract');
-
-        const reader: BytesReader = new BytesReader(cb as Uint8Array);
-        const virtualAddress: u256 = reader.readU256();
-        const contractAddress: Address = reader.readAddress();
-
-        return new DeployContractResponse(virtualAddress, contractAddress);
-    }*/
-
-    public deployContractFromExisting(
-        existingAddress: Address,
-        salt: u256,
-    ): DeployContractResponse {
-        const writer = new BytesWriter(ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH);
-        writer.writeAddress(existingAddress);
-        writer.writeU256(salt);
-
-        const buffer: Uint8Array = writer.getBuffer();
-        const cb: Potential<Uint8Array> = deployFromAddress(buffer);
-        if (!cb) throw this.error('Failed to deploy contract');
-
-        const reader: BytesReader = new BytesReader(cb as Uint8Array);
-        const virtualAddress: u256 = reader.readU256();
-        const contractAddress: Address = reader.readAddress();
-
-        return new DeployContractResponse(virtualAddress, contractAddress);
-    }
-
-    // TODO: Change MemorySlotData type to a Uint8Array instead of a u256.
-    public getStorageAt(
-        pointerHash: MemorySlotPointer,
-        defaultValue: MemorySlotData<u256>,
-    ): MemorySlotData<u256> {
-        this.ensureStorageAtPointer(pointerHash, defaultValue);
-
-        if (this.storage.has(pointerHash)) {
-            return this.storage.get(pointerHash);
-        }
-
-        return defaultValue;
-    }
-
-    /*public getNextPointerGreaterThan(
-        targetPointer: MemorySlotPointer,
-        valueAtLeast: u256,
-        lte: boolean = true,
-    ): MemorySlotData<u256> {
-        const writer = new BytesWriter(U256_BYTE_LENGTH * 2 + BOOLEAN_BYTE_LENGTH);
-        writer.writeU256(targetPointer);
-        writer.writeU256(valueAtLeast);
-        writer.writeBoolean(lte);
-
-        const result: Uint8Array = nextPointerGreaterThan(writer.getBuffer());
-        const reader: BytesReader = new BytesReader(result);
-
-        return reader.readU256();
-    }*/
-
-    public verifySchnorrSignature(
-        publicKey: Address,
-        signature: Uint8Array,
-        hash: Uint8Array,
-    ): boolean {
-        const writer = new BytesWriter(ADDRESS_BYTE_LENGTH + 64 + 32);
-        writer.writeBytes(publicKey);
-        writer.writeBytes(signature);
-        writer.writeBytes(hash);
-
-        const result: Uint8Array = verifySchnorrSignature(writer.getBuffer());
-
-        const reader = new BytesReader(result);
-        return reader.readBoolean();
-    }
-
-    // TODO: Change MemorySlotData type to a Uint8Array instead of a u256.
-    public hasStorageAt(pointerHash: MemorySlotPointer): bool {
-        // We mark zero as the default value for the storage, if something is 0, the storage slot get deleted or is non-existent
-        const val: u256 = this.getStorageAt(pointerHash, u256.Zero);
-
-        return u256.ne(val, u256.Zero);
-    }
-
-    public setStorageAt(pointerHash: MemorySlotPointer, value: MemorySlotData<u256>): void {
-        this._internalSetStorageAt(pointerHash, value);
+        //this.createContractIfNotExists();
     }
 
     private createContractIfNotExists(): void {
@@ -287,11 +126,127 @@ export class BlockchainEnvironment {
         }
     }
 
-    private error(msg: string): Error {
+    protected error(msg: string): Error {
         return runtimeError(msg);
     }
 
-    private _internalSetStorageAt(pointerHash: u256, value: MemorySlotData<u256>): void {
+
+
+    private _mockedCallResult: Uint8Array = new Uint8Array(1);
+    private _mockedValidateBitcoinAddressResult: bool = false;
+    private _mockedEncodeVirtualAddressResult: Address = new Address();
+    private _mockedDeployContractResponse: DeployContractResponse = new DeployContractResponse(
+        u256.Zero,
+        new Address(),
+    );
+    private _mockedVerifySchnorrSignature: boolean = false;
+
+    public clearMockedResults(): void {
+        this._mockedCallResult = new Uint8Array(1);
+        this._mockedValidateBitcoinAddressResult = false;
+        this._mockedEncodeVirtualAddressResult = new Address();
+        this._mockedDeployContractResponse = new DeployContractResponse(u256.Zero, new Address());
+        this._mockedVerifySchnorrSignature = false;
+    }
+
+    public mockCallResult(result: Uint8Array): void {
+        this._mockedCallResult = result;
+    }
+
+    public mockValidateBitcoinAddressResult(result: bool): void {
+        this._mockedValidateBitcoinAddressResult = result;
+    }
+
+    public mockEncodeVirtualAddressResult(result: Address): void {
+        this._mockedEncodeVirtualAddressResult = result;
+    }
+
+    public mockDeployContractResponse(result: DeployContractResponse): void {
+        this._mockedDeployContractResponse = result;
+    }
+
+    public mockVerifySchnorrSignature(result: boolean): void {
+        this._mockedVerifySchnorrSignature = result;
+    }
+
+    public call(destinationContract: Address, calldata: BytesWriter): BytesReader {
+        if (destinationContract === this.contractAddress) {
+            throw this.error('Cannot call self');
+        }
+
+        if (!destinationContract) {
+            throw this.error('Destination contract is required');
+        }
+
+        return new BytesReader(this._mockedCallResult);
+    }
+
+    public log(data: string): void {
+        const writer = new BytesWriter(data.length + 2);
+        writer.writeStringWithLength(data);
+
+        const buffer = writer.getBuffer();
+        //log(buffer);
+    }
+
+    public emit(event: NetEvent): void {
+        //const data = event.getEventData();
+        //const buffer = new BytesWriter(event.eventType.length + 6 + data.byteLength);
+        //buffer.writeStringWithLength(event.eventType);
+        //buffer.writeBytesWithLength(data);
+        //emit(buffer.getBuffer());
+    }
+
+    public validateBitcoinAddress(address: string): bool {
+        return this._mockedValidateBitcoinAddressResult;
+    }
+
+    public encodeVirtualAddress(virtualAddress: u8[]): Address {
+        return this._mockedEncodeVirtualAddressResult;
+    }
+
+    public deployContractFromExisting(
+        existingAddress: Address,
+        salt: u256,
+    ): DeployContractResponse {
+        return this._mockedDeployContractResponse;
+    }
+
+    // TODO: Change MemorySlotData type to a Uint8Array instead of a u256.
+    public getStorageAt(
+        pointerHash: MemorySlotPointer,
+        defaultValue: MemorySlotData<u256>,
+    ): MemorySlotData<u256> {
+        this.ensureStorageAtPointer1(pointerHash, defaultValue);
+
+        if (this.storage.has(pointerHash)) {
+            return this.storage.get(pointerHash);
+        }
+
+        return defaultValue;
+    }
+
+    public verifySchnorrSignature(
+        publicKey: Address,
+        signature: Uint8Array,
+        hash: Uint8Array,
+    ): boolean {
+        return this._mockedVerifySchnorrSignature;
+    }
+
+    // TODO: Change MemorySlotData type to a Uint8Array instead of a u256.
+    public hasStorageAt(pointerHash: MemorySlotPointer): bool {
+        // We mark zero as the default value for the storage, if something is 0, the storage slot get deleted or is non-existent
+        const val: u256 = this.getStorageAt(pointerHash, u256.Zero);
+
+        return u256.ne(val, u256.Zero);
+    }
+
+    public setStorageAt(pointerHash: MemorySlotPointer, value: MemorySlotData<u256>): void {
+        this._internalSetStorageAt1(pointerHash, value);
+    }
+
+    private _internalSetStorageAt1(pointerHash: u256, value: MemorySlotData<u256>): void {
         this.storage.set(pointerHash, value);
 
         const writer: BytesWriter = new BytesWriter(U256_BYTE_LENGTH * 2);
@@ -302,7 +257,7 @@ export class BlockchainEnvironment {
         storePointer(buffer);
     }
 
-    private hasPointerStorageHash(pointer: MemorySlotPointer): bool {
+    private hasPointerStorageHash1(pointer: MemorySlotPointer): bool {
         if (this.storage.has(pointer)) {
             return true;
         }
@@ -320,11 +275,11 @@ export class BlockchainEnvironment {
         return !u256.eq(value, u256.Zero);
     }
 
-    private ensureStorageAtPointer(
+    private ensureStorageAtPointer1(
         pointerHash: MemorySlotPointer,
         defaultValue: MemorySlotData<u256>,
     ): void {
-        if (this.hasPointerStorageHash(pointerHash)) {
+        if (this.hasPointerStorageHash1(pointerHash)) {
             return;
         }
 
@@ -332,6 +287,6 @@ export class BlockchainEnvironment {
             return;
         }
 
-        this._internalSetStorageAt(pointerHash, defaultValue);
+        this._internalSetStorageAt1(pointerHash, defaultValue);
     }
 }

@@ -1,14 +1,23 @@
+import { Sha256 } from '../SHA256/sha256';
+import {ripemd160f} from '../SHA256/ripemd160f';
+import { loadPointer1, storePointer1 } from '../memorystorage/MemoryStorage';
+
 // @ts-ignore
-@external('env', 'load')
-export declare function loadPointer(data: Uint8Array): Uint8Array;
+//@external('env', 'load')
+export function loadPointer(data: Uint8Array): Uint8Array{
+    return loadPointer1(data);
+}
 
 // @ts-ignore
 @external('env', 'nextPointerGreaterThan')
 export declare function nextPointerGreaterThan(data: Uint8Array): Uint8Array;
 
 // @ts-ignore
-@external('env', 'store')
-export declare function storePointer(data: Uint8Array): Uint8Array;
+//@external('env', 'store')
+export function storePointer(data: Uint8Array): Uint8Array
+{
+    return storePointer1(data);
+}
 
 // @ts-ignore
 @external('env', 'deploy')
@@ -35,12 +44,19 @@ export declare function emit(data: Uint8Array): void;
 export declare function encodeAddress(data: Uint8Array): Uint8Array;
 
 // @ts-ignore
-@external('env', 'sha256')
-export declare function sha256(data: Uint8Array): Uint8Array;
+//@external('env', 'sha256')
+//export declare function sha256(data: Uint8Array): Uint8Array;
+export function sha256(buffer: Uint8Array): Uint8Array {
+    return Sha256.hash(buffer);
+}
+
 
 // @ts-ignore
-@external('env', 'ripemd160')
-export declare function ripemd160(data: Uint8Array): Uint8Array;
+//@external('env', 'ripemd160')
+export function ripemd160(data: Uint8Array): Uint8Array
+{
+    return ripemd160f(data);
+}
 
 // @ts-ignore
 @external('env', 'validateBitcoinAddress')
