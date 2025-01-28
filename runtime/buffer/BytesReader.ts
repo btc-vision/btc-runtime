@@ -262,7 +262,7 @@ export class BytesReader {
     }
 
     public verifyEnd(size: i32): void {
-        if (this.currentOffset > this.buffer.byteLength) {
+        if (size > this.buffer.byteLength) {
             throw new Error(`Expected to read ${size} bytes but read ${this.currentOffset} bytes`);
         }
     }

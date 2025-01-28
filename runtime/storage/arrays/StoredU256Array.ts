@@ -19,13 +19,13 @@ export class StoredU256Array {
     private _isChanged: Set<u64> = new Set(); // Set of slotIndexes that are modified
 
     // Internal variables for length and startIndex management
-    private _length: u64 = 0; // Current length of the array
+    private _length: u64 = 0;     // Current length of the array
     private _startIndex: u64 = 0; // Starting index of the array
-    private _isChangedLength: bool = false; // Indicates if the length has been modified
-    private _isChangedStartIndex: bool = false; // Indicates if the startIndex has been modified
+    private _isChangedLength: bool = false;      // Indicates if the length has been modified
+    private _isChangedStartIndex: bool = false;  // Indicates if the startIndex has been modified
 
     // Define a maximum allowed length to prevent excessive storage usage
-    private readonly MAX_LENGTH: u64 = u64(u32.MAX_VALUE - 1); // we need to check what happen in overflow situation to be able to set it to u64.MAX_VALUE
+    private readonly MAX_LENGTH: u64 = u64(u32.MAX_VALUE - 1);
 
     /**
      * @constructor
@@ -52,19 +52,23 @@ export class StoredU256Array {
         this.lengthPointer = lengthPointer;
         this.baseU256Pointer = baseU256Pointer;
 
-        this._length = storedLengthAndStartIndex.lo1; // Bytes 0-7: length
+        this._length = storedLengthAndStartIndex.lo1;  // Bytes 0-7: length
         this._startIndex = storedLengthAndStartIndex.lo2; // Bytes 8-15: startIndex
     }
 
     /**
      * @method get
      * @description Retrieves the u256 value at the specified global index.
+     *              Returns zero instead of reverting if the index is out of bounds.
      * @param {u64} index - The global index (0 to ∞) of the u256 value to retrieve.
-     * @returns {u256} - The u256 value at the specified index.
+     * @returns {u256} - The u256 value at the specified index or zero if out of bounds.
      */
     @inline
     public get(index: u64): u256 {
-        assert(index < this._length, 'Index out of bounds');
+        if (index >= this._length) {
+            return u256.Zero;
+        }
+
         const slotIndex: u32 = <u32>index;
         this.ensureValues(slotIndex);
         const value = this._values.get(slotIndex);
@@ -79,7 +83,10 @@ export class StoredU256Array {
      */
     @inline
     public set(index: u64, value: u256): void {
-        assert(index < this._length, 'Index exceeds current array length');
+        if (index >= this.MAX_LENGTH) {
+            throw new Revert('Set operation failed: Index exceeds maximum allowed value.');
+        }
+
         const slotIndex: u32 = <u32>index;
         this.ensureValues(slotIndex);
 
@@ -165,41 +172,9 @@ export class StoredU256Array {
     }
 
     /**
-     * @method shift
-     * @description Removes the first element of the array by setting it to zero, decrementing the length, and incrementing the startIndex.
-     *              If the startIndex reaches the maximum value of u64, it wraps around to 0.
-     */
-    public shift(): void {
-        if (this._length === 0) {
-            throw new Revert('Shift operation failed: Array is empty.');
-        }
-
-        const currentStartIndex: u64 = this._startIndex;
-        const slotIndex: u32 = <u32>currentStartIndex;
-        this.ensureValues(slotIndex);
-
-        const currentValue = this._values.get(slotIndex);
-        if (!u256.eq(currentValue, u256.Zero)) {
-            this._values.set(slotIndex, u256.Zero);
-            this._isChanged.add(slotIndex);
-        }
-
-        // Decrement the length
-        this._length -= 1;
-        this._isChangedLength = true;
-
-        // Increment the startIndex with wrap-around
-        if (this._startIndex < this.MAX_LENGTH - 1) {
-            this._startIndex += 1;
-        } else {
-            this._startIndex = 0;
-        }
-        this._isChangedStartIndex = true;
-    }
-
-    /**
      * @method save
-     * @description Persists all cached u256 values, the length, and the startIndex to their respective storage slots if any have been modified.
+     * @description Persists all cached u256 values, the length, and the startIndex to their respective storage slots
+     *              if any have been modified.
      */
     public save(): void {
         // Save all changed slots
@@ -210,6 +185,7 @@ export class StoredU256Array {
             const value = this._values.get(slotIndex);
             Blockchain.setStorageAt(storagePointer, value);
         }
+
         this._isChanged.clear();
 
         // Save length and startIndex if changed
@@ -239,6 +215,7 @@ export class StoredU256Array {
         // Reset the length and startIndex to zero
         const zeroLengthAndStartIndex = u256.Zero;
         Blockchain.setStorageAt(this.lengthPointer, zeroLengthAndStartIndex);
+
         this._length = 0;
         this._startIndex = 0;
         this._isChangedLength = false;
@@ -272,7 +249,9 @@ export class StoredU256Array {
      */
     @inline
     public getAll(startIndex: u32, count: u32): u256[] {
-        assert(startIndex + count <= this._length, 'Requested range exceeds array length');
+        if ((startIndex + count) > this._length) {
+            throw new Revert('Requested range exceeds array length');
+        }
         const result: u256[] = new Array<u256>(count);
         for (let i: u32 = 0; i < count; i++) {
             result[i] = this.get(<u64>(startIndex + i));
@@ -352,25 +331,6 @@ export class StoredU256Array {
      */
     public startingIndex(): u64 {
         return this._startIndex;
-    }
-
-    /**
-     * @method setLength
-     * @description Sets the length of the array.
-     * @param {u64} newLength - The new length to set.
-     */
-    public setLength(newLength: u64): void {
-        if (newLength > this.MAX_LENGTH) {
-            throw new Revert('SetLength operation failed: Length exceeds maximum allowed value.');
-        }
-
-        if (newLength > this._startIndex) {
-            this._startIndex = newLength;
-            this._isChangedStartIndex = true;
-        }
-
-        this._length = newLength;
-        this._isChangedLength = true;
     }
 
     /**

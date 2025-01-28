@@ -45,7 +45,6 @@ export * from './math/abi';
 export * from './math/bytes';
 export * from './math/cyrb53';
 export * from './math/sha256';
-export * from './math/rnd';
 export * from './secp256k1/ECPoint';
 
 /** Memory */

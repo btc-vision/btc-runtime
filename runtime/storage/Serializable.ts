@@ -5,7 +5,7 @@ import { Blockchain } from '../env';
 import { encodePointer } from '../math/abi';
 import { MemorySlotPointer } from '../memory/MemorySlotPointer';
 import { Revert } from '../types/Revert';
-import { U256_BYTE_LENGTH } from '../utils/lengths';
+import { U256_BYTE_LENGTH } from '../utils';
 
 // Similar to a struct in Solidity. (Use in worst case scenario, consume a lot of gas)
 export abstract class Serializable {
@@ -54,10 +54,14 @@ export abstract class Serializable {
         if (chunks.length !== this.chunkCount) {
             throw new Revert(
                 'Invalid chunk count, expected ' +
-                    this.chunkCount.toString() +
-                    ' but got ' +
-                    chunks.length.toString(),
+                this.chunkCount.toString() +
+                ' but got ' +
+                chunks.length.toString(),
             );
+        }
+
+        if (chunks.length > 255) {
+            throw new Revert('Too many chunks to save. You may only write up to 8160 bytes per object.');
         }
 
         for (let index: u8 = 0; index < u8(chunks.length); index++) {
@@ -69,8 +73,8 @@ export abstract class Serializable {
         const chunks: u256[] = [];
 
         for (let index: i32 = 0; index < buffer.byteLength; index += 32) {
-            if (chunks.length === 255) {
-                throw new Revert('Too many chunks to save');
+            if (chunks.length === 256) {
+                throw new Revert(`Too many chunks to save You may only write up to 8160 bytes per object.`);
             }
 
             const chunk = buffer.slice(index, index + 32);
@@ -81,12 +85,11 @@ export abstract class Serializable {
     }
 
     protected chunksToBytes(chunks: u256[]): BytesReader {
-        if (this.chunkCount >= u8(255)) {
-            //67108863
-            throw new Revert('Too many chunks received');
+        if (this.chunkCount > u8(255)) {
+            throw new Revert(`Too many chunks received. You may only write up to 8160 bytes per object.`);
         }
 
-        const buffer: Uint8Array = new Uint8Array(this.chunkCount * 32);
+        const buffer: Uint8Array = new Uint8Array(i32(this.chunkCount) * i32(32));
         let offset: i32 = 0;
 
         for (let indexChunk: i32 = 0; indexChunk < chunks.length; indexChunk++) {

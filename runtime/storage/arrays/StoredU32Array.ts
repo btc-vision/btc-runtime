@@ -65,7 +65,9 @@ export class StoredU32Array {
      */
     @inline
     public get(index: u64): u32 {
-        assert(index < this._length, 'Index out of bounds');
+        if (index >= this._length) {
+            return 0;
+        }
 
         const slotIndex: u64 = index / 8; // Each slot holds 8 u32s
         const subIndex: u8 = <u8>(index % 8); // 0..7
@@ -82,7 +84,10 @@ export class StoredU32Array {
      */
     @inline
     public set(index: u64, value: u32): void {
-        assert(index < this._length, 'Index exceeds current array length');
+        if (index >= this.MAX_LENGTH) {
+            throw new Revert('Set operation failed: Index exceeds maximum allowed value.');
+        }
+
         const slotIndex: u64 = index / 8;
         const subIndex: u8 = <u8>(index % 8);
 
@@ -258,7 +263,9 @@ export class StoredU32Array {
      */
     @inline
     public getAll(startIndex: u64, count: u64): u32[] {
-        assert(startIndex + count <= this._length, 'Requested range exceeds array length');
+        if ((startIndex + count) > this._length) {
+            throw new Revert('Requested range exceeds array length');
+        }
 
         if (u32.MAX_VALUE < count) {
             throw new Revert('Requested range exceeds maximum allowed value.');
@@ -342,25 +349,6 @@ export class StoredU32Array {
     @inline
     public startingIndex(): u64 {
         return this._startIndex;
-    }
-
-    /**
-     * @method setLength
-     * @description Adjusts the length of the array (may truncate if newLength < currentLength).
-     * @param {u64} newLength - The new length to set.
-     */
-    public setLength(newLength: u64): void {
-        if (newLength > this.MAX_LENGTH) {
-            throw new Revert('SetLength operation failed: Length exceeds maximum allowed value.');
-        }
-
-        if (newLength > this._startIndex) {
-            this._startIndex = newLength;
-            this._isChangedStartIndex = true;
-        }
-
-        this._length = newLength;
-        this._isChangedLength = true;
     }
 
     /**

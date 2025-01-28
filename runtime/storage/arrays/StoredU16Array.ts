@@ -64,7 +64,9 @@ export class StoredU16Array {
      */
     @inline
     public get(index: u64): u16 {
-        assert(index < this._length, 'Index out of bounds');
+        if (index >= this._length) {
+            return 0;
+        }
 
         const slotIndex: u64 = index / 16; // Each slot holds sixteen u16s
         const subIndex: u8 = <u8>(index % 16); // 0 to 15
@@ -81,7 +83,10 @@ export class StoredU16Array {
      */
     @inline
     public set(index: u64, value: u16): void {
-        assert(index < this._length, 'Index exceeds current array length');
+        if (index >= this.MAX_LENGTH) {
+            throw new Revert('Set operation failed: Index exceeds maximum allowed value.');
+        }
+
         const slotIndex: u64 = index / 16;
         const subIndex: u8 = <u8>(index % 16);
         this.ensureValues(slotIndex);
@@ -146,40 +151,6 @@ export class StoredU16Array {
             slotValues[subIndex] = 0;
             this._isChanged.add(slotIndex);
         }
-    }
-
-    /**
-     * @method shift
-     * @description Removes the first element of the array by setting it to zero, decrementing the length, and incrementing the startIndex.
-     *              If the startIndex reaches the maximum value of u64, it wraps around to 0.
-     */
-    public shift(): void {
-        if (this._length === 0) {
-            throw new Revert('Shift operation failed: Array is empty.');
-        }
-
-        const currentStartIndex: u64 = this._startIndex;
-        const slotIndex: u64 = currentStartIndex / 16;
-        const subIndex: u8 = <u8>(currentStartIndex % 16);
-        this.ensureValues(slotIndex);
-
-        const slotValues = this._values.get(slotIndex);
-        if (slotValues && slotValues[subIndex] !== 0) {
-            slotValues[subIndex] = 0;
-            this._isChanged.add(slotIndex);
-        }
-
-        // Decrement the length
-        this._length -= 1;
-        this._isChangedLength = true;
-
-        // Increment the startIndex with wrap-around
-        if (this._startIndex < this.MAX_LENGTH - 1) {
-            this._startIndex += 1;
-        } else {
-            this._startIndex = 0;
-        }
-        this._isChangedStartIndex = true;
     }
 
     /**
@@ -257,7 +228,9 @@ export class StoredU16Array {
      */
     @inline
     public getAll(startIndex: u64, count: u64): u16[] {
-        assert(startIndex + count <= this._length, 'Requested range exceeds array length');
+        if ((startIndex + count) > this._length) {
+            throw new Revert('Requested range exceeds array length');
+        }
 
         if (u32.MAX_VALUE < count) {
             throw new Revert('Requested range exceeds maximum allowed value.');
@@ -342,25 +315,6 @@ export class StoredU16Array {
      */
     public startingIndex(): u64 {
         return this._startIndex;
-    }
-
-    /**
-     * @method setLength
-     * @description Sets the length of the array.
-     * @param {u64} newLength - The new length to set.
-     */
-    public setLength(newLength: u64): void {
-        if (newLength > this.MAX_LENGTH) {
-            throw new Revert('SetLength operation failed: Length exceeds maximum allowed value.');
-        }
-
-        if (newLength > this._startIndex) {
-            this._startIndex = newLength;
-            this._isChangedStartIndex = true;
-        }
-
-        this._length = newLength;
-        this._isChangedLength = true;
     }
 
     public deleteLast(): void {
