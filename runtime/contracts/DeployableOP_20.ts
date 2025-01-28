@@ -250,6 +250,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         if (owner === Blockchain.DEAD_ADDRESS) {
             throw new Revert('Address can not be dead address');
         }
+
         if (spender === Blockchain.DEAD_ADDRESS) {
             throw new Revert('Spender cannot be dead address');
         }
@@ -271,7 +272,6 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         writer.writeU256(nonce);
 
         const hash = sha256(writer.getBuffer());
-
         if (!Blockchain.verifySchnorrSignature(owner, signature, hash)) {
             throw new Revert('ApproveFrom: Invalid signature');
         }
