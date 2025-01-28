@@ -1,11 +1,20 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
 
-export function bytes(number: u256[]): Uint8Array {
-    const result = new Uint8Array(32 * number.length);
-    for (let i: u8 = 0; i < 32; i++) {
-        const num: Uint8Array = number[31 - i].toUint8Array();
-        for (let j: u8 = 0; j < u8(number.length); j++) {
-            result[i + j * 32] = num[i];
+export function bytes(numbers: u256[]): Uint8Array {
+    const len = numbers.length;
+    const result = new Uint8Array(32 * len);
+
+    // Loop through the array in reverse order, so that the last element (index = len-1)
+    // becomes the first chunk in the output, and so on.
+    for (let i = 0; i < len; i++) {
+        // Reverse index to pick elements from the end
+        const rev = len - 1 - i;
+        const chunk: Uint8Array = numbers[rev].toUint8Array();
+
+        // Copy this 32-byte chunk into the output at offset i * 32.
+        const offset = i * 32;
+        for (let b: u32 = 0; b < 32; b++) {
+            result[offset + b] = chunk[b];
         }
     }
 
@@ -30,8 +39,13 @@ export function bytes8(number: Uint8Array): u64 {
 }
 
 export function bytes16(buffer: Uint8Array): u128 {
-    // Make sure that the buffer is 16 bytes long.
-    if (buffer.length !== 16) {
+    // Validate that the buffer is at least 16 bytes:
+    if (buffer.length < 16) {
+        throw new Error('bytes16: Buffer must be at least 16 bytes long');
+    }
+
+    // If it's larger than 16, slice it down:
+    if (buffer.length > 16) {
         buffer = buffer.slice(0, 16);
     }
 

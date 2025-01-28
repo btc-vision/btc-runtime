@@ -65,7 +65,10 @@ export class StoredAddressArray {
      */
     @inline
     public get(index: u64): Address {
-        assert(index < this._length, 'Index out of bounds');
+        if (index >= this._length) {
+            throw new Revert('Get operation failed: Index out of bounds.');
+        }
+
         const slotIndex: u32 = <u32>index;
         this.ensureValues(slotIndex);
         const value = this._values.get(slotIndex);
@@ -80,7 +83,10 @@ export class StoredAddressArray {
      */
     @inline
     public set(index: u64, value: Address): void {
-        assert(index < this._length, 'Index exceeds current array length');
+        if (index >= this.MAX_LENGTH) {
+            throw new Revert('Set operation failed: Index exceeds maximum allowed value.');
+        }
+
         const slotIndex: u32 = <u32>index;
         this.ensureValues(slotIndex);
 
@@ -198,37 +204,6 @@ export class StoredAddressArray {
     }
 
     /**
-     * @method shift
-     * @description Removes the first element of the array.
-     */
-    public shift(): void {
-        if (this._length === 0) {
-            throw new Revert('Shift operation failed: Array is empty.');
-        }
-
-        const currentStartIndex: u64 = this._startIndex;
-        const slotIndex: u32 = <u32>currentStartIndex;
-        this.ensureValues(slotIndex);
-
-        const currentValue = this._values.get(slotIndex);
-        if (currentValue != this.defaultValue) {
-            this._values.set(slotIndex, this.defaultValue);
-            this._isChanged.add(slotIndex);
-        }
-
-        this._length -= 1;
-        this._isChangedLength = true;
-
-        // Increment the startIndex with wrap-around
-        if (this._startIndex < this.MAX_LENGTH - 1) {
-            this._startIndex += 1;
-        } else {
-            this._startIndex = 0;
-        }
-        this._isChangedStartIndex = true;
-    }
-
-    /**
      * @method save
      * @description Persists all changes to storage.
      */
@@ -303,7 +278,10 @@ export class StoredAddressArray {
      */
     @inline
     public getAll(startIndex: u32, count: u32): Address[] {
-        assert(startIndex + count <= this._length, 'Requested range exceeds array length');
+        if ((startIndex + count) > this._length) {
+            throw new Revert('Requested range exceeds array length');
+        }
+
         const result: Address[] = new Array<Address>(count);
         for (let i: u32 = 0; i < count; i++) {
             result[i] = this.get(<u64>(startIndex + i));
@@ -381,27 +359,6 @@ export class StoredAddressArray {
      */
     public startingIndex(): u64 {
         return this._startIndex;
-    }
-
-    /**
-     * @method setLength
-     * @description Sets the length of the array, truncating if necessary.
-     * @param {u64} newLength - The new length.
-     */
-    public setLength(newLength: u64): void {
-        if (newLength > this.MAX_LENGTH) {
-            throw new Revert('SetLength operation failed: Length exceeds maximum allowed value.');
-        }
-
-        if (newLength < this._length) {
-            // Truncate the array if newLength is smaller
-            for (let i: u64 = newLength; i < this._length; i++) {
-                this.delete(i);
-            }
-        }
-
-        this._length = newLength;
-        this._isChangedLength = true;
     }
 
     /**

@@ -96,6 +96,10 @@ export class SafeMathI128 {
      * Increment an i128 by 1 with overflow check.
      */
     public static inc(value: i128): i128 {
+        if (value == SafeMathI128.MAX) {
+            throw new Error('SafeMathI128: inc overflow');
+        }
+
         return SafeMathI128.add(value, SafeMathI128.ONE);
     }
 
@@ -103,6 +107,10 @@ export class SafeMathI128 {
      * Decrement an i128 by 1 with underflow check.
      */
     public static dec(value: i128): i128 {
+        if (value == SafeMathI128.MIN) {
+            throw new Error('SafeMathI128: dec underflow');
+        }
+
         return SafeMathI128.sub(value, SafeMathI128.ONE);
     }
 
