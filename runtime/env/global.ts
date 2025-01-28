@@ -1,23 +1,9 @@
 import { Sha256 } from '../SHA256/sha256';
 import {ripemd160f} from '../SHA256/ripemd160f';
-import { loadPointer1, storePointer1 } from '../memorystorage/MemoryStorage';
-
-// @ts-ignore
-//@external('env', 'load')
-export function loadPointer(data: Uint8Array): Uint8Array{
-    return loadPointer1(data);
-}
 
 // @ts-ignore
 @external('env', 'nextPointerGreaterThan')
 export declare function nextPointerGreaterThan(data: Uint8Array): Uint8Array;
-
-// @ts-ignore
-//@external('env', 'store')
-export function storePointer(data: Uint8Array): Uint8Array
-{
-    return storePointer1(data);
-}
 
 // @ts-ignore
 @external('env', 'deploy')
