@@ -63,6 +63,10 @@ export class StoredU8Array {
      */
     @inline
     public get(index: u64): u8 {
+        if (index > this.MAX_LENGTH) {
+            throw new Revert('Operation failed: Index exceeds maximum allowed value.');
+        }
+
         const slotIndex: u64 = index / 32; // Each slot holds thirty-two u8s
         const subIndex: u8 = <u8>(index % 32);
 
@@ -132,6 +136,10 @@ export class StoredU8Array {
      * @param {u64} index - The global index of the u8 value to delete.
      */
     public delete(index: u64): void {
+        if (index > this.MAX_LENGTH) {
+            throw new Revert('Operation failed: Index exceeds maximum allowed value.');
+        }
+
         const slotIndex: u64 = index / 32;
         const subIndex: u8 = <u8>(index % 32);
         this.ensureValues(slotIndex);

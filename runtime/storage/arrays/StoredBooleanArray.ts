@@ -64,6 +64,10 @@ export class StoredBooleanArray {
      */
     @inline
     public get(index: u64): bool {
+        if (index > this.MAX_LENGTH) {
+            throw new Revert('Operation failed: Index exceeds maximum allowed value.');
+        }
+
         const slotIndex: u64 = index / 256; // Each slot holds 256 bits
         const bitIndex: u16 = <u16>(index % 256); // 0 to 255
 
@@ -144,6 +148,10 @@ export class StoredBooleanArray {
      * @param {u64} index - The global index of the boolean value to delete.
      */
     public delete(index: u64): void {
+        if (index > this.MAX_LENGTH) {
+            throw new Revert('Operation failed: Index exceeds maximum allowed value.');
+        }
+
         const slotIndex: u64 = index / 256;
         const bitIndex: u16 = <u16>(index % 256);
         this.ensureValues(slotIndex);
