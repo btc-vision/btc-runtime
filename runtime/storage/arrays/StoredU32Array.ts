@@ -65,13 +65,11 @@ export class StoredU32Array {
      */
     @inline
     public get(index: u64): u32 {
-        if (index >= this._length) {
-            return 0;
-        }
-
         const slotIndex: u64 = index / 8; // Each slot holds 8 u32s
         const subIndex: u8 = <u8>(index % 8); // 0..7
+
         this.ensureValues(slotIndex);
+
         const slotValues = this._values.get(slotIndex);
         return slotValues ? slotValues[subIndex] : 0;
     }
@@ -139,10 +137,6 @@ export class StoredU32Array {
      * @param {u64} index - The global index of the u32 value to delete.
      */
     public delete(index: u64): void {
-        if (index >= this._length) {
-            throw new Revert('Delete operation failed: Index out of bounds.');
-        }
-
         const slotIndex: u64 = index / 8;
         const subIndex: u8 = <u8>(index % 8);
         this.ensureValues(slotIndex);

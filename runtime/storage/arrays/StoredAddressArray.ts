@@ -65,12 +65,9 @@ export class StoredAddressArray {
      */
     @inline
     public get(index: u64): Address {
-        if (index >= this._length) {
-            throw new Revert('Get operation failed: Index out of bounds.');
-        }
-
         const slotIndex: u32 = <u32>index;
         this.ensureValues(slotIndex);
+
         const value = this._values.get(slotIndex);
         return value ? value : this.defaultValue;
     }
@@ -189,10 +186,6 @@ export class StoredAddressArray {
      * @param {u64} index - The global index of the Address value to delete.
      */
     public delete(index: u64): void {
-        if (index >= this._length) {
-            throw new Revert('Delete operation failed: Index out of bounds.');
-        }
-
         const slotIndex: u32 = <u32>index;
         this.ensureValues(slotIndex);
 

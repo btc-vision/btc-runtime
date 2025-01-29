@@ -65,12 +65,9 @@ export class StoredU256Array {
      */
     @inline
     public get(index: u64): u256 {
-        if (index >= this._length) {
-            return u256.Zero;
-        }
-
         const slotIndex: u32 = <u32>index;
         this.ensureValues(slotIndex);
+
         const value = this._values.get(slotIndex);
         return value ? value : u256.Zero;
     }
@@ -157,10 +154,6 @@ export class StoredU256Array {
      * @param {u64} index - The global index of the u256 value to delete.
      */
     public delete(index: u64): void {
-        if (index >= this._length) {
-            throw new Revert('Delete operation failed: Index out of bounds.');
-        }
-
         const slotIndex: u32 = <u32>index;
         this.ensureValues(slotIndex);
 

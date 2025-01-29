@@ -64,13 +64,11 @@ export class StoredBooleanArray {
      */
     @inline
     public get(index: u64): bool {
-        if (index >= this._length) {
-            return false;
-        }
-
         const slotIndex: u64 = index / 256; // Each slot holds 256 bits
         const bitIndex: u16 = <u16>(index % 256); // 0 to 255
+
         this.ensureValues(slotIndex);
+
         const slotValue = this._values.get(slotIndex);
         if (slotValue) {
             return this.getBit(slotValue, bitIndex);
@@ -121,6 +119,7 @@ export class StoredBooleanArray {
         const effectiveIndex: u64 = this._startIndex + newIndex;
         const wrappedIndex: u64 =
             effectiveIndex < this.MAX_LENGTH ? effectiveIndex : effectiveIndex % this.MAX_LENGTH;
+
         const slotIndex: u64 = wrappedIndex / 256;
         const bitIndex: u8 = <u8>(wrappedIndex % 256);
 
@@ -145,10 +144,6 @@ export class StoredBooleanArray {
      * @param {u64} index - The global index of the boolean value to delete.
      */
     public delete(index: u64): void {
-        if (index >= this._length) {
-            throw new Revert('Delete operation failed: Index out of bounds.');
-        }
-
         const slotIndex: u64 = index / 256;
         const bitIndex: u16 = <u16>(index % 256);
         this.ensureValues(slotIndex);
