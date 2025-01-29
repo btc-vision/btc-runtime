@@ -167,6 +167,10 @@ export class BlockchainEnvironment {//extends BlockchainEnvironment {
         this._mockedVerifySchnorrSignature = result;
     }
 
+    public clearStorage():void{
+        this.storage.clear()
+    }
+
     public call(destinationContract: Address, calldata: BytesWriter): BytesReader {
         if (destinationContract === this.contractAddress) {
             throw this.error('Cannot call self');
