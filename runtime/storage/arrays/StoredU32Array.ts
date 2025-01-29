@@ -84,7 +84,7 @@ export class StoredU32Array {
      */
     @inline
     public set(index: u64, value: u32): void {
-        if (index >= this.MAX_LENGTH) {
+        if (index > this.MAX_LENGTH) {
             throw new Revert('Set operation failed: Index exceeds maximum allowed value.');
         }
 
@@ -105,7 +105,7 @@ export class StoredU32Array {
      * @param {u32} value - The u32 value to append.
      */
     public push(value: u32): void {
-        if (this._length >= this.MAX_LENGTH) {
+        if (this._length > this.MAX_LENGTH) {
             throw new Revert(
                 'Push operation failed: Array has reached its maximum allowed length.',
             );

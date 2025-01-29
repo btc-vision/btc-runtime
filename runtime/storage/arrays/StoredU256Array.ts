@@ -83,7 +83,7 @@ export class StoredU256Array {
      */
     @inline
     public set(index: u64, value: u256): void {
-        if (index >= this.MAX_LENGTH) {
+        if (index > this.MAX_LENGTH) {
             throw new Revert('Set operation failed: Index exceeds maximum allowed value.');
         }
 
@@ -103,7 +103,7 @@ export class StoredU256Array {
      * @param {u256} value - The u256 value to append.
      */
     public push(value: u256): void {
-        if (this._length >= this.MAX_LENGTH) {
+        if (this._length > this.MAX_LENGTH) {
             throw new Revert(
                 'Push operation failed: Array has reached its maximum allowed length.',
             );

@@ -83,7 +83,7 @@ export class StoredAddressArray {
      */
     @inline
     public set(index: u64, value: Address): void {
-        if (index >= this.MAX_LENGTH) {
+        if (index > this.MAX_LENGTH) {
             throw new Revert('Set operation failed: Index exceeds maximum allowed value.');
         }
 
@@ -131,7 +131,7 @@ export class StoredAddressArray {
      * @param {Address} value - The Address to append.
      */
     public push(value: Address): void {
-        if (this._length >= this.MAX_LENGTH) {
+        if (this._length > this.MAX_LENGTH) {
             throw new Revert(
                 'Push operation failed: Array has reached its maximum allowed length.',
             );
