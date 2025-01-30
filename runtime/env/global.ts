@@ -1,3 +1,7 @@
+import { Sha256 } from '../SHA256/sha256';
+import { ripemd160f } from '../SHA256/ripemd160f';
+import { Blockchain } from './index';
+
 // @ts-ignore
 @external('env', 'load')
 export declare function loadPointer(data: Uint8Array): Uint8Array;
@@ -23,10 +27,6 @@ export declare function deployFromAddress(data: Uint8Array): Uint8Array;
 export declare function callContract(data: Uint8Array): Uint8Array;
 
 // @ts-ignore
-@external('env', 'log')
-export declare function log(data: Uint8Array): void;
-
-// @ts-ignore
 @external('env', 'emit')
 export declare function emit(data: Uint8Array): void;
 
@@ -35,12 +35,14 @@ export declare function emit(data: Uint8Array): void;
 export declare function encodeAddress(data: Uint8Array): Uint8Array;
 
 // @ts-ignore
-@external('env', 'sha256')
-export declare function sha256(data: Uint8Array): Uint8Array;
+export function sha256(data: Uint8Array): Uint8Array {
+    return Sha256.hash(data);
+}
 
 // @ts-ignore
-@external('env', 'ripemd160')
-export declare function ripemd160(data: Uint8Array): Uint8Array;
+export function ripemd160(data: Uint8Array): Uint8Array {
+    return ripemd160f(data);
+}
 
 // @ts-ignore
 @external('env', 'validateBitcoinAddress')
@@ -51,8 +53,10 @@ export declare function validateBitcoinAddress(data: Uint8Array): Uint8Array;
 export declare function inputs(): Uint8Array;
 
 // @ts-ignore
-@external('env', 'outputs')
-export declare function outputs(): Uint8Array;
+//@external('env', 'outputs')
+export function outputs(): Uint8Array {
+    return Blockchain.mockedTransactionOutput();
+}
 
 // @ts-ignore
 @external('env', 'verifySchnorrSignature')

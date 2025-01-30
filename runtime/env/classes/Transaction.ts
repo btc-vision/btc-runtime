@@ -10,7 +10,9 @@ export class Transaction {
         public readonly sender: Address, // "immediate caller"
         public readonly origin: Address, // "leftmost thing in the call chain"
         public readonly id: Uint8Array,
-    ) {}
+        public readonly disableCache: bool = false,
+    ) {
+    }
 
     private _inputs: Potential<TransactionInput[]> = null;
 
@@ -28,14 +30,18 @@ export class Transaction {
     private _outputs: Potential<TransactionOutput[]> = null;
 
     public get outputs(): TransactionOutput[] {
-        if (!this._outputs) {
-            const outputs = this.loadOutputs();
-            this._outputs = outputs;
+        if (this.disableCache) {
+            return this.loadOutputs();
+        } else {
+            if (!this._outputs) {
+                const outputs = this.loadOutputs();
+                this._outputs = outputs;
 
-            return outputs;
+                return outputs;
+            }
+
+            return this._outputs as TransactionOutput[];
         }
-
-        return this._outputs as TransactionOutput[];
     }
 
     private loadInputs(): TransactionInput[] {
