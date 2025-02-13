@@ -11,13 +11,13 @@ import { Address } from '../types/Address';
 import { Revert } from '../types/Revert';
 import { SafeMath } from '../types/SafeMath';
 
+import { sha256 } from '../env/global';
+import { ApproveStr, TransferFromStr, TransferStr } from '../shared-libraries/TransferHelper';
 import { Calldata } from '../types';
 import { ADDRESS_BYTE_LENGTH, BOOLEAN_BYTE_LENGTH, U256_BYTE_LENGTH } from '../utils';
 import { IOP_20 } from './interfaces/IOP_20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
-import { sha256 } from '../env/global';
-import { ApproveStr, TransferFromStr, TransferStr } from '../shared-libraries/TransferHelper';
 
 const nonceMapPointer: u16 = Blockchain.nextPointer;
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
@@ -121,6 +121,13 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     public approveFrom(callData: Calldata): BytesWriter {
+        // If the transaction is initiated directly by the owner, there is no need for an off-chain signature.
+        if (Blockchain.tx.origin == Blockchain.tx.sender) {
+            throw new Revert(
+                'Direct owner approval detected. Use approve function instead of approveFrom.',
+            );
+        }
+
         const response = new BytesWriter(BOOLEAN_BYTE_LENGTH);
 
         const owner: Address = Blockchain.tx.origin;
@@ -213,7 +220,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
                 return this.allowance(calldata);
             case encodeSelector(ApproveStr):
                 return this.approve(calldata);
-            case encodeSelector('approveFrom(address,uint256,uint64,bytes)'):
+            case encodeSelector('approveFrom(address,uint256,uint256,bytes)'):
                 return this.approveFrom(calldata);
             case encodeSelector('balanceOf(address)'):
                 return this.balanceOf(calldata);

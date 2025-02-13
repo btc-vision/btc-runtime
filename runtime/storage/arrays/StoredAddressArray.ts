@@ -35,11 +35,7 @@ export class StoredAddressArray {
      * @param {Uint8Array} subPointer - The sub-pointer for memory slot addressing.
      * @param {Address} defaultValue - The default Address value if storage is uninitialized.
      */
-    constructor(
-        public pointer: u16,
-        public subPointer: Uint8Array,
-        private defaultValue: Address,
-    ) {
+    constructor(public pointer: u16, public subPointer: Uint8Array, private defaultValue: Address) {
         // Initialize the base pointer
         const writer = new BytesWriter(32);
         writer.writeU16(pointer);
@@ -132,7 +128,7 @@ export class StoredAddressArray {
      * @param {Address} value - The Address to append.
      */
     public push(value: Address): void {
-        if (this._length > this.MAX_LENGTH) {
+        if (this._length >= this.MAX_LENGTH) {
             throw new Revert(
                 'Push operation failed: Array has reached its maximum allowed length.',
             );
@@ -279,7 +275,7 @@ export class StoredAddressArray {
      */
     @inline
     public getAll(startIndex: u32, count: u32): Address[] {
-        if ((startIndex + count) > this._length) {
+        if (startIndex + count > this._length) {
             throw new Revert('Requested range exceeds array length');
         }
 
