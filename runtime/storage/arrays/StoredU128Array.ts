@@ -111,7 +111,7 @@ export class StoredU128Array {
      * @param {u128} value - The u128 value to append.
      */
     public push(value: u128): void {
-        if (this._length > this.MAX_LENGTH) {
+        if (this._length >= this.MAX_LENGTH) {
             throw new Revert(
                 'Push operation failed: Array has reached its maximum allowed length.',
             );

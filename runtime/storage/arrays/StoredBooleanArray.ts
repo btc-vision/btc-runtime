@@ -113,7 +113,7 @@ export class StoredBooleanArray {
      * @param {bool} value - The boolean value to append.
      */
     public push(value: bool): void {
-        if (this._length > this.MAX_LENGTH) {
+        if (this._length >= this.MAX_LENGTH) {
             throw new Revert(
                 'Push operation failed: Array has reached its maximum allowed length.',
             );

@@ -44,7 +44,6 @@ export * from './types/SafeMathI128';
 export * from './math/abi';
 export * from './math/bytes';
 export * from './math/cyrb53';
-export * from './math/sha256';
 export * from './secp256k1/ECPoint';
 
 /** Memory */
@@ -73,13 +72,6 @@ export * from './storage/arrays/StoredU32Array';
 export * from './storage/arrays/StoredBooleanArray';
 export * from './storage/arrays/StoredU128Array';
 export * from './storage/arrays/StoredU256Array';
-
-/** Storage Utils */
-export * from './storage/utils/StorageBacked';
-export * from './storage/utils/StorageSlot';
-export * from './storage/utils/StorageStruct';
-export * from './storage/utils/StorageLayout';
-export * from './storage/utils/StorageValue';
 
 /** Shared libraries */
 export * from './shared-libraries/TransferHelper';

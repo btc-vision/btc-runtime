@@ -107,7 +107,7 @@ export class StoredU32Array {
      * @param {u32} value - The u32 value to append.
      */
     public push(value: u32): void {
-        if (this._length > this.MAX_LENGTH) {
+        if (this._length >= this.MAX_LENGTH) {
             throw new Revert(
                 'Push operation failed: Array has reached its maximum allowed length.',
             );
