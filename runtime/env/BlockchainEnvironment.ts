@@ -10,7 +10,7 @@ import { MemorySlotData } from '../memory/MemorySlot';
 import { MemorySlotPointer } from '../memory/MemorySlotPointer';
 import { PointerStorage } from '../types';
 import { Address } from '../types/Address';
-import { ADDRESS_BYTE_LENGTH, U256_BYTE_LENGTH } from '../utils/lengths';
+import { ADDRESS_BYTE_LENGTH, U256_BYTE_LENGTH } from '../utils';
 import { Block } from './classes/Block';
 import { Transaction } from './classes/Transaction';
 import {
