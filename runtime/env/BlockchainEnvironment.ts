@@ -24,6 +24,7 @@ import {
     validateBitcoinAddress,
     verifySchnorrSignature,
 } from './global';
+import { Uint8Array } from 'typedarray';
 
 export * from '../env/global';
 
@@ -294,12 +295,7 @@ export class BlockchainEnvironment {
     private _internalSetStorageAt(pointerHash: u256, value: MemorySlotData<u256>): void {
         this.storage.set(pointerHash, value);
 
-        const writer: BytesWriter = new BytesWriter(U256_BYTE_LENGTH * 2);
-        writer.writeU256(pointerHash);
-        writer.writeU256(value);
-
-        const buffer: Uint8Array = writer.getBuffer();
-        storePointer(buffer);
+        storePointer(pointerHash.toStaticBytes(true), value.toStaticBytes(true));
     }
 
     private hasPointerStorageHash(pointer: MemorySlotPointer): bool {
@@ -308,13 +304,11 @@ export class BlockchainEnvironment {
         }
 
         // we attempt to load the requested pointer.
-        const writer = new BytesWriter(U256_BYTE_LENGTH);
-        writer.writeU256(pointer);
+        let resultStaticArray = new StaticArray<u8>(32);
+        loadPointer(pointer.toStaticBytes(true), resultStaticArray);
 
-        const result: Uint8Array = loadPointer(writer.getBuffer());
-        const reader: BytesReader = new BytesReader(result);
-
-        const value: u256 = reader.readU256();
+        let resultArray: u8[] = resultStaticArray.map<u8>(i => i);
+        const value: u256 = u256.fromBytes(resultArray, true);
         this.storage.set(pointer, value); // cache the value
 
         return !u256.eq(value, u256.Zero);
