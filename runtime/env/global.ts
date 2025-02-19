@@ -22,7 +22,11 @@ export declare function deployFromAddress(data: Uint8Array): Uint8Array;
 
 // @ts-ignore
 @external('env', 'call')
-export declare function callContract(data: Uint8Array): Uint8Array;
+export declare function callContract(address: ArrayBuffer, calldata: ArrayBuffer, calldataLength: u32, resultLength: ArrayBuffer): void;
+
+// @ts-ignore
+@external('env', 'callResult')
+export declare function getCallResult(offset: u32, length: u32, result: ArrayBuffer): void;
 
 // @ts-ignore
 @external('env', 'log')

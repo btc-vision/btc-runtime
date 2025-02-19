@@ -17,7 +17,7 @@ import {
     callContract,
     deployFromAddress,
     emit,
-    encodeAddress,
+    encodeAddress, getCallResult,
     loadPointer,
     log,
     storePointer,
@@ -25,6 +25,7 @@ import {
     verifySchnorrSignature,
 } from './global';
 import { Uint8Array } from 'typedarray';
+import { ArrayBuffer } from 'arraybuffer';
 
 export * from '../env/global';
 
@@ -138,13 +139,14 @@ export class BlockchainEnvironment {
             throw this.error('Destination contract is required');
         }
 
-        const call = new BytesWriter(ADDRESS_BYTE_LENGTH + calldata.bufferLength() + 4);
-        call.writeAddress(destinationContract);
-        call.writeBytesWithLength(calldata.getBuffer());
+        let resultLengthBuffer = new ArrayBuffer(32);
+        callContract(destinationContract.buffer, calldata.getBuffer().buffer, calldata.bufferLength(), resultLengthBuffer);
+        let reader = new BytesReader(Uint8Array.wrap(resultLengthBuffer));
+        let resultLength = reader.readU32(false);
+        let resultBuffer = new ArrayBuffer(resultLength);
+        getCallResult(0, resultLength, resultBuffer);
 
-        const response: Uint8Array = callContract(call.getBuffer());
-
-        return new BytesReader(response);
+        return new BytesReader(Uint8Array.wrap(resultBuffer));
     }
 
     public log(data: string): void {
