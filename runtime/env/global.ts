@@ -1,8 +1,6 @@
-import { StaticArray } from 'staticarray';
-
 // @ts-ignore
 @external('env', 'load')
-export declare function loadPointer(key: StaticArray<u8>, result: StaticArray<u8>): void;
+export declare function loadPointer(key: ArrayBuffer, result: ArrayBuffer): void;
 
 // @ts-ignore
 @external('env', 'nextPointerGreaterThan')
@@ -10,7 +8,7 @@ export declare function nextPointerGreaterThan(data: Uint8Array): Uint8Array;
 
 // @ts-ignore
 @external('env', 'store')
-export declare function storePointer(key: StaticArray<u8>, value: StaticArray<u8>): void;
+export declare function storePointer(key: ArrayBuffer, value: ArrayBuffer): void;
 
 // @ts-ignore
 @external('env', 'deploy')
