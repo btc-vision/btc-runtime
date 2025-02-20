@@ -26,6 +26,10 @@ export class BytesReader {
         this.buffer = new DataView(bytes.buffer);
     }
 
+    public get byteLength(): i32 {
+        return this.buffer.byteLength
+    }
+
     public readU8(): u8 {
         this.verifyEnd(this.currentOffset + U8_BYTE_LENGTH);
 
