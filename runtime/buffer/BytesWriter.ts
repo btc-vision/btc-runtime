@@ -114,6 +114,17 @@ export class BytesWriter {
         }
     }
 
+    public writeU64Array(value: u64[]): void {
+        if (value.length > 65535) throw new Revert('Array size is too large');
+
+        this.allocSafe(U16_BYTE_LENGTH + value.length * U64_BYTE_LENGTH);
+        this.writeU16(u16(value.length));
+
+        for (let i = 0; i < value.length; i++) {
+            this.writeU64(value[i]);
+        }
+    }
+
     public writeU128Array(value: u128[]): void {
         if (value.length > 65535) throw new Revert('Array size is too large');
 
