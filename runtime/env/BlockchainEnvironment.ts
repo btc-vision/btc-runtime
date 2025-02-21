@@ -13,6 +13,7 @@ import { ADDRESS_BYTE_LENGTH } from '../utils';
 import { Block } from './classes/Block';
 import { Transaction } from './classes/Transaction';
 import {
+    _sha256,
     callContract,
     deployFromAddress,
     emit,
@@ -163,6 +164,12 @@ export class BlockchainEnvironment {
         writer.writeBytesWithLength(data);
 
         emit(writer.getBuffer().buffer, writer.bufferLength());
+    }
+
+    public sha256(data: Uint8Array): Uint8Array {
+        const resultBuffer = new ArrayBuffer(32);
+        _sha256(data.buffer, data.length, resultBuffer);
+        return Uint8Array.wrap(resultBuffer);
     }
 
     public validateBitcoinAddress(address: string): bool {
