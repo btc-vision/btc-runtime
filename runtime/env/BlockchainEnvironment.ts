@@ -13,6 +13,7 @@ import { ADDRESS_BYTE_LENGTH } from '../utils';
 import { Block } from './classes/Block';
 import { Transaction } from './classes/Transaction';
 import {
+    _ripemd160,
     _sha256,
     callContract,
     deployFromAddress,
@@ -169,6 +170,13 @@ export class BlockchainEnvironment {
     public sha256(data: Uint8Array): Uint8Array {
         const resultBuffer = new ArrayBuffer(32);
         _sha256(data.buffer, data.length, resultBuffer);
+        return Uint8Array.wrap(resultBuffer);
+    }
+
+    public ripemd160(data: Uint8Array): Uint8Array {
+        const resultBuffer = new ArrayBuffer(20);
+        _ripemd160(data.buffer, data.length, resultBuffer);
+
         return Uint8Array.wrap(resultBuffer);
     }
 

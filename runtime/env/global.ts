@@ -40,7 +40,7 @@ export declare function _sha256(data: ArrayBuffer, dataLength: u32, result: Arra
 
 // @ts-ignore
 @external('env', 'ripemd160')
-export declare function ripemd160(data: Uint8Array): Uint8Array;
+export declare function _ripemd160(data: ArrayBuffer, dataLength: u32, result: ArrayBuffer): void;
 
 // @ts-ignore
 @external('env', 'validateBitcoinAddress')
