@@ -56,7 +56,7 @@ export function decodeHexArray(hex: string): u8[] {
     const result = new Array<u8>(hex.length / 2);
 
     for (let i = 0; i < hex.length; i += 2) {
-        store<u8>(changetype<usize>(result) + i / 2, <u8>parseInt(hex.substring(i, i + 2), 16));
+        result[i / 2] = <u8>parseInt(hex.substring(i, i + 2), 16);
     }
 
     return result;
