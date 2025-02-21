@@ -28,7 +28,7 @@ export declare function log(data: Uint8Array): void;
 
 // @ts-ignore
 @external('env', 'emit')
-export declare function emit(data: Uint8Array): void;
+export declare function emit(data: ArrayBuffer, dataLength: u32): void;
 
 // @ts-ignore
 @external('env', 'encodeAddress')

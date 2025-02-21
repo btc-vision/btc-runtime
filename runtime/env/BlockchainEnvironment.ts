@@ -157,12 +157,12 @@ export class BlockchainEnvironment {
 
     public emit(event: NetEvent): void {
         const data = event.getEventData();
-        const buffer = new BytesWriter(event.eventType.length + 6 + data.byteLength);
+        const writer = new BytesWriter(event.eventType.length + 6 + data.byteLength);
 
-        buffer.writeStringWithLength(event.eventType);
-        buffer.writeBytesWithLength(data);
+        writer.writeStringWithLength(event.eventType);
+        writer.writeBytesWithLength(data);
 
-        emit(buffer.getBuffer());
+        emit(writer.getBuffer().buffer, writer.bufferLength());
     }
 
     public validateBitcoinAddress(address: string): bool {
