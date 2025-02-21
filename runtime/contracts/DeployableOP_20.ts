@@ -11,7 +11,6 @@ import { Address } from '../types/Address';
 import { Revert } from '../types/Revert';
 import { SafeMath } from '../types/SafeMath';
 
-import { sha256 } from '../env/global';
 import { ApproveStr, TransferFromStr, TransferStr } from '../shared-libraries/TransferHelper';
 import { Calldata } from '../types';
 import { ADDRESS_BYTE_LENGTH, BOOLEAN_BYTE_LENGTH, U256_BYTE_LENGTH } from '../utils';
@@ -278,7 +277,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         writer.writeU256(value);
         writer.writeU256(nonce);
 
-        const hash = sha256(writer.getBuffer());
+        const hash = Blockchain.sha256(writer.getBuffer());
         if (!Blockchain.verifySchnorrSignature(owner, signature, hash)) {
             throw new Revert('ApproveFrom: Invalid signature');
         }

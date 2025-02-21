@@ -36,11 +36,11 @@ export declare function encodeAddress(data: Uint8Array): Uint8Array;
 
 // @ts-ignore
 @external('env', 'sha256')
-export declare function sha256(data: Uint8Array): Uint8Array;
+export declare function _sha256(data: ArrayBuffer, dataLength: u32, result: ArrayBuffer): void;
 
 // @ts-ignore
 @external('env', 'ripemd160')
-export declare function ripemd160(data: Uint8Array): Uint8Array;
+export declare function _ripemd160(data: ArrayBuffer, dataLength: u32, result: ArrayBuffer): void;
 
 // @ts-ignore
 @external('env', 'validateBitcoinAddress')
