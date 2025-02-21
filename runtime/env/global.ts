@@ -11,12 +11,8 @@ export declare function nextPointerGreaterThan(data: Uint8Array): Uint8Array;
 export declare function storePointer(key: ArrayBuffer, value: ArrayBuffer): void;
 
 // @ts-ignore
-@external('env', 'deploy')
-export declare function deploy(data: Uint8Array): Uint8Array;
-
-// @ts-ignore
 @external('env', 'deployFromAddress')
-export declare function deployFromAddress(data: Uint8Array): Uint8Array;
+export declare function deployFromAddress(originAddress: ArrayBuffer, salt: ArrayBuffer, resultAddress: ArrayBuffer): u32;
 
 // @ts-ignore
 @external('env', 'call')

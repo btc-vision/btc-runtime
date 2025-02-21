@@ -14,7 +14,6 @@ export * from './buffer/BytesWriter';
 
 /** Interfaces */
 export * from './interfaces/IBTC';
-export * from './interfaces/DeployContractResponse';
 
 /** Events */
 export * from './events/NetEvent';
