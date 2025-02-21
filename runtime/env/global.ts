@@ -23,7 +23,7 @@ export declare function callContract(address: ArrayBuffer, calldata: ArrayBuffer
 export declare function getCallResult(offset: u32, length: u32, result: ArrayBuffer): void;
 
 // @ts-ignore
-@external('env', 'log')
+@external('debug', 'log')
 export declare function log(data: Uint8Array): void;
 
 // @ts-ignore
