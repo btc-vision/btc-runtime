@@ -4,20 +4,20 @@ import { BytesWriter } from '../buffer/BytesWriter';
 import { OP_NET } from '../contracts/OP_NET';
 import { NetEvent } from '../events/NetEvent';
 import { MapU256 } from '../generic/MapU256';
-import { DeployContractResponse } from '../interfaces/DeployContractResponse';
 import { Potential } from '../lang/Definitions';
 import { MemorySlotData } from '../memory/MemorySlot';
 import { MemorySlotPointer } from '../memory/MemorySlotPointer';
 import { PointerStorage } from '../types';
 import { Address } from '../types/Address';
-import { ADDRESS_BYTE_LENGTH, U256_BYTE_LENGTH } from '../utils';
+import { ADDRESS_BYTE_LENGTH } from '../utils';
 import { Block } from './classes/Block';
 import { Transaction } from './classes/Transaction';
 import {
     callContract,
     deployFromAddress,
     emit,
-    encodeAddress, getCallResult,
+    encodeAddress,
+    getCallResult,
     loadPointer,
     log,
     storePointer,
@@ -204,20 +204,21 @@ export class BlockchainEnvironment {
     public deployContractFromExisting(
         existingAddress: Address,
         salt: u256,
-    ): DeployContractResponse {
-        const writer = new BytesWriter(ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH);
-        writer.writeAddress(existingAddress);
-        writer.writeU256(salt);
+    ): Address {
+        const resultAddressBuffer = new ArrayBuffer(ADDRESS_BYTE_LENGTH);
 
-        const buffer: Uint8Array = writer.getBuffer();
-        const cb: Potential<Uint8Array> = deployFromAddress(buffer);
-        if (!cb) throw this.error('Failed to deploy contract');
+        const status = deployFromAddress(
+            existingAddress.buffer,
+            salt.toUint8Array(true).buffer,
+            resultAddressBuffer,
+        );
 
-        const reader: BytesReader = new BytesReader(cb as Uint8Array);
-        const virtualAddress: u256 = reader.readU256();
-        const contractAddress: Address = reader.readAddress();
+        if (status !== 0) {
+            throw this.error('Failed to deploy contract');
+        }
 
-        return new DeployContractResponse(virtualAddress, contractAddress);
+        const contractAddressReader = new BytesReader(Uint8Array.wrap(resultAddressBuffer));
+        return contractAddressReader.readAddress();
     }
 
     // TODO: Change MemorySlotData type to a Uint8Array instead of a u256.
