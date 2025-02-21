@@ -17,7 +17,7 @@ import {
     callContract,
     deployFromAddress,
     emit,
-    encodeAddress,
+    encodeAddress, getCallResult,
     loadPointer,
     log,
     storePointer,
@@ -137,13 +137,14 @@ export class BlockchainEnvironment {
             throw this.error('Destination contract is required');
         }
 
-        const call = new BytesWriter(ADDRESS_BYTE_LENGTH + calldata.bufferLength() + 4);
-        call.writeAddress(destinationContract);
-        call.writeBytesWithLength(calldata.getBuffer());
+        let resultLengthBuffer = new ArrayBuffer(32);
+        callContract(destinationContract.buffer, calldata.getBuffer().buffer, calldata.bufferLength(), resultLengthBuffer);
+        let reader = new BytesReader(Uint8Array.wrap(resultLengthBuffer));
+        let resultLength = reader.readU32(false);
+        let resultBuffer = new ArrayBuffer(resultLength);
+        getCallResult(0, resultLength, resultBuffer);
 
-        const response: Uint8Array = callContract(call.getBuffer());
-
-        return new BytesReader(response);
+        return new BytesReader(Uint8Array.wrap(resultBuffer));
     }
 
     public log(data: string): void {
@@ -294,12 +295,7 @@ export class BlockchainEnvironment {
     private _internalSetStorageAt(pointerHash: u256, value: MemorySlotData<u256>): void {
         this.storage.set(pointerHash, value);
 
-        const writer: BytesWriter = new BytesWriter(U256_BYTE_LENGTH * 2);
-        writer.writeU256(pointerHash);
-        writer.writeU256(value);
-
-        const buffer: Uint8Array = writer.getBuffer();
-        storePointer(buffer);
+        storePointer(pointerHash.toUint8Array(true).buffer, value.toUint8Array(true).buffer);
     }
 
     private hasPointerStorageHash(pointer: MemorySlotPointer): bool {
@@ -308,13 +304,10 @@ export class BlockchainEnvironment {
         }
 
         // we attempt to load the requested pointer.
-        const writer = new BytesWriter(U256_BYTE_LENGTH);
-        writer.writeU256(pointer);
+        let resultBuffer = new ArrayBuffer(32);
+        loadPointer(pointer.toUint8Array(true).buffer, resultBuffer);
 
-        const result: Uint8Array = loadPointer(writer.getBuffer());
-        const reader: BytesReader = new BytesReader(result);
-
-        const value: u256 = reader.readU256();
+        const value: u256 = u256.fromUint8ArrayBE(Uint8Array.wrap(resultBuffer));
         this.storage.set(pointer, value); // cache the value
 
         return !u256.eq(value, u256.Zero);
