@@ -184,7 +184,7 @@ export class BlockchainEnvironment {
         const writer = new BytesWriter(address.length);
         writer.writeString(address);
 
-        let result = validateBitcoinAddress(writer.getBuffer().buffer, address.length)
+        let result = validateBitcoinAddress(writer.getBuffer().buffer, address.length);
 
         return result === 1;
     }
@@ -272,15 +272,8 @@ export class BlockchainEnvironment {
         signature: Uint8Array,
         hash: Uint8Array,
     ): boolean {
-        const writer = new BytesWriter(ADDRESS_BYTE_LENGTH + 64 + 32);
-        writer.writeBytes(publicKey);
-        writer.writeBytes(signature);
-        writer.writeBytes(hash);
-
-        const result: Uint8Array = verifySchnorrSignature(writer.getBuffer());
-
-        const reader = new BytesReader(result);
-        return reader.readBoolean();
+        const result: u32 = verifySchnorrSignature(publicKey.buffer, signature.buffer, hash.buffer);
+        return result === 1;
     }
 
     // TODO: Change MemorySlotData type to a Uint8Array instead of a u256.
