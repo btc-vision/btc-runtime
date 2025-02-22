@@ -184,8 +184,9 @@ export class BlockchainEnvironment {
         const writer = new BytesWriter(address.length);
         writer.writeString(address);
 
-        const reader = new BytesReader(validateBitcoinAddress(writer.getBuffer()));
-        return reader.readBoolean();
+        let result = validateBitcoinAddress(writer.getBuffer().buffer, address.length)
+
+        return result === 1;
     }
 
     public encodeVirtualAddress(virtualAddress: u8[]): Address {

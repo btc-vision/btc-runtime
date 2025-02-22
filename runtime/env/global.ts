@@ -44,7 +44,7 @@ export declare function _ripemd160(data: ArrayBuffer, dataLength: u32, result: A
 
 // @ts-ignore
 @external('env', 'validateBitcoinAddress')
-export declare function validateBitcoinAddress(data: Uint8Array): Uint8Array;
+export declare function validateBitcoinAddress(address: ArrayBuffer, addressLength: u32): u32;
 
 // @ts-ignore
 @external('env', 'inputs')
