@@ -56,4 +56,4 @@ export declare function outputs(): Uint8Array;
 
 // @ts-ignore
 @external('env', 'verifySchnorrSignature')
-export declare function verifySchnorrSignature(data: Uint8Array): Uint8Array;
+export declare function verifySchnorrSignature(publicKey: ArrayBuffer, signature: ArrayBuffer, message: ArrayBuffer): u32;
