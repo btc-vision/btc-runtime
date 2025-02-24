@@ -61,11 +61,19 @@ export declare function validateBitcoinAddress(address: ArrayBuffer, addressLeng
 
 // @ts-ignore
 @external('env', 'inputs')
-export declare function inputs(): Uint8Array;
+export declare function inputs(result: ArrayBuffer): void;
+
+// @ts-ignore
+@external('env', 'inputsSize')
+export declare function getInputsSize(): u32;
 
 // @ts-ignore
 @external('env', 'outputs')
-export declare function outputs(): Uint8Array;
+export declare function outputs(result: ArrayBuffer): void;
+
+// @ts-ignore
+@external('env', 'outputsSize')
+export declare function getOutputsSize(): u32;
 
 // @ts-ignore
 @external('env', 'verifySchnorrSignature')
