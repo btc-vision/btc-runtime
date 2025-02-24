@@ -17,6 +17,7 @@ import { ADDRESS_BYTE_LENGTH, BOOLEAN_BYTE_LENGTH, U256_BYTE_LENGTH } from '../u
 import { IOP_20 } from './interfaces/IOP_20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
+import { sha256 } from '../env/global';
 
 const nonceMapPointer: u16 = Blockchain.nextPointer;
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
@@ -277,7 +278,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         writer.writeU256(value);
         writer.writeU256(nonce);
 
-        const hash = Blockchain.sha256(writer.getBuffer());
+        const hash = sha256(writer.getBuffer());
         if (!Blockchain.verifySchnorrSignature(owner, signature, hash)) {
             throw new Revert('ApproveFrom: Invalid signature');
         }

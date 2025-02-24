@@ -167,19 +167,6 @@ export class BlockchainEnvironment {
         emit(writer.getBuffer().buffer, writer.bufferLength());
     }
 
-    public sha256(data: Uint8Array): Uint8Array {
-        const resultBuffer = new ArrayBuffer(32);
-        _sha256(data.buffer, data.length, resultBuffer);
-        return Uint8Array.wrap(resultBuffer);
-    }
-
-    public ripemd160(data: Uint8Array): Uint8Array {
-        const resultBuffer = new ArrayBuffer(20);
-        _ripemd160(data.buffer, data.length, resultBuffer);
-
-        return Uint8Array.wrap(resultBuffer);
-    }
-
     public validateBitcoinAddress(address: string): bool {
         const writer = new BytesWriter(address.length);
         writer.writeString(address);
