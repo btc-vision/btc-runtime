@@ -78,3 +78,7 @@ export declare function getOutputsSize(): u32;
 // @ts-ignore
 @external('env', 'verifySchnorrSignature')
 export declare function verifySchnorrSignature(publicKey: ArrayBuffer, signature: ArrayBuffer, message: ArrayBuffer): u32;
+
+// @ts-ignore
+@external('env', 'revert')
+export declare function env_revert(data: ArrayBuffer, dataLength: u32): void;
