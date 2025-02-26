@@ -13,8 +13,6 @@ import { ADDRESS_BYTE_LENGTH } from '../utils';
 import { Block } from './classes/Block';
 import { Transaction } from './classes/Transaction';
 import {
-    _ripemd160,
-    _sha256,
     callContract,
     deployFromAddress,
     emit,
