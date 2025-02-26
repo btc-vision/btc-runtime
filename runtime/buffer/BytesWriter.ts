@@ -307,7 +307,7 @@ export class BytesWriter {
     }
 
     private resize(size: u32): void {
-        abort(
+        throw new Revert(
             `Buffer is getting resized. This is very bad for performance. Expected size: ${
                 this.buffer.byteLength + size
             } - Current size: ${this.buffer.byteLength}`,
