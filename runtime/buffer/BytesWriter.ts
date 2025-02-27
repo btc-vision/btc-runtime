@@ -105,7 +105,7 @@ export class BytesWriter {
         }
     }
 
-    public writeTuple(value: u256[]): void {
+    public writeU256Array(value: u256[]): void {
         this.allocSafe(U32_BYTE_LENGTH + value.length * U256_BYTE_LENGTH);
         this.writeU32(u32(value.length));
 

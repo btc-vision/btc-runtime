@@ -27,7 +27,7 @@ export class BytesReader {
     }
 
     public get byteLength(): i32 {
-        return this.buffer.byteLength
+        return this.buffer.byteLength;
     }
 
     public readU8(): u8 {
@@ -189,7 +189,7 @@ export class BytesReader {
         return result;
     }
 
-    public readTuple(): u256[] {
+    public readU256Array(): u256[] {
         const length = this.readU32();
         const result: u256[] = new Array<u256>(length);
 
