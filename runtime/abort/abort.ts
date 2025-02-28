@@ -1,5 +1,5 @@
 import { BytesWriter } from '../buffer/BytesWriter';
-import { env_revert } from '../env/global';
+import { env_exit } from '../env/global';
 
 export function revertOnError(message: string, fileName: string, line: u32, column: u32): void {
     const selector = 0x63739d5c; // Error(string)
@@ -10,5 +10,5 @@ export function revertOnError(message: string, fileName: string, line: u32, colu
     writer.writeStringWithLength(revertMessage);
 
     const buffer = writer.getBuffer().buffer;
-    env_revert(buffer, buffer.byteLength);
+    env_exit(1, buffer, buffer.byteLength);
 }
