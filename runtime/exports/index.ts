@@ -3,9 +3,13 @@ import { BytesWriter } from '../buffer/BytesWriter';
 import { BytesReader } from '../buffer/BytesReader';
 import { Selector } from '../math/abi';
 import { Calldata } from '../types';
+import { getCalldata } from '../env/global';
 
-export function execute(data: Uint8Array): Uint8Array {
-    const calldata: Calldata = new BytesReader(data);
+export function execute(calldataLength: u32): Uint8Array {
+    const calldataBuffer = new ArrayBuffer(calldataLength);
+    getCalldata(0, calldataLength, calldataBuffer);
+
+    const calldata: Calldata = new BytesReader(Uint8Array.wrap(calldataBuffer));
     const selector: Selector = calldata.readSelector();
     const result: BytesWriter = Blockchain.contract.execute(selector, calldata);
 
