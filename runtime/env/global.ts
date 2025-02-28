@@ -1,4 +1,8 @@
 // @ts-ignore
+@external('env', 'calldata')
+export declare function getCalldata(offset: u32, length: u32, result: ArrayBuffer): void;
+
+// @ts-ignore
 @external('env', 'load')
 export declare function loadPointer(key: ArrayBuffer, result: ArrayBuffer): void;
 
