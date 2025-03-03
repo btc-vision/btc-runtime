@@ -3,9 +3,10 @@ import { BytesWriter } from '../buffer/BytesWriter';
 import { BytesReader } from '../buffer/BytesReader';
 import { Selector } from '../math/abi';
 import { Calldata } from '../types';
+import { env_exit } from '../env/global';
 import { getCalldata } from '../env/global';
 
-export function execute(calldataLength: u32): Uint8Array {
+export function execute(calldataLength: u32): u32 {
     const calldataBuffer = new ArrayBuffer(calldataLength);
     getCalldata(0, calldataLength, calldataBuffer);
 
@@ -15,7 +16,13 @@ export function execute(calldataLength: u32): Uint8Array {
 
     Blockchain.contract.onExecutionCompleted();
 
-    return result.getBuffer();
+    const resultBuffer = result.getBuffer().buffer;
+    const resultLength = resultBuffer.byteLength;
+    if (resultLength > 0) {
+        env_exit(0, resultBuffer, resultLength);
+    }
+
+    return 0;
 }
 
 export function onDeploy(data: Uint8Array): void {

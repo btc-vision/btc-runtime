@@ -1,6 +1,6 @@
-import { env_revert } from '../env/global';
 import { DataView } from 'dataview';
 import { ArrayBuffer } from 'arraybuffer';
+import { env_exit } from '../env/global';
 
 export function revertOnError(message: string, fileName: string, line: u32, column: u32): void {
     const selector = 0x63739d5c; // Error(string)
@@ -21,5 +21,5 @@ export function revertOnError(message: string, fileName: string, line: u32, colu
         writer.setUint8(6 + i, <u8>revertMessage.charCodeAt(i));
     }
 
-    env_revert(arrayBuffer, arrayBuffer.byteLength);
+    env_exit(1, arrayBuffer, arrayBuffer.byteLength);
 }
