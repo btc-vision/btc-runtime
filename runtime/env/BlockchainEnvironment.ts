@@ -19,7 +19,7 @@ import {
     encodeAddress,
     getCallResult,
     loadPointer,
-    log,
+    log, sha256,
     storePointer,
     validateBitcoinAddress,
     verifySchnorrSignature,
@@ -251,6 +251,14 @@ export class BlockchainEnvironment {
 
         return reader.readU256();
     }*/
+
+    public sha256(buffer: Uint8Array): Uint8Array {
+        return sha256(buffer);
+    }
+
+    public hash256(buffer: Uint8Array): Uint8Array {
+        return sha256(sha256(buffer));
+    }
 
     public verifySchnorrSignature(
         publicKey: Address,
