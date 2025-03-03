@@ -154,12 +154,8 @@ export class BytesReader {
         return this.readU8() !== 0;
     }
 
-    /**
-     * By default, the writer uses `writeSelector(value, false) => little-endian`.
-     * So we read in little-endian as well.
-     */
     public readSelector(): Selector {
-        return this.readU32(false);
+        return this.readU32(true);
     }
 
     /**
