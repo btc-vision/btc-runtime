@@ -167,7 +167,7 @@ export class BytesReader {
      */
     public readAddress(): Address {
         const addr = new Address();
-        for (let i: u32 = 0; i < ADDRESS_BYTE_LENGTH; i++) {
+        for (let i: i32 = 0; i < ADDRESS_BYTE_LENGTH; i++) {
             addr[i] = this.readU8();
         }
         return addr;
