@@ -16,7 +16,6 @@ import {
     callContract,
     deployFromAddress,
     emit,
-    encodeAddress,
     getCallResult,
     loadPointer,
     log,
@@ -138,12 +137,12 @@ export class BlockchainEnvironment {
             throw this.error('Destination contract is required');
         }
 
-        let resultLengthBuffer = new ArrayBuffer(32);
+        const resultLengthBuffer = new ArrayBuffer(32);
         callContract(destinationContract.buffer, calldata.getBuffer().buffer, calldata.bufferLength(), resultLengthBuffer);
 
-        let reader = new BytesReader(Uint8Array.wrap(resultLengthBuffer));
-        let resultLength = reader.readU32(true);
-        let resultBuffer = new ArrayBuffer(resultLength);
+        const reader = new BytesReader(Uint8Array.wrap(resultLengthBuffer));
+        const resultLength = reader.readU32(true);
+        const resultBuffer = new ArrayBuffer(resultLength);
         getCallResult(0, resultLength, resultBuffer);
 
         return new BytesReader(Uint8Array.wrap(resultBuffer));
@@ -171,22 +170,9 @@ export class BlockchainEnvironment {
         const writer = new BytesWriter(address.length);
         writer.writeString(address);
 
-        let result = validateBitcoinAddress(writer.getBuffer().buffer, address.length);
+        const result = validateBitcoinAddress(writer.getBuffer().buffer, address.length);
 
         return result === 1;
-    }
-
-    public encodeVirtualAddress(virtualAddress: u8[]): Address {
-        const writer: BytesWriter = new BytesWriter(virtualAddress.length + 4);
-        writer.writeU32(virtualAddress.length);
-        writer.writeBytesU8Array(virtualAddress);
-
-        const buffer: Uint8Array = writer.getBuffer();
-        const cb: Potential<Uint8Array> = encodeAddress(buffer);
-        if (!cb) throw this.error('Failed to encode virtual address');
-
-        const reader: BytesReader = new BytesReader(cb as Uint8Array);
-        return reader.readAddress();
     }
 
     /*public deployContract(hash: u256, bytecode: Uint8Array): DeployContractResponse {
@@ -309,7 +295,7 @@ export class BlockchainEnvironment {
         }
 
         // we attempt to load the requested pointer.
-        let resultBuffer = new ArrayBuffer(32);
+        const resultBuffer = new ArrayBuffer(32);
         loadPointer(pointer.toUint8Array(true).buffer, resultBuffer);
 
         const value: u256 = u256.fromUint8ArrayBE(Uint8Array.wrap(resultBuffer));

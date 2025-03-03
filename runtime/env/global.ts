@@ -35,10 +35,6 @@ export declare function log(data: Uint8Array): void;
 export declare function emit(data: ArrayBuffer, dataLength: u32): void;
 
 // @ts-ignore
-@external('env', 'encodeAddress')
-export declare function encodeAddress(data: Uint8Array): Uint8Array;
-
-// @ts-ignore
 @external('env', 'sha256')
 export declare function _sha256(data: ArrayBuffer, dataLength: u32, result: ArrayBuffer): void;
 
