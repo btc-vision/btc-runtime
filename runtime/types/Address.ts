@@ -31,6 +31,16 @@ export class Address extends Uint8Array {
         return new Address(decodeHexArray(pubKey));
     }
 
+    public isZero(): bool {
+        for (let i = 0; i < this.length; i++) {
+            if (this[i] != 0) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public toHex(): string {
         return encodeHexFromBuffer(this.buffer);
     }
