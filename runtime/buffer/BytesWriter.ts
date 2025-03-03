@@ -1,5 +1,4 @@
 import { i128, u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { ArrayBuffer } from 'arraybuffer';
 import { AddressMap } from '../generic/AddressMap';
 import { Selector } from '../math/abi';
 import { Address } from '../types/Address';
@@ -20,7 +19,6 @@ import { BytesReader } from './BytesReader';
 export class BytesWriter {
     private currentOffset: u32 = 0;
     private buffer: DataView;
-
     private readonly typedArray: Uint8Array;
 
     constructor(length: i32) {
@@ -38,34 +36,38 @@ export class BytesWriter {
         this.currentOffset += U8_BYTE_LENGTH;
     }
 
-    public writeU16(value: u16): void {
+    /**
+     * Writes a 16-bit unsigned integer. By default big-endian (be = true).
+     * If be=false, writes little-endian.
+     */
+    public writeU16(value: u16, be: boolean = true): void {
         this.allocSafe(U16_BYTE_LENGTH);
-        this.buffer.setUint16(this.currentOffset, value, true);
+        this.buffer.setUint16(this.currentOffset, value, !be);
         this.currentOffset += U16_BYTE_LENGTH;
     }
 
-    public writeU32(value: u32, le: boolean = true): void {
+    /**
+     * Writes a 32-bit unsigned integer. By default big-endian (be = true).
+     */
+    public writeU32(value: u32, be: boolean = true): void {
         this.allocSafe(U32_BYTE_LENGTH);
-        this.buffer.setUint32(this.currentOffset, value, le);
+        this.buffer.setUint32(this.currentOffset, value, !be);
         this.currentOffset += U32_BYTE_LENGTH;
     }
 
-    public writeU64(value: u64): void {
+    /**
+     * Writes a 64-bit unsigned integer. By default big-endian (be = true).
+     */
+    public writeU64(value: u64, be: boolean = true): void {
         this.allocSafe(U64_BYTE_LENGTH);
-        this.buffer.setUint64(this.currentOffset, value || 0, true);
+        this.buffer.setUint64(this.currentOffset, value || 0, !be);
         this.currentOffset += U64_BYTE_LENGTH;
     }
 
-    public writeAddressArray(value: Address[]): void {
-        if (value.length > 65535) throw new Revert('Array size is too large');
-
-        this.writeU16(u16(value.length));
-
-        for (let i: i32 = 0; i < value.length; i++) {
-            this.writeAddress(value[i]);
-        }
-    }
-
+    /**
+     * Writes a 32-bit selector. Little-endian.
+     * @param value
+     */
     public writeSelector(value: Selector): void {
         this.writeU32(value, false);
     }
@@ -74,71 +76,104 @@ export class BytesWriter {
         this.writeU8(value ? 1 : 0);
     }
 
-    public writeU8At(value: u8, offset: u32): void {
-        this.buffer.setUint8(offset, value);
-    }
-
-    public writeU256(value: u256): void {
+    /**
+     * Writes a 256-bit unsigned integer. By default big-endian (be = true).
+     */
+    public writeU256(value: u256, be: boolean = true): void {
         this.allocSafe(U256_BYTE_LENGTH);
-
-        const bytes = value.toUint8Array(true);
+        const bytes = value.toUint8Array(be);
         for (let i: i32 = 0; i < U256_BYTE_LENGTH; i++) {
-            this.writeU8(bytes[i] || 0);
+            this.writeU8(bytes[i]);
         }
     }
 
-    public writeI128(value: i128): void {
+    /**
+     * Writes a 128-bit signed integer. By default big-endian (be = true).
+     */
+    public writeI128(value: i128, be: boolean = true): void {
         this.allocSafe(I128_BYTE_LENGTH);
-
-        const bytes = value.toUint8Array(true);
+        const bytes = value.toUint8Array(be);
         for (let i: i32 = 0; i < I128_BYTE_LENGTH; i++) {
-            this.writeU8(bytes[i] || 0);
+            this.writeU8(bytes[i]);
         }
     }
 
-    public writeU128(value: u128): void {
+    /**
+     * Writes a 128-bit unsigned integer. By default big-endian (be = true).
+     */
+    public writeU128(value: u128, be: boolean = true): void {
         this.allocSafe(U128_BYTE_LENGTH);
-
-        const bytes = value.toUint8Array(true);
+        const bytes = value.toUint8Array(be);
         for (let i: i32 = 0; i < U128_BYTE_LENGTH; i++) {
-            this.writeU8(bytes[i] || 0);
+            this.writeU8(bytes[i]);
         }
     }
 
-    public writeU256Array(value: u256[]): void {
-        this.allocSafe(U32_BYTE_LENGTH + value.length * U256_BYTE_LENGTH);
-        this.writeU32(u32(value.length));
+    // ------------------ Array Writers ------------------ //
+
+    public writeU16Array(value: u16[], be: boolean = true): void {
+        if (value.length > 65535) throw new Revert('Array size is too large');
+        this.allocSafe(U16_BYTE_LENGTH + value.length * U16_BYTE_LENGTH);
+        this.writeU16(u16(value.length), be);
 
         for (let i = 0; i < value.length; i++) {
-            this.writeU256(value[i]);
+            this.writeU16(value[i], be);
         }
     }
 
-    public writeU64Array(value: u64[]): void {
+    public writeU32Array(value: u32[], be: boolean = true): void {
         if (value.length > 65535) throw new Revert('Array size is too large');
+        this.allocSafe(U16_BYTE_LENGTH + value.length * U32_BYTE_LENGTH);
+        this.writeU16(u16(value.length), be);
 
+        for (let i = 0; i < value.length; i++) {
+            this.writeU32(value[i], be);
+        }
+    }
+
+    public writeU64Array(value: u64[], be: boolean = true): void {
+        if (value.length > 65535) throw new Revert('Array size is too large');
         this.allocSafe(U16_BYTE_LENGTH + value.length * U64_BYTE_LENGTH);
-        this.writeU16(u16(value.length));
+        this.writeU16(u16(value.length), be);
 
         for (let i = 0; i < value.length; i++) {
-            this.writeU64(value[i]);
+            this.writeU64(value[i], be);
         }
     }
 
-    public writeU128Array(value: u128[]): void {
+    public writeU128Array(value: u128[], be: boolean = true): void {
         if (value.length > 65535) throw new Revert('Array size is too large');
-
         this.allocSafe(U16_BYTE_LENGTH + value.length * U128_BYTE_LENGTH);
-        this.writeU16(u16(value.length));
+        this.writeU16(u16(value.length), be);
 
         for (let i = 0; i < value.length; i++) {
-            this.writeU128(value[i]);
+            this.writeU128(value[i], be);
         }
     }
+
+    public writeU256Array(value: u256[], be: boolean = true): void {
+        if (value.length > 65535) throw new Revert('Array size is too large');
+        this.allocSafe(U16_BYTE_LENGTH + value.length * U256_BYTE_LENGTH);
+        this.writeU16(u16(value.length), be);
+
+        for (let i = 0; i < value.length; i++) {
+            this.writeU256(value[i], be);
+        }
+    }
+
+    public writeAddressArray(value: Address[]): void {
+        if (value.length > 65535) throw new Revert('Array size is too large');
+        this.writeU16(u16(value.length));
+
+        for (let i: i32 = 0; i < value.length; i++) {
+            this.writeAddress(value[i]);
+        }
+    }
+
+    // --------------------------------------------------- //
 
     public writeBytes(value: Uint8Array): void {
         this.allocSafe(value.length);
-
         for (let i = 0; i < value.length; i++) {
             this.writeU8(value[i]);
         }
@@ -147,18 +182,19 @@ export class BytesWriter {
     @inline
     public writeBytesU8Array(value: u8[]): void {
         this.allocSafe(value.length);
-
         for (let i = 0; i < value.length; i++) {
             this.writeU8(value[i]);
         }
     }
 
+    /**
+     * Writes [u32 length][raw bytes].
+     * By default big-endian, so length is stored with `writeU32(length, true)`.
+     */
     public writeBytesWithLength(value: Uint8Array): void {
         const length: u32 = u32(value.length);
-
         this.allocSafe(length + U32_BYTE_LENGTH);
-        this.writeU32(length);
-
+        this.writeU32(length); // default be = true => big-endian
         for (let i: u32 = 0; i < length; i++) {
             this.writeU8(value[i]);
         }
@@ -177,80 +213,25 @@ export class BytesWriter {
 
     public writeStringWithLength(value: string): void {
         this.writeU16(u16(value.length));
-
         this.writeString(value);
     }
 
-    public writeAddressValueTupleMap(map: AddressMap<u256>): void {
-        if (map.size > 65535) throw new Revert('Map size is too large');
+    /**
+     * Equivalent to TS’s writeAddressValueTuple, except specialized for u256 values.
+     */
+    public writeAddressMapU256(value: AddressMap<u256>, be: boolean = true): void {
+        const keys: Address[] = value.keys();
+        if (keys.length > 65535) throw new Revert('Map size is too large');
 
-        /*const requiredSize: u32 = U16_BYTE_LENGTH + map.size * (ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH);
-
-        if (this.buffer.byteLength < requiredSize) {
-            abort(
-                `This buffer is too small. Required size: ${requiredSize} - Current size: ${this.buffer.byteLength}`,
-            );
-        }*/
-
-        this.writeU16(u16(map.size));
-
-        const keys = map.keys();
-        for (let i = 0; i < keys.length; i++) {
-            const key: Address = keys[i];
-            const value: u256 = map.get(key) || u256.Zero;
-
-            this.writeAddress(key);
-            this.writeU256(value);
-        }
-    }
-
-    public writeLimitedAddressBytesMap(map: AddressMap<Uint8Array[]>): void {
-        if (map.size > 8) throw new Revert('Too many contract called.'); // no more than 8 different contracts.
-
-        /*let requiredSize: u32 = U8_BYTE_LENGTH + (map.size * ADDRESS_BYTE_LENGTH + U8_BYTE_LENGTH);
-
-
-        for (let i = 0; i < map.size; i++) {
-            const address: Address = keys[i];
-            const calls: Uint8Array[] = map.get(address) || [];
-
-            for (let j: i32 = 0; j < calls.length; j++) {
-                requiredSize += 4 + calls[j].length;
-            }
-        }
-
-        if (this.buffer.byteLength < requiredSize) {
-            abort(
-                `This buffer is too small. Required size: ${requiredSize} - Current size: ${this.buffer.byteLength}`,
-            );
-        }*/
-
-        const keys: Address[] = map.keys();
-
-        this.writeU8(u8(map.size));
+        this.writeU16(u16(keys.length), be);
 
         for (let i: i32 = 0; i < keys.length; i++) {
-            const address: Address = keys[i];
-            const calls: Uint8Array[] = map.get(address) || [];
-
-            if (calls.length > 10) throw new Revert('Too many calls.'); // no more than 16 different calls.
-
-            this.writeAddress(address);
-            this.writeU8(u8(calls.length));
-
-            for (let j: i32 = 0; j < calls.length; j++) {
-                this.writeBytesWithLength(calls[j]);
-            }
+            this.writeAddress(keys[i]);
+            this.writeU256(value.get(keys[i]), be);
         }
     }
 
-    public writeMethodSelectorsMap(map: Selector[]): void {
-        this.writeU16(u16(map.length));
-
-        for (let i = 0; i < map.length; i++) {
-            this.writeSelector(map[i]);
-        }
-    }
+    // --------------------------------------------------- //
 
     public getBuffer(): Uint8Array {
         return this.typedArray;
@@ -268,32 +249,16 @@ export class BytesWriter {
         this.currentOffset = offset;
     }
 
+    /**
+     * Ensures we have space for `size` more bytes without going past the current buffer.
+     * If not, calls `resize()` which by default throws a Revert.
+     */
     public allocSafe(size: u32): void {
-        if (this.currentOffset + size > u32(this.buffer.byteLength)) {
-            const sizeDiff: u32 = size - (u32(this.buffer.byteLength) - this.currentOffset);
-
+        const needed = this.currentOffset + size;
+        if (needed > u32(this.buffer.byteLength)) {
+            const sizeDiff: u32 = needed - u32(this.buffer.byteLength);
             this.resize(sizeDiff);
         }
-    }
-
-    public writeABISelector(name: string, selector: Selector): void {
-        this.writeStringWithLength(name);
-        this.writeSelector(selector);
-    }
-
-    private writeMethodSelectorMap(value: Set<Selector>): void {
-        this.writeU16(u16(value.size));
-
-        const keys = value.values();
-        for (let i = 0; i < keys.length; i++) {
-            const key = keys[i];
-
-            this.writeSelector(key);
-        }
-    }
-
-    private min(value1: i32, value2: i32): i32 {
-        return value1 < value2 ? value1 : value2;
     }
 
     private fromAddress(pubKey: Address): Uint8Array {
@@ -302,27 +267,19 @@ export class BytesWriter {
                 `Address is too long ${pubKey.byteLength} > ${ADDRESS_BYTE_LENGTH} bytes`,
             );
         }
-
         return pubKey;
     }
 
+    /**
+     * This implementation always throws rather than actually resizing,
+     * which is consistent with the original approach. If you need
+     * dynamic resizing, remove the `throw` and implement accordingly.
+     */
     private resize(size: u32): void {
         throw new Revert(
-            `Buffer is getting resized. This is very bad for performance. Expected size: ${
-                this.buffer.byteLength + size
-            } - Current size: ${this.buffer.byteLength}`,
+            `Buffer is getting resized. This is bad for performance. ` +
+            `Expected size: ${this.buffer.byteLength + size} - ` +
+            `Current size: ${this.buffer.byteLength}`,
         );
-
-        /*const buf: Uint8Array = new Uint8Array(u32(this.buffer.byteLength) + size);
-
-        for (let i: i32 = 0; i < this.buffer.byteLength; i++) {
-            buf[i] = this.buffer.getUint8(i);
-        }
-
-        this.buffer = new DataView(buf.buffer);*/
-    }
-
-    private getDefaultBuffer(length: i32 = 1): DataView {
-        return new DataView(new ArrayBuffer(length));
     }
 }

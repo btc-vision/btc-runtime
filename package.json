@@ -1,12 +1,9 @@
 {
     "name": "@btc-vision/btc-runtime",
-    "version": "1.4.8",
+    "version": "1.5.0",
     "description": "Bitcoin Smart Contract Runtime",
     "main": "btc/index.ts",
-    "scripts": {
-        "build": "cross-env node scripts/asc tests/tests.ts",
-        "test": "ts-mocha tests/**/*.spec.ts"
-    },
+    "scripts": {},
     "types": "btc/index.ts",
     "keywords": [
         "bitcoin",
@@ -20,12 +17,8 @@
     "author": "BlobMaster41",
     "license": "MIT",
     "devDependencies": {
-        "@types/mocha": "^10.0.8",
-        "@types/node": "^22.7.5",
-        "assemblyscript": "^0.27.30",
-        "cross-env": "^7.0.3",
-        "fs-extra": "^11.2.0",
-        "ts-mocha": "^10.0.0"
+        "@types/node": "^22.13.8",
+        "assemblyscript": "^0.27.34"
     },
     "repository": {
         "type": "git",
@@ -42,14 +35,12 @@
         "test/*.ts"
     ],
     "dependencies": {
-        "@assemblyscript/loader": "^0.27.30",
+        "@assemblyscript/loader": "^0.27.34",
         "@btc-vision/as-bignum": "^0.0.4",
-        "@eslint/js": "^9.10.0",
+        "@eslint/js": "^9.21.0",
         "gulplog": "^2.2.0",
-        "mocha": "^10.7.3",
         "ts-node": "^10.9.2",
-        "typescript": "^5.6.2",
-        "typescript-eslint": "^8.6.0",
-        "yargs": "^17.7.2"
+        "typescript": "^5.7.3",
+        "typescript-eslint": "^8.25.0"
     }
 }

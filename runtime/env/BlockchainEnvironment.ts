@@ -20,6 +20,7 @@ import {
     getCallResult,
     loadPointer,
     log,
+    sha256,
     storePointer,
     validateBitcoinAddress,
     verifySchnorrSignature,
@@ -139,8 +140,9 @@ export class BlockchainEnvironment {
 
         let resultLengthBuffer = new ArrayBuffer(32);
         callContract(destinationContract.buffer, calldata.getBuffer().buffer, calldata.bufferLength(), resultLengthBuffer);
+
         let reader = new BytesReader(Uint8Array.wrap(resultLengthBuffer));
-        let resultLength = reader.readU32(false);
+        let resultLength = reader.readU32(true);
         let resultBuffer = new ArrayBuffer(resultLength);
         getCallResult(0, resultLength, resultBuffer);
 
@@ -251,6 +253,14 @@ export class BlockchainEnvironment {
 
         return reader.readU256();
     }*/
+
+    public sha256(buffer: Uint8Array): Uint8Array {
+        return sha256(buffer);
+    }
+
+    public hash256(buffer: Uint8Array): Uint8Array {
+        return sha256(sha256(buffer));
+    }
 
     public verifySchnorrSignature(
         publicKey: Address,

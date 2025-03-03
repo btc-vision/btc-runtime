@@ -19,7 +19,6 @@ import {
 @final
 export class BytesReader {
     private readonly buffer: DataView;
-
     private currentOffset: i32 = 0;
 
     constructor(bytes: Uint8Array) {
@@ -32,131 +31,234 @@ export class BytesReader {
 
     public readU8(): u8 {
         this.verifyEnd(this.currentOffset + U8_BYTE_LENGTH);
-
         const value = this.buffer.getUint8(this.currentOffset);
         this.currentOffset += U8_BYTE_LENGTH;
-
         return value;
     }
 
-    public readU16(): u16 {
+    /**
+     * By default, big-endian (be = true).
+     */
+    public readU16(be: boolean = true): u16 {
         this.verifyEnd(this.currentOffset + U16_BYTE_LENGTH);
-
-        const value = this.buffer.getUint16(this.currentOffset, true);
+        const value = this.buffer.getUint16(this.currentOffset, !be);
         this.currentOffset += U16_BYTE_LENGTH;
-
         return value;
     }
 
-    public readU32(le: boolean = true): u32 {
+    /**
+     * By default, big-endian (be = true).
+     */
+    public readU32(be: boolean = true): u32 {
         this.verifyEnd(this.currentOffset + U32_BYTE_LENGTH);
-
-        const value = this.buffer.getUint32(this.currentOffset, le);
+        const value = this.buffer.getUint32(this.currentOffset, !be);
         this.currentOffset += U32_BYTE_LENGTH;
         return value;
     }
 
-    public readU64(): u64 {
+    /**
+     * By default, big-endian (be = true).
+     */
+    public readU64(be: boolean = true): u64 {
         this.verifyEnd(this.currentOffset + U64_BYTE_LENGTH);
-
-        const value = this.buffer.getUint64(this.currentOffset, true);
+        const value = this.buffer.getUint64(this.currentOffset, !be);
         this.currentOffset += U64_BYTE_LENGTH;
-
         return value;
     }
 
-    public readU256(): u256 {
+    /**
+     * Reads 256 bits. The writer calls `writeU256(value, be)`.
+     * If be=true, we do big-endian; if be=false, little-endian.
+     */
+    public readU256(be: boolean = true): u256 {
         this.verifyEnd(this.currentOffset + U256_BYTE_LENGTH);
-
-        const next32Bytes: u8[] = this.readBytesBE(U256_BYTE_LENGTH);
-
-        return u256.fromBytesBE(next32Bytes);
+        const raw: u8[] = this.readBytesArray(U256_BYTE_LENGTH);
+        return be ? u256.fromBytesBE(raw) : u256.fromBytesLE(raw);
     }
 
-    @inline
-    public readBytesBE(count: i32): u8[] {
-        const next32Bytes: u8[] = [];
-        for (let i = 0; i < count; i++) {
-            next32Bytes[i] = this.readU8();
-        }
-
-        return next32Bytes;
-    }
-
-    public readI64(): i64 {
+    public readI64(be: boolean = true): i64 {
         this.verifyEnd(this.currentOffset + I64_BYTE_LENGTH);
-
-        const value = this.buffer.getInt64(this.currentOffset, true);
+        const value = this.buffer.getInt64(this.currentOffset, !be);
         this.currentOffset += I64_BYTE_LENGTH;
-
         return value;
     }
 
-    public readU128(): u128 {
+    public readU128(be: boolean = true): u128 {
         this.verifyEnd(this.currentOffset + U128_BYTE_LENGTH);
-
-        const next16Bytes: u8[] = this.readBytesBE(U128_BYTE_LENGTH);
-
-        return u128.fromBytesBE(next16Bytes);
+        const raw: u8[] = this.readBytesArray(U128_BYTE_LENGTH);
+        return be ? u128.fromBytesBE(raw) : u128.fromBytesLE(raw);
     }
 
-    public readI128(): i128 {
+    public readI128(be: boolean = true): i128 {
         this.verifyEnd(this.currentOffset + I128_BYTE_LENGTH);
-
-        const next16Bytes: u8[] = this.readBytesBE(I128_BYTE_LENGTH);
-
-        return i128.fromBytesBE(next16Bytes);
+        const raw: u8[] = this.readBytesArray(I128_BYTE_LENGTH);
+        return be ? i128.fromBytesBE(raw) : i128.fromBytesLE(raw);
     }
 
+    /**
+     * Reads `length` bytes, optionally stopping early if a 0x00 is seen.
+     */
     public readBytes(length: u32, zeroStop: boolean = false): Uint8Array {
-        let bytes: Uint8Array = new Uint8Array(length);
+        let bytes = new Uint8Array(length);
         for (let i: u32 = 0; i < length; i++) {
-            const byte: u8 = this.readU8();
-            if (zeroStop && byte === 0) {
-                bytes = bytes.slice(0, i);
+            const b: u8 = this.readU8();
+            if (zeroStop && b === 0) {
+                bytes = bytes.subarray(0, i);
                 break;
             }
-
-            bytes[i] = byte;
+            bytes[i] = b;
         }
-
         return bytes;
     }
 
-    public readMultiBytesAddressMap(): AddressMap<Uint8Array[]> {
-        const map: AddressMap<Uint8Array[]> = new AddressMap<Uint8Array[]>();
-        const size: u8 = this.readU8();
-
-        if (size > 8) throw new Revert('Too many contract called.');
-
-        for (let i: u8 = 0; i < size; i++) {
-            const address: Address = this.readAddress();
-            const responseSize: u8 = this.readU8();
-
-            if (responseSize > 10) throw new Revert('Too many calls.');
-
-            const calls: Uint8Array[] = [];
-            for (let j: u8 = 0; j < responseSize; j++) {
-                const response: Uint8Array = this.readBytesWithLength();
-                calls.push(response);
-            }
-
-            map.set(address, calls);
+    /**
+     * Convenience for reading a fixed number of bytes into a plain u8[] array.
+     */
+    @inline
+    public readBytesArray(count: i32): u8[] {
+        const arr = new Array<u8>(count);
+        for (let i = 0; i < count; i++) {
+            arr[i] = this.readU8();
         }
-
-        return map;
+        return arr;
     }
 
-    public readBytesWithLength(): Uint8Array {
-        const length = this.readU32();
-
+    /**
+     * [u32 length][raw bytes]. By default big-endian for the length,
+     * to match AS BytesWriter's `writeBytesWithLength`.
+     */
+    public readBytesWithLength(be: boolean = true): Uint8Array {
+        const length = this.readU32(be);
         return this.readBytes(length);
     }
 
+    /**
+     * Reads a string of `length` raw bytes, zeroStop = true for convenience.
+     * (Or the writer may not have used zeroStop.)
+     */
     public readString(length: u16): string {
         const bytes = this.readBytes(length, true);
-
         return String.UTF8.decode(bytes.buffer);
+    }
+
+    /**
+     * [u16 length][raw bytes].
+     * The AS writer calls `writeStringWithLength(value: string)` => writes length big-endian by default.
+     */
+    public readStringWithLength(be: boolean = true): string {
+        const length = this.readU16(be);
+        return this.readString(length);
+    }
+
+    public readBoolean(): boolean {
+        return this.readU8() !== 0;
+    }
+
+    /**
+     * By default, the writer uses `writeSelector(value, false) => little-endian`.
+     * So we read in little-endian as well.
+     */
+    public readSelector(): Selector {
+        return this.readU32(false);
+    }
+
+    /**
+     * Reads an Address (32 bytes).
+     */
+    public readAddress(): Address {
+        const addr = new Address();
+        for (let i: i32 = 0; i < ADDRESS_BYTE_LENGTH; i++) {
+            addr[i] = this.readU8();
+        }
+        return addr;
+    }
+
+    // ------------------- Arrays ------------------- //
+
+    /**
+     * The AS writer does `writeU32(length)` for U256 arrays, so we read a u32.
+     * If you changed it to a `u16`, then do readU16() here.
+     */
+    public readU256Array(be: boolean = true): u256[] {
+        // The AS writer currently writes a u32 length for U256 arrays
+        const length = this.readU32();
+        const result = new Array<u256>(length);
+        for (let i: u32 = 0; i < length; i++) {
+            result[i] = this.readU256(be);
+        }
+        return result;
+    }
+
+    /**
+     * The AS writer uses a [u16 length] for U64 arrays.
+     */
+    public readU64Array(be: boolean = true): u64[] {
+        const length = this.readU16(be);
+        const result = new Array<u64>(length);
+        for (let i: u32 = 0; i < length; i++) {
+            result[i] = this.readU64(be);
+        }
+        return result;
+    }
+
+    public readU32Array(be: boolean = true): u32[] {
+        const length = this.readU16(be);
+        const result = new Array<u32>(length);
+        for (let i: u16 = 0; i < length; i++) {
+            result[i] = this.readU32(be);
+        }
+        return result;
+    }
+
+    public readU16Array(be: boolean = true): u16[] {
+        const length = this.readU16(be);
+        const result = new Array<u16>(length);
+        for (let i: u16 = 0; i < length; i++) {
+            result[i] = this.readU16(be);
+        }
+        return result;
+    }
+
+    public readU128Array(be: boolean = true): u128[] {
+        const length = this.readU16(be);
+        const result = new Array<u128>(length);
+        for (let i: u16 = 0; i < length; i++) {
+            result[i] = this.readU128(be);
+        }
+        return result;
+    }
+
+    /**
+     * The AS writer uses a [u8 length] for transaction inputs/outputs in the example,
+     * but for an "AddressArray" we use [u16 length].
+     */
+    public readAddressArray(be: boolean = true): Address[] {
+        const length = this.readU16(be);
+        const result = new Array<Address>(length);
+        for (let i: u16 = 0; i < length; i++) {
+            result[i] = this.readAddress();
+        }
+        return result;
+    }
+
+    /**
+     * Map of [u16 length] entries, each entry = [Address, U256], consistent with the writer’s `writeAddressMapU256`.
+     */
+    public readAddressMapU256(be: boolean = true): AddressMap<u256> {
+        const length = this.readU16(be);
+        const result = new AddressMap<u256>();
+
+        for (let i: u16 = 0; i < length; i++) {
+            const address = this.readAddress();
+            const value = this.readU256(be);
+
+            if (result.has(address)) {
+                throw new Revert('Duplicate address found in map');
+            }
+            result.set(address, value);
+        }
+
+        return result;
     }
 
     public readTransactionInputs(): TransactionInput[] {
@@ -167,7 +269,6 @@ export class BytesReader {
             const txId = this.readBytes(32);
             const outputIndex = this.readU8();
             const scriptSig = this.readBytesWithLength();
-
             result[i] = new TransactionInput(txId, outputIndex, scriptSig);
         }
 
@@ -182,79 +283,10 @@ export class BytesReader {
             const index = this.readU8();
             const scriptPubKey = this.readStringWithLength();
             const value = this.readU64();
-
             result[i] = new TransactionOutput(index, scriptPubKey, value);
         }
 
         return result;
-    }
-
-    public readU256Array(): u256[] {
-        const length = this.readU32();
-        const result: u256[] = new Array<u256>(length);
-
-        for (let i: u32 = 0; i < length; i++) {
-            result[i] = this.readU256();
-        }
-
-        return result;
-    }
-
-    public readU128Array(): u128[] {
-        const length = this.readU16();
-        const result: u128[] = new Array<u128>(length);
-
-        for (let i: u16 = 0; i < length; i++) {
-            result[i] = this.readU128();
-        }
-
-        return result;
-    }
-
-    public readAddressValueTuple(): AddressMap<u256> {
-        const length: u16 = this.readU16();
-        const result = new AddressMap<u256>();
-
-        for (let i: u16 = 0; i < length; i++) {
-            const address = this.readAddress();
-            const value = this.readU256();
-
-            if (result.has(address)) throw new Revert('Duplicate address found in map');
-
-            result.set(address, value);
-        }
-
-        return result;
-    }
-
-    public readSelector(): Selector {
-        return this.readU32(false);
-    }
-
-    public readStringWithLength(): string {
-        const length = this.readU16();
-
-        return this.readString(length);
-    }
-
-    public readBoolean(): boolean {
-        return this.readU8() !== 0;
-    }
-
-    public readFloat(): f32 {
-        const value = this.buffer.getFloat32(this.currentOffset, true);
-        this.currentOffset += 4;
-
-        return value;
-    }
-
-    public readAddress(): Address {
-        const bytes: Address = new Address();
-        for (let i: u32 = 0; i < u32(ADDRESS_BYTE_LENGTH); i++) {
-            bytes[i] = this.readU8();
-        }
-
-        return bytes;
     }
 
     public getOffset(): i32 {
@@ -265,20 +297,15 @@ export class BytesReader {
         this.currentOffset = offset;
     }
 
+    /**
+     * Checks if we have enough bytes left in the buffer.
+     */
     public verifyEnd(size: i32): void {
         if (size > this.buffer.byteLength) {
-            throw new Error(`Expected to read ${size} bytes but read ${this.currentOffset} bytes`);
+            throw new Error(
+                `Attempt to read beyond buffer length. Requested up to offset ${size}, ` +
+                `but buffer is only ${this.buffer.byteLength} bytes.`,
+            );
         }
-    }
-
-    public readAddressArray(): Address[] {
-        const length = this.readU16();
-        const result = new Array<Address>(length);
-
-        for (let i: u16 = 0; i < length; i++) {
-            result[i] = this.readAddress();
-        }
-
-        return result;
     }
 }
