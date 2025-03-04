@@ -25,11 +25,16 @@ export function execute(calldataLength: u32): u32 {
     return 0;
 }
 
-export function onDeploy(data: Uint8Array): void {
-    const calldata: Calldata = new BytesReader(data);
+export function onDeploy(calldataLength: u32): u32 {
+    const calldataBuffer = new ArrayBuffer(calldataLength);
+    getCalldata(0, calldataLength, calldataBuffer);
+
+    const calldata: Calldata = new BytesReader(Uint8Array.wrap(calldataBuffer));
 
     Blockchain.contract.onDeployment(calldata);
     Blockchain.contract.onExecutionCompleted();
+
+    return 0;
 }
 
 export function setEnvironment(data: Uint8Array): void {
