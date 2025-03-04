@@ -121,9 +121,7 @@ export class BlockchainEnvironment {
         this._contractAddress = reader.readAddress();
 
         const medianTimestamp = reader.readU64();
-        const safeRnd64 = reader.readU64();
-
-        this._block = new Block(currentBlock, medianTimestamp, safeRnd64);
+        this._block = new Block(currentBlock, medianTimestamp);
 
         this.createContractIfNotExists();
     }

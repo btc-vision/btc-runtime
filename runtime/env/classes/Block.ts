@@ -7,7 +7,6 @@ export class Block {
     public constructor(
         public readonly number: u256,
         public readonly medianTimestamp: u64,
-        public readonly safeRnd64: u64,
     ) {
         this.u64BlockNumber = number.toU64();
     }
