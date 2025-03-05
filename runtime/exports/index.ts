@@ -3,10 +3,16 @@ import { BytesWriter } from '../buffer/BytesWriter';
 import { BytesReader } from '../buffer/BytesReader';
 import { Selector } from '../math/abi';
 import { Calldata } from '../types';
-import { env_exit } from '../env/global';
+import { env_exit, getEnvironmentVariables } from '../env/global';
 import { getCalldata } from '../env/global';
 
+const ENVIRONMENT_VARIABLES_BYTE_LENGTH: u32 = 208;
+
 export function execute(calldataLength: u32): u32 {
+    const environmentVariablesBuffer = new ArrayBuffer(ENVIRONMENT_VARIABLES_BYTE_LENGTH);
+    getEnvironmentVariables(0, ENVIRONMENT_VARIABLES_BYTE_LENGTH, environmentVariablesBuffer);
+    Blockchain.setEnvironmentVariables(Uint8Array.wrap(environmentVariablesBuffer));
+
     const calldataBuffer = new ArrayBuffer(calldataLength);
     getCalldata(0, calldataLength, calldataBuffer);
 
@@ -26,6 +32,10 @@ export function execute(calldataLength: u32): u32 {
 }
 
 export function onDeploy(calldataLength: u32): u32 {
+    const environmentVariablesBuffer = new ArrayBuffer(ENVIRONMENT_VARIABLES_BYTE_LENGTH);
+    getEnvironmentVariables(0, ENVIRONMENT_VARIABLES_BYTE_LENGTH, environmentVariablesBuffer);
+    Blockchain.setEnvironmentVariables(Uint8Array.wrap(environmentVariablesBuffer));
+
     const calldataBuffer = new ArrayBuffer(calldataLength);
     getCalldata(0, calldataLength, calldataBuffer);
 
@@ -35,8 +45,4 @@ export function onDeploy(calldataLength: u32): u32 {
     Blockchain.contract.onExecutionCompleted();
 
     return 0;
-}
-
-export function setEnvironment(data: Uint8Array): void {
-    Blockchain.setEnvironment(data);
 }

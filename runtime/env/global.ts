@@ -1,4 +1,8 @@
 // @ts-ignore
+@external('env', 'environment')
+export declare function getEnvironmentVariables(offset: u32, length: u32, result: ArrayBuffer): void;
+
+// @ts-ignore
 @external('env', 'calldata')
 export declare function getCalldata(offset: u32, length: u32, result: ArrayBuffer): void;
 
