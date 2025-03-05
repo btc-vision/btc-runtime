@@ -154,10 +154,10 @@ export class BlockchainEnvironment {
 
     public log(data: string): void {
         const writer = new BytesWriter(data.length + 2);
-        writer.writeStringWithLength(data);
+        writer.writeString(data);
 
         const buffer = writer.getBuffer();
-        log(buffer);
+        log(buffer.buffer, buffer.length);
     }
 
     public emit(event: NetEvent): void {

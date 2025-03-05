@@ -32,7 +32,7 @@ export declare function getCallResult(offset: u32, length: u32, result: ArrayBuf
 
 // @ts-ignore
 @external('debug', 'log')
-export declare function log(data: Uint8Array): void;
+export declare function log(data: ArrayBuffer, dataLength: u32): void;
 
 // @ts-ignore
 @external('env', 'emit')
