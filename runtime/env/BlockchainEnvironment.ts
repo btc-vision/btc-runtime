@@ -106,22 +106,28 @@ export class BlockchainEnvironment {
         return this._contractAddress as Address;
     }
 
-    public setEnvironment(data: Uint8Array): void {
+    public setEnvironmentVariables(data: Uint8Array): void {
         const reader: BytesReader = new BytesReader(data);
 
+        const blockHash = reader.readBytes(32);
+        const blockNumber = reader.readU64();
+        const blockMedianTime = reader.readU64();
+        const txHash = reader.readBytes(32);
+        const contractAddress = reader.readAddress();
+        const contractDeployer = reader.readAddress();
+        const caller = reader.readAddress();
+        const origin = reader.readAddress();
+
         this._tx = new Transaction(
-            reader.readAddress(),
-            reader.readAddress(),
-            reader.readBytes(32),
+            caller,
+            origin,
+            txHash,
         );
 
-        const currentBlock = reader.readU256();
+        this._contractDeployer = contractDeployer;
+        this._contractAddress = contractAddress;
 
-        this._contractDeployer = reader.readAddress();
-        this._contractAddress = reader.readAddress();
-
-        const medianTimestamp = reader.readU64();
-        this._block = new Block(currentBlock, medianTimestamp);
+        this._block = new Block(blockHash, blockNumber, blockMedianTime);
 
         this.createContractIfNotExists();
     }

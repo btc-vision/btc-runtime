@@ -9,7 +9,7 @@ export class Transaction {
     public constructor(
         public readonly sender: Address, // "immediate caller"
         public readonly origin: Address, // "leftmost thing in the call chain"
-        public readonly id: Uint8Array,
+        public readonly hash: Uint8Array,
     ) {}
 
     private _inputs: Potential<TransactionInput[]> = null;
