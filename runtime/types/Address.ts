@@ -4,7 +4,7 @@ import { bech32m as _bech32m, toWords } from '../utils/b32';
 
 @final
 export class Address extends Uint8Array {
-    public constructor(bytes: u8[] = []) {
+    public constructor(bytes: Array<u8> = []) {
         super(ADDRESS_BYTE_LENGTH);
 
         if (!(!bytes || bytes.length === 0)) {
@@ -60,7 +60,7 @@ export class Address extends Uint8Array {
      * @param {ArrayLike} publicKey The public key
      * @returns {void}
      */
-    public newSet(publicKey: u8[]): void {
+    public newSet(publicKey: Array<u8>): void {
         if (publicKey.length !== 32) {
             throw new Error('Invalid public key length');
         }

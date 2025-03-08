@@ -1,5 +1,4 @@
 import { u256 } from '@btc-vision/as-bignum/assembly';
-import { MemorySlotPointer } from '../memory/MemorySlotPointer';
 
 import { b32decode as _b32decode, bech32m as _bech32m, fromWords, toWords } from './b32';
 
@@ -7,8 +6,8 @@ export function bech32m(v: u256): string {
     return String.UTF8.decode(_bech32m(String.UTF8.encode('bc'), toWords(toArrayBuffer(v))));
 }
 
-export function b32decode(v: string): u256 {
-    return fromArrayBuffer(fromWords(_b32decode(v).words)) as u256;
+export function b32decode(v: string): Uint8Array {
+    return fromArrayBuffer(fromWords(_b32decode(v).words));
 }
 
 export function arrayBufferToArray(data: ArrayBuffer): Array<u8> {
@@ -29,9 +28,9 @@ export function primitiveToBuffer<T>(value: T): ArrayBuffer {
     return buffer;
 }
 
-export function fromArrayBuffer(data: ArrayBuffer): MemorySlotPointer {
-    if (data.byteLength === 0) return u256.Zero;
-    return u256.fromBytes(changetype<u8[]>(Uint8Array.wrap(data)));
+export function fromArrayBuffer(data: ArrayBuffer): Uint8Array {
+    if (data.byteLength === 0) return new Uint8Array(0);
+    return Uint8Array.wrap(data);
 }
 
 export function concat(a: ArrayBuffer, b: ArrayBuffer): ArrayBuffer {

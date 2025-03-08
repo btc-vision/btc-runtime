@@ -1,12 +1,9 @@
-import { MemorySlotPointer } from './MemorySlotPointer';
 import { Blockchain } from '../env';
-import { encodePointer } from '../math/abi';
-import { MemorySlotData } from './MemorySlot';
-import { u256 } from '@btc-vision/as-bignum/assembly';
+import { encodePointerUnknownLength } from '../math/abi';
 import { BytesWriter } from '../buffer/BytesWriter';
 
 @final
-export class StringMemoryMap<K extends string, V extends MemorySlotData<u256>> {
+export class StringMemoryMap<K extends string, V extends Uint8Array> {
     public pointer: u16;
 
     constructor(
@@ -16,21 +13,24 @@ export class StringMemoryMap<K extends string, V extends MemorySlotData<u256>> {
         this.pointer = pointer;
     }
 
+    @inline
     public set(key: K, value: V): this {
-        const keyHash: MemorySlotPointer = this.encodePointer(key);
+        const keyHash: Uint8Array = this.encodePointer(key);
         Blockchain.setStorageAt(keyHash, value);
 
         return this;
     }
 
-    public get(key: K): MemorySlotData<u256> {
-        const keyHash: MemorySlotPointer = this.encodePointer(key);
+    @inline
+    public get(key: K): Uint8Array {
+        const keyHash: Uint8Array = this.encodePointer(key);
 
         return Blockchain.getStorageAt(keyHash, this.defaultValue);
     }
 
+    @inline
     public has(key: K): bool {
-        const keyHash: MemorySlotPointer = this.encodePointer(key);
+        const keyHash: Uint8Array = this.encodePointer(key);
 
         return Blockchain.hasStorageAt(keyHash);
     }
@@ -47,10 +47,10 @@ export class StringMemoryMap<K extends string, V extends MemorySlotData<u256>> {
         throw new Error('Method not implemented.');
     }
 
-    private encodePointer(key: K): MemorySlotPointer {
+    private encodePointer(key: K): Uint8Array {
         const writer = new BytesWriter(key.length);
         writer.writeString(key);
 
-        return encodePointer(this.pointer, writer.getBuffer());
+        return encodePointerUnknownLength(this.pointer, writer.getBuffer());
     }
 }

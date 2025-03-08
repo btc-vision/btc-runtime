@@ -2,8 +2,8 @@ import { u256 } from '@btc-vision/as-bignum/assembly';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
 import { encodePointer } from '../math/abi';
-import { MemorySlotPointer } from '../memory/MemorySlotPointer';
-import { U256_BYTE_LENGTH } from '../utils/lengths';
+import { GET_EMPTY_BUFFER } from '../math/bytes';
+import { BytesReader } from '../buffer/BytesReader';
 
 /**
  * @class StoredU64
@@ -11,7 +11,7 @@ import { U256_BYTE_LENGTH } from '../utils/lengths';
  */
 @final
 export class StoredU64 {
-    private readonly u256Pointer: u256;
+    private readonly bufferPointer: Uint8Array;
 
     // Internal cache for four u64 values: [lo1, lo2, hi1, hi2]
     private _values: u64[] = [0, 0, 0, 0];
@@ -25,18 +25,15 @@ export class StoredU64 {
     /**
      * @constructor
      * @param {u16} pointer - The primary pointer identifier.
-     * @param {MemorySlotPointer} subPointer - The sub-pointer for memory slot addressing.
-     * @param {u256} defaultValue - The default u256 value if storage is uninitialized.
+     * @param {Uint8Array} subPointer - The sub-pointer for memory slot addressing.
      */
     constructor(
         public pointer: u16,
-        public subPointer: MemorySlotPointer,
-        private defaultValue: u256,
+        public subPointer: Uint8Array,
     ) {
-        const writer = new BytesWriter(U256_BYTE_LENGTH);
-        writer.writeU256(subPointer);
+        assert(subPointer.length === 30, `You must pass a 30 bytes sub-pointer.`);
 
-        this.u256Pointer = encodePointer(pointer, writer.getBuffer());
+        this.bufferPointer = encodePointer(pointer, subPointer);
     }
 
     /**
@@ -75,7 +72,7 @@ export class StoredU64 {
     public save(): void {
         if (this.isChanged) {
             const packed = this.packValues();
-            Blockchain.setStorageAt(this.u256Pointer, packed);
+            Blockchain.setStorageAt(this.bufferPointer, packed);
             this.isChanged = false;
         }
     }
@@ -122,17 +119,6 @@ export class StoredU64 {
         return `[${this._values[0].toString()}, ${this._values[1].toString()}, ${this._values[2].toString()}, ${this._values[3].toString()}]`;
     }
 
-    /**
-     * @method toBytes
-     * @description Returns the packed u256 value as a byte array.
-     * @returns {Uint8Array} - The packed u256 value in byte form.
-     */
-    @inline
-    public toBytes(): u8[] {
-        this.ensureValues();
-        const packed = this.packValues();
-        return packed.toBytes();
-    }
 
     /**
      * @method reset
@@ -151,13 +137,14 @@ export class StoredU64 {
      */
     private ensureValues(): void {
         if (!this.isLoaded) {
-            const storedU256: u256 = Blockchain.getStorageAt(this.u256Pointer, this.defaultValue);
+            const storedU256: Uint8Array = Blockchain.getStorageAt(this.bufferPointer, GET_EMPTY_BUFFER());
 
-            // Unpack the stored u256 into four u64s
-            this._values[0] = storedU256.lo1;
-            this._values[1] = storedU256.lo2;
-            this._values[2] = storedU256.hi1;
-            this._values[3] = storedU256.hi2;
+            const reader = new BytesReader(storedU256);
+
+            this._values[0] = reader.readU64();
+            this._values[1] = reader.readU64();
+            this._values[2] = reader.readU64();
+            this._values[3] = reader.readU64();
 
             this.isLoaded = true;
         }
@@ -169,12 +156,14 @@ export class StoredU64 {
      * @description Packs the four cached u64 values into a single u256 for storage.
      * @returns {u256} - The packed u256 value.
      */
-    private packValues(): u256 {
-        return new u256(
-            this._values[0], // lo1
-            this._values[1], // lo2
-            this._values[2], // hi1
-            this._values[3], // hi2
-        );
+    private packValues(): Uint8Array {
+        const writer = new BytesWriter(32);
+
+        writer.writeU64(this._values[0]);
+        writer.writeU64(this._values[1]);
+        writer.writeU64(this._values[2]);
+        writer.writeU64(this._values[3]);
+
+        return writer.getBuffer();
     }
 }
