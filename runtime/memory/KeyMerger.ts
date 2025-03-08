@@ -1,32 +1,30 @@
-import { u256 } from '@btc-vision/as-bignum/assembly';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
-import { encodePointer } from '../math/abi';
-import { MemorySlotData } from './MemorySlot';
-import { MemorySlotPointer } from './MemorySlotPointer';
+import { encodePointerUnknownLength } from '../math/abi';
+
 
 @final
-export class KeyMerger<K extends string, K2 extends string, V extends MemorySlotData<u256>> {
+export class KeyMerger<K extends string, K2 extends string, V extends Uint8Array> {
     public parentKey: K;
     public pointer: u16;
 
-    constructor(parent: K, pointer: u16, private readonly defaultValue: V) {
+    constructor(parent: K, pointer: u16) {
         this.pointer = pointer;
         this.parentKey = parent;
     }
 
     public set(key2: K2, value: V): this {
         const mergedKey: string = this.mergeKey(key2);
-        const keyHash: MemorySlotPointer = this.encodePointer(mergedKey);
+        const keyHash: Uint8Array = this.encodePointer(mergedKey);
 
         Blockchain.setStorageAt(keyHash, value);
 
         return this;
     }
 
-    public get(key: K): MemorySlotData<u256> {
+    public get(key: K): Uint8Array {
         const mergedKey: string = this.mergeKey(key);
-        return Blockchain.getStorageAt(this.encodePointer(mergedKey), this.defaultValue);
+        return Blockchain.getStorageAt(this.encodePointer(mergedKey));
     }
 
     public has(key: K): bool {
@@ -50,14 +48,16 @@ export class KeyMerger<K extends string, K2 extends string, V extends MemorySlot
      *   parentKey = "abc", key = "def"  => "3:abc3:def"
      *   parentKey = "ab",  key = "cdef" => "2:ab4:cdef"
      */
+    @inline
     private mergeKey(key: string): string {
         return `${this.parentKey.length}:${this.parentKey}${key.length}:${key}`;
     }
 
-    private encodePointer(key: string): MemorySlotPointer {
+    @inline
+    private encodePointer(key: string): Uint8Array {
         const writer = new BytesWriter(key.length);
         writer.writeString(key);
 
-        return encodePointer(this.pointer, writer.getBuffer());
+        return encodePointerUnknownLength(this.pointer, writer.getBuffer());
     }
 }

@@ -1,31 +1,28 @@
-import { u256 } from '@btc-vision/as-bignum/assembly';
-import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
 import { encodePointer } from '../math/abi';
 import { Address } from '../types/Address';
+import { EMPTY_BUFFER } from '../math/bytes';
+import { eqUint } from '../generic/MapUint8Array';
 
+/**
+ * Default is Address.dead();
+ */
 @final
 export class StoredAddress {
-    private readonly addressPointer: u256;
-    private readonly defaultValue: u256;
+    private readonly addressPointer: Uint8Array;
 
-    constructor(public pointer: u16, defaultValue: Address) {
-        const writer = new BytesWriter(32);
-
-        this.defaultValue = u256.fromBytes(defaultValue);
-        this.addressPointer = encodePointer(pointer, writer.getBuffer());
+    constructor(public pointer: u16) {
+        this.addressPointer = encodePointer(pointer, EMPTY_BUFFER);
     }
 
-    private _value: Address = new Address();
+    private _value: Address = Address.dead();
 
-    @inline
     public get value(): Address {
         this.ensureValue();
 
         return this._value;
     }
 
-    @inline
     public set value(value: Address) {
         if (value === this.value) {
             return;
@@ -33,11 +30,15 @@ export class StoredAddress {
 
         this._value = value;
 
-        Blockchain.setStorageAt(this.addressPointer, u256.fromBytes(this._value));
+        Blockchain.setStorageAt(this.addressPointer, this._value);
+    }
+
+    public isDead(): bool {
+        return eqUint(Address.dead(), this.value);
     }
 
     private ensureValue(): void {
-        const value = Blockchain.getStorageAt(this.addressPointer, this.defaultValue);
-        this._value.set(value.toBytes());
+        const value = Blockchain.getStorageAt(this.addressPointer);
+        this._value.set(value);
     }
 }

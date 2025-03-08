@@ -3,10 +3,7 @@ import { BytesReader } from '../buffer/BytesReader';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { OP_NET } from '../contracts/OP_NET';
 import { NetEvent } from '../events/NetEvent';
-import { MapU256 } from '../generic/MapU256';
 import { Potential } from '../lang/Definitions';
-import { MemorySlotData } from '../memory/MemorySlot';
-import { MemorySlotPointer } from '../memory/MemorySlotPointer';
 import { PointerStorage } from '../types';
 import { Address } from '../types/Address';
 import { ADDRESS_BYTE_LENGTH } from '../utils';
@@ -24,6 +21,8 @@ import {
     validateBitcoinAddress,
     verifySchnorrSignature,
 } from './global';
+import { eqUint, MapUint8Array } from '../generic/MapUint8Array';
+import { EMPTY_BUFFER } from '../math/bytes';
 
 export * from '../env/global';
 
@@ -37,7 +36,7 @@ export class BlockchainEnvironment {
 
     public readonly DEAD_ADDRESS: Address = Address.dead();
 
-    private storage: PointerStorage = new MapU256();
+    private storage: PointerStorage = new MapUint8Array();
     private _selfContract: Potential<OP_NET> = null;
 
     private _block: Potential<Block> = null;
@@ -65,13 +64,13 @@ export class BlockchainEnvironment {
     private _contract: Potential<() => OP_NET> = null;
 
     public get contract(): OP_NET {
-        this.createContractIfNotExists();
-
         return this._selfContract as OP_NET;
     }
 
     public set contract(contract: () => OP_NET) {
         this._contract = contract;
+
+        this.createContractIfNotExists();
     }
 
     private _nextPointer: u16 = 0;
@@ -179,21 +178,6 @@ export class BlockchainEnvironment {
         return result === 1;
     }
 
-    /*public deployContract(hash: u256, bytecode: Uint8Array): DeployContractResponse {
-        const writer = new BytesWriter(U256_BYTE_LENGTH + bytecode.length);
-        writer.writeU256(hash);
-        writer.writeBytes(bytecode);
-
-        const cb: Potential<Uint8Array> = deploy(writer.getBuffer());
-        if (!cb) throw this.error('Failed to deploy contract');
-
-        const reader: BytesReader = new BytesReader(cb as Uint8Array);
-        const virtualAddress: u256 = reader.readU256();
-        const contractAddress: Address = reader.readAddress();
-
-        return new DeployContractResponse(virtualAddress, contractAddress);
-    }*/
-
     public deployContractFromExisting(
         existingAddress: Address,
         salt: u256,
@@ -214,35 +198,17 @@ export class BlockchainEnvironment {
         return contractAddressReader.readAddress();
     }
 
-    // TODO: Change MemorySlotData type to a Uint8Array instead of a u256.
     public getStorageAt(
-        pointerHash: MemorySlotPointer,
-        defaultValue: MemorySlotData<u256>,
-    ): MemorySlotData<u256> {
-        this.ensureStorageAtPointer(pointerHash, defaultValue);
+        pointerHash: Uint8Array,
+    ): Uint8Array {
+        this.ensureStorageAtPointer(pointerHash);
 
         if (this.storage.has(pointerHash)) {
             return this.storage.get(pointerHash);
         }
 
-        return defaultValue;
+        return new Uint8Array(32);
     }
-
-    /*public getNextPointerGreaterThan(
-        targetPointer: MemorySlotPointer,
-        valueAtLeast: u256,
-        lte: boolean = true,
-    ): MemorySlotData<u256> {
-        const writer = new BytesWriter(U256_BYTE_LENGTH * 2 + BOOLEAN_BYTE_LENGTH);
-        writer.writeU256(targetPointer);
-        writer.writeU256(valueAtLeast);
-        writer.writeBoolean(lte);
-
-        const result: Uint8Array = nextPointerGreaterThan(writer.getBuffer());
-        const reader: BytesReader = new BytesReader(result);
-
-        return reader.readU256();
-    }*/
 
     public sha256(buffer: Uint8Array): Uint8Array {
         return sha256(buffer);
@@ -258,18 +224,18 @@ export class BlockchainEnvironment {
         hash: Uint8Array,
     ): boolean {
         const result: u32 = verifySchnorrSignature(publicKey.buffer, signature.buffer, hash.buffer);
+
         return result === 1;
     }
 
-    // TODO: Change MemorySlotData type to a Uint8Array instead of a u256.
-    public hasStorageAt(pointerHash: MemorySlotPointer): bool {
+    public hasStorageAt(pointerHash: Uint8Array): bool {
         // We mark zero as the default value for the storage, if something is 0, the storage slot get deleted or is non-existent
-        const val: u256 = this.getStorageAt(pointerHash, u256.Zero);
+        const val: Uint8Array = this.getStorageAt(pointerHash);
 
-        return u256.ne(val, u256.Zero);
+        return !eqUint(val, EMPTY_BUFFER);
     }
 
-    public setStorageAt(pointerHash: MemorySlotPointer, value: MemorySlotData<u256>): void {
+    public setStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {
         this._internalSetStorageAt(pointerHash, value);
     }
 
@@ -287,39 +253,34 @@ export class BlockchainEnvironment {
         return runtimeError(msg);
     }
 
-    private _internalSetStorageAt(pointerHash: u256, value: MemorySlotData<u256>): void {
+    private _internalSetStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {
         this.storage.set(pointerHash, value);
 
-        storePointer(pointerHash.toUint8Array(true).buffer, value.toUint8Array(true).buffer);
+        storePointer(pointerHash.buffer, value.buffer);
     }
 
-    private hasPointerStorageHash(pointer: MemorySlotPointer): bool {
+    private hasPointerStorageHash(pointer: Uint8Array): bool {
         if (this.storage.has(pointer)) {
             return true;
         }
 
         // we attempt to load the requested pointer.
         const resultBuffer = new ArrayBuffer(32);
-        loadPointer(pointer.toUint8Array(true).buffer, resultBuffer);
+        loadPointer(pointer.buffer, resultBuffer);
 
-        const value: u256 = u256.fromUint8ArrayBE(Uint8Array.wrap(resultBuffer));
+        const value: Uint8Array = Uint8Array.wrap(resultBuffer);
         this.storage.set(pointer, value); // cache the value
 
-        return !u256.eq(value, u256.Zero);
+        return !eqUint(value, EMPTY_BUFFER);
     }
 
     private ensureStorageAtPointer(
-        pointerHash: MemorySlotPointer,
-        defaultValue: MemorySlotData<u256>,
+        pointerHash: Uint8Array,
     ): void {
         if (this.hasPointerStorageHash(pointerHash)) {
             return;
         }
 
-        if (u256.eq(defaultValue, u256.Zero)) {
-            return;
-        }
-
-        this._internalSetStorageAt(pointerHash, defaultValue);
+        this._internalSetStorageAt(pointerHash, EMPTY_BUFFER);
     }
 }

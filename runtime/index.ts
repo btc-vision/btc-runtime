@@ -42,15 +42,12 @@ export * from './types/SafeMathI128';
 /** Math */
 export * from './math/abi';
 export * from './math/bytes';
-export * from './math/cyrb53';
 export * from './secp256k1/ECPoint';
 
 /** Memory */
 export * from './memory/AddressMemoryMap';
 export * from './memory/StringMemoryMap';
 export * from './memory/MultiStringMemoryMap';
-export * from './memory/MemorySlot';
-export * from './memory/MemorySlotPointer';
 export * from './memory/KeyMerger';
 export * from './memory/MultiAddressMemoryMap';
 export * from './memory/Uint8ArrayMerger';
@@ -65,12 +62,16 @@ export * from './storage/Serializable';
 
 /** Arrays */
 export * from './storage/arrays/StoredAddressArray';
+export * from './storage/arrays/StoredBooleanArray';
+
 export * from './storage/arrays/StoredU8Array';
 export * from './storage/arrays/StoredU16Array';
 export * from './storage/arrays/StoredU32Array';
-export * from './storage/arrays/StoredBooleanArray';
+export * from './storage/arrays/StoredU64Array';
 export * from './storage/arrays/StoredU128Array';
 export * from './storage/arrays/StoredU256Array';
+
+export * from './memory/FastUint8Array';
 
 /** Shared libraries */
 export * from './shared-libraries/TransferHelper';

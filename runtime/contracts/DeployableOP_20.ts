@@ -18,39 +18,39 @@ import { IOP_20 } from './interfaces/IOP_20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
 import { sha256 } from '../env/global';
+import { EMPTY_BUFFER } from '../math/bytes';
 
 const nonceMapPointer: u16 = Blockchain.nextPointer;
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
 const decimalsPointer: u16 = Blockchain.nextPointer;
-const namePointer: u16 = Blockchain.nextPointer;
-const symbolPointer: u16 = Blockchain.nextPointer;
+const stringPointer: u16 = Blockchain.nextPointer;
 const totalSupplyPointer: u16 = Blockchain.nextPointer;
 const allowanceMapPointer: u16 = Blockchain.nextPointer;
 const balanceOfMapPointer: u16 = Blockchain.nextPointer;
 
 export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
-    protected readonly allowanceMap: MultiAddressMemoryMap<u256>;
-    protected readonly balanceOfMap: AddressMemoryMap<u256>;
+    protected readonly allowanceMap: MultiAddressMemoryMap;
+    protected readonly balanceOfMap: AddressMemoryMap;
 
     protected readonly _maxSupply: StoredU256;
     protected readonly _decimals: StoredU256;
     protected readonly _name: StoredString;
     protected readonly _symbol: StoredString;
 
-    protected readonly _nonceMap: AddressMemoryMap<u256>;
+    protected readonly _nonceMap: AddressMemoryMap;
 
     protected constructor(params: OP20InitParameters | null = null) {
         super();
 
         // Initialize main storage structures
-        this.allowanceMap = new MultiAddressMemoryMap<u256>(allowanceMapPointer, u256.Zero);
-        this.balanceOfMap = new AddressMemoryMap<u256>(balanceOfMapPointer, u256.Zero);
-        this._totalSupply = new StoredU256(totalSupplyPointer, u256.Zero, u256.Zero);
-        this._maxSupply = new StoredU256(maxSupplyPointer, u256.Zero, u256.Zero);
-        this._decimals = new StoredU256(decimalsPointer, u256.Zero, u256.Zero);
-        this._name = new StoredString(namePointer, '');
-        this._symbol = new StoredString(symbolPointer, '');
-        this._nonceMap = new AddressMemoryMap(nonceMapPointer, u256.Zero);
+        this.allowanceMap = new MultiAddressMemoryMap(allowanceMapPointer);
+        this.balanceOfMap = new AddressMemoryMap(balanceOfMapPointer);
+        this._totalSupply = new StoredU256(totalSupplyPointer, EMPTY_BUFFER);
+        this._maxSupply = new StoredU256(maxSupplyPointer, EMPTY_BUFFER);
+        this._decimals = new StoredU256(decimalsPointer, EMPTY_BUFFER);
+        this._name = new StoredString(stringPointer, 0);
+        this._symbol = new StoredString(stringPointer, 1);
+        this._nonceMap = new AddressMemoryMap(nonceMapPointer);
 
         if (params && this._maxSupply.value.isZero()) {
             this.instantiate(params, true);
@@ -162,8 +162,10 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     public balanceOf(callData: Calldata): BytesWriter {
         const response = new BytesWriter(U256_BYTE_LENGTH);
         const address: Address = callData.readAddress();
+
         const resp = this._balanceOf(address);
         response.writeU256(resp);
+
         return response;
     }
 
@@ -171,6 +173,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         const response = new BytesWriter(BOOLEAN_BYTE_LENGTH);
         const resp = this._burn(callData.readU256());
         response.writeBoolean(resp);
+
         return response;
     }
 
@@ -178,6 +181,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         const response = new BytesWriter(BOOLEAN_BYTE_LENGTH);
         const resp = this._transfer(callData.readAddress(), callData.readU256());
         response.writeBoolean(resp);
+
         return response;
     }
 
@@ -188,6 +192,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             callData.readAddress(),
             callData.readU256(),
         );
+
         response.writeBoolean(resp);
         return response;
     }
@@ -299,6 +304,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         if (owner === Blockchain.DEAD_ADDRESS) {
             throw new Revert('Address can not be dead address');
         }
+
         if (spender === Blockchain.DEAD_ADDRESS) {
             throw new Revert('Spender cannot be dead address');
         }
@@ -312,6 +318,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
 
     protected _balanceOf(owner: Address): u256 {
         if (!this.balanceOfMap.has(owner)) return u256.Zero;
+
         return this.balanceOfMap.get(owner);
     }
 
