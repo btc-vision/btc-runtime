@@ -1,6 +1,7 @@
 import { Revert } from '../types/Revert';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { BytesReader } from '../buffer/BytesReader';
+import { FastUint8Array } from '../memory/FastUint8Array';
 
 /**
  * Convert a 4-byte big-endian array into a u32.
@@ -19,6 +20,7 @@ export function bytesToU32(number: Uint8Array): u32 {
 
 // 32-byte buffer of all zeros
 export const EMPTY_BUFFER: Uint8Array = new Uint8Array(32);
+export const EMPTY_FAST_BUFFER: FastUint8Array = new FastUint8Array(32);
 
 // 32-byte buffer representing 1 in big-endian form:
 // index 31 is the least significant byte.

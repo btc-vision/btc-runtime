@@ -10,7 +10,6 @@ export class MultiAddressMemoryMap extends Map<
 
     constructor(
         pointer: u16,
-        private readonly defaultValue: Uint8Array,
     ) {
         super();
 
@@ -49,7 +48,7 @@ export class MultiAddressMemoryMap extends Map<
     @inline
     private createKeyMerger(key: Address): void {
         if (!super.has(key)) {
-            super.set(key, new Uint8ArrayMerger(key, this.pointer, this.defaultValue));
+            super.set(key, new Uint8ArrayMerger(key, this.pointer));
         }
     }
 }

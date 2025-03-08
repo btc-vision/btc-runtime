@@ -2,7 +2,6 @@ import { u256 } from '@btc-vision/as-bignum/assembly';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
 import { encodePointer } from '../math/abi';
-import { GET_EMPTY_BUFFER } from '../math/bytes';
 import { BytesReader } from '../buffer/BytesReader';
 
 /**
@@ -137,7 +136,7 @@ export class StoredU64 {
      */
     private ensureValues(): void {
         if (!this.isLoaded) {
-            const storedU256: Uint8Array = Blockchain.getStorageAt(this.bufferPointer, GET_EMPTY_BUFFER());
+            const storedU256: Uint8Array = Blockchain.getStorageAt(this.bufferPointer);
 
             const reader = new BytesReader(storedU256);
 

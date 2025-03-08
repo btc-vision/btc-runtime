@@ -18,7 +18,7 @@ import { IOP_20 } from './interfaces/IOP_20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
 import { sha256 } from '../env/global';
-import { GET_EMPTY_BUFFER } from '../math/bytes';
+import { EMPTY_BUFFER } from '../math/bytes';
 
 const nonceMapPointer: u16 = Blockchain.nextPointer;
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
@@ -43,14 +43,14 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         super();
 
         // Initialize main storage structures
-        this.allowanceMap = new MultiAddressMemoryMap(allowanceMapPointer, GET_EMPTY_BUFFER());
-        this.balanceOfMap = new AddressMemoryMap(balanceOfMapPointer, GET_EMPTY_BUFFER());
-        this._totalSupply = new StoredU256(totalSupplyPointer, GET_EMPTY_BUFFER(), u256.Zero);
-        this._maxSupply = new StoredU256(maxSupplyPointer, GET_EMPTY_BUFFER(), u256.Zero);
-        this._decimals = new StoredU256(decimalsPointer, GET_EMPTY_BUFFER(), u256.Zero);
+        this.allowanceMap = new MultiAddressMemoryMap(allowanceMapPointer);
+        this.balanceOfMap = new AddressMemoryMap(balanceOfMapPointer);
+        this._totalSupply = new StoredU256(totalSupplyPointer, EMPTY_BUFFER);
+        this._maxSupply = new StoredU256(maxSupplyPointer, EMPTY_BUFFER);
+        this._decimals = new StoredU256(decimalsPointer, EMPTY_BUFFER);
         this._name = new StoredString(stringPointer, 0);
         this._symbol = new StoredString(stringPointer, 1);
-        this._nonceMap = new AddressMemoryMap(nonceMapPointer, GET_EMPTY_BUFFER());
+        this._nonceMap = new AddressMemoryMap(nonceMapPointer);
 
         if (params && this._maxSupply.value.isZero()) {
             this.instantiate(params, true);

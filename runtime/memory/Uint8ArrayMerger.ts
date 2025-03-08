@@ -12,7 +12,6 @@ export class Uint8ArrayMerger {
     constructor(
         parent: Uint8Array,
         pointer: u16,
-        private readonly defaultValue: Uint8Array,
     ) {
         this.pointer = pointer;
 
@@ -33,7 +32,7 @@ export class Uint8ArrayMerger {
     public getAsUint8Array(key: Uint8Array): Uint8Array {
         const keyHash: Uint8Array = this.getKeyHash(key);
 
-        return Blockchain.getStorageAt(keyHash, this.defaultValue);
+        return Blockchain.getStorageAt(keyHash);
     }
 
     public get(key: Uint8Array): u256 {

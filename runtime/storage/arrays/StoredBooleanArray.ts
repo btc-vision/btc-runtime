@@ -29,21 +29,16 @@ export class StoredBooleanArray {
 
     private readonly MAX_LENGTH: u64 = u32.MAX_VALUE;
 
-    /** Default 32-byte buffer if storage is uninitialized for a slot. */
-    private readonly defaultSlotValue: Uint8Array;
-
     /**
      * @constructor
      * @param {u16} pointer       - The primary pointer identifier.
      * @param {Uint8Array} subPtr - The sub-pointer for memory slot addressing.
-     * @param {Uint8Array} defaultValue - A 32-byte array used as the default slot value. (Previously `u256`.)
      *
      * The code below treats the first 16 bytes of `lengthPointer` as storing [length, startIndex].
      */
     constructor(
         public pointer: u16,
         public subPtr: Uint8Array,
-        defaultValue: Uint8Array = new Uint8Array(32),
     ) {
         const writer = new BytesWriter(32);
         writer.writeU16(pointer);
@@ -53,11 +48,9 @@ export class StoredBooleanArray {
 
         this.basePointer = basePtr;
         this.lengthPointer = basePtr;
-        this.defaultSlotValue = defaultValue;
 
         const storedLenStart: Uint8Array = Blockchain.getStorageAt(
             this.lengthPointer,
-            GET_EMPTY_BUFFER(),
         );
 
         const r = new BytesReader(storedLenStart);
@@ -318,7 +311,7 @@ export class StoredBooleanArray {
     private ensureSlotLoaded(slotIndex: u64): void {
         if (!this._values.has(slotIndex)) {
             const pointer = this.calculateStoragePointer(slotIndex);
-            const stored = Blockchain.getStorageAt(pointer, this.defaultSlotValue);
+            const stored = Blockchain.getStorageAt(pointer);
             this._values.set(slotIndex, stored);
         }
     }

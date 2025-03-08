@@ -2,6 +2,7 @@ import { Blockchain } from '../env';
 import { encodePointer } from '../math/abi';
 import { Address } from '../types/Address';
 import { EMPTY_BUFFER } from '../math/bytes';
+import { eqUint } from '../generic/MapUint8Array';
 
 /**
  * Default is Address.dead();
@@ -32,8 +33,12 @@ export class StoredAddress {
         Blockchain.setStorageAt(this.addressPointer, this._value);
     }
 
+    public isDead(): bool {
+        return eqUint(Address.dead(), this.value);
+    }
+
     private ensureValue(): void {
-        const value = Blockchain.getStorageAt(this.addressPointer, Address.dead());
+        const value = Blockchain.getStorageAt(this.addressPointer);
         this._value.set(value);
     }
 }

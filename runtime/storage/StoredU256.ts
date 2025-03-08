@@ -10,7 +10,6 @@ export class StoredU256 {
     constructor(
         public pointer: u16,
         public subPointer: Uint8Array,
-        private defaultValue: u256,
     ) {
         assert(subPointer.length === 30, `You must pass a 30 bytes sub-pointer.`);
 
@@ -253,7 +252,7 @@ export class StoredU256 {
     }
 
     private ensureValue(): void {
-        const value = Blockchain.getStorageAt(this.pointerBuffer, this.defaultValue.toUint8Array(true));
+        const value = Blockchain.getStorageAt(this.pointerBuffer);
         this._value = u256.fromUint8ArrayBE(value);
     }
 }

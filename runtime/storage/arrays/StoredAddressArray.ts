@@ -3,7 +3,7 @@ import { BytesReader } from '../../buffer/BytesReader';
 import { Blockchain } from '../../env';
 import { Address } from '../../types/Address';
 import { Revert } from '../../types/Revert';
-import { addUint8ArraysBE, GET_EMPTY_BUFFER, u64ToBE32Bytes } from '../../math/bytes';
+import { addUint8ArraysBE, u64ToBE32Bytes } from '../../math/bytes';
 
 /**
  * @class StoredAddressArray
@@ -25,16 +25,16 @@ export class StoredAddressArray {
 
     private readonly MAX_LENGTH: u64 = u64(u32.MAX_VALUE - 1);
 
+    private readonly defaultValue: Address = Address.zero();
+
     /**
      * @constructor
      * @param {u16} pointer - The primary pointer identifier.
      * @param {Uint8Array} subPointer - The sub-pointer for memory slot addressing.
-     * @param {Address} defaultValue - The default Address value if storage is uninitialized.
      */
     constructor(
         public pointer: u16,
         public subPointer: Uint8Array,
-        private defaultValue: Address = Address.dead(),
     ) {
         // Construct base pointer as a 32-byte array
         const writer = new BytesWriter(32);
@@ -49,7 +49,6 @@ export class StoredAddressArray {
         // Load length + startIndex from storage (16 bytes: 8 for length, 8 for startIndex).
         const storedLengthAndStartIndex: Uint8Array = Blockchain.getStorageAt(
             lengthPointer,
-            GET_EMPTY_BUFFER(),
         );
 
         const reader = new BytesReader(storedLengthAndStartIndex);
@@ -69,8 +68,7 @@ export class StoredAddressArray {
         const slotIndex: u32 = <u32>index;
         this.ensureValues(slotIndex);
 
-        const value = this._values.get(slotIndex);
-        return value ? value : this.defaultValue;
+        return this._values.get(slotIndex);
     }
 
     /** Set an element by its global index. */
@@ -285,7 +283,6 @@ export class StoredAddressArray {
             // Load raw bytes from storage
             const stored: Uint8Array = Blockchain.getStorageAt(
                 storagePointer,
-                GET_EMPTY_BUFFER(),
             );
 
             const storedAddress: Address =

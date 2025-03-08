@@ -8,12 +8,11 @@ export class KeyMerger<K extends string, K2 extends string, V extends Uint8Array
     public parentKey: K;
     public pointer: u16;
 
-    constructor(parent: K, pointer: u16, private readonly defaultValue: V) {
+    constructor(parent: K, pointer: u16) {
         this.pointer = pointer;
         this.parentKey = parent;
     }
 
-    @inline
     public set(key2: K2, value: V): this {
         const mergedKey: string = this.mergeKey(key2);
         const keyHash: Uint8Array = this.encodePointer(mergedKey);
@@ -23,13 +22,11 @@ export class KeyMerger<K extends string, K2 extends string, V extends Uint8Array
         return this;
     }
 
-    @inline
     public get(key: K): Uint8Array {
         const mergedKey: string = this.mergeKey(key);
-        return Blockchain.getStorageAt(this.encodePointer(mergedKey), this.defaultValue);
+        return Blockchain.getStorageAt(this.encodePointer(mergedKey));
     }
 
-    @inline
     public has(key: K): bool {
         const mergedKey: string = this.mergeKey(key);
         return Blockchain.hasStorageAt(this.encodePointer(mergedKey));

@@ -198,18 +198,16 @@ export class BlockchainEnvironment {
         return contractAddressReader.readAddress();
     }
 
-    // TODO: Change MemorySlotData type to a Uint8Array instead of a u256.
     public getStorageAt(
         pointerHash: Uint8Array,
-        defaultValue: Uint8Array,
     ): Uint8Array {
-        this.ensureStorageAtPointer(pointerHash, defaultValue);
+        this.ensureStorageAtPointer(pointerHash);
 
         if (this.storage.has(pointerHash)) {
             return this.storage.get(pointerHash);
         }
 
-        return defaultValue;
+        return new Uint8Array(32);
     }
 
     public sha256(buffer: Uint8Array): Uint8Array {
@@ -232,7 +230,7 @@ export class BlockchainEnvironment {
 
     public hasStorageAt(pointerHash: Uint8Array): bool {
         // We mark zero as the default value for the storage, if something is 0, the storage slot get deleted or is non-existent
-        const val: Uint8Array = this.getStorageAt(pointerHash, EMPTY_BUFFER);
+        const val: Uint8Array = this.getStorageAt(pointerHash);
 
         return !eqUint(val, EMPTY_BUFFER);
     }
@@ -278,16 +276,11 @@ export class BlockchainEnvironment {
 
     private ensureStorageAtPointer(
         pointerHash: Uint8Array,
-        defaultValue: Uint8Array,
     ): void {
         if (this.hasPointerStorageHash(pointerHash)) {
             return;
         }
 
-        if (eqUint(defaultValue, EMPTY_BUFFER)) {
-            return;
-        }
-
-        this._internalSetStorageAt(pointerHash, defaultValue);
+        this._internalSetStorageAt(pointerHash, EMPTY_BUFFER);
     }
 }

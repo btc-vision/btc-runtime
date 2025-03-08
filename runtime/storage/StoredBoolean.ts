@@ -4,21 +4,27 @@ import { Revert } from '../types/Revert';
 
 @final
 export class StoredBoolean {
-    private readonly pointerBuffer: Uint8Array = new Uint8Array(32);
+    private readonly pointerBuffer: Uint8Array;
 
     constructor(
         public pointer: u16,
         defaultValue: bool,
     ) {
-        this.pointerBuffer[0] = pointer & 255;
-        this.pointerBuffer[1] = (pointer << 8) & 255;
+        const pointerBuffer = GET_EMPTY_BUFFER();
+        pointerBuffer[0] = pointer & 255;
+        pointerBuffer[1] = (pointer << 8) & 255;
 
+        this.pointerBuffer = pointerBuffer;
+
+        const value = GET_EMPTY_BUFFER();
         if (defaultValue) {
-            this._value[0] = 1;
+            value[0] = 1;
         }
+
+        this._value = value;
     }
 
-    private _value: Uint8Array = GET_EMPTY_BUFFER();
+    private _value: Uint8Array;
 
     @inline
     public get value(): bool {
@@ -27,7 +33,6 @@ export class StoredBoolean {
         return this._value[0] === 1;
     }
 
-    @inline
     public set value(value: bool) {
         this._value[0] = value ? 1 : 0;
 
@@ -46,8 +51,6 @@ export class StoredBoolean {
     private ensureValue(): void {
         this._value = Blockchain.getStorageAt(
             this.pointerBuffer,
-            this._value,
         );
-
     }
 }

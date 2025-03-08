@@ -40,6 +40,7 @@ export class StoredString {
 
     public set value(v: string) {
         this._value = v;
+
         this.save();
     }
 
@@ -57,7 +58,7 @@ export class StoredString {
      * Returns 0 if the slot is all zero.
      */
     private getStoredLength(): u32 {
-        const headerSlot = Blockchain.getStorageAt(this.getPointer(0), new Uint8Array(32));
+        const headerSlot = Blockchain.getStorageAt(this.getPointer(0));
         const b0 = <u32>headerSlot[0];
         const b1 = <u32>headerSlot[1];
         const b2 = <u32>headerSlot[2];
@@ -156,7 +157,7 @@ export class StoredString {
      */
     private load(): void {
         // Read the header slot first
-        const headerSlot = Blockchain.getStorageAt(this.getPointer(0), new Uint8Array(32));
+        const headerSlot = Blockchain.getStorageAt(this.getPointer(0));
 
         // Parse the big-endian length
         const b0 = <u32>headerSlot[0];
@@ -187,7 +188,7 @@ export class StoredString {
         // Read the subsequent slots of 32 bytes each
         let chunkIndex: u64 = 1;
         while (remaining > 0) {
-            const slotData = Blockchain.getStorageAt(this.getPointer(chunkIndex), new Uint8Array(32));
+            const slotData = Blockchain.getStorageAt(this.getPointer(chunkIndex));
             const chunkSize = remaining < 32 ? remaining : 32;
             for (let i: u32 = 0; i < chunkSize; i++) {
                 out[offset + i] = slotData[i];

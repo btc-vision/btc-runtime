@@ -4,7 +4,7 @@ import { bech32m as _bech32m, toWords } from '../utils/b32';
 
 @final
 export class Address extends Uint8Array {
-    public constructor(bytes: Array<u8> = []) {
+    public constructor(bytes: u8[] = []) {
         super(ADDRESS_BYTE_LENGTH);
 
         if (!(!bytes || bytes.length === 0)) {
@@ -17,10 +17,11 @@ export class Address extends Uint8Array {
      * generated from 04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f
      */
     public static dead(): Address {
-        return new Address([
-            40, 74, 228, 172, 219, 50, 169, 155, 163, 235, 250, 102, 169, 29, 219, 65, 167, 183,
-            161, 210, 254, 244, 21, 57, 153, 34, 205, 138, 4, 72, 92, 2,
-        ]);
+        return DEAD_ADDRESS;
+    }
+
+    public static zero(): Address {
+        return ZERO_ADDRESS;
     }
 
     public static fromString(pubKey: string): Address {
@@ -60,7 +61,7 @@ export class Address extends Uint8Array {
      * @param {ArrayLike} publicKey The public key
      * @returns {void}
      */
-    public newSet(publicKey: Array<u8>): void {
+    public newSet(publicKey: u8[]): void {
         if (publicKey.length !== 32) {
             throw new Error('Invalid public key length');
         }
@@ -140,5 +141,12 @@ export class Address extends Uint8Array {
         return this.toBech32m();
     }
 }
+
+export const DEAD_ADDRESS = new Address([
+    40, 74, 228, 172, 219, 50, 169, 155, 163, 235, 250, 102, 169, 29, 219, 65, 167, 183,
+    161, 210, 254, 244, 21, 57, 153, 34, 205, 138, 4, 72, 92, 2,
+]);
+
+export const ZERO_ADDRESS = new Address();
 
 export declare type PotentialAddress = Potential<Address>;

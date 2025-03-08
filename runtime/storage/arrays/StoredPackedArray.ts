@@ -55,7 +55,7 @@ export abstract class StoredPackedArray<T> {
         this.lengthPointer = Uint8Array.wrap(basePointer.buffer);
         this.basePointer = basePointer;
 
-        const storedLenStart = Blockchain.getStorageAt(basePointer, GET_EMPTY_BUFFER());
+        const storedLenStart = Blockchain.getStorageAt(basePointer);
         const data = readLengthAndStartIndex(storedLenStart);
 
         this._length = data[0];
@@ -315,7 +315,7 @@ export abstract class StoredPackedArray<T> {
     protected ensureSlot(slotIndex: u64): Uint8Array {
         if (!this._slots.has(slotIndex)) {
             const ptr = this.calculateStoragePointer(slotIndex);
-            const data = Blockchain.getStorageAt(ptr, GET_EMPTY_BUFFER());
+            const data = Blockchain.getStorageAt(ptr);
 
             // Must be exactly 32 bytes; if it's empty, you get 32 zero bytes from GET_EMPTY_BUFFER()
             this._slots.set(slotIndex, data);

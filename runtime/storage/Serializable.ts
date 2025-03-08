@@ -3,7 +3,6 @@ import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
 import { encodePointer } from '../math/abi';
 import { Revert } from '../types/Revert';
-import { GET_EMPTY_BUFFER } from '../math/bytes';
 
 export const SERIALIZED_POINTER_LENGTH: u8 = 29;
 
@@ -33,7 +32,7 @@ export abstract class Serializable {
 
         for (let index: u8 = 0; index < this.chunkCount; index++) {
             const pointer = this.getPointer(this.subPointer, index);
-            const chunk: Uint8Array = Blockchain.getStorageAt(pointer, GET_EMPTY_BUFFER());
+            const chunk: Uint8Array = Blockchain.getStorageAt(pointer);
 
             if (!this.exists(chunk, index)) {
                 return false;

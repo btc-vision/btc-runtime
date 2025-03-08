@@ -10,7 +10,6 @@ export class MultiStringMemoryMap<
 
     constructor(
         pointer: u16,
-        private readonly defaultValue: V,
     ) {
         super();
 
@@ -60,7 +59,7 @@ export class MultiStringMemoryMap<
 
     private createKeyMerger(key: K): void {
         if (!super.has(key)) {
-            super.set(key, new KeyMerger<K, K2, V>(key, this.pointer, this.defaultValue));
+            super.set(key, new KeyMerger<K, K2, V>(key, this.pointer));
         }
     }
 }
