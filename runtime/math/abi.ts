@@ -1,6 +1,5 @@
 import { bytesToU32 } from './bytes';
 import { sha256 } from '../env/global';
-import { FastUint8Array } from '../memory/FastUint8Array';
 
 export type Selector = u32;
 
@@ -16,10 +15,10 @@ export function encodeSelector(name: string): Selector {
  * @param uniqueIdentifier
  * @param typed
  */
-export function encodePointerUnknownLength(uniqueIdentifier: u16, typed: Uint8Array): FastUint8Array {
+export function encodePointerUnknownLength(uniqueIdentifier: u16, typed: Uint8Array): Uint8Array {
     const hash = sha256(typed);
 
-    return encodePointer(uniqueIdentifier, FastUint8Array.fromUint8Array(hash));
+    return encodePointer(uniqueIdentifier, hash);
 }
 
 /**
@@ -28,12 +27,12 @@ export function encodePointerUnknownLength(uniqueIdentifier: u16, typed: Uint8Ar
  * @param typed
  * @param safe
  */
-export function encodePointer(uniqueIdentifier: u16, typed: FastUint8Array, safe: boolean = true): FastUint8Array {
+export function encodePointer(uniqueIdentifier: u16, typed: Uint8Array, safe: boolean = true): Uint8Array {
     if (safe) assert(typed.length === 30, `Pointers must be 30 bytes. Got ${typed.length}.`);
 
-    const finalPointer = new FastUint8Array(32);
-    finalPointer[0] = u8(uniqueIdentifier & 0xff);
-    finalPointer[1] = u8((uniqueIdentifier >> 8) & 0xff);
+    const finalPointer = new Uint8Array(32);
+    finalPointer[0] = uniqueIdentifier & 0xff;
+    finalPointer[1] = (uniqueIdentifier >> 8) & 0xff;
 
     for (let i = 0; i < 30; i++) {
         finalPointer[i + 2] = typed[i];

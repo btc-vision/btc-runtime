@@ -71,6 +71,8 @@ export * from './storage/arrays/StoredU64Array';
 export * from './storage/arrays/StoredU128Array';
 export * from './storage/arrays/StoredU256Array';
 
+export * from './memory/FastUint8Array';
+
 /** Shared libraries */
 export * from './shared-libraries/TransferHelper';
 export * from './shared-libraries/OP20Utils';

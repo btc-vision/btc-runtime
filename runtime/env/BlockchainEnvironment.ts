@@ -64,13 +64,13 @@ export class BlockchainEnvironment {
     private _contract: Potential<() => OP_NET> = null;
 
     public get contract(): OP_NET {
-        this.createContractIfNotExists();
-
         return this._selfContract as OP_NET;
     }
 
     public set contract(contract: () => OP_NET) {
         this._contract = contract;
+
+        this.createContractIfNotExists();
     }
 
     private _nextPointer: u16 = 0;

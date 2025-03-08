@@ -1,20 +1,20 @@
 import { Blockchain } from '../env';
 import { encodePointerUnknownLength } from '../math/abi';
 import { BytesWriter } from '../buffer/BytesWriter';
+import { EMPTY_BUFFER } from '../math/bytes';
 
 @final
-export class StringMemoryMap<K extends string, V extends Uint8Array> {
+export class StringMemoryMap<K extends string> {
     public pointer: u16;
 
     constructor(
         pointer: u16,
-        private readonly defaultValue: V,
     ) {
         this.pointer = pointer;
     }
 
     @inline
-    public set(key: K, value: V): this {
+    public set(key: K, value: Uint8Array): this {
         const keyHash: Uint8Array = this.encodePointer(key);
         Blockchain.setStorageAt(keyHash, value);
 
@@ -25,7 +25,7 @@ export class StringMemoryMap<K extends string, V extends Uint8Array> {
     public get(key: K): Uint8Array {
         const keyHash: Uint8Array = this.encodePointer(key);
 
-        return Blockchain.getStorageAt(keyHash, this.defaultValue);
+        return Blockchain.getStorageAt(keyHash);
     }
 
     @inline
@@ -37,7 +37,7 @@ export class StringMemoryMap<K extends string, V extends Uint8Array> {
 
     @unsafe
     public delete(key: K): bool {
-        this.set(key, this.defaultValue);
+        this.set(key, EMPTY_BUFFER);
 
         return true;
     }
