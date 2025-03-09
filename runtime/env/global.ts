@@ -1,5 +1,5 @@
 import { Sha256 } from '../SHA256/sha256';
-import {ripemd160f} from '../SHA256/ripemd160f';
+import { ripemd160f } from '../SHA256/ripemd160f';
 
 // @ts-ignore
 @external('env', 'environment')
