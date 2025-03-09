@@ -24,7 +24,7 @@ export declare function deployFromAddress(originAddress: ArrayBuffer, salt: Arra
 
 // @ts-ignore
 @external('env', 'call')
-export declare function callContract(address: ArrayBuffer, calldata: ArrayBuffer, calldataLength: u32, resultLength: ArrayBuffer): void;
+export declare function callContract(address: ArrayBuffer, calldata: ArrayBuffer, calldataLength: u32, resultLength: ArrayBuffer): u32;
 
 // @ts-ignore
 @external('env', 'callResult')
