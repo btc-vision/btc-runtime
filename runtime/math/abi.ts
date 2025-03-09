@@ -37,18 +37,28 @@ export function ensureAtLeast30Bytes(typed: Uint8Array): Uint8Array {
 
 @inline
 function toArrayBufferBE(buffer: usize, val: u256): void {
-    store<u64>(buffer, bswap(val.hi2), 0);
-    store<u64>(buffer, bswap(val.hi1), 8);
-    store<u64>(buffer, bswap(val.lo2), 16);
+    // Write the upper 3 chunks (each 64 bits) in one shot:
+    store<u64>(buffer, bswap(val.hi2), 0); // 0..7
+    store<u64>(buffer, bswap(val.hi1), 8); // 8..15
+    store<u64>(buffer, bswap(val.lo2), 16); // 16..23
 
-    // convert lo1 to u32 and u16
-    const low1 = u32(val.lo1 & 0xffffffff);
-    const low1hi = u16((val.lo1 >> 32) & 0xffff);
-    store<u32>(buffer, bswap(low1), 24);
+    // Now handle the final 64 bits (val.lo1) in [32 + 16 + 16] form.
+    //  - lo1High32 = top 32 bits   [bits 63..32]
+    //  - lo1Mid16  = middle 16 bits [bits 31..16]
+    //  - lo1Low16  = bottom 16 bits [bits 15..0]
+    const lo1High32 = u32(val.lo1 >>> 32);
+    const lo1Mid16 = u16((val.lo1 >>> 16) & 0xffff);
 
-    // store high bits of lo1
-    store<u16>(buffer, bswap(low1hi), 28);
+    // Store them in ascending offsets. Because each store is little-endian,
+    // we bswap the values so that the final bytes in memory are big-endian.
+
+    // Offsets 24..27 (4 bytes): top 32 bits of lo1
+    store<u32>(buffer, bswap(lo1High32), 24);
+
+    // Offsets 28..29 (2 bytes): mid 16 bits of lo1
+    store<u16>(buffer, bswap(lo1Mid16), 28);
 }
+
 
 export function u256To30Bytes(value: u256): Uint8Array {
     const result = new Uint8Array(30);
