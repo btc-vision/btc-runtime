@@ -71,4 +71,7 @@ export class TransferHelper {
             throw new Revert(`TransferHelper: TRANSFER_FROM_FAILED`);
         }
     }
+
+    public clearMockedResults(): void {
+    }
 }

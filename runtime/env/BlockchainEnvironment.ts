@@ -10,6 +10,7 @@ import { Transaction } from './classes/Transaction';
 import { sha256 } from './global';
 import { eqUint, MapUint8Array } from '../generic/MapUint8Array';
 import { EMPTY_BUFFER } from '../math/bytes';
+import { TransactionOutput } from './classes/UTXO';
 
 export * from '../env/global';
 
@@ -17,13 +18,14 @@ export function runtimeError(msg: string): Error {
     return new Error(`RuntimeException: ${msg}`);
 }
 
-export class BlockchainEnvironment {//extends BlockchainEnvironment {
+export class BlockchainEnvironment {
     protected static readonly MAX_U16: u16 = 65535;
 
     public readonly DEAD_ADDRESS: Address = Address.dead();
 
     protected storage: MapUint8Array = new MapUint8Array();
     protected _selfContract: Potential<OP_NET> = null;
+
     private _mockedCallResult: Uint8Array = new Uint8Array(1);
     private _mockedValidateBitcoinAddressResult: bool = false;
     private _mockedEncodeVirtualAddressResult: Address = new Address();
@@ -118,6 +120,12 @@ export class BlockchainEnvironment {//extends BlockchainEnvironment {
         this._contractAddress = contractAddress;
 
         this._block = new Block(blockHash, blockNumber, blockMedianTime);
+    }
+
+    public mockTransactionOutput(
+        output: TransactionOutput,
+    ): void {
+
     }
 
     public clearMockedResults(): void {
