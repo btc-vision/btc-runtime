@@ -1,5 +1,6 @@
 import { bytesToU32 } from './bytes';
 import { sha256 } from '../env/global';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 
 export type Selector = u32;
 
@@ -21,7 +22,7 @@ export function encodePointerUnknownLength(uniqueIdentifier: u16, typed: Uint8Ar
     return encodePointer(uniqueIdentifier, hash, false);
 }
 
-function ensureAtLeast30Bytes(typed: Uint8Array): Uint8Array {
+export function ensureAtLeast30Bytes(typed: Uint8Array): Uint8Array {
     if (typed.length >= 30) {
         return typed;
     }
@@ -31,6 +32,27 @@ function ensureAtLeast30Bytes(typed: Uint8Array): Uint8Array {
         result[i] = typed[i];
     }
 
+    return result;
+}
+
+@inline
+function toArrayBufferBE(buffer: usize, val: u256): void {
+    store<u64>(buffer, bswap(val.hi2), 0);
+    store<u64>(buffer, bswap(val.hi1), 8);
+    store<u64>(buffer, bswap(val.lo2), 16);
+
+    // convert lo1 to u32 and u16
+    const low1 = u32(val.lo1 & 0xffffffff);
+    const low1hi = u16((val.lo1 >> 32) & 0xffff);
+    store<u32>(buffer, bswap(low1), 24);
+
+    // store high bits of lo1
+    store<u16>(buffer, bswap(low1hi), 28);
+}
+
+export function u256To30Bytes(value: u256): Uint8Array {
+    const result = new Uint8Array(30);
+    toArrayBufferBE(changetype<usize>(result.dataStart), value);
     return result;
 }
 

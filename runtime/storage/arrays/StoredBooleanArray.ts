@@ -40,6 +40,8 @@ export class StoredBooleanArray {
         public pointer: u16,
         public subPtr: Uint8Array,
     ) {
+        assert(subPtr.length <= 30, `You must pass a 30 bytes sub-pointer. (StoredBooleanArray, got ${subPtr.length})`);
+
         const writer = new BytesWriter(32);
         writer.writeU16(pointer);
         writer.writeBytes(subPtr);
