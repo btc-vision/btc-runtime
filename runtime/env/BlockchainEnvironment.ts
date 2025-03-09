@@ -7,17 +7,7 @@ import { NetEvent } from '../events/NetEvent';
 import { Potential } from '../lang/Definitions';
 import { Block } from './classes/Block';
 import { Transaction } from './classes/Transaction';
-import {
-    callContract,
-    deployFromAddress,
-    emit,
-    env_exit,
-    getCallResult,
-    log,
-    sha256,
-    validateBitcoinAddress,
-    verifySchnorrSignature,
-} from './global';
+import { sha256 } from './global';
 import { eqUint, MapUint8Array } from '../generic/MapUint8Array';
 import { EMPTY_BUFFER } from '../math/bytes';
 
@@ -34,6 +24,11 @@ export class BlockchainEnvironment {//extends BlockchainEnvironment {
 
     protected storage: MapUint8Array = new MapUint8Array();
     protected _selfContract: Potential<OP_NET> = null;
+    private _mockedCallResult: Uint8Array = new Uint8Array(1);
+    private _mockedValidateBitcoinAddressResult: bool = false;
+    private _mockedEncodeVirtualAddressResult: Address = new Address();
+    private _mockedDeployContractResponse: Address = new Address();
+    private _mockedVerifySchnorrSignature: boolean = false;
 
     protected _block: Potential<Block> = null;
 
@@ -125,28 +120,6 @@ export class BlockchainEnvironment {//extends BlockchainEnvironment {
         this._block = new Block(blockHash, blockNumber, blockMedianTime);
     }
 
-    private createContractIfNotExists(): void {
-        if (!this._contract) {
-            throw this.error('Contract is required');
-        }
-
-        if (!this._selfContract) {
-            this._selfContract = this._contract();
-        }
-    }
-
-    protected error(msg: string): Error {
-        return runtimeError(msg);
-    }
-
-
-
-    private _mockedCallResult: Uint8Array = new Uint8Array(1);
-    private _mockedValidateBitcoinAddressResult: bool = false;
-    private _mockedEncodeVirtualAddressResult: Address = new Address();
-    private _mockedDeployContractResponse: Address = new Address();
-    private _mockedVerifySchnorrSignature: boolean = false;
-
     public clearMockedResults(): void {
         this._mockedCallResult = new Uint8Array(1);
         this._mockedValidateBitcoinAddressResult = false;
@@ -175,8 +148,8 @@ export class BlockchainEnvironment {//extends BlockchainEnvironment {
         this._mockedVerifySchnorrSignature = result;
     }
 
-    public clearStorage():void{
-        this.storage.clear()
+    public clearStorage(): void {
+        this.storage.clear();
     }
 
     public call(destinationContract: Address, calldata: BytesWriter): BytesReader {
@@ -262,6 +235,20 @@ export class BlockchainEnvironment {//extends BlockchainEnvironment {
 
     public setStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {
         this._internalSetStorageAt(pointerHash, value);
+    }
+
+    protected error(msg: string): Error {
+        return runtimeError(msg);
+    }
+
+    private createContractIfNotExists(): void {
+        if (!this._contract) {
+            throw this.error('Contract is required');
+        }
+
+        if (!this._selfContract) {
+            this._selfContract = this._contract();
+        }
     }
 
     private _internalSetStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {
