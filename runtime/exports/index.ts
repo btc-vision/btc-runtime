@@ -3,8 +3,7 @@ import { BytesWriter } from '../buffer/BytesWriter';
 import { BytesReader } from '../buffer/BytesReader';
 import { Selector } from '../math/abi';
 import { Calldata } from '../types';
-import { env_exit, getEnvironmentVariables } from '../env/global';
-import { getCalldata } from '../env/global';
+import { env_exit, getCalldata, getEnvironmentVariables } from '../env/global';
 
 const ENVIRONMENT_VARIABLES_BYTE_LENGTH: u32 = 208;
 
