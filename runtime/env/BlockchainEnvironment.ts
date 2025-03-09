@@ -12,6 +12,7 @@ import {
     callContract,
     deployFromAddress,
     emit,
+    env_exit,
     getCallResult,
     loadPointer,
     log,
@@ -140,12 +141,16 @@ export class BlockchainEnvironment {
         }
 
         const resultLengthBuffer = new ArrayBuffer(32);
-        callContract(destinationContract.buffer, calldata.getBuffer().buffer, calldata.bufferLength(), resultLengthBuffer);
+        let status = callContract(destinationContract.buffer, calldata.getBuffer().buffer, calldata.bufferLength(), resultLengthBuffer);
 
         const reader = new BytesReader(Uint8Array.wrap(resultLengthBuffer));
         const resultLength = reader.readU32(true);
         const resultBuffer = new ArrayBuffer(resultLength);
         getCallResult(0, resultLength, resultBuffer);
+
+        if (status !== 0) {
+            env_exit(status, resultBuffer, resultLength);
+        }
 
         return new BytesReader(Uint8Array.wrap(resultBuffer));
     }
