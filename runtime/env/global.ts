@@ -55,8 +55,9 @@ export function ripemd160(data: Uint8Array): Uint8Array {
 export declare function validateBitcoinAddress(address: ArrayBuffer, addressLength: u32): u32;
 
 // @ts-ignore
-@external('env', 'inputs')
-export declare function inputs(result: ArrayBuffer): void;
+export function inputs(): Uint8Array {
+    return Blockchain.mockedTransactionInputs();
+}
 
 // @ts-ignore
 @external('env', 'inputsSize')

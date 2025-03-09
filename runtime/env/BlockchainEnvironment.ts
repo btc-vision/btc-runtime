@@ -5,22 +5,9 @@ import { OP_NET } from '../contracts/OP_NET';
 import { NetEvent } from '../events/NetEvent';
 import { Potential } from '../lang/Definitions';
 import { Address } from '../types/Address';
-import { ADDRESS_BYTE_LENGTH } from '../utils';
 import { Block } from './classes/Block';
 import { Transaction } from './classes/Transaction';
-import {
-    callContract,
-    deployFromAddress,
-    emit,
-    env_exit,
-    getCallResult,
-    loadPointer,
-    log,
-    sha256,
-    storePointer,
-    validateBitcoinAddress,
-    verifySchnorrSignature,
-} from './global';
+import { sha256, storePointer } from './global';
 import { eqUint, MapUint8Array } from '../generic/MapUint8Array';
 import { EMPTY_BUFFER } from '../math/bytes';
 import { TransactionOutput } from './classes/UTXO';
@@ -163,6 +150,10 @@ export class BlockchainEnvironment {
 
     public mockTransactionOutput(transactions: TransactionOutput[]): void {
         this._mockedOutputs = transactions;
+    }
+
+    public mockedTransactionInputs(): Uint8Array {
+        throw new Revert('TODO.');
     }
 
     public mockedTransactionOutput(): Uint8Array {
