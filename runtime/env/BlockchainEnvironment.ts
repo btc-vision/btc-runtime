@@ -4,7 +4,6 @@ import { BytesWriter } from '../buffer/BytesWriter';
 import { OP_NET } from '../contracts/OP_NET';
 import { NetEvent } from '../events/NetEvent';
 import { Potential } from '../lang/Definitions';
-import { PointerStorage } from '../types';
 import { Address } from '../types/Address';
 import { ADDRESS_BYTE_LENGTH } from '../utils';
 import { Block } from './classes/Block';
@@ -36,7 +35,7 @@ export class BlockchainEnvironment {
 
     public readonly DEAD_ADDRESS: Address = Address.dead();
 
-    private storage: PointerStorage = new MapUint8Array();
+    private storage: MapUint8Array = new MapUint8Array();
     private _selfContract: Potential<OP_NET> = null;
 
     private _block: Potential<Block> = null;
@@ -201,8 +200,7 @@ export class BlockchainEnvironment {
     public getStorageAt(
         pointerHash: Uint8Array,
     ): Uint8Array {
-        this.ensureStorageAtPointer(pointerHash);
-
+        this.hasPointerStorageHash(pointerHash);
         if (this.storage.has(pointerHash)) {
             return this.storage.get(pointerHash);
         }
@@ -272,15 +270,5 @@ export class BlockchainEnvironment {
         this.storage.set(pointer, value); // cache the value
 
         return !eqUint(value, EMPTY_BUFFER);
-    }
-
-    private ensureStorageAtPointer(
-        pointerHash: Uint8Array,
-    ): void {
-        if (this.hasPointerStorageHash(pointerHash)) {
-            return;
-        }
-
-        this._internalSetStorageAt(pointerHash, EMPTY_BUFFER);
     }
 }

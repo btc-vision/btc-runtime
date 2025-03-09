@@ -55,6 +55,6 @@ export class AddressMemoryMap {
     }
 
     private encodePointer(key: Address): Uint8Array {
-        return encodePointer(this.pointer, key, false);
+        return encodePointer(this.pointer, key.slice(0, 30), true);
     }
 }

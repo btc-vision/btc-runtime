@@ -17,11 +17,14 @@ export class Address extends Uint8Array {
      * generated from 04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f
      */
     public static dead(): Address {
-        return DEAD_ADDRESS;
+        return new Address([
+            40, 74, 228, 172, 219, 50, 169, 155, 163, 235, 250, 102, 169, 29, 219, 65, 167, 183,
+            161, 210, 254, 244, 21, 57, 153, 34, 205, 138, 4, 72, 92, 2,
+        ]);
     }
 
     public static zero(): Address {
-        return ZERO_ADDRESS;
+        return new Address();
     }
 
     public static fromString(pubKey: string): Address {

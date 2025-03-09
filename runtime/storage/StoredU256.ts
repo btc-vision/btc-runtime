@@ -35,7 +35,7 @@ export class StoredU256 {
     }
 
     public get toBytes(): Uint8Array {
-        return this._value.toUint8Array(false);
+        return this._value.toUint8Array(true);
     }
 
     private get __value(): Uint8Array {

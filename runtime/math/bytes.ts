@@ -20,6 +20,9 @@ export function bytesToU32(number: Uint8Array): u32 {
 // 32-byte buffer of all zeros
 export const EMPTY_BUFFER: Uint8Array = new Uint8Array(32);
 
+// 30-byte buffer of all zeros
+export const EMPTY_POINTER: Uint8Array = new Uint8Array(30);
+
 // 32-byte buffer representing 1 in big-endian form:
 // index 31 is the least significant byte.
 export const ONE_BUFFER: Uint8Array = new Uint8Array(32);

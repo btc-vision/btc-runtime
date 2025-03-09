@@ -18,7 +18,7 @@ export function encodeSelector(name: string): Selector {
 export function encodePointerUnknownLength(uniqueIdentifier: u16, typed: Uint8Array): Uint8Array {
     const hash = sha256(typed);
 
-    return encodePointer(uniqueIdentifier, hash);
+    return encodePointer(uniqueIdentifier, hash, false);
 }
 
 /**

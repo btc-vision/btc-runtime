@@ -304,4 +304,8 @@ export class BytesReader {
             );
         }
     }
+
+    public toString(): string {
+        return Uint8Array.wrap(this.buffer.buffer).toString();
+    }
 }
