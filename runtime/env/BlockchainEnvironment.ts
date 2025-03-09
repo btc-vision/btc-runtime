@@ -7,7 +7,7 @@ import { Potential } from '../lang/Definitions';
 import { Address } from '../types/Address';
 import { Block } from './classes/Block';
 import { Transaction } from './classes/Transaction';
-import { sha256, storePointer } from './global';
+import { sha256 } from './global';
 import { eqUint, MapUint8Array } from '../generic/MapUint8Array';
 import { EMPTY_BUFFER } from '../math/bytes';
 import { TransactionOutput } from './classes/UTXO';
@@ -294,8 +294,6 @@ export class BlockchainEnvironment {
 
     private _internalSetStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {
         this.storage.set(pointerHash, value);
-
-        storePointer(pointerHash.buffer, value.buffer);
     }
 
     private hasPointerStorageHash(pointer: Uint8Array): bool {
