@@ -1,51 +1,56 @@
-import { u256 } from '@btc-vision/as-bignum/assembly';
 import { Blockchain } from '../env';
+import { GET_EMPTY_BUFFER } from '../math/bytes';
+import { Revert } from '../types/Revert';
 
 @final
 export class StoredBoolean {
-    private readonly u256Pointer: u256;
+    private readonly pointerBuffer: Uint8Array;
 
     constructor(
         public pointer: u16,
-        private defaultValue: bool,
+        defaultValue: bool,
     ) {
-        this.u256Pointer = u256.from(pointer);
+        const pointerBuffer = GET_EMPTY_BUFFER();
+        pointerBuffer[0] = pointer & 255;
+        pointerBuffer[1] = (pointer << 8) & 255;
+
+        this.pointerBuffer = pointerBuffer;
+
+        const value = GET_EMPTY_BUFFER();
+        if (defaultValue) {
+            value[0] = 1;
+        }
+
+        this._value = value;
     }
 
-    private _value: u256 = u256.Zero;
+    private _value: Uint8Array;
 
     @inline
     public get value(): bool {
         this.ensureValue();
 
-        return this._value.toBool();
+        return this._value[0] === 1;
     }
 
-    @inline
     public set value(value: bool) {
-        this._value = value ? u256.One : u256.Zero;
+        this._value[0] = value ? 1 : 0;
 
-        Blockchain.setStorageAt(this.u256Pointer, this._value);
-    }
-
-    @inline
-    public set(value: u256): this {
-        this._value = value;
-
-        Blockchain.setStorageAt(this.u256Pointer, this._value);
-
-        return this;
+        Blockchain.setStorageAt(this.pointerBuffer, this._value);
     }
 
     @inline
     public toUint8Array(): Uint8Array {
-        return this._value.toUint8Array(true);
+        if (!this._value) {
+            throw new Revert(`Not defined.`);
+        }
+
+        return this._value;
     }
 
     private ensureValue(): void {
         this._value = Blockchain.getStorageAt(
-            this.u256Pointer,
-            this.defaultValue ? u256.One : u256.Zero,
+            this.pointerBuffer,
         );
     }
 }

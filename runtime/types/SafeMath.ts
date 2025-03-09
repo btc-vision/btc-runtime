@@ -80,15 +80,30 @@ export class SafeMath {
 
         while (!r.isZero()) {
             const quotient = SafeMath.div(old_r, r);
-            const r_copy = r;
-            r = SafeMath.sub(old_r, SafeMath.mul(quotient, r));
-            old_r = r_copy;
 
-            const s_copy = s;
-            s = SafeMath.sub(old_s, SafeMath.mul(quotient, s));
-            old_s = s_copy;
+            // --- Update r ---
+            {
+                // old_r - (quotient * r)
+                const tmp = r;
+                r = u256.sub(old_r, u256.mul(quotient, r));  // unchecked subtract
+                old_r = tmp;
+            }
+
+            // --- Update s ---
+            {
+                // old_s - (quotient * s)
+                const tmp = s;
+                s = u256.sub(old_s, u256.mul(quotient, s));  // unchecked subtract
+                old_s = tmp;
+            }
         }
 
+        // At this point, `old_r` is the gcd(k, p). If gcd != 1 => no inverse
+        // (in a prime field p, gcd=1 if k != 0).
+        // We could enforce this by checking `old_r == 1` but we'll leave it to the caller.
+
+        // The extended Euclidean algorithm says `old_s` is the inverse (possibly negative),
+        // so we reduce mod p
         return SafeMath.mod(old_s, p);
     }
 
@@ -248,52 +263,48 @@ export class SafeMath {
 
     @unsafe
     public static shl(value: u256, shift: i32): u256 {
-        if (shift == 0) {
-            return value.clone();
+        // If shift <= 0, no left shift needed (shift=0 => return clone, shift<0 => treat as 0).
+        if (shift <= 0) {
+            return shift == 0 ? value.clone() : new u256(); // or just return value if shift<0 is invalid
         }
 
-        const totalBits = 256;
-        const bitsPerSegment = 64;
+        // If shift >= 256, the result is zero
+        if (shift >= 256) {
+            return new u256();
+        }
 
-        // Normalize shift to be within 0-255 range
+        // Now shift is in [1..255]. Masking is optional for clarity:
         shift &= 255;
 
-        if (shift >= totalBits) {
-            return new u256(); // Shift size larger than width results in zero
-        }
-
-        // Determine how many full 64-bit segments we are shifting
+        const bitsPerSegment = 64;
         const segmentShift = (shift / bitsPerSegment) | 0;
         const bitShift = shift % bitsPerSegment;
 
         const segments = [value.lo1, value.lo2, value.hi1, value.hi2];
         const result = SafeMath.shlSegment(segments, segmentShift, bitShift, bitsPerSegment, 4);
-
         return new u256(result[0], result[1], result[2], result[3]);
     }
 
     public static shl128(value: u128, shift: i32): u128 {
-        if (shift == 0) {
-            return value.clone();
+        if (shift <= 0) {
+            return shift == 0 ? value.clone() : new u128();
         }
 
-        const totalBits = 256;
+        // Here the total bit width is 128, so shifting >= 128 bits => zero
+        if (shift >= 128) {
+            return new u128();
+        }
+
+        // Mask to 0..127
+        shift &= 127;
+
         const bitsPerSegment = 64;
 
-        // Normalize shift to be within 0-255 range
-        shift &= 255;
-
-        if (shift >= totalBits) {
-            return new u128(); // Shift size larger than width results in zero
-        }
-
-        // Determine how many full 64-bit segments we are shifting
         const segmentShift = (shift / bitsPerSegment) | 0;
         const bitShift = shift % bitsPerSegment;
 
         const segments = [value.lo, value.hi];
         const result = SafeMath.shlSegment(segments, segmentShift, bitShift, bitsPerSegment, 2);
-
         return new u128(result[0], result[1]);
     }
 
@@ -369,7 +380,24 @@ export class SafeMath {
      * @returns The incremented value
      */
     static inc(value: u256): u256 {
+        if (u256.eq(value, u256.Max)) {
+            throw new Error('SafeMath: increment overflow');
+        }
+
         return value.preInc();
+    }
+
+    /**
+     * Decrement a u256 value by 1
+     * @param value The value to decrement
+     * @returns The decremented value
+     */
+    public static dec(value: u256): u256 {
+        if (u256.eq(value, u256.Zero)) {
+            throw new Error('SafeMath: decrement overflow');
+        }
+
+        return value.preDec();
     }
 
     /**

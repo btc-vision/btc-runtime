@@ -32,7 +32,7 @@ export class OP_NET implements IBTC {
                 response.writeAddress(this.contractDeployer);
                 break;
             default:
-                throw new Revert('Method not found');
+                throw new Revert(`Method not found: ${method}`);
         }
 
         return response;

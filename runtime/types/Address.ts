@@ -1,7 +1,6 @@
 import { Potential } from '../lang/Definitions';
-import { decodeHexArray, encodeHexFromBuffer } from '../utils';
+import { ADDRESS_BYTE_LENGTH, decodeHexArray, encodeHexFromBuffer } from '../utils';
 import { bech32m as _bech32m, toWords } from '../utils/b32';
-import { ADDRESS_BYTE_LENGTH } from '../utils/lengths';
 
 @final
 export class Address extends Uint8Array {
@@ -24,12 +23,26 @@ export class Address extends Uint8Array {
         ]);
     }
 
+    public static zero(): Address {
+        return new Address();
+    }
+
     public static fromString(pubKey: string): Address {
         if (pubKey.startsWith('0x')) {
             pubKey = pubKey.slice(2);
         }
 
         return new Address(decodeHexArray(pubKey));
+    }
+
+    public isZero(): bool {
+        for (let i = 0; i < this.length; i++) {
+            if (this[i] != 0) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public toHex(): string {
@@ -131,5 +144,12 @@ export class Address extends Uint8Array {
         return this.toBech32m();
     }
 }
+
+export const DEAD_ADDRESS = new Address([
+    40, 74, 228, 172, 219, 50, 169, 155, 163, 235, 250, 102, 169, 29, 219, 65, 167, 183,
+    161, 210, 254, 244, 21, 57, 153, 34, 205, 138, 4, 72, 92, 2,
+]);
+
+export const ZERO_ADDRESS = new Address();
 
 export declare type PotentialAddress = Potential<Address>;

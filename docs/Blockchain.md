@@ -178,8 +178,8 @@ usage examples.
       Blockchain.log(`New Contract Address: ${deployResponse.contractAddress}`);
       ```
 
-7. **getStorageAt(pointer: u16, subPointer: MemorySlotPointer, defaultValue: MemorySlotData<u256>)**
-    - **Returns**: `MemorySlotData<u256>`
+7. **getStorageAt(pointer: u16, subPointer: Uint8Array, defaultValue: Uint8Array)**
+    - **Returns**: `Uint8Array`
     - **Description**: Retrieves the value stored at the specified storage pointer and sub-pointer. This method is
       crucial for accessing persistent data within the contract's storage.
     - **Usage Example**:
@@ -188,7 +188,7 @@ usage examples.
       Blockchain.log(`Stored Value: ${value}`);
       ```
 
-8. **hasStorageAt(pointer: u16, subPointer: MemorySlotPointer)**
+8. **hasStorageAt(pointer: u16, subPointer: Uint8Array)**
     - **Returns**: `bool`
     - **Description**: Checks whether a value exists at the specified storage pointer and sub-pointer. This method helps
       determine if a storage location is occupied or has been set.
@@ -198,12 +198,12 @@ usage examples.
       Blockchain.log(`Storage Exists: ${exists}`);
       ```
 
-9. **setStorageAt(pointer: u16, keyPointer: MemorySlotPointer, value: MemorySlotData<u256>)**
+9. **setStorageAt(pointer: u16, keyPointer: Uint8Array, value: Uint8Array)**
     - **Description**: Sets a value at the specified storage pointer and key pointer. This method is used to store
       persistent data in the contract's storage.
     - **Usage Example**:
       ```typescript
-      Blockchain.setStorageAt(pointer, keyPointer, new MemorySlotData<u256>(u256.fromU32(1000)));
+      Blockchain.setStorageAt(pointer, keyPointer, new Uint8Array(u256.fromU32(1000)));
       ```
 
 ---

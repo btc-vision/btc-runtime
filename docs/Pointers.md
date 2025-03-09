@@ -28,7 +28,7 @@ locations are secure and resistant to tampering.
 
 **Encoding and Hashing:**
 
-- Both the pointer and sub-pointer are encoded and hashed together to generate a unique `MemorySlotPointer`, which is
+- Both the pointer and sub-pointer are encoded and hashed together to generate a unique `Uint8Array`, which is
   then used to store or retrieve data from the contract's storage.
 
 ### 3. **How Encoding and Hashing Work**
@@ -37,7 +37,7 @@ Let's break down the encoding and hashing process:
 
 #### **1. Encoding a Selector or Pointer**
 
-For example, to encode a selector (like a function name) or a string into a `MemorySlotPointer`:
+For example, to encode a selector (like a function name) or a string into a `Uint8Array`:
 
 ```typescript
 export function encodeSelector(name: string): Selector {
@@ -47,7 +47,7 @@ export function encodeSelector(name: string): Selector {
     return bytes4(hash); // Returns the first 4 bytes of the hash
 }
 
-export function encodePointer(str: string): MemorySlotPointer {
+export function encodePointer(str: string): Uint8Array {
     const typed = Uint8Array.wrap(String.UTF8.encode(str));
     const hash = Sha256.hash(typed);
 
@@ -60,7 +60,7 @@ export function encodePointer(str: string): MemorySlotPointer {
 To combine a primary pointer (`u16`) and a sub-pointer (`u256`), the following method is used:
 
 ```typescript
-export function encodePointerHash(pointer: u16, sub: u256): MemorySlotPointer {
+export function encodePointerHash(pointer: u16, sub: u256): Uint8Array {
     const finalBuffer: Uint8Array = new Uint8Array(34); // 2 bytes for pointer + 32 bytes for sub-pointer
     const mergedKey: u8[] = [u8(pointer & u16(0xff)), u8((pointer >> u16(8)) & u16(0xff))];
 
@@ -84,13 +84,13 @@ Let’s consider an example where:
 - **Pointer**: `0x01`
 - **Sub-Pointer**: `0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890`
 
-The `encodePointerHash` function combines these two values and hashes them to produce a unique `MemorySlotPointer`:
+The `encodePointerHash` function combines these two values and hashes them to produce a unique `Uint8Array`:
 
 ```typescript
 const pointer: u16 = 0x01;
 const subPointer: u256 = u256.fromHexString("abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890");
 
-const memorySlotPointer: MemorySlotPointer = encodePointerHash(pointer, subPointer);
+const Uint8Array: Uint8Array = encodePointerHash(pointer, subPointer);
 ```
 
 - **Pointer (0x01)**: `0001` (in hexadecimal, 2 bytes)
@@ -102,7 +102,7 @@ const memorySlotPointer: MemorySlotPointer = encodePointerHash(pointer, subPoint
 0001abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
 ```
 
-This final buffer is then hashed using SHA-256 to produce a `MemorySlotPointer`:
+This final buffer is then hashed using SHA-256 to produce a `Uint8Array`:
 
 **Hashed Result:**
 
@@ -110,7 +110,7 @@ This final buffer is then hashed using SHA-256 to produce a `MemorySlotPointer`:
 5f8fdbfe9d6c7e9dff7c80f104b82cbf8b365b762c3a6e3c68e6a53e0f2360bf
 ```
 
-This 32-byte value (`MemorySlotPointer`) is now the key used to store and retrieve the data from the contract’s storage.
+This 32-byte value (`Uint8Array`) is now the key used to store and retrieve the data from the contract’s storage.
 
 ### 4. **Usage Example in a Contract**
 
@@ -119,11 +119,10 @@ Here’s how this works in a practical contract scenario:
 ```typescript
 import { u256 } from 'as-bignum/assembly';
 import { Blockchain } from '@btc-vision/btc-runtime/runtime/env';
-import { MemorySlotPointer } from '@btc-vision/btc-runtime/runtime/memory/MemorySlotPointer';
 
 class MyStorageContract {
     private pointer: u16;
-    private subPointer: MemorySlotPointer;
+    private subPointer: Uint8Array;
 
     constructor(pointer: u16, subKey: string) {
         this.pointer = pointer;
@@ -144,7 +143,7 @@ class MyStorageContract {
 
 ### 5. **Proofs and Integrity**
 
-The cryptographic hashing ensures that each storage slot is uniquely identified by its `MemorySlotPointer`, preventing
+The cryptographic hashing ensures that each storage slot is uniquely identified by its `Uint8Array`, preventing
 collisions and ensuring that data stored in one slot cannot be overwritten or tampered with without detection.
 
 When the data is stored or retrieved, the system generates cryptographic proofs that verify the integrity of the data.
