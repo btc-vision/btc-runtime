@@ -14,7 +14,6 @@ export * from './buffer/BytesWriter';
 
 /** Interfaces */
 export * from './interfaces/IBTC';
-export * from './interfaces/DeployContractResponse';
 
 /** Events */
 export * from './events/NetEvent';
@@ -43,16 +42,12 @@ export * from './types/SafeMathI128';
 /** Math */
 export * from './math/abi';
 export * from './math/bytes';
-export * from './math/cyrb53';
-export * from './math/sha256';
 export * from './secp256k1/ECPoint';
 
 /** Memory */
 export * from './memory/AddressMemoryMap';
 export * from './memory/StringMemoryMap';
 export * from './memory/MultiStringMemoryMap';
-export * from './memory/MemorySlot';
-export * from './memory/MemorySlotPointer';
 export * from './memory/KeyMerger';
 export * from './memory/MultiAddressMemoryMap';
 export * from './memory/Uint8ArrayMerger';
@@ -67,19 +62,16 @@ export * from './storage/Serializable';
 
 /** Arrays */
 export * from './storage/arrays/StoredAddressArray';
+export * from './storage/arrays/StoredBooleanArray';
+
 export * from './storage/arrays/StoredU8Array';
 export * from './storage/arrays/StoredU16Array';
 export * from './storage/arrays/StoredU32Array';
-export * from './storage/arrays/StoredBooleanArray';
+export * from './storage/arrays/StoredU64Array';
 export * from './storage/arrays/StoredU128Array';
 export * from './storage/arrays/StoredU256Array';
 
-/** Storage Utils */
-export * from './storage/utils/StorageBacked';
-export * from './storage/utils/StorageSlot';
-export * from './storage/utils/StorageStruct';
-export * from './storage/utils/StorageLayout';
-export * from './storage/utils/StorageValue';
+export * from './memory/FastUint8Array';
 
 /** Shared libraries */
 export * from './shared-libraries/TransferHelper';

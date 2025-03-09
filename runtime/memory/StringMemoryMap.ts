@@ -1,43 +1,43 @@
-import { MemorySlotPointer } from './MemorySlotPointer';
 import { Blockchain } from '../env';
-import { encodePointer } from '../math/abi';
-import { MemorySlotData } from './MemorySlot';
-import { u256 } from '@btc-vision/as-bignum/assembly';
+import { encodePointerUnknownLength } from '../math/abi';
 import { BytesWriter } from '../buffer/BytesWriter';
+import { EMPTY_BUFFER } from '../math/bytes';
 
 @final
-export class StringMemoryMap<K extends string, V extends MemorySlotData<u256>> {
+export class StringMemoryMap<K extends string> {
     public pointer: u16;
 
     constructor(
         pointer: u16,
-        private readonly defaultValue: V,
     ) {
         this.pointer = pointer;
     }
 
-    public set(key: K, value: V): this {
-        const keyHash: MemorySlotPointer = this.encodePointer(key);
+    @inline
+    public set(key: K, value: Uint8Array): this {
+        const keyHash: Uint8Array = this.encodePointer(key);
         Blockchain.setStorageAt(keyHash, value);
 
         return this;
     }
 
-    public get(key: K): MemorySlotData<u256> {
-        const keyHash: MemorySlotPointer = this.encodePointer(key);
+    @inline
+    public get(key: K): Uint8Array {
+        const keyHash: Uint8Array = this.encodePointer(key);
 
-        return Blockchain.getStorageAt(keyHash, this.defaultValue);
+        return Blockchain.getStorageAt(keyHash);
     }
 
+    @inline
     public has(key: K): bool {
-        const keyHash: MemorySlotPointer = this.encodePointer(key);
+        const keyHash: Uint8Array = this.encodePointer(key);
 
         return Blockchain.hasStorageAt(keyHash);
     }
 
     @unsafe
     public delete(key: K): bool {
-        this.set(key, this.defaultValue);
+        this.set(key, EMPTY_BUFFER);
 
         return true;
     }
@@ -47,10 +47,10 @@ export class StringMemoryMap<K extends string, V extends MemorySlotData<u256>> {
         throw new Error('Method not implemented.');
     }
 
-    private encodePointer(key: K): MemorySlotPointer {
+    private encodePointer(key: K): Uint8Array {
         const writer = new BytesWriter(key.length);
         writer.writeString(key);
 
-        return encodePointer(this.pointer, writer.getBuffer());
+        return encodePointerUnknownLength(this.pointer, writer.getBuffer());
     }
 }

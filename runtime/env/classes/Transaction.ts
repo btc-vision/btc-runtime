@@ -2,14 +2,14 @@ import { Address } from '../../types/Address';
 import { TransactionInput, TransactionOutput } from './UTXO';
 import { Potential } from '../../lang/Definitions';
 import { BytesReader } from '../../buffer/BytesReader';
-import { inputs, outputs } from '../global';
+import { getInputsSize, getOutputsSize, inputs, outputs } from '../global';
 
 @final
 export class Transaction {
     public constructor(
         public readonly sender: Address, // "immediate caller"
         public readonly origin: Address, // "leftmost thing in the call chain"
-        public readonly id: Uint8Array,
+        public readonly hash: Uint8Array,
         public readonly disableCache: bool = false,
     ) {
     }
@@ -45,14 +45,12 @@ export class Transaction {
     }
 
     private loadInputs(): TransactionInput[] {
-        const buffer = new BytesReader(inputs());
-
-        return buffer.readTransactionInputs();
+        const reader = new BytesReader(inputs());
+        return reader.readTransactionInputs();
     }
 
     private loadOutputs(): TransactionOutput[] {
-        const buffer = new BytesReader(outputs());
-
-        return buffer.readTransactionOutputs();
+        const reader = new BytesReader(outputs());
+        return reader.readTransactionOutputs();
     }
 }

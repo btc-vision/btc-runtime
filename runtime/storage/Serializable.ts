@@ -1,18 +1,19 @@
-import { u256 } from '@btc-vision/as-bignum/assembly';
 import { BytesReader } from '../buffer/BytesReader';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
 import { encodePointer } from '../math/abi';
-import { MemorySlotPointer } from '../memory/MemorySlotPointer';
 import { Revert } from '../types/Revert';
-import { U256_BYTE_LENGTH } from '../utils';
+
+export const SERIALIZED_POINTER_LENGTH: u8 = 29;
 
 // Similar to a struct in Solidity. (Use in worst case scenario, consume a lot of gas)
 export abstract class Serializable {
     protected pointer: u16;
-    protected subPointer: MemorySlotPointer;
+    protected subPointer: Uint8Array;
 
-    protected constructor(pointer: u16, subPointer: MemorySlotPointer) {
+    protected constructor(pointer: u16, subPointer: Uint8Array) {
+        if (subPointer.length !== SERIALIZED_POINTER_LENGTH) throw new Revert(`Sub pointer length must be ${SERIALIZED_POINTER_LENGTH} bytes.`);
+
         this.pointer = pointer;
         this.subPointer = subPointer;
     }
@@ -24,14 +25,14 @@ export abstract class Serializable {
 
     public abstract readFromBuffer(reader: BytesReader): void;
 
-    public abstract exists(chunk: u256, index: u8): boolean;
+    public abstract exists(chunk: Uint8Array, index: u8): boolean;
 
     public load(): boolean {
-        const chunks: u256[] = [];
+        const chunks: Uint8Array[] = [];
 
         for (let index: u8 = 0; index < this.chunkCount; index++) {
             const pointer = this.getPointer(this.subPointer, index);
-            const chunk: u256 = Blockchain.getStorageAt(pointer, u256.Zero);
+            const chunk: Uint8Array = Blockchain.getStorageAt(pointer);
 
             if (!this.exists(chunk, index)) {
                 return false;
@@ -49,7 +50,7 @@ export abstract class Serializable {
     public save(): void {
         const writer: BytesWriter = this.writeToBuffer();
         const buffer = writer.getBuffer();
-        const chunks: u256[] = this.bytesToChunks(buffer);
+        const chunks: Uint8Array[] = this.bytesToChunks(buffer);
 
         if (chunks.length !== this.chunkCount) {
             throw new Revert(
@@ -69,8 +70,8 @@ export abstract class Serializable {
         }
     }
 
-    protected bytesToChunks(buffer: Uint8Array): u256[] {
-        const chunks: u256[] = [];
+    protected bytesToChunks(buffer: Uint8Array): Uint8Array[] {
+        const chunks: Uint8Array[] = [];
 
         for (let index: i32 = 0; index < buffer.byteLength; index += 32) {
             if (chunks.length === 256) {
@@ -78,13 +79,13 @@ export abstract class Serializable {
             }
 
             const chunk = buffer.slice(index, index + 32);
-            chunks.push(u256.fromBytes(chunk, true));
+            chunks.push(chunk);
         }
 
         return chunks;
     }
 
-    protected chunksToBytes(chunks: u256[]): BytesReader {
+    protected chunksToBytes(chunks: Uint8Array[]): BytesReader {
         if (this.chunkCount > u8(255)) {
             throw new Revert(`Too many chunks received. You may only write up to 8160 bytes per object.`);
         }
@@ -93,7 +94,7 @@ export abstract class Serializable {
         let offset: i32 = 0;
 
         for (let indexChunk: i32 = 0; indexChunk < chunks.length; indexChunk++) {
-            const bytes: u8[] = chunks[indexChunk].toBytes(true);
+            const bytes: Uint8Array = chunks[indexChunk];
             for (let indexByte: i32 = 0; indexByte < bytes.length; indexByte++) {
                 buffer[offset++] = bytes[indexByte];
             }
@@ -102,12 +103,10 @@ export abstract class Serializable {
         return new BytesReader(buffer);
     }
 
-    protected getPointer(subPointer: u256, index: u8): u256 {
-        const writer = new BytesWriter(U256_BYTE_LENGTH);
-        writer.writeU256(subPointer);
-
-        // Discard the first byte for offset.
-        writer.writeU8At(index, 0);
+    protected getPointer(subPointer: Uint8Array, index: u8): Uint8Array {
+        const writer = new BytesWriter(30);
+        writer.writeU8(index);
+        writer.writeBytes(subPointer);
 
         return encodePointer(this.pointer, writer.getBuffer());
     }
