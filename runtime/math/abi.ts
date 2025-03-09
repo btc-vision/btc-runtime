@@ -21,6 +21,19 @@ export function encodePointerUnknownLength(uniqueIdentifier: u16, typed: Uint8Ar
     return encodePointer(uniqueIdentifier, hash, false);
 }
 
+function ensureAtLeast30Bytes(typed: Uint8Array): Uint8Array {
+    if (typed.length >= 30) {
+        return typed;
+    }
+
+    const result = new Uint8Array(30);
+    for (let i = 0; i < typed.length; i++) {
+        result[i] = typed[i];
+    }
+
+    return result;
+}
+
 /**
  * Optimized pointer encoding, see encodePointerUnknownLength for a more generic version.
  * @param uniqueIdentifier
@@ -28,14 +41,16 @@ export function encodePointerUnknownLength(uniqueIdentifier: u16, typed: Uint8Ar
  * @param safe
  */
 export function encodePointer(uniqueIdentifier: u16, typed: Uint8Array, safe: boolean = true): Uint8Array {
-    if (safe) assert(typed.length === 30, `Pointers must be 30 bytes. Got ${typed.length}.`);
+    const array = ensureAtLeast30Bytes(typed);
+
+    if (safe) assert(array.length === 30, `Pointers must be 30 bytes. Got ${array.length}.`);
 
     const finalPointer = new Uint8Array(32);
     finalPointer[0] = uniqueIdentifier & 0xff;
     finalPointer[1] = (uniqueIdentifier >> 8) & 0xff;
 
     for (let i = 0; i < 30; i++) {
-        finalPointer[i + 2] = typed[i];
+        finalPointer[i + 2] = array[i];
     }
 
     return finalPointer;
