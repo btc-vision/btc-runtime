@@ -18,7 +18,7 @@ import { IOP_20 } from './interfaces/IOP_20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
 import { sha256 } from '../env/global';
-import { EMPTY_BUFFER, EMPTY_POINTER } from '../math/bytes';
+import { EMPTY_POINTER } from '../math/bytes';
 
 const nonceMapPointer: u16 = Blockchain.nextPointer;
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
