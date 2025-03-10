@@ -2,7 +2,7 @@ import { Address } from '../../types/Address';
 import { TransactionInput, TransactionOutput } from './UTXO';
 import { Potential } from '../../lang/Definitions';
 import { BytesReader } from '../../buffer/BytesReader';
-import { getInputsSize, getOutputsSize, inputs, outputs } from '../global';
+import { inputs, outputs } from '../global';
 
 @final
 export class Transaction {

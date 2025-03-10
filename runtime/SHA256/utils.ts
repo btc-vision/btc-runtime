@@ -7,7 +7,7 @@ type aisize = i32;
  */
 export function bin2hex(bin: Uint8Array): string {
     let bin_len = bin.length;
-    let hex = "";
+    let hex = '';
     for (let i = 0; i < bin_len; i++) {
         let bin_i = bin[i] as u32;
         let c = bin_i & 0xf;
@@ -22,10 +22,10 @@ export function bin2hex(bin: Uint8Array): string {
 }
 
 /**
-* (best-effort) Constant-time hexadecimal decoding
-* @param hex Hex-encoded data
-* @returns Raw binary representation
-*/
+ * (best-effort) Constant-time hexadecimal decoding
+ * @param hex Hex-encoded data
+ * @returns Raw binary representation
+ */
 function hex2bin(hex: string): Uint8Array | null {
     let hex_len = hex.length;
     if ((hex_len & 1) !== 0) {
@@ -57,11 +57,11 @@ function hex2bin(hex: string): Uint8Array | null {
 
 
 /**
-* (best-effort) Constant-time verification that x == y
-* @param x array 1
-* @param y array 2
-* @returns true if both arrays contain the same data
-*/
+ * (best-effort) Constant-time verification that x == y
+ * @param x array 1
+ * @param y array 2
+ * @returns true if both arrays contain the same data
+ */
 export function verify(x: Uint8Array, y: Uint8Array): bool {
     let d: u8 = 0;
 

@@ -2,46 +2,6 @@ import { Sha256 } from '../SHA256/sha256';
 import { ripemd160f } from '../SHA256/ripemd160f';
 import { Blockchain } from './index';
 
-// @ts-ignore
-@external('env', 'environment')
-export declare function getEnvironmentVariables(offset: u32, length: u32, result: ArrayBuffer): void;
-
-// @ts-ignore
-@external('env', 'calldata')
-export declare function getCalldata(offset: u32, length: u32, result: ArrayBuffer): void;
-
-// @ts-ignore
-@external('env', 'load')
-export declare function loadPointer(key: ArrayBuffer, result: ArrayBuffer): void;
-
-// @ts-ignore
-@external('env', 'nextPointerGreaterThan')
-export declare function nextPointerGreaterThan(data: Uint8Array): Uint8Array;
-
-// @ts-ignore
-@external('env', 'store')
-export declare function storePointer(key: ArrayBuffer, value: ArrayBuffer): void;
-
-// @ts-ignore
-@external('env', 'deployFromAddress')
-export declare function deployFromAddress(originAddress: ArrayBuffer, salt: ArrayBuffer, resultAddress: ArrayBuffer): u32;
-
-// @ts-ignore
-@external('env', 'call')
-export declare function callContract(address: ArrayBuffer, calldata: ArrayBuffer, calldataLength: u32, resultLength: ArrayBuffer): u32;
-
-// @ts-ignore
-@external('env', 'callResult')
-export declare function getCallResult(offset: u32, length: u32, result: ArrayBuffer): void;
-
-// @ts-ignore
-@external('debug', 'log')
-export declare function log(data: ArrayBuffer, dataLength: u32): void;
-
-// @ts-ignore
-@external('env', 'emit')
-export declare function emit(data: ArrayBuffer, dataLength: u32): void;
-
 export function sha256(data: Uint8Array): Uint8Array {
     return Sha256.hash(data);
 }
@@ -50,33 +10,10 @@ export function ripemd160(data: Uint8Array): Uint8Array {
     return ripemd160f(data);
 }
 
-// @ts-ignore
-@external('env', 'validateBitcoinAddress')
-export declare function validateBitcoinAddress(address: ArrayBuffer, addressLength: u32): u32;
-
-// @ts-ignore
 export function inputs(): Uint8Array {
     return Blockchain.mockedTransactionInputs();
 }
 
-// @ts-ignore
-@external('env', 'inputsSize')
-export declare function getInputsSize(): u32;
-
-// @ts-ignore
-//@external('env', 'outputs')
 export function outputs(): Uint8Array {
     return Blockchain.mockedTransactionOutput();
 }
-
-// @ts-ignore
-@external('env', 'outputsSize')
-export declare function getOutputsSize(): u32;
-
-// @ts-ignore
-@external('env', 'verifySchnorrSignature')
-export declare function verifySchnorrSignature(publicKey: ArrayBuffer, signature: ArrayBuffer, message: ArrayBuffer): u32;
-
-// @ts-ignore
-@external('env', 'exit')
-export declare function env_exit(status: u32, data: ArrayBuffer, dataLength: u32): void;

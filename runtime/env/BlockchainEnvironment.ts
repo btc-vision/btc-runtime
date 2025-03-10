@@ -35,6 +35,7 @@ export function runtimeError(msg: string): Error {
  * log<Vec3>(null);
  * ```
  */
+@external('env', 'log')
 declare function log<T>(value: T | null): void;
 
 @final
@@ -48,7 +49,6 @@ export class BlockchainEnvironment {
 
     private _mockedCallResult: Uint8Array = new Uint8Array(1);
     private _mockedValidateBitcoinAddressResult: bool = false;
-    private _mockedEncodeVirtualAddressResult: Address = new Address();
     private _mockedDeployContractResponse: Address = new Address();
     private _mockedVerifySchnorrSignature: boolean = false;
     private _mockedOutputs: TransactionOutput[] = [];
@@ -61,6 +61,7 @@ export class BlockchainEnvironment {
             throw this.error('Block is required');
         }
 
+        log('test');
         return this._block as Block;
     }
 
@@ -122,7 +123,6 @@ export class BlockchainEnvironment {
     public clearMockedResults(): void {
         this._mockedCallResult = new Uint8Array(1);
         this._mockedValidateBitcoinAddressResult = false;
-        this._mockedEncodeVirtualAddressResult = new Address();
         this._mockedDeployContractResponse = new Address();
         this._mockedVerifySchnorrSignature = false;
         this._mockedOutputs = [];
@@ -134,10 +134,6 @@ export class BlockchainEnvironment {
 
     public mockValidateBitcoinAddressResult(result: bool): void {
         this._mockedValidateBitcoinAddressResult = result;
-    }
-
-    public mockEncodeVirtualAddressResult(result: Address): void {
-        this._mockedEncodeVirtualAddressResult = result;
     }
 
     public mockDeployContractResponse(result: Address): void {
@@ -195,7 +191,7 @@ export class BlockchainEnvironment {
             caller,
             origin,
             txHash,
-			true
+            true,
         );
 
         this._contractDeployer = contractDeployer;

@@ -11,6 +11,7 @@ export function eqUint(data: Uint8Array, data2: Uint8Array): bool {
     return true;
 }
 
+@final
 export class MapUint8Array extends Map<Uint8Array, Uint8Array> {
     public set(key: Uint8Array, value: Uint8Array): void {
         const index: i32 = this._keys.indexOf(key);
