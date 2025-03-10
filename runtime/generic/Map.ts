@@ -1,6 +1,24 @@
 import { Revert } from '../types/Revert';
 
-export class Map<K, V> {
+export interface IMap<K, V> {
+    readonly size: i32;
+
+    has(key: K): bool;
+
+    set(key: K, value: V): this;
+
+    get(key: K): V;
+
+    delete(key: K): bool;
+
+    clear(): void;
+
+    keys(): K[]; // preliminary
+    values(): V[]; // preliminary
+    toString(): string;
+}
+
+export class Map<K, V> implements IMap<K, V> {
     protected _keys: K[] = [];
     protected _values: V[] = [];
 
@@ -16,7 +34,7 @@ export class Map<K, V> {
         return this._values;
     }
 
-    public set(key: K, value: V): void {
+    public set(key: K, value: V): this {
         const index: i32 = this.indexOf(key);
         if (index == -1) {
             this._keys.push(key);
@@ -24,6 +42,8 @@ export class Map<K, V> {
         } else {
             this._values[index] = value;
         }
+
+        return this;
     }
 
     public indexOf(key: K): i32 {
@@ -62,5 +82,15 @@ export class Map<K, V> {
     public clear(): void {
         this._keys = [];
         this._values = [];
+    }
+
+    public toString(): string {
+        const str: string = ``;
+
+        for (let i: i32 = 0; i < this._keys.length; i++) {
+            str.concat(`[${this._keys[i]}] => [${this._values[i]}]`);
+        }
+
+        return str;
     }
 }

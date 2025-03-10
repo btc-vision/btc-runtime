@@ -141,7 +141,7 @@ export class BlockchainEnvironment {
         }
 
         const resultLengthBuffer = new ArrayBuffer(32);
-        let status = callContract(destinationContract.buffer, calldata.getBuffer().buffer, calldata.bufferLength(), resultLengthBuffer);
+        const status = callContract(destinationContract.buffer, calldata.getBuffer().buffer, calldata.bufferLength(), resultLengthBuffer);
 
         const reader = new BytesReader(Uint8Array.wrap(resultLengthBuffer));
         const resultLength = reader.readU32(true);
