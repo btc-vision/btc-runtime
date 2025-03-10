@@ -15,6 +15,7 @@ export function eqUint(data: Uint8Array, data2: Uint8Array): bool {
 export class MapUint8Array extends Map<Uint8Array, Uint8Array> {
     public set(key: Uint8Array, value: Uint8Array): void {
         const index: i32 = this._keys.indexOf(key);
+        console.log(`${index}`);
         if (index == -1) {
             this._keys.push(key);
             this._values.push(value);

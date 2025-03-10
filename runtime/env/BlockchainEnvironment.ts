@@ -19,25 +19,6 @@ export function runtimeError(msg: string): Error {
     return new Error(`RuntimeException: ${msg}`);
 }
 
-/**
- * Logs a single value to the logger, and is stringified. It works for references, values, and
- * strings.
- *
- * @type {T} - The type to be logged.
- * @param {T | null} value - The value to be logged.
- *
- * @example
- *
- * ```ts
- * log<string>("This is a logged value.");
- * log<i32>(42);
- * log<Vec3>(new Vec(1, 2, 3));
- * log<Vec3>(null);
- * ```
- */
-@external('env', 'log')
-declare function log<T>(value: T | null): void;
-
 @final
 export class BlockchainEnvironment {
     private static readonly MAX_U16: u16 = 65535;
@@ -61,7 +42,6 @@ export class BlockchainEnvironment {
             throw this.error('Block is required');
         }
 
-        log('test');
         return this._block as Block;
     }
 
@@ -213,7 +193,7 @@ export class BlockchainEnvironment {
     }
 
     public log(data: string): void {
-        log(data);
+        console.log(data);
     }
 
     public emit(event: NetEvent): void {
