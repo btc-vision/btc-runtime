@@ -24,10 +24,7 @@ export class StoredU256Array {
     private _isChangedLength: bool = false;      // Indicates if the length has been modified
     private _isChangedStartIndex: bool = false;  // Indicates if the startIndex has been modified
 
-    // Define a maximum allowed length to prevent excessive storage usage
-    private readonly MAX_LENGTH: u64 = u64(u32.MAX_VALUE - 1);
-
-    /**
+        /**
      * @constructor
      * @param {u16} pointer - The primary pointer identifier.
      * @param {Uint8Array} subPointer - The sub-pointer for memory slot addressing.
@@ -55,6 +52,10 @@ export class StoredU256Array {
         this._length = storedLengthAndStartIndex.lo1;  // Bytes 0-7: length
         this._startIndex = storedLengthAndStartIndex.lo2; // Bytes 8-15: startIndex
     }
+
+
+    // Define a maximum allowed length to prevent excessive storage usage
+    public MAX_LENGTH: u64 = u64(u32.MAX_VALUE - 1);
 
     /**
      * @method get

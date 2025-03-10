@@ -186,6 +186,7 @@ export class BlockchainEnvironment {
             reader.readAddress(),
             reader.readAddress(),
             reader.readBytes(32),
+            true
         );
 
         const currentBlock = reader.readU256();

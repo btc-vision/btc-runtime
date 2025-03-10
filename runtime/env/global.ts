@@ -49,8 +49,10 @@ export function ripemd160(data: Uint8Array): Uint8Array {
 export declare function validateBitcoinAddress(data: Uint8Array): Uint8Array;
 
 // @ts-ignore
-@external('env', 'inputs')
-export declare function inputs(): Uint8Array;
+//@external('env', 'inputs')
+export function inputs(): Uint8Array {
+    return new Uint8Array(1);
+}
 
 // @ts-ignore
 //@external('env', 'outputs')
