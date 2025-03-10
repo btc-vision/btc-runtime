@@ -4,14 +4,16 @@ import { Address } from '../types/Address';
 
 @final
 export class AddressMap<V> extends Map<Address, V> {
-    public set(key: Address, value: V): void {
-        const index: i32 = this._keys.indexOf(key);
-        if (index == -1) {
+    public set(key: Address, value: V): this {
+        const index: i32 = this.indexOf(key);
+        if (index === -1) {
             this._keys.push(key);
             this._values.push(value);
         } else {
             this._values[index] = value;
         }
+
+        return this;
     }
 
     public indexOf(address: Address): i32 {
@@ -38,7 +40,7 @@ export class AddressMap<V> extends Map<Address, V> {
 
     public get(key: Address): V {
         const index: i32 = this.indexOf(key);
-        if (index == -1) {
+        if (index === -1) {
             throw new Revert('Key not found in map (AddressMap)');
         }
         return this._values[index];
@@ -46,7 +48,7 @@ export class AddressMap<V> extends Map<Address, V> {
 
     public delete(key: Address): bool {
         const index: i32 = this.indexOf(key);
-        if (index == -1) {
+        if (index === -1) {
             return false;
         }
 
