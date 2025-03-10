@@ -1,6 +1,7 @@
 import { Potential } from '../lang/Definitions';
 import { ADDRESS_BYTE_LENGTH, decodeHexArray, encodeHexFromBuffer } from '../utils';
 import { bech32m as _bech32m, toWords } from '../utils/b32';
+import { Revert } from './Revert';
 
 @final
 export class Address extends Uint8Array {
@@ -12,8 +13,6 @@ export class Address extends Uint8Array {
         if (!(!bytes || bytes.length === 0)) {
             this.newSet(bytes);
         }
-
-        this.isDefined = true;
     }
 
     /**
@@ -21,11 +20,11 @@ export class Address extends Uint8Array {
      * generated from 04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f
      */
     public static dead(): Address {
-        return DEAD_ADDRESS;
+        return DEAD_ADDRESS.clone();
     }
 
     public static zero(): Address {
-        return ZERO_ADDRESS;
+        return ZERO_ADDRESS.clone();
     }
 
     public static fromString(pubKey: string): Address {
@@ -44,6 +43,21 @@ export class Address extends Uint8Array {
         }
 
         return true;
+    }
+
+    /**
+     * Create a new Address that is a copy of the current Address.
+     * @returns {Address}
+     */
+    public clone(): Address {
+        const cloned = new Address();
+        // Copy the raw memory directly:
+        memory.copy(cloned.dataStart, this.dataStart, ADDRESS_BYTE_LENGTH);
+
+        // Duplicate the isDefined flag as well:
+        cloned.isDefined = this.isDefined;
+
+        return cloned;
     }
 
     public toHex(): string {
@@ -71,6 +85,8 @@ export class Address extends Uint8Array {
         }
 
         super.set(publicKey);
+
+        this.isDefined = true;
     }
 
     public toBech32m(): string {
@@ -156,7 +172,9 @@ export class Address extends Uint8Array {
 
     @operator('[]=')
     private ___set(index: i32, value: u8): void {
-        assert(this.isDefined, `Can not modify address data.`);
+        if (this.isDefined) {
+            throw new Revert(`Cannot modify address data.`);
+        }
 
         if (u32(index) >= u32(this.length)) {
             throw new RangeError('Index out of range');

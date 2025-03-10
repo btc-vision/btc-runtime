@@ -59,7 +59,6 @@ function toArrayBufferBE(buffer: usize, val: u256): void {
     store<u16>(buffer, bswap(lo1Mid16), 28);
 }
 
-
 export function u256To30Bytes(value: u256): Uint8Array {
     const result = new Uint8Array(30);
     toArrayBufferBE(changetype<usize>(result.dataStart), value);
