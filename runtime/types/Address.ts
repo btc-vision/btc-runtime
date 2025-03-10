@@ -4,12 +4,16 @@ import { bech32m as _bech32m, toWords } from '../utils/b32';
 
 @final
 export class Address extends Uint8Array {
+    private isDefined: boolean = false;
+
     public constructor(bytes: u8[] = []) {
         super(ADDRESS_BYTE_LENGTH);
 
         if (!(!bytes || bytes.length === 0)) {
             this.newSet(bytes);
         }
+
+        this.isDefined = true;
     }
 
     /**
@@ -17,14 +21,11 @@ export class Address extends Uint8Array {
      * generated from 04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f
      */
     public static dead(): Address {
-        return new Address([
-            40, 74, 228, 172, 219, 50, 169, 155, 163, 235, 250, 102, 169, 29, 219, 65, 167, 183,
-            161, 210, 254, 244, 21, 57, 153, 34, 205, 138, 4, 72, 92, 2,
-        ]);
+        return DEAD_ADDRESS;
     }
 
     public static zero(): Address {
-        return new Address();
+        return ZERO_ADDRESS;
     }
 
     public static fromString(pubKey: string): Address {
@@ -69,7 +70,7 @@ export class Address extends Uint8Array {
             throw new Error('Invalid public key length');
         }
 
-        this.set(publicKey);
+        super.set(publicKey);
     }
 
     public toBech32m(): string {
@@ -143,13 +144,32 @@ export class Address extends Uint8Array {
     public toString(): string {
         return this.toBech32m();
     }
+
+    @operator('[]')
+    private ___get(index: i32): u8 {
+        if (u32(index) >= u32(this.length)) {
+            throw new RangeError('Index out of range');
+        }
+
+        return load<u8>(this.dataStart + <usize>index);
+    }
+
+    @operator('[]=')
+    private ___set(index: i32, value: u8): void {
+        assert(this.isDefined, `Can not modify address data.`);
+
+        if (u32(index) >= u32(this.length)) {
+            throw new RangeError('Index out of range');
+        }
+
+        store<u8>(this.dataStart + <usize>index, value);
+    }
 }
 
-export const DEAD_ADDRESS = new Address([
+export const ZERO_ADDRESS: Address = new Address();
+export const DEAD_ADDRESS: Address = new Address([
     40, 74, 228, 172, 219, 50, 169, 155, 163, 235, 250, 102, 169, 29, 219, 65, 167, 183,
     161, 210, 254, 244, 21, 57, 153, 34, 205, 138, 4, 72, 92, 2,
 ]);
-
-export const ZERO_ADDRESS = new Address();
 
 export declare type PotentialAddress = Potential<Address>;
