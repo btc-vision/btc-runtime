@@ -35,6 +35,7 @@ export function ensureAtLeast30Bytes(typed: Uint8Array): Uint8Array {
     return result;
 }
 
+@inline
 function toArrayBufferBE(buffer: usize, val: u256): void {
     // Write the upper 3 chunks (each 64 bits) in one shot:
     store<u64>(buffer, bswap(val.hi2), 0); // 0..7
