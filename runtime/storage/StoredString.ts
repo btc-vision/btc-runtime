@@ -1,148 +1,204 @@
-import { u256 } from '@btc-vision/as-bignum/assembly';
-import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
 import { encodePointer } from '../math/abi';
+import { bigEndianAdd } from '../math/bytes';
+import { Revert } from '../types/Revert';
+import { u256 } from '@btc-vision/as-bignum/assembly';
 import { SafeMath } from '../types/SafeMath';
-import { U256_BYTE_LENGTH } from '../utils/lengths';
 
+const MAX_LENGTH = <u32>u16.MAX_VALUE;
+const MAX_LENGTH_U256 = u256.fromU32(<u32>MAX_LENGTH);
+
+/**
+ * @class StoredString
+ * @description
+ * Stores a string in a sequence of 32-byte storage slots, in UTF-8 format:
+ *  - Slot 0: first 4 bytes = length (big-endian), next 28 bytes = partial data
+ *  - Slot N>0: 32 bytes of data each
+ *
+ * The maximum is 65,535 bytes in UTF-8 form (not necessarily the same as code points).
+ */
 @final
 export class StoredString {
-    constructor(public pointer: u16, private defaultValue?: string) {}
+    private readonly subPointer: Uint8Array;
+
+    constructor(public pointer: u16, index: u64 = 0) {
+        const indexed = SafeMath.mul(u256.fromU64(index), MAX_LENGTH_U256);
+        this.subPointer = indexed.toUint8Array(true).slice(0, 30);
+    }
 
     private _value: string = '';
 
-    @inline
+    /**
+     * Cached string value. If `_value` is empty, we call `load()` on first access.
+     */
     public get value(): string {
         if (!this._value) {
             this.load();
         }
-
         return this._value;
     }
 
-    @inline
-    public set value(value: string) {
-        this._value = value;
+    public set value(v: string) {
+        this._value = v;
+
         this.save();
     }
 
-    private min(a: u32, b: u32): u32 {
-        return a < b ? a : b;
+    /**
+     * Derives a 32-byte pointer for the given chunkIndex and performs big-endian addition.
+     * chunkIndex=0 => header slot, 1 => second slot, etc.
+     */
+    private getPointer(chunkIndex: u64): Uint8Array {
+        const base = encodePointer(this.pointer, this.subPointer);
+        return bigEndianAdd(base, chunkIndex);
     }
 
-    private getPointer(key: u256): u256 {
-        const buf = new BytesWriter(U256_BYTE_LENGTH);
-        buf.writeU256(key);
-
-        return encodePointer(this.pointer, buf.getBuffer());
+    /**
+     * Reads the first slot and returns the stored byte length (big-endian).
+     * Returns 0 if the slot is all zero.
+     */
+    private getStoredLength(): u32 {
+        const headerSlot = Blockchain.getStorageAt(this.getPointer(0));
+        const b0 = <u32>headerSlot[0];
+        const b1 = <u32>headerSlot[1];
+        const b2 = <u32>headerSlot[2];
+        const b3 = <u32>headerSlot[3];
+        return (b0 << 24) | (b1 << 16) | (b2 << 8) | b3;
     }
 
+    /**
+     * Clears old data from storage. Based on `oldLength`, determines how many slots
+     * were used, and writes zeroed 32-byte arrays to each.
+     */
+    private clearOldStorage(oldLength: u32): void {
+        if (oldLength == 0) {
+            return;
+        }
+
+        // We always use at least 1 slot (the header slot).
+        let chunkCount: u64 = 1;
+
+        // In the header slot, we can store up to 28 bytes of data.
+        const remaining = oldLength > 28 ? oldLength - 28 : 0;
+        if (remaining > 0) {
+            // Each additional chunk is 32 bytes.
+            // Use integer math ceiling: (remaining + 32 - 1) / 32
+            chunkCount += (remaining + 32 - 1) / 32;
+        }
+
+        // Zero out each previously used slot
+        for (let i: u64 = 0; i < chunkCount; i++) {
+            Blockchain.setStorageAt(this.getPointer(i), new Uint8Array(32));
+        }
+    }
+
+    /**
+     * Saves the current string to storage in UTF-8 form.
+     */
     private save(): void {
-        const length: u32 = this._value.length;
+        // 1) Clear old data
+        const oldLen = this.getStoredLength();
+        this.clearOldStorage(oldLen);
+
+        // 2) Encode new string as UTF-8
+        const utf8Data = String.UTF8.encode(this._value, false);
+        const length = <u32>utf8Data.byteLength;
+
+        // Enforce max length
+        if (length > MAX_LENGTH) {
+            throw new Revert(`StoredString: value is too long (max=${MAX_LENGTH})`);
+        }
+
+        // 3) If new string is empty, just store a zeroed header and return
         if (length == 0) {
+            // A zeroed 32-byte array => indicates length=0
+            Blockchain.setStorageAt(this.getPointer(0), new Uint8Array(32));
             return;
         }
 
-        if (length > 2048) {
-            throw new Error('StoredString: value is too long');
-        }
-
-        // Prepare the header with the length of the string in the first 4 bytes
-        let header: u256 = u256.fromU32(length);
-        header = SafeMath.shl(header, 224);
-
-        let currentPointer: u256 = u256.Zero;
-        let remainingLength: u32 = length;
+        // 4) Write the first slot: length + up to 28 bytes
+        let remaining: u32 = length;
         let offset: u32 = 0;
+        const firstSlot = new Uint8Array(32);
+        firstSlot[0] = <u8>((length >> 24) & 0xff);
+        firstSlot[1] = <u8>((length >> 16) & 0xff);
+        firstSlot[2] = <u8>((length >> 8) & 0xff);
+        firstSlot[3] = <u8>(length & 0xff);
 
-        // Save the initial chunk (first 28 bytes) in the header
-        let bytesToWrite: u32 = this.min(remainingLength, 28);
-        header = this.saveChunk(header, this._value, offset, bytesToWrite, 4);
-        Blockchain.setStorageAt(this.getPointer(currentPointer), header);
-
-        remainingLength -= bytesToWrite;
-        offset += bytesToWrite;
-
-        // Save the remaining chunks in subsequent storage slots
-        while (remainingLength > 0) {
-            bytesToWrite = this.min(remainingLength, 32);
-            const storageValue: u256 = this.saveChunk(
-                u256.Zero,
-                this._value,
-                offset,
-                bytesToWrite,
-                0,
-            );
-            currentPointer = u256.add(currentPointer, u256.One);
-            Blockchain.setStorageAt(this.getPointer(currentPointer), storageValue);
-
-            remainingLength -= bytesToWrite;
-            offset += bytesToWrite;
+        const bytes = Uint8Array.wrap(utf8Data);
+        const firstChunkSize = remaining < 28 ? remaining : 28;
+        for (let i: u32 = 0; i < firstChunkSize; i++) {
+            firstSlot[4 + i] = bytes[i];
         }
-    }
+        Blockchain.setStorageAt(this.getPointer(0), firstSlot);
 
-    // Helper method to save a chunk of the string into the storage slot
-    private saveChunk(
-        storage: u256,
-        value: string,
-        offset: u32,
-        length: u32,
-        storageOffset: u32,
-    ): u256 {
-        const bytes = storage.toBytes(true);
-        for (let i: u32 = 0; i < length; i++) {
-            const index: i32 = i32(offset + i);
-            bytes[i + storageOffset] = u8(value.charCodeAt(index));
-        }
-        return u256.fromBytes(bytes, true);
-    }
+        remaining -= firstChunkSize;
+        offset += firstChunkSize;
 
-    private load(): void {
-        const header: u256 = Blockchain.getStorageAt(this.getPointer(u256.Zero), u256.Zero);
-        if (u256.eq(header, u256.Zero)) {
-            if (this.defaultValue) {
-                this.value = this.defaultValue;
+        // 5) Write subsequent slots (32 bytes each)
+        let chunkIndex: u64 = 1;
+        while (remaining > 0) {
+            const slotData = new Uint8Array(32);
+            const chunkSize = remaining < u32(32) ? remaining : u32(32);
+            for (let i: u32 = 0; i < chunkSize; i++) {
+                slotData[i] = bytes[offset + i];
             }
+            Blockchain.setStorageAt(this.getPointer(chunkIndex), slotData);
 
+            remaining -= chunkSize;
+            offset += chunkSize;
+            chunkIndex++;
+        }
+    }
+
+    /**
+     * Loads the string from storage by reading the stored byte length, then decoding
+     * the corresponding UTF-8 data from the slots.
+     */
+    private load(): void {
+        // Read the header slot first
+        const headerSlot = Blockchain.getStorageAt(this.getPointer(0));
+
+        // Parse the big-endian length
+        const b0 = <u32>headerSlot[0];
+        const b1 = <u32>headerSlot[1];
+        const b2 = <u32>headerSlot[2];
+        const b3 = <u32>headerSlot[3];
+        const length: u32 = (b0 << 24) | (b1 << 16) | (b2 << 8) | b3;
+
+        // If length=0, then the string is empty
+        if (length == 0) {
+            this._value = '';
             return;
         }
 
-        // the length of the string is stored in the first 4 bytes of the header
-        const bits: u256 = u256.shr(header, 224);
-        const length: u32 = bits.toU32();
+        // Read the UTF-8 bytes from storage
+        let remaining: u32 = length;
+        let offset: u32 = 0;
+        const out = new Uint8Array(length);
 
-        // the rest contains the string itself
-        let currentPointer: u256 = u256.Zero;
-        let remainingLength: u32 = length;
-        let currentStorage: u256 = header;
+        // First slot can hold up to 28 bytes after the length
+        const firstChunkSize = remaining < 28 ? remaining : 28;
+        for (let i: u32 = 0; i < firstChunkSize; i++) {
+            out[i] = headerSlot[4 + i];
+        }
+        remaining -= firstChunkSize;
+        offset += firstChunkSize;
 
-        const bytesToRead: u32 = this.min(remainingLength, 28);
-        let str: string = this.loadChunk(currentStorage, 4, bytesToRead);
-        remainingLength -= bytesToRead;
-
-        while (remainingLength > 0) {
-            // Move to the next storage slot
-            currentPointer = u256.add(currentPointer, u256.One);
-            currentStorage = Blockchain.getStorageAt(this.getPointer(currentPointer), u256.Zero);
-
-            // Extract the relevant portion of the string from the current storage slot
-            const bytesToRead: u32 = this.min(remainingLength, 32);
-            str += this.loadChunk(currentStorage, 0, bytesToRead);
-
-            remainingLength -= bytesToRead;
+        // Read the subsequent slots of 32 bytes each
+        let chunkIndex: u64 = 1;
+        while (remaining > 0) {
+            const slotData = Blockchain.getStorageAt(this.getPointer(chunkIndex));
+            const chunkSize = remaining < 32 ? remaining : 32;
+            for (let i: u32 = 0; i < chunkSize; i++) {
+                out[offset + i] = slotData[i];
+            }
+            remaining -= chunkSize;
+            offset += chunkSize;
+            chunkIndex++;
         }
 
-        this._value = str;
-    }
-
-    private loadChunk(value: u256, offset: u32, length: u32): string {
-        const bytes = value.toBytes(true);
-
-        let str: string = '';
-        for (let i: u32 = 0; i < length; i++) {
-            str += String.fromCharCode(bytes[i + offset]);
-        }
-
-        return str;
+        // Decode UTF-8 into a normal string
+        this._value = String.UTF8.decode(out.buffer, false);
     }
 }
