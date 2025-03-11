@@ -18,7 +18,7 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.13.10",
-    "assemblyscript": "^0.27.34"
+    "assemblyscript": "^0.27.35"
   },
   "repository": {
     "type": "git",
@@ -35,12 +35,12 @@
     "test/*.ts"
   ],
   "dependencies": {
-    "@assemblyscript/loader": "^0.27.34",
+    "@assemblyscript/loader": "^0.27.35",
     "@btc-vision/as-bignum": "^0.0.5",
     "@eslint/js": "^9.22.0",
     "gulplog": "^2.2.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.3",
-    "typescript-eslint": "^8.25.0"
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.26.1"
   }
 }
