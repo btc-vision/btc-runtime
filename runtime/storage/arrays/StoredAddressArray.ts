@@ -1,9 +1,9 @@
-import { BytesWriter } from '../../buffer/BytesWriter';
 import { BytesReader } from '../../buffer/BytesReader';
+import { BytesWriter } from '../../buffer/BytesWriter';
 import { Blockchain } from '../../env';
+import { addUint8ArraysBE, u64ToBE32Bytes } from '../../math/bytes';
 import { Address } from '../../types/Address';
 import { Revert } from '../../types/Revert';
-import { addUint8ArraysBE, u64ToBE32Bytes } from '../../math/bytes';
 
 /**
  * @class StoredAddressArray
@@ -15,8 +15,8 @@ export class StoredAddressArray {
     private readonly baseU256Pointer: Uint8Array;
     private readonly lengthPointer: Uint8Array;
 
-    private _values: Map<u64, Address> = new Map();  // slotIndex -> Address
-    private _isChanged: Set<u64> = new Set();        // track changed slotIndexes
+    private _values: Map<u64, Address> = new Map(); // slotIndex -> Address
+    private _isChanged: Set<u64> = new Set(); // track changed slotIndexes
 
     private _length: u64 = 0;
     private _startIndex: u64 = 0;
@@ -32,11 +32,11 @@ export class StoredAddressArray {
      * @param {u16} pointer - The primary pointer identifier.
      * @param {Uint8Array} subPointer - The sub-pointer for memory slot addressing.
      */
-    constructor(
-        public pointer: u16,
-        public subPointer: Uint8Array,
-    ) {
-        assert(subPointer.length <= 30, `You must pass a 30 bytes sub-pointer. (AddressArray, got ${this.subPointer.length})`);
+    constructor(public pointer: u16, public subPointer: Uint8Array) {
+        assert(
+            subPointer.length <= 30,
+            `You must pass a 30 bytes sub-pointer. (AddressArray, got ${this.subPointer.length})`,
+        );
 
         // Construct base pointer as a 32-byte array
         const writer = new BytesWriter(32);
@@ -49,9 +49,7 @@ export class StoredAddressArray {
         const lengthPointer = Uint8Array.wrap(baseU256Pointer.buffer);
 
         // Load length + startIndex from storage (16 bytes: 8 for length, 8 for startIndex).
-        const storedLengthAndStartIndex: Uint8Array = Blockchain.getStorageAt(
-            lengthPointer,
-        );
+        const storedLengthAndStartIndex: Uint8Array = Blockchain.getStorageAt(lengthPointer);
 
         const reader = new BytesReader(storedLengthAndStartIndex);
         this._length = reader.readU64();
@@ -113,7 +111,8 @@ export class StoredAddressArray {
         }
 
         const newIndex: u64 = this._length;
-        const wrappedIndex: u64 = newIndex < this.MAX_LENGTH ? newIndex : newIndex % this.MAX_LENGTH;
+        const wrappedIndex: u64 =
+            newIndex < this.MAX_LENGTH ? newIndex : newIndex % this.MAX_LENGTH;
         const slotIndex: u32 = <u32>wrappedIndex;
 
         this.ensureValues(slotIndex);
@@ -283,12 +282,10 @@ export class StoredAddressArray {
             const storagePointer = this.calculateStoragePointer(slotIndex);
 
             // Load raw bytes from storage
-            const stored: Uint8Array = Blockchain.getStorageAt(
-                storagePointer,
-            );
+            const stored: Uint8Array = Blockchain.getStorageAt(storagePointer);
 
             const storedAddress: Address =
-                stored.length == 0 ? this.defaultValue : new Address(changetype<Array<u8>>(stored));
+                stored.length == 0 ? this.defaultValue : Address.fromUint8Array(stored);
 
             this._values.set(slotIndex, storedAddress);
         }
