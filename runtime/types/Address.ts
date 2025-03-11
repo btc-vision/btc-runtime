@@ -60,6 +60,14 @@ export class Address extends Uint8Array {
         return cloned;
     }
 
+    public static fromUint8Array(bytes: Uint8Array): Address {
+        const cloned = new Address();
+        // Copy the raw memory directly:
+        memory.copy(cloned.dataStart, bytes.dataStart, ADDRESS_BYTE_LENGTH);
+
+        return cloned;
+    }
+
     public toHex(): string {
         return encodeHexFromBuffer(this.buffer);
     }
@@ -186,8 +194,8 @@ export class Address extends Uint8Array {
 
 export const ZERO_ADDRESS: Address = new Address();
 export const DEAD_ADDRESS: Address = new Address([
-    40, 74, 228, 172, 219, 50, 169, 155, 163, 235, 250, 102, 169, 29, 219, 65, 167, 183,
-    161, 210, 254, 244, 21, 57, 153, 34, 205, 138, 4, 72, 92, 2,
+    40, 74, 228, 172, 219, 50, 169, 155, 163, 235, 250, 102, 169, 29, 219, 65, 167, 183, 161, 210,
+    254, 244, 21, 57, 153, 34, 205, 138, 4, 72, 92, 2,
 ]);
 
 export declare type PotentialAddress = Potential<Address>;
