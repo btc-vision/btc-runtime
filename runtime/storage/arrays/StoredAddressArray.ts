@@ -35,7 +35,7 @@ export class StoredAddressArray {
     constructor(public pointer: u16, public subPointer: Uint8Array) {
         assert(
             subPointer.length <= 30,
-            `You must pass a 30 bytes sub-pointer. (AddressArray, got ${this.subPointer.length})`,
+            `You must pass a 30 bytes sub-pointer. (AddressArray, got ${subPointer.length})`,
         );
 
         // Construct base pointer as a 32-byte array
