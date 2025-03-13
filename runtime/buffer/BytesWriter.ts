@@ -30,6 +30,62 @@ export class BytesWriter {
         return this.buffer.byteLength;
     }
 
+    public write<T>(value: T): void {
+        if (isInteger<T>()) {
+            const size = sizeof<T>();
+            if (size === 1) {
+                this.writeU8(<u8>value);
+                return;
+            }
+
+            if (isSigned<T>()) {
+                switch (size) {
+                    case 2:
+                        this.writeI16(<i16>value);
+                        break;
+                    case 4:
+                        this.writeI32(<i32>value);
+                        break;
+                    case 8:
+                        this.writeI64(<i64>value);
+                        break;
+                    default:
+                        throw new Revert(`Unsupported integer size: ${size}`);
+                }
+            } else {
+                switch (size) {
+                    case 2:
+                        this.writeU16(<u16>value);
+                        break;
+                    case 4:
+                        this.writeU32(<u32>value);
+                        break;
+                    case 8:
+                        this.writeU64(<u64>value);
+                        break;
+                    default:
+                        throw new Revert(`Unsupported integer size: ${size}`);
+                }
+            }
+        } else if (isBoolean<T>()) {
+            this.writeBoolean(<boolean>value);
+        } else if (isString<T>()) {
+            this.writeStringWithLength(<string>value);
+        } else if (value instanceof Uint8Array) {
+            this.writeBytesWithLength(<Uint8Array>value);
+        } else if (value instanceof Address) {
+            this.writeAddress(<Address>value);
+        } else if (value instanceof u128) {
+            this.writeU128(<u128>value);
+        } else if (value instanceof u256) {
+            this.writeU256(<u256>value);
+        } else if (value instanceof i128) {
+            this.writeI128(<i128>value);
+        } else {
+            throw new Revert(`Unsupported type: ${typeof value}`);
+        }
+    }
+
     public writeU8(value: u8): void {
         this.allocSafe(U8_BYTE_LENGTH);
         this.buffer.setUint8(this.currentOffset, value);
@@ -62,6 +118,24 @@ export class BytesWriter {
         this.allocSafe(U64_BYTE_LENGTH);
         this.buffer.setUint64(this.currentOffset, value || 0, !be);
         this.currentOffset += U64_BYTE_LENGTH;
+    }
+
+    public writeI64(value: i64, be: boolean = true): void {
+        this.allocSafe(U64_BYTE_LENGTH);
+        this.buffer.setInt64(this.currentOffset, value, !be);
+        this.currentOffset += U64_BYTE_LENGTH;
+    }
+
+    public writeI32(value: i32, be: boolean = true): void {
+        this.allocSafe(U32_BYTE_LENGTH);
+        this.buffer.setInt32(this.currentOffset, value, !be);
+        this.currentOffset += U32_BYTE_LENGTH;
+    }
+
+    public writeI16(value: i16, be: boolean = true): void {
+        this.allocSafe(U16_BYTE_LENGTH);
+        this.buffer.setInt16(this.currentOffset, value, !be);
+        this.currentOffset += U16_BYTE_LENGTH;
     }
 
     /**

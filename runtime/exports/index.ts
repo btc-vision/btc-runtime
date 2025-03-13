@@ -18,11 +18,11 @@ export function execute(calldataLength: u32): u32 {
     const calldata: Calldata = new BytesReader(Uint8Array.wrap(calldataBuffer));
     const selector: Selector = calldata.readSelector();
 
-    Blockchain.contract.onExecutionStarted();
+    Blockchain.onExecutionStarted();
 
     const result: BytesWriter = Blockchain.contract.execute(selector, calldata);
 
-    Blockchain.contract.onExecutionCompleted();
+    Blockchain.onExecutionCompleted();
 
     const resultBuffer = result.getBuffer().buffer;
     const resultLength = resultBuffer.byteLength;
@@ -43,9 +43,9 @@ export function onDeploy(calldataLength: u32): u32 {
 
     const calldata: Calldata = new BytesReader(Uint8Array.wrap(calldataBuffer));
 
-    Blockchain.contract.onExecutionStarted();
-    Blockchain.contract.onDeployment(calldata);
-    Blockchain.contract.onExecutionCompleted();
+    Blockchain.onExecutionStarted();
+    Blockchain.onDeployment(calldata);
+    Blockchain.onExecutionCompleted();
 
     return 0;
 }

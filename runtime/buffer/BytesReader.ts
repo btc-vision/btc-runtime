@@ -15,6 +15,7 @@ import {
     U64_BYTE_LENGTH,
     U8_BYTE_LENGTH,
 } from '../utils';
+import { sizeof } from 'builtins';
 
 @final
 export class BytesReader {
@@ -27,6 +28,76 @@ export class BytesReader {
 
     public get byteLength(): i32 {
         return this.buffer.byteLength;
+    }
+
+    public read<T>(): T {
+        const id = idof<T>();
+
+        if (isBoolean<T>()) {
+            return this.readBoolean() as T;
+        } else if (isString<T>()) {
+            return this.readStringWithLength() as T;
+        } else if (isInteger<T>()) {
+            if (isSigned<T>()) {
+                const size = sizeof<T>();
+
+                switch (size) {
+                    case 8:
+                        return this.readU8() as T;
+                    case 16:
+                        return this.readI16() as T;
+                    case 32:
+                        return this.readI32() as T;
+                    case 64:
+                        return this.readI64() as T;
+                    default:
+                        throw new Error(`Invalid size ${size}`);
+                }
+            } else {
+                const size = sizeof<T>();
+
+                switch (size) {
+                    case 8:
+                        return this.readU8() as T;
+                    case 16:
+                        return this.readU16() as T;
+                    case 32:
+                        return this.readU32() as T;
+                    case 64:
+                        return this.readU64() as T;
+                    default:
+                        throw new Error(`Invalid size ${size}`);
+                }
+            }
+        } else if (id === idof<u256>()) {
+            return this.readU256() as T;
+        } else if (id === idof<u128>()) {
+            return this.readU128() as T;
+        } else if (id === idof<i128>()) {
+            return this.readI128() as T;
+        } else if (id === idof<Address>()) {
+            return this.readAddress() as T;
+        } else if (id === idof<Uint8Array>()) {
+            return this.readBytesWithLength() as T;
+        } else if (id === idof<string>()) {
+            return this.readStringWithLength() as T;
+        } else {
+            throw new Error(`Unsupported type ${id}`);
+        }
+    }
+
+    public readI16(): i16 {
+        this.verifyEnd(this.currentOffset + 2);
+        const value = this.buffer.getInt16(this.currentOffset, true);
+        this.currentOffset += 2;
+        return value;
+    }
+
+    public readI32(): i32 {
+        this.verifyEnd(this.currentOffset + 4);
+        const value = this.buffer.getInt32(this.currentOffset, true);
+        this.currentOffset += 4;
+        return value;
     }
 
     public readU8(): u8 {
@@ -169,7 +240,7 @@ export class BytesReader {
         return addr;
     }
 
-    // ------------------- Arrays ------------------- //
+// ------------------- Arrays ------------------- //
 
     /**
      * The AS writer does `writeU32(length)` for U256 arrays, so we read a u32.

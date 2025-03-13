@@ -3,8 +3,6 @@ import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
 import { ApproveEvent, BurnEvent, MintEvent, TransferEvent } from '../events/predefined';
 import { encodeSelector, Selector } from '../math/abi';
-import { AddressMemoryMap } from '../memory/AddressMemoryMap';
-import { MultiAddressMemoryMap } from '../memory/MultiAddressMemoryMap';
 import { StoredString } from '../storage/StoredString';
 import { StoredU256 } from '../storage/StoredU256';
 import { Address } from '../types/Address';
@@ -19,6 +17,8 @@ import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
 import { sha256 } from '../env/global';
 import { EMPTY_POINTER } from '../math/bytes';
+import { MapOfMap } from '../memory/MapOfMap';
+import { AddressMemoryMap } from '../memory/AddressMemoryMap';
 
 const nonceMapPointer: u16 = Blockchain.nextPointer;
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
@@ -29,7 +29,7 @@ const allowanceMapPointer: u16 = Blockchain.nextPointer;
 const balanceOfMapPointer: u16 = Blockchain.nextPointer;
 
 export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
-    protected readonly allowanceMap: MultiAddressMemoryMap;
+    protected readonly allowanceMap: MapOfMap<u256>;
     protected readonly balanceOfMap: AddressMemoryMap;
 
     protected readonly _maxSupply: StoredU256;
@@ -43,14 +43,15 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         super();
 
         // Initialize main storage structures
-        this.allowanceMap = new MultiAddressMemoryMap(allowanceMapPointer);
+        this.allowanceMap = new MapOfMap(allowanceMapPointer);
         this.balanceOfMap = new AddressMemoryMap(balanceOfMapPointer);
+        this._nonceMap = new AddressMemoryMap(nonceMapPointer);
+
         this._totalSupply = new StoredU256(totalSupplyPointer, EMPTY_POINTER);
         this._maxSupply = new StoredU256(maxSupplyPointer, EMPTY_POINTER);
         this._decimals = new StoredU256(decimalsPointer, EMPTY_POINTER);
         this._name = new StoredString(stringPointer, 0);
         this._symbol = new StoredString(stringPointer, 1);
-        this._nonceMap = new AddressMemoryMap(nonceMapPointer);
 
         if (params && this._maxSupply.value.isZero()) {
             this.instantiate(params, true);

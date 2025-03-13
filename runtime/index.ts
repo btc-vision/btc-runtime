@@ -45,12 +45,18 @@ export * from './math/bytes';
 export * from './secp256k1/ECPoint';
 
 /** Memory */
-export * from './memory/AddressMemoryMap';
-export * from './memory/StringMemoryMap';
-export * from './memory/MultiStringMemoryMap';
-export * from './memory/KeyMerger';
-export * from './memory/MultiAddressMemoryMap';
-export * from './memory/Uint8ArrayMerger';
+export * from './memory/Nested';
+export * from './nested/PointerManager';
+export * from './nested/storage/StorageMap';
+export * from './nested/storage/StorageSet';
+
+/** Codecs */
+export * from './nested/codecs/U256Codec';
+export * from './nested/codecs/AddressCodec';
+export * from './nested/codecs/NumericCodec';
+export * from './nested/codecs/BooleanCodec';
+export * from './nested/codecs/StringCodec';
+export * from './nested/codecs/VariableBytesCodec';
 
 /** Storage */
 export * from './storage/StoredU256';
@@ -58,7 +64,6 @@ export * from './storage/StoredU64';
 export * from './storage/StoredString';
 export * from './storage/StoredAddress';
 export * from './storage/StoredBoolean';
-export * from './storage/Serializable';
 
 /** Arrays */
 export * from './storage/arrays/StoredAddressArray';
@@ -70,8 +75,6 @@ export * from './storage/arrays/StoredU32Array';
 export * from './storage/arrays/StoredU64Array';
 export * from './storage/arrays/StoredU128Array';
 export * from './storage/arrays/StoredU256Array';
-
-export * from './memory/FastUint8Array';
 
 /** Shared libraries */
 export * from './shared-libraries/TransferHelper';
