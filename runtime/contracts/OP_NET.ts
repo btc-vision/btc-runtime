@@ -20,6 +20,9 @@ export class OP_NET implements IBTC {
     public onDeployment(_calldata: Calldata): void {
     }
 
+    public onExecutionStarted(): void {
+    }
+
     public onExecutionCompleted(): void {
     }
 

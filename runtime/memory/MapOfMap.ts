@@ -1,10 +1,10 @@
-import { Uint8ArrayMerger } from './Uint8ArrayMerger';
 import { Address } from '../types/Address';
+import { Nested } from './Nested';
 
 @final
-export class MultiAddressMemoryMap extends Map<
+export class MapOfMap<T> extends Map<
     Address,
-    Uint8ArrayMerger
+    Nested<T>
 > {
     public pointer: u16;
 
@@ -17,14 +17,14 @@ export class MultiAddressMemoryMap extends Map<
     }
 
     @inline
-    public get(key: Address): Uint8ArrayMerger {
+    public get(key: Address): Nested<T> {
         this.createKeyMerger(key);
 
         return super.get(key);
     }
 
     @inline
-    public set(key: Address, value: Uint8ArrayMerger): this {
+    public set(key: Address, value: Nested<T>): this {
         this.createKeyMerger(key);
 
         return <this>super.set(key, value);
@@ -48,7 +48,7 @@ export class MultiAddressMemoryMap extends Map<
     @inline
     private createKeyMerger(key: Address): void {
         if (!super.has(key)) {
-            super.set(key, new Uint8ArrayMerger(key, this.pointer));
+            super.set(key, new Nested<T>(key, this.pointer));
         }
     }
 }

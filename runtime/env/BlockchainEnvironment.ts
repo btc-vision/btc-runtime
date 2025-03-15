@@ -10,6 +10,8 @@ import { Transaction } from './classes/Transaction';
 import { sha256 } from './global';
 import { eqUint, MapUint8Array } from '../generic/MapUint8Array';
 import { EMPTY_BUFFER } from '../math/bytes';
+import { Plugin } from '../plugins/Plugin';
+import { Calldata } from '../types';
 import { TransactionOutput } from './classes/UTXO';
 import { Revert } from '../types/Revert';
 
@@ -27,6 +29,7 @@ export class BlockchainEnvironment {
 
     private storage: MapUint8Array = new MapUint8Array();
     private _selfContract: Potential<OP_NET> = null;
+    private _plugins: Plugin[] = [];
 
     private _mockedCallResult: Uint8Array = new Uint8Array(1);
     private _mockedValidateBitcoinAddressResult: bool = false;
@@ -98,6 +101,40 @@ export class BlockchainEnvironment {
         }
 
         return this._contractAddress as Address;
+    }
+
+    public registerPlugin(plugin: Plugin): void {
+        this._plugins.push(plugin);
+    }
+
+    public onDeployment(calldata: Calldata): void {
+        for (let i: i32 = 0; i < this._plugins.length; i++) {
+            const plugin = this._plugins[i];
+
+            plugin.onDeployment(calldata);
+        }
+
+        this.contract.onDeployment(calldata);
+    }
+
+    public onExecutionStarted(): void {
+        for (let i: i32 = 0; i < this._plugins.length; i++) {
+            const plugin = this._plugins[i];
+
+            plugin.onExecutionStarted();
+        }
+
+        this.contract.onExecutionStarted();
+    }
+
+    public onExecutionCompleted(): void {
+        for (let i: i32 = 0; i < this._plugins.length; i++) {
+            const plugin = this._plugins[i];
+
+            plugin.onExecutionCompleted();
+        }
+
+        this.contract.onExecutionCompleted();
     }
 
     public clearMockedResults(): void {
