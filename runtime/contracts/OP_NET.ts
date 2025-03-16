@@ -17,14 +17,11 @@ export class OP_NET implements IBTC {
         return Blockchain.contractDeployer;
     }
 
-    public onDeployment(_calldata: Calldata): void {
-    }
+    public onDeployment(_calldata: Calldata): void {}
 
-    public onExecutionStarted(): void {
-    }
+    public onExecutionStarted(): void {}
 
-    public onExecutionCompleted(): void {
-    }
+    public onExecutionCompleted(): void {}
 
     public execute(method: Selector, _calldata: Calldata): BytesWriter {
         let response: BytesWriter;
@@ -55,7 +52,7 @@ export class OP_NET implements IBTC {
 
     protected onlyDeployer(caller: Address): void {
         if (this.contractDeployer !== caller) {
-            throw new Revert('Only owner can call this method');
+            throw new Revert('Only deployer can call this method');
         }
     }
 }

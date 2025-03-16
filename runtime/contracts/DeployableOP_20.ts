@@ -9,16 +9,16 @@ import { Address } from '../types/Address';
 import { Revert } from '../types/Revert';
 import { SafeMath } from '../types/SafeMath';
 
+import { sha256 } from '../env/global';
+import { EMPTY_POINTER } from '../math/bytes';
+import { AddressMemoryMap } from '../memory/AddressMemoryMap';
+import { MapOfMap } from '../memory/MapOfMap';
 import { ApproveStr, TransferFromStr, TransferStr } from '../shared-libraries/TransferHelper';
 import { Calldata } from '../types';
 import { ADDRESS_BYTE_LENGTH, BOOLEAN_BYTE_LENGTH, U256_BYTE_LENGTH } from '../utils';
 import { IOP_20 } from './interfaces/IOP_20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
-import { sha256 } from '../env/global';
-import { EMPTY_POINTER } from '../math/bytes';
-import { MapOfMap } from '../memory/MapOfMap';
-import { AddressMemoryMap } from '../memory/AddressMemoryMap';
 
 const nonceMapPointer: u16 = Blockchain.nextPointer;
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
@@ -84,12 +84,15 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         return this._symbol.value;
     }
 
-    public instantiate(params: OP20InitParameters, skipOwnerVerification: boolean = false): void {
+    public instantiate(
+        params: OP20InitParameters,
+        skipDeployerVerification: boolean = false,
+    ): void {
         if (!this._maxSupply.value.isZero()) {
             throw new Revert('Already initialized');
         }
 
-        if (!skipOwnerVerification) this.onlyDeployer(Blockchain.tx.sender);
+        if (!skipDeployerVerification) this.onlyDeployer(Blockchain.tx.sender);
 
         if (params.decimals > 32) {
             throw new Revert('Decimals can not be more than 32');
@@ -446,8 +449,8 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         this.emitEvent(approveEvent);
     }
 
-    protected createMintEvent(owner: Address, value: u256): void {
-        const mintEvent = new MintEvent(owner, value);
+    protected createMintEvent(recipient: Address, value: u256): void {
+        const mintEvent = new MintEvent(recipient, value);
         this.emitEvent(mintEvent);
     }
 
