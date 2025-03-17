@@ -65,7 +65,6 @@ export class StorageMap<K, V> {
 
     @unsafe
     public clear(): void {
-        // Not implemented: we'd need key-tracking to remove them all
         throw new Error('clear() not implemented; no key-tracking logic here.');
     }
 
@@ -102,6 +101,7 @@ export class StorageMap<K, V> {
             const arr = VariableBytesCodec.decode(pointer);
             return changetype<P>(arr);
         }
+
         if (typeId == idOfString) {
             const str = StringCodec.decode(pointer);
             return changetype<P>(str);
