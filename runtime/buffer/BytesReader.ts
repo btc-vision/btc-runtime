@@ -258,12 +258,12 @@ export class BytesReader {
     }
 
     public readTransactionInputs(): TransactionInput[] {
-        const length = this.readU8();
+        const length = this.readU16();
         const result = new Array<TransactionInput>(length);
 
         for (let i: u16 = 0; i < length; i++) {
             const txId = this.readBytes(32);
-            const outputIndex = this.readU8();
+            const outputIndex = this.readU16();
             const scriptSig = this.readBytesWithLength();
             result[i] = new TransactionInput(txId, outputIndex, scriptSig);
         }
@@ -272,11 +272,11 @@ export class BytesReader {
     }
 
     public readTransactionOutputs(): TransactionOutput[] {
-        const length = this.readU8();
+        const length = this.readU16();
         const result = new Array<TransactionOutput>(length);
 
         for (let i: u16 = 0; i < length; i++) {
-            const index = this.readU8();
+            const index = this.readU16();
             const scriptPubKey = this.readStringWithLength();
             const value = this.readU64();
             result[i] = new TransactionOutput(index, scriptPubKey, value);
