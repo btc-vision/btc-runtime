@@ -174,13 +174,13 @@ export class BlockchainEnvironment {
             throw new Revert(`Out of storage pointer.`);
         }
 
-        const writer = new BytesWriter(this._mockedOutputs.length * (1 + 2 + 64 + 8) + 1);
-        writer.writeU8(u8(this._mockedOutputs.length));
+        const writer = new BytesWriter(this._mockedOutputs.length * (2 + 2 + 64 + 8) + 2);
+        writer.writeU16(u16(this._mockedOutputs.length));
 
         for (let i = 0; i < this._mockedOutputs.length; i++) {
             const output = this._mockedOutputs[i];
 
-            writer.writeU8(output.index);
+            writer.writeU16(output.index);
             writer.writeStringWithLength(output.to);
             writer.writeU64(output.value);
         }
