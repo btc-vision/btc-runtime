@@ -1,7 +1,6 @@
-import { BytesReader } from '../../buffer/BytesReader';
 import { BytesWriter } from '../../buffer/BytesWriter';
 import { Blockchain } from '../../env';
-import { addUint8ArraysBE, u64ToBE32Bytes } from '../../math/bytes';
+import { addUint8ArraysBE, encodeBasePointer, readLengthAndStartIndex, u64ToBE32Bytes } from '../../math/bytes';
 import { Address } from '../../types/Address';
 import { Revert } from '../../types/Revert';
 
@@ -38,25 +37,15 @@ export class StoredAddressArray {
             `You must pass a 30 bytes sub-pointer. (AddressArray, got ${subPointer.length})`,
         );
 
-        // Construct base pointer as a 32-byte array
-        const writer = new BytesWriter(32);
-        writer.writeU16(pointer);
-        writer.writeBytes(subPointer);
+        const basePointer = encodeBasePointer(pointer, subPointer);
+        this.lengthPointer = Uint8Array.wrap(basePointer.buffer);
+        this.baseU256Pointer = basePointer;
 
-        // We'll reuse the same bytes as the "base pointer" for offsets
-        const baseU256Pointer = writer.getBuffer(); // 32 bytes
-        // For length+startIndex, we'll use the same pointer
-        const lengthPointer = Uint8Array.wrap(baseU256Pointer.buffer);
+        const storedLenStart = Blockchain.getStorageAt(basePointer);
+        const data = readLengthAndStartIndex(storedLenStart);
 
-        // Load length + startIndex from storage (16 bytes: 8 for length, 8 for startIndex).
-        const storedLengthAndStartIndex: Uint8Array = Blockchain.getStorageAt(lengthPointer);
-
-        const reader = new BytesReader(storedLengthAndStartIndex);
-        this._length = reader.readU64();
-        this._startIndex = reader.readU64();
-
-        this.lengthPointer = lengthPointer;
-        this.baseU256Pointer = baseU256Pointer;
+        this._length = data[0];
+        this._startIndex = data[1];
     }
 
     /** Get an element by its global index. */

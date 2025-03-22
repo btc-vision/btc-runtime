@@ -1,8 +1,15 @@
 import { BytesWriter } from '../../buffer/BytesWriter';
-import { BytesReader } from '../../buffer/BytesReader';
 import { Blockchain } from '../../env';
 import { Revert } from '../../types/Revert';
-import { addUint8ArraysBE, GET_EMPTY_BUFFER, getBit, setBit, u64ToBE32Bytes } from '../../math/bytes';
+import {
+    addUint8ArraysBE,
+    encodeBasePointer,
+    GET_EMPTY_BUFFER,
+    getBit,
+    readLengthAndStartIndex,
+    setBit,
+    u64ToBE32Bytes,
+} from '../../math/bytes';
 
 /**
  * @class StoredBooleanArray
@@ -42,22 +49,15 @@ export class StoredBooleanArray {
     ) {
         assert(subPtr.length <= 30, `You must pass a 30 bytes sub-pointer. (StoredBooleanArray, got ${subPtr.length})`);
 
-        const writer = new BytesWriter(32);
-        writer.writeU16(pointer);
-        writer.writeBytes(subPtr);
+        const basePointer = encodeBasePointer(pointer, subPtr);
+        this.lengthPointer = Uint8Array.wrap(basePointer.buffer);
+        this.basePointer = basePointer;
 
-        const basePtr = writer.getBuffer();
+        const storedLenStart = Blockchain.getStorageAt(basePointer);
+        const data = readLengthAndStartIndex(storedLenStart);
 
-        this.basePointer = basePtr;
-        this.lengthPointer = basePtr;
-
-        const storedLenStart: Uint8Array = Blockchain.getStorageAt(
-            this.lengthPointer,
-        );
-
-        const r = new BytesReader(storedLenStart);
-        this._length = r.readU64();
-        this._startIndex = r.readU64();
+        this._length = data[0];
+        this._startIndex = data[1];
     }
 
     // -------------- Public Accessors -------------- //
@@ -187,12 +187,11 @@ export class StoredBooleanArray {
 
         // 2) If length or startIndex changed, store them
         if (this._isChangedLength || this._isChangedStartIndex) {
-            const w = new BytesWriter(16);
+            const w = new BytesWriter(32);
             w.writeU64(this._length);
             w.writeU64(this._startIndex);
 
-            const data = w.getBuffer(); // 16 bytes
-            // You could store 32 bytes if you prefer; the leftover bytes can be 0
+            const data = w.getBuffer();
             Blockchain.setStorageAt(this.lengthPointer, data);
 
             this._isChangedLength = false;
@@ -215,9 +214,7 @@ export class StoredBooleanArray {
         }
 
         // also reset length + startIndex in storage
-        const writer = new BytesWriter(16);
-        writer.writeU64(0);
-        writer.writeU64(0);
+        const writer = new BytesWriter(32);
         Blockchain.setStorageAt(this.lengthPointer, writer.getBuffer());
 
         // reset in memory
