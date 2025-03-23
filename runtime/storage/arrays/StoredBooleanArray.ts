@@ -62,16 +62,28 @@ export class StoredBooleanArray {
 
     // -------------- Public Accessors -------------- //
 
+    @inline
+    public has(index: u64): bool {
+        return index < this._length;
+    }
+
     /**
      * Retrieve boolean at `index`.
      */
+    @operator('[]')
     @inline
     public get(index: u64): bool {
-        if (index > this.MAX_LENGTH) {
-            throw new Revert('get: Index exceeds maximum allowed value.');
+        if (index >= this._length) {
+            throw new Revert(`get: index out of range (${index} >= ${this._length}, boolean array)`);
         }
-        const slotIndex = index / 256;      // which 32-byte slot
-        const bitIndex = <u16>(index % 256);
+
+        const effectiveIndex = this._startIndex + index;
+        const wrappedIndex = effectiveIndex < this.MAX_LENGTH
+            ? effectiveIndex
+            : effectiveIndex % this.MAX_LENGTH;
+
+        const slotIndex = wrappedIndex / 256;
+        const bitIndex = <u16>(wrappedIndex % 256);
 
         this.ensureSlotLoaded(slotIndex);
 
@@ -82,13 +94,20 @@ export class StoredBooleanArray {
     /**
      * Set boolean at `index`.
      */
+    @operator('[]=')
     @inline
     public set(index: u64, value: bool): void {
-        if (index > this.MAX_LENGTH) {
-            throw new Revert('set: Index exceeds maximum allowed value.');
+        if (index >= this._length) {
+            throw new Revert(`set: index out of range (${index} >= ${this._length}, boolean array)`);
         }
-        const slotIndex = index / 256;
-        const bitIndex = <u16>(index % 256);
+
+        const effectiveIndex = this._startIndex + index;
+        const wrappedIndex = effectiveIndex < this.MAX_LENGTH
+            ? effectiveIndex
+            : effectiveIndex % this.MAX_LENGTH;
+
+        const slotIndex = wrappedIndex / 256;
+        const bitIndex = <u16>(wrappedIndex % 256);
 
         this.ensureSlotLoaded(slotIndex);
 
@@ -108,7 +127,7 @@ export class StoredBooleanArray {
     @inline
     public push(value: bool): void {
         if (this._length >= this.MAX_LENGTH) {
-            throw new Revert('push: Reached max allowed length');
+            throw new Revert('push: reached max allowed length (boolean array)');
         }
 
         const newIndex = this._length;
@@ -137,11 +156,17 @@ export class StoredBooleanArray {
      */
     @inline
     public delete(index: u64): void {
-        if (index > this.MAX_LENGTH) {
-            throw new Revert('delete: Index exceeds maximum allowed value.');
+        if (index >= this._length) {
+            throw new Revert('delete: index out of range (boolean array)');
         }
-        const slotIndex = index / 256;
-        const bitIndex = <u16>(index % 256);
+
+        const effectiveIndex = this._startIndex + index;
+        const wrappedIndex = effectiveIndex < this.MAX_LENGTH
+            ? effectiveIndex
+            : effectiveIndex % this.MAX_LENGTH;
+
+        const slotIndex = wrappedIndex / 256;
+        const bitIndex = <u16>(wrappedIndex % 256);
 
         this.ensureSlotLoaded(slotIndex);
 
@@ -161,8 +186,9 @@ export class StoredBooleanArray {
     @inline
     public deleteLast(): void {
         if (this._length === 0) {
-            throw new Revert('deleteLast: Array is empty');
+            throw new Revert('deleteLast: array is empty');
         }
+
         const lastIndex = this._length - 1;
         this.delete(lastIndex);
 
@@ -200,11 +226,10 @@ export class StoredBooleanArray {
     }
 
     /**
-     * Delete all slots in storage (that are loaded) + reset length + startIndex.
+     * Delete all slots in storage (that are loaded) + reset length + _startIndex.
      */
     @inline
     public deleteAll(): void {
-        // clear all loaded slots
         const keys = this._values.keys();
         const zeroArr = GET_EMPTY_BUFFER();
         for (let i = 0; i < keys.length; i++) {
@@ -213,15 +238,14 @@ export class StoredBooleanArray {
             Blockchain.setStorageAt(storagePointer, zeroArr);
         }
 
-        // also reset length + startIndex in storage
         const writer = new BytesWriter(32);
         Blockchain.setStorageAt(this.lengthPointer, writer.getBuffer());
 
-        // reset in memory
         this._length = 0;
         this._startIndex = 0;
         this._isChangedLength = false;
         this._isChangedStartIndex = false;
+
         this._values.clear();
         this._isChanged.clear();
     }
@@ -240,18 +264,20 @@ export class StoredBooleanArray {
      * Retrieve a batch of bools.
      */
     @inline
-    public getAll(startIndex: u64, count: u64): bool[] {
-        if (startIndex + count > this._length) {
-            throw new Revert('getAll: range exceeds array length');
+    public getAll(start: u64, count: u64): bool[] {
+        if (start + count > this._length) {
+            throw new Revert('getAll: range exceeds array length (boolean array)');
         }
+
         if (count > u64(u32.MAX_VALUE)) {
-            throw new Revert('getAll: range exceeds max allowed');
+            throw new Revert('getAll: range exceeds max allowed (boolean array)');
         }
 
         const result = new Array<bool>(<i32>count);
         for (let i: u64 = 0; i < count; i++) {
-            result[<i32>i] = this.get(startIndex + i);
+            result[<i32>i] = this.get(start + i);
         }
+
         return result;
     }
 
@@ -295,6 +321,12 @@ export class StoredBooleanArray {
         return this._length;
     }
 
+    @inline
+    public setStartingIndex(index: u64): void {
+        this._startIndex = index;
+        this._isChangedStartIndex = true;
+    }
+
     /**
      * Current starting index for the array.
      */
@@ -302,7 +334,6 @@ export class StoredBooleanArray {
     public startingIndex(): u64 {
         return this._startIndex;
     }
-
 
     /**
      * Ensure the 32-byte slot for `slotIndex` is loaded into _values.
