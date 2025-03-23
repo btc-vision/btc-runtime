@@ -62,9 +62,11 @@ export abstract class StoredPackedArray<T> {
         this._startIndex = data[1];
     }
 
+    @inline
+    @operator('[]')
     public get(index: u64): T {
         if (index > this.MAX_LENGTH) {
-            throw new Revert('get: index exceeds MAX_LENGTH');
+            throw new Revert('get: index exceeds MAX_LENGTH (packed array)');
         }
 
         const cap = this.getSlotCapacity();
@@ -79,7 +81,13 @@ export abstract class StoredPackedArray<T> {
         return arr[subIndex];
     }
 
+    @inline
+    @operator('[]=')
     public set(index: u64, value: T): void {
+        if (index > this.MAX_LENGTH) {
+            throw new Revert('set: index exceeds MAX_LENGTH (packed array)');
+        }
+
         const cap = this.getSlotCapacity();
         const slotIndex = index / cap;
         const subIndex = <u32>(index % cap);
@@ -95,9 +103,10 @@ export abstract class StoredPackedArray<T> {
         }
     }
 
+    @inline
     public push(value: T): void {
         if (this._length >= this.MAX_LENGTH) {
-            throw new Revert('push: array has reached MAX_LENGTH');
+            throw new Revert('push: array has reached MAX_LENGTH (packed array)');
         }
 
         const newIndex = this._length;
@@ -123,6 +132,7 @@ export abstract class StoredPackedArray<T> {
      * "Delete" by zeroing out the element at `index`,
      * but does not reduce the length.
      */
+    @inline
     public delete(index: u64): void {
         const cap = this.getSlotCapacity();
         const slotIndex = index / cap;
@@ -143,9 +153,10 @@ export abstract class StoredPackedArray<T> {
     /**
      * Remove the last element by zeroing it and decrementing length by 1.
      */
+    @inline
     public deleteLast(): void {
         if (this._length == 0) {
-            throw new Revert('deleteLast: array is empty');
+            throw new Revert('deleteLast: array is empty (packed array)');
         }
 
         const lastIndex = this._length - 1;
@@ -155,11 +166,13 @@ export abstract class StoredPackedArray<T> {
         this._isChangedLength = true;
     }
 
+    @inline
     public setMultiple(startIndex: u64, values: T[]): void {
         const end = startIndex + <u64>values.length;
         if (end > this._length) {
-            throw new Revert('setMultiple: out of range');
+            throw new Revert('setMultiple: out of range (packed array)');
         }
+
         for (let i = 0; i < values.length; i++) {
             this.set(startIndex + <u64>i, values[i]);
         }
@@ -168,10 +181,10 @@ export abstract class StoredPackedArray<T> {
     // -----------------------------------------------------------
     //              Public Array-Like Methods
     // -----------------------------------------------------------
-
+    @inline
     public getAll(startIndex: u64, count: u64): T[] {
         if (count > <u64>u32.MAX_VALUE) {
-            throw new Revert('getAll: count too large');
+            throw new Revert('getAll: count too large (packed array)');
         }
 
         const out = new Array<T>(<i32>count);
@@ -182,14 +195,17 @@ export abstract class StoredPackedArray<T> {
         return out;
     }
 
+    @inline
     public getLength(): u64 {
         return this._length;
     }
 
+    @inline
     public startingIndex(): u64 {
         return this._startIndex;
     }
 
+    @inline
     public setStartingIndex(index: u64): void {
         this._startIndex = index;
         this._isChangedStartIndex = true;
@@ -250,6 +266,9 @@ export abstract class StoredPackedArray<T> {
         this._isChanged.clear();
     }
 
+    /**
+     * Reset the array to its initial state.
+     */
     public reset(): void {
         this._length = 0;
         this._startIndex = 0;

@@ -48,13 +48,21 @@ export class StoredAddressArray {
         this._startIndex = data[1];
     }
 
+    @inline
+    public has(index: u64): bool {
+        return index < this._length;
+    }
+
     /** Get an element by its global index. */
     @inline
+    @operator('[]')
     public get(index: u64): Address {
-        if (index > this.MAX_LENGTH) {
-            throw new Revert('Operation failed: Index exceeds maximum allowed value.');
+        if (index >= this._length) {
+            throw new Revert('get: index out of range (address array)');
         }
-        const slotIndex: u32 = <u32>index;
+
+        const physicalIndex = (this._startIndex + index) % this.MAX_LENGTH;
+        const slotIndex: u32 = <u32>physicalIndex;
         this.ensureValues(slotIndex);
 
         return this._values.get(slotIndex);
@@ -62,11 +70,14 @@ export class StoredAddressArray {
 
     /** Set an element by its global index. */
     @inline
+    @operator('[]=')
     public set(index: u64, value: Address): void {
-        if (index > this.MAX_LENGTH) {
-            throw new Revert('Set failed: Index exceeds maximum allowed value.');
+        if (index >= this._length) {
+            throw new Revert('set: index out of range (address array)');
         }
-        const slotIndex: u32 = <u32>index;
+
+        const physicalIndex = (this._startIndex + index) % this.MAX_LENGTH;
+        const slotIndex: u32 = <u32>physicalIndex;
         this.ensureValues(slotIndex);
 
         const currentValue = this._values.get(slotIndex);
@@ -76,33 +87,16 @@ export class StoredAddressArray {
         }
     }
 
-    /** Find the first index containing `value`. Returns -1 if not found. */
-    @inline
-    public indexOf(value: Address): i64 {
-        for (let i: u64 = 0; i < this._length; i++) {
-            if (this.get(i) == value) {
-                return i64(i);
-            }
-        }
-        return -1;
-    }
-
-    /** Check if the array contains `value`. */
-    @inline
-    public contains(value: Address): boolean {
-        return this.indexOf(value) !== -1;
-    }
-
     /** Append an address at the end of the array. */
+    @inline
     public push(value: Address): void {
         if (this._length >= this.MAX_LENGTH) {
-            throw new Revert('Push failed: Array has reached its maximum length.');
+            throw new Revert('push: array reached maximum length (address array)');
         }
 
-        const newIndex: u64 = this._length;
-        const wrappedIndex: u64 =
-            newIndex < this.MAX_LENGTH ? newIndex : newIndex % this.MAX_LENGTH;
-        const slotIndex: u32 = <u32>wrappedIndex;
+        const newLogicalIndex: u64 = this._length;
+        const physicalIndex: u64 = (this._startIndex + newLogicalIndex) % this.MAX_LENGTH;
+        const slotIndex: u32 = <u32>physicalIndex;
 
         this.ensureValues(slotIndex);
         this._values.set(slotIndex, value);
@@ -115,11 +109,12 @@ export class StoredAddressArray {
     /** Delete the last element. */
     public deleteLast(): void {
         if (this._length === 0) {
-            throw new Revert('Delete failed: Array is empty.');
+            throw new Revert('deleteLast: array is empty (address array)');
         }
 
-        const lastIndex: u64 = this._length - 1;
-        const slotIndex: u32 = <u32>(this._startIndex + lastIndex);
+        const lastLogicalIndex: u64 = this._length - 1;
+        const physicalIndex: u64 = (this._startIndex + lastLogicalIndex) % this.MAX_LENGTH;
+        const slotIndex: u32 = <u32>physicalIndex;
         this.ensureValues(slotIndex);
 
         const currentValue = this._values.get(slotIndex);
@@ -139,12 +134,14 @@ export class StoredAddressArray {
     }
 
     /** Delete a specific element by setting it to `defaultValue`. */
+    @inline
     public delete(index: u64): void {
         if (index > this.MAX_LENGTH) {
-            throw new Revert('Operation failed: Index exceeds maximum allowed value.');
+            throw new Revert('delete: index out of range (address array)');
         }
 
-        const slotIndex: u32 = <u32>index;
+        const physicalIndex: u64 = (this._startIndex + index) % this.MAX_LENGTH;
+        const slotIndex: u32 = <u32>physicalIndex;
         this.ensureValues(slotIndex);
 
         const currentValue = this._values.get(slotIndex);
@@ -159,6 +156,7 @@ export class StoredAddressArray {
      *  - Store any changed slotIndex -> Address
      *  - Store updated length and startIndex if changed
      */
+    @inline
     public save(): void {
         // 1) Save changed slots
         const changed = this._isChanged.values();
@@ -185,7 +183,6 @@ export class StoredAddressArray {
 
     /** Clear entire array content from storage, reset length and startIndex. */
     public deleteAll(): void {
-        // Clear all loaded slots
         const keys = this._values.keys();
         for (let i = 0; i < keys.length; i++) {
             const slotIndex = keys[i];
@@ -193,14 +190,13 @@ export class StoredAddressArray {
             Blockchain.setStorageAt(storagePointer, this.defaultValue);
         }
 
-        // Reset length and startIndex in storage
-        Blockchain.setStorageAt(this.lengthPointer, new Uint8Array(0)); // or a 16-byte zero array if preferred
+        Blockchain.setStorageAt(this.lengthPointer, new Uint8Array(32));
+
         this._length = 0;
         this._startIndex = 0;
         this._isChangedLength = false;
         this._isChangedStartIndex = false;
 
-        // Clear internal caches
         this._values.clear();
         this._isChanged.clear();
     }
@@ -217,7 +213,7 @@ export class StoredAddressArray {
     @inline
     public getAll(startIndex: u32, count: u32): Address[] {
         if (startIndex + count > this._length) {
-            throw new Revert('Requested range exceeds array length');
+            throw new Revert('getAll: index out of range (address array)');
         }
 
         const result = new Array<Address>(count);
@@ -249,6 +245,10 @@ export class StoredAddressArray {
         this._startIndex = 0;
         this._isChangedLength = true;
         this._isChangedStartIndex = true;
+
+        this._values.clear();
+        this._isChanged.clear();
+
         this.save();
     }
 
