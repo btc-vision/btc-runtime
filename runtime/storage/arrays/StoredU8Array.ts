@@ -43,6 +43,6 @@ export class StoredU8Array extends StoredPackedArray<u8> {
 
     protected calculateStoragePointer(slotIndex: u64): Uint8Array {
         // basePointer + (slotIndex+1) in big-endian
-        return bigEndianAdd(this.basePointer, slotIndex + 1);
+        return bigEndianAdd(this.basePointer, slotIndex);
     }
 }

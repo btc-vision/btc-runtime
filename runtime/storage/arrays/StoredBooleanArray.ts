@@ -3,6 +3,7 @@ import { Blockchain } from '../../env';
 import { Revert } from '../../types/Revert';
 import {
     addUint8ArraysBE,
+    bigEndianAdd,
     encodeBasePointer,
     GET_EMPTY_BUFFER,
     getBit,
@@ -51,7 +52,7 @@ export class StoredBooleanArray {
 
         const basePointer = encodeBasePointer(pointer, subPtr);
         this.lengthPointer = Uint8Array.wrap(basePointer.buffer);
-        this.basePointer = basePointer;
+        this.basePointer = bigEndianAdd(basePointer, 1);
 
         const storedLenStart = Blockchain.getStorageAt(basePointer);
         const data = readLengthAndStartIndex(storedLenStart);
@@ -350,7 +351,7 @@ export class StoredBooleanArray {
      * Convert `slotIndex` -> pointer = basePointer + (slotIndex + 1), as big-endian addition.
      */
     private calculateStoragePointer(slotIndex: u64): Uint8Array {
-        const offset = u64ToBE32Bytes(slotIndex + 1);
+        const offset = u64ToBE32Bytes(slotIndex);
         return addUint8ArraysBE(this.basePointer, offset);
     }
 }

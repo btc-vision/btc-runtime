@@ -1,4 +1,5 @@
 import {
+    bigEndianAdd,
     encodeBasePointer,
     GET_EMPTY_BUFFER,
     readLengthAndStartIndex,
@@ -53,7 +54,7 @@ export abstract class StoredPackedArray<T> {
 
         const basePointer = encodeBasePointer(pointer, subPointer);
         this.lengthPointer = Uint8Array.wrap(basePointer.buffer);
-        this.basePointer = basePointer;
+        this.basePointer = bigEndianAdd(basePointer, 1);
 
         const storedLenStart = Blockchain.getStorageAt(basePointer);
         const data = readLengthAndStartIndex(storedLenStart);
