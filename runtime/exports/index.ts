@@ -5,7 +5,7 @@ import { Selector } from '../math/abi';
 import { Calldata } from '../types';
 import { env_exit, getCalldata, getEnvironmentVariables } from '../env/global';
 
-const ENVIRONMENT_VARIABLES_BYTE_LENGTH: u32 = 208;
+const ENVIRONMENT_VARIABLES_BYTE_LENGTH: u32 = 240;
 
 export function execute(calldataLength: u32): u32 {
     const environmentVariablesBuffer = new ArrayBuffer(ENVIRONMENT_VARIABLES_BYTE_LENGTH);
