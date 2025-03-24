@@ -198,6 +198,7 @@ export class BlockchainEnvironment {
         const blockHash = reader.readBytes(32);
         const blockNumber = reader.readU64();
         const blockMedianTime = reader.readU64();
+        const txId = reader.readBytes(32);
         const txHash = reader.readBytes(32);
         const contractAddress = reader.readAddress();
         const contractDeployer = reader.readAddress();
@@ -207,6 +208,7 @@ export class BlockchainEnvironment {
         this._tx = new Transaction(
             caller,
             origin,
+            txId,
             txHash,
             true,
         );
