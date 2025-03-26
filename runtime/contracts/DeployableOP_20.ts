@@ -39,7 +39,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
 
     protected readonly _nonceMap: AddressMemoryMap;
 
-    protected constructor(params: OP20InitParameters | null = null) {
+    public constructor(params: OP20InitParameters | null = null) {
         super();
 
         // Initialize main storage structures
