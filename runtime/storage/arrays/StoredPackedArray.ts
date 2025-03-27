@@ -49,7 +49,7 @@ export abstract class StoredPackedArray<T> {
      */
     protected readonly MAX_LENGTH: u64 = <u64>(u32.MAX_VALUE - 1);
 
-    protected constructor(public pointer: u16, public subPointer: Uint8Array) {
+    protected constructor(public pointer: u16, public subPointer: Uint8Array, protected defaultValue: T) {
         assert(subPointer.length <= 30, `You must pass a 30 bytes sub-pointer. (Array, got ${subPointer.length})`);
 
         const basePointer = encodeBasePointer(pointer, subPointer);
@@ -66,6 +66,24 @@ export abstract class StoredPackedArray<T> {
     @inline
     @operator('[]')
     public get(index: u64): T {
+        // max length used on purpose to prevent unbounded usage
+        if (index > this.MAX_LENGTH) {
+            throw new Revert('get: out of range');
+        }
+
+        const realIndex = (this._startIndex + index) % this.MAX_LENGTH;
+        const cap = this.getSlotCapacity();
+        const slotIndex = realIndex / cap;
+        const subIndex = <u32>(realIndex % cap);
+
+        const slotData = this.ensureSlot(slotIndex);
+        const arr = this.unpackSlot(slotData);
+
+        return arr[subIndex];
+    }
+
+    @inline
+    public get_physical(index: u64): T {
         if (index > this.MAX_LENGTH) {
             throw new Revert('get: index exceeds MAX_LENGTH (packed array)');
         }
@@ -74,17 +92,37 @@ export abstract class StoredPackedArray<T> {
         const slotIndex = index / cap;
         const subIndex = <u32>(index % cap);
 
-        // Load the slot if not cached
         const slotData = this.ensureSlot(slotIndex);
-
-        // Unpack and return the subIndex
         const arr = this.unpackSlot(slotData);
+
         return arr[subIndex];
     }
 
     @inline
     @operator('[]=')
     public set(index: u64, value: T): void {
+        if (index > this.MAX_LENGTH) {
+            throw new Revert('set: index exceeds MAX_LENGTH (packed array)');
+        }
+
+        const realIndex = (this._startIndex + index) % this.MAX_LENGTH;
+        const cap = this.getSlotCapacity();
+        const slotIndex = realIndex / cap;
+        const subIndex = <u32>(realIndex % cap);
+
+        let slotData = this.ensureSlot(slotIndex);
+        const arr = this.unpackSlot(slotData);
+
+        if (!this.eq(arr[subIndex], value)) {
+            arr[subIndex] = value;
+            slotData = this.packSlot(arr);
+            this._slots.set(slotIndex, slotData);
+            this._isChanged.add(slotIndex);
+        }
+    }
+
+    @inline
+    public set_physical(index: u64, value: T): void {
         if (index > this.MAX_LENGTH) {
             throw new Revert('set: index exceeds MAX_LENGTH (packed array)');
         }
@@ -107,13 +145,13 @@ export abstract class StoredPackedArray<T> {
     @inline
     public push(value: T): void {
         if (this._length >= this.MAX_LENGTH) {
-            throw new Revert('push: array has reached MAX_LENGTH (packed array)');
+            throw new Revert('push: array has reached MAX_LENGTH');
         }
 
-        const newIndex = this._length;
+        const realIndex = (this._startIndex + this._length) % this.MAX_LENGTH;
         const cap = this.getSlotCapacity();
-        const slotIndex = newIndex / cap;
-        const subIndex = <u32>(newIndex % cap);
+        const slotIndex = realIndex / cap;
+        const subIndex = <u32>(realIndex % cap);
 
         let slotData = this.ensureSlot(slotIndex);
         const arr = this.unpackSlot(slotData);
@@ -130,11 +168,69 @@ export abstract class StoredPackedArray<T> {
     }
 
     /**
+     * Remove the first element by zeroing it and shifting all other elements.
+     */
+    @inline
+    public shift(): T {
+        if (this._length == 0) {
+            throw new Revert('shift: array is empty (packed array)');
+        }
+
+        const newIndex = this._startIndex;
+        const cap = this.getSlotCapacity();
+        const slotIndex = newIndex / cap;
+        const subIndex = <u32>(newIndex % cap);
+
+        let slotData = this.ensureSlot(slotIndex);
+
+        const arr = this.unpackSlot(slotData);
+        const currentData = arr[subIndex];
+
+        if (!this.eq(currentData, this.defaultValue)) {
+            arr[subIndex] = this.defaultValue;
+            slotData = this.packSlot(arr);
+
+            this._slots.set(slotIndex, slotData);
+            this._isChanged.add(slotIndex);
+        }
+
+        this._length -= 1;
+        this._startIndex += 1;
+        this._isChangedLength = true;
+        this._isChangedStartIndex = true;
+
+        return currentData;
+    }
+
+    /**
      * "Delete" by zeroing out the element at `index`,
      * but does not reduce the length.
      */
     @inline
     public delete(index: u64): void {
+        const realIndex = (this._startIndex + index) % this.MAX_LENGTH;
+        const cap = this.getSlotCapacity();
+        const slotIndex = realIndex / cap;
+        const subIndex = <u32>(realIndex % cap);
+
+        let slotData = this.ensureSlot(slotIndex);
+        const arr = this.unpackSlot(slotData);
+
+        const zeroVal = this.zeroValue();
+        if (!this.eq(arr[subIndex], zeroVal)) {
+            arr[subIndex] = zeroVal;
+            slotData = this.packSlot(arr);
+            this._slots.set(slotIndex, slotData);
+            this._isChanged.add(slotIndex);
+        }
+    }
+
+    /**
+     * "Delete" by zeroing out the element at `index`,
+     * but does not reduce the length.
+     */
+    @inline
+    public delete_physical(index: u64): void {
         const cap = this.getSlotCapacity();
         const slotIndex = index / cap;
         const subIndex = <u32>(index % cap);

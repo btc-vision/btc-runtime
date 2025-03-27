@@ -10,7 +10,7 @@ import { bigEndianAdd } from '../../math/bytes';
 @final
 export class StoredU128Array extends StoredPackedArray<u128> {
     public constructor(pointer: u16, subPointer: Uint8Array) {
-        super(pointer, subPointer);
+        super(pointer, subPointer, u128.Zero);
     }
 
     protected getSlotCapacity(): u64 {
