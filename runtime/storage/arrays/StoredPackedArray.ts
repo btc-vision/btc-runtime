@@ -143,12 +143,12 @@ export abstract class StoredPackedArray<T> {
     }
 
     @inline
-    public push(value: T): void {
+    public push(value: T, isPhysical: bool = false): void {
         if (this._length >= this.MAX_LENGTH) {
             throw new Revert('push: array has reached MAX_LENGTH');
         }
 
-        const realIndex = (this._startIndex + this._length) % this.MAX_LENGTH;
+        const realIndex = ((isPhysical ? 0 : this._startIndex) + this._length) % this.MAX_LENGTH;
         const cap = this.getSlotCapacity();
         const slotIndex = realIndex / cap;
         const subIndex = <u32>(realIndex % cap);
