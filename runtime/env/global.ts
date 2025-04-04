@@ -1,3 +1,4 @@
+
 // @ts-ignore
 @external('env', 'environment')
 export declare function getEnvironmentVariables(offset: u32, length: u32, result: ArrayBuffer): void;
@@ -11,12 +12,16 @@ export declare function getCalldata(offset: u32, length: u32, result: ArrayBuffe
 export declare function loadPointer(key: ArrayBuffer, result: ArrayBuffer): void;
 
 // @ts-ignore
-@external('env', 'nextPointerGreaterThan')
-export declare function nextPointerGreaterThan(data: Uint8Array): Uint8Array;
-
-// @ts-ignore
 @external('env', 'store')
 export declare function storePointer(key: ArrayBuffer, value: ArrayBuffer): void;
+
+// @ts-ignore
+@external('env', 'tload')
+export declare function tLoadPointer(key: ArrayBuffer, result: ArrayBuffer): void;
+
+// @ts-ignore
+@external('env', 'tstore')
+export declare function tStorePointer(key: ArrayBuffer, value: ArrayBuffer): void;
 
 // @ts-ignore
 @external('env', 'deployFromAddress')
@@ -82,6 +87,14 @@ export declare function getOutputsSize(): u32;
 // @ts-ignore
 @external('env', 'verifySchnorrSignature')
 export declare function verifySchnorrSignature(publicKey: ArrayBuffer, signature: ArrayBuffer, message: ArrayBuffer): u32;
+
+// @ts-ignore
+@external('env', 'blockHash')
+export declare function getBlockHash(block_number: u64, result: ArrayBuffer): void;
+
+// @ts-ignore
+@external('env', 'accountType')
+export declare function getAccountType(address: ArrayBuffer): u32;
 
 // @ts-ignore
 @external('env', 'exit')
