@@ -168,10 +168,6 @@ export class BlockchainEnvironment {
     }
 
     public call(destinationContract: Address, calldata: BytesWriter): BytesReader {
-        if (destinationContract === this.contractAddress) {
-            throw new Revert('Cannot call self');
-        }
-
         if (!destinationContract) {
             throw new Revert('Destination contract is required');
         }
