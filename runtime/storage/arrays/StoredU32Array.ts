@@ -8,7 +8,7 @@ import { bigEndianAdd } from '../../math/bytes';
 @final
 export class StoredU32Array extends StoredPackedArray<u32> {
     public constructor(pointer: u16, subPointer: Uint8Array) {
-        super(pointer, subPointer);
+        super(pointer, subPointer, 0);
     }
 
     protected getSlotCapacity(): u64 {
@@ -52,6 +52,6 @@ export class StoredU32Array extends StoredPackedArray<u32> {
     }
 
     protected calculateStoragePointer(slotIndex: u64): Uint8Array {
-        return bigEndianAdd(this.basePointer, slotIndex + 1);
+        return bigEndianAdd(this.basePointer, slotIndex);
     }
 }

@@ -17,10 +17,6 @@ import { Revert } from '../types/Revert';
 
 export * from '../env/global';
 
-export function runtimeError(msg: string): Error {
-    return new Error(`RuntimeException: ${msg}`);
-}
-
 @final
 export class BlockchainEnvironment {
     private static readonly MAX_U16: u16 = 65535;
@@ -42,7 +38,7 @@ export class BlockchainEnvironment {
     @inline
     public get block(): Block {
         if (!this._block) {
-            throw this.error('Block is required');
+            throw new Revert('Block is required');
         }
 
         return this._block as Block;
@@ -53,7 +49,7 @@ export class BlockchainEnvironment {
     @inline
     public get tx(): Transaction {
         if (!this._tx) {
-            throw this.error('Transaction is required');
+            throw new Revert('Transaction is required');
         }
 
         return this._tx as Transaction;
@@ -75,7 +71,7 @@ export class BlockchainEnvironment {
 
     public get nextPointer(): u16 {
         if (this._nextPointer === BlockchainEnvironment.MAX_U16) {
-            throw this.error(`Out of storage pointer.`);
+            throw new Revert(`Out of storage pointer.`);
         }
 
         this._nextPointer += 1;
@@ -87,7 +83,7 @@ export class BlockchainEnvironment {
 
     public get contractDeployer(): Address {
         if (!this._contractDeployer) {
-            throw this.error('Deployer is required');
+            throw new Revert('Deployer is required');
         }
 
         return this._contractDeployer as Address;
@@ -97,7 +93,7 @@ export class BlockchainEnvironment {
 
     public get contractAddress(): Address {
         if (!this._contractAddress) {
-            throw this.error('Contract address is required');
+            throw new Revert('Contract address is required');
         }
 
         return this._contractAddress as Address;
@@ -220,12 +216,8 @@ export class BlockchainEnvironment {
     }
 
     public call(destinationContract: Address, _calldata: BytesWriter): BytesReader {
-        if (destinationContract === this.contractAddress) {
-            throw this.error('Cannot call self');
-        }
-
         if (!destinationContract) {
-            throw this.error('Destination contract is required');
+            throw new Revert('Destination contract is required');
         }
 
         return new BytesReader(this._mockedCallResult);
@@ -296,16 +288,12 @@ export class BlockchainEnvironment {
 
     private createContractIfNotExists(): void {
         if (!this._contract) {
-            throw this.error('Contract is required');
+            throw new Revert('Contract is required');
         }
 
         if (!this._selfContract) {
             this._selfContract = this._contract();
         }
-    }
-
-    private error(msg: string): Error {
-        return runtimeError(msg);
     }
 
     private _internalSetStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {

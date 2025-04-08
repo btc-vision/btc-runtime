@@ -1,6 +1,12 @@
 import { BytesWriter } from '../../buffer/BytesWriter';
 import { Blockchain } from '../../env';
-import { addUint8ArraysBE, encodeBasePointer, readLengthAndStartIndex, u64ToBE32Bytes } from '../../math/bytes';
+import {
+    addUint8ArraysBE,
+    bigEndianAdd,
+    encodeBasePointer,
+    readLengthAndStartIndex,
+    u64ToBE32Bytes,
+} from '../../math/bytes';
 import { Address } from '../../types/Address';
 import { Revert } from '../../types/Revert';
 
@@ -39,7 +45,7 @@ export class StoredAddressArray {
 
         const basePointer = encodeBasePointer(pointer, subPointer);
         this.lengthPointer = Uint8Array.wrap(basePointer.buffer);
-        this.baseU256Pointer = basePointer;
+        this.baseU256Pointer = bigEndianAdd(basePointer, 1);
 
         const storedLenStart = Blockchain.getStorageAt(basePointer);
         const data = readLengthAndStartIndex(storedLenStart);
@@ -284,8 +290,8 @@ export class StoredAddressArray {
      * Compute a 32-byte storage pointer = basePointer + (slotIndex + 1) big-endian.
      */
     private calculateStoragePointer(slotIndex: u64): Uint8Array {
-        // Convert (slotIndex + 1) to a 32-byte big-endian offset
-        const offset = u64ToBE32Bytes(slotIndex + 1);
+        // Convert (slotIndex) to a 32-byte big-endian offset
+        const offset = u64ToBE32Bytes(slotIndex);
 
         return addUint8ArraysBE(this.baseU256Pointer, offset);
     }

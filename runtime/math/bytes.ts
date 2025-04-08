@@ -171,23 +171,7 @@ export function encodeBasePointer(pointer: u16, subPointer: Uint8Array): Uint8Ar
 
 @inline
 export function bigEndianAdd(base: Uint8Array, increment: u64): Uint8Array {
-    const out = new Uint8Array(32);
+    const add = u64ToBE32Bytes(increment);
 
-    // Copy the base pointer
-    for (let i = 0; i < 32; i++) {
-        out[i] = base[i];
-    }
-
-    // If this is truly big-endian, out[0] is the MSB, out[31] is the LSB.
-    // So to add `increment`, we start from out[31] backward.
-    let carry: u64 = increment;
-    for (let i = 31; i >= 0; i--) {
-        const sum = <u64>out[i] + (carry & 0xFF);
-        out[i] = <u8>(sum & 0xFF);
-        carry = sum >> 8;
-        if (carry == 0 || i == 0) {
-            break;
-        }
-    }
-    return out;
+    return addUint8ArraysBE(base, add);
 }
