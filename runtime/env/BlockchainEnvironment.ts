@@ -217,12 +217,16 @@ export class BlockchainEnvironment {
     public deployContractFromExisting(
         existingAddress: Address,
         salt: u256,
+        calldata: BytesWriter,
     ): Address {
         const resultAddressBuffer = new ArrayBuffer(ADDRESS_BYTE_LENGTH);
+        const callDataBuffer = calldata.getBuffer().buffer;
 
         const status = deployFromAddress(
             existingAddress.buffer,
             salt.toUint8Array(true).buffer,
+            callDataBuffer,
+            callDataBuffer.byteLength,
             resultAddressBuffer,
         );
 
