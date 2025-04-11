@@ -20,7 +20,7 @@ export declare function storePointer(key: ArrayBuffer, value: ArrayBuffer): void
 
 // @ts-ignore
 @external('env', 'deployFromAddress')
-export declare function deployFromAddress(originAddress: ArrayBuffer, salt: ArrayBuffer, resultAddress: ArrayBuffer): u32;
+export declare function deployFromAddress(originAddress: ArrayBuffer, salt: ArrayBuffer, calldata: ArrayBuffer, calldataLength: u32, resultAddress: ArrayBuffer): u32;
 
 // @ts-ignore
 @external('env', 'call')
