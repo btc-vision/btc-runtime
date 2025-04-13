@@ -1,6 +1,6 @@
 {
     "name": "@btc-vision/btc-runtime",
-    "version": "1.5.8",
+    "version": "1.5.9",
     "description": "Bitcoin Smart Contract Runtime",
     "main": "btc/index.ts",
     "scripts": {},
