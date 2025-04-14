@@ -1,4 +1,3 @@
-
 // @ts-ignore
 @external('env', 'environment')
 export declare function getEnvironmentVariables(offset: u32, length: u32, result: ArrayBuffer): void;

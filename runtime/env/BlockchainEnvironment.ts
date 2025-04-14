@@ -40,7 +40,7 @@ export class BlockchainEnvironment {
     public readonly DEAD_ADDRESS: Address = Address.dead();
 
     private storage: MapUint8Array = new MapUint8Array();
-    private transient: MapUint8Array = new MapUint8Array();
+    private transientStorage: MapUint8Array = new MapUint8Array();
     private _selfContract: Potential<OP_NET> = null;
     private _plugins: Plugin[] = [];
 
@@ -254,12 +254,12 @@ export class BlockchainEnvironment {
         return new Uint8Array(32);
     }
 
-    public getTransientAt(
+    public getTransientStorageAt(
         pointerHash: Uint8Array,
     ): Uint8Array {
-        this.hasPointerTransientHash(pointerHash);
-        if (this.transient.has(pointerHash)) {
-            return this.transient.get(pointerHash);
+        this.hasPointerTransientStorageHash(pointerHash);
+        if (this.transientStorage.has(pointerHash)) {
+            return this.transientStorage.get(pointerHash);
         }
 
         return new Uint8Array(32);
@@ -290,9 +290,9 @@ export class BlockchainEnvironment {
         return !eqUint(val, EMPTY_BUFFER);
     }
 
-    public hasTransientAt(pointerHash: Uint8Array): bool {
+    public hasTransientStorageAt(pointerHash: Uint8Array): bool {
         // We mark zero as the default value for the storage, if something is 0, the storage slot get deleted or is non-existent
-        const val: Uint8Array = this.getTransientAt(pointerHash);
+        const val: Uint8Array = this.getTransientStorageAt(pointerHash);
 
         return !eqUint(val, EMPTY_BUFFER);
     }
@@ -301,8 +301,8 @@ export class BlockchainEnvironment {
         this._internalSetStorageAt(pointerHash, value);
     }
 
-    public setTransientAt(pointerHash: Uint8Array, value: Uint8Array): void {
-        this._internalSetTransientAt(pointerHash, value);
+    public setTransientStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {
+        this._internalSetTransientStorageAt(pointerHash, value);
     }
 
     private createContractIfNotExists(): void {
@@ -321,8 +321,8 @@ export class BlockchainEnvironment {
         storePointer(pointerHash.buffer, value.buffer);
     }
 
-    private _internalSetTransientAt(pointerHash: Uint8Array, value: Uint8Array): void {
-        this.transient.set(pointerHash, value);
+    private _internalSetTransientStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {
+        this.transientStorage.set(pointerHash, value);
 
         tStorePointer(pointerHash.buffer, value.buffer);
     }
@@ -342,7 +342,7 @@ export class BlockchainEnvironment {
         return !eqUint(value, EMPTY_BUFFER);
     }
 
-    private hasPointerTransientHash(pointer: Uint8Array): bool {
+    private hasPointerTransientStorageHash(pointer: Uint8Array): bool {
         if (this.storage.has(pointer)) {
             return true;
         }
@@ -363,9 +363,7 @@ export class BlockchainEnvironment {
 
     public getBlockHash(blockNumber: u64): Uint8Array {
         const hash = new ArrayBuffer(32);
-        this.log("before block hash");
         getBlockHash(blockNumber, hash);
-        this.log("after block hash");
         return Uint8Array.wrap(hash);
     }
 }
