@@ -1,46 +1,46 @@
 {
-  "name": "@btc-vision/btc-runtime",
-  "version": "1.5.6",
-  "description": "Bitcoin Smart Contract Runtime",
-  "main": "btc/index.ts",
-  "scripts": {},
-  "types": "btc/index.ts",
-  "keywords": [
-    "bitcoin",
-    "smart",
-    "contract",
-    "runtime",
-    "opnet",
-    "OP_NET"
-  ],
-  "homepage": "https://opnet.org",
-  "author": "BlobMaster41",
-  "license": "MIT",
-  "devDependencies": {
-    "@types/node": "^22.13.10",
-    "assemblyscript": "^0.27.35"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/btc-vision/btc-runtime"
-  },
-  "type": "module",
-  "files": [
-    "package.json",
-    "runtime",
-    "runtime/*.ts",
-    "runtime/**/*.ts",
-    "!**/*.js.map",
-    "!**/*.tsbuildinfo",
-    "test/*.ts"
-  ],
-  "dependencies": {
-    "@assemblyscript/loader": "^0.27.35",
-    "@btc-vision/as-bignum": "^0.0.5",
-    "@eslint/js": "^9.22.0",
-    "gulplog": "^2.2.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.8.2",
-    "typescript-eslint": "^8.26.1"
-  }
+    "name": "@btc-vision/btc-runtime",
+    "version": "1.5.9",
+    "description": "Bitcoin Smart Contract Runtime",
+    "main": "btc/index.ts",
+    "scripts": {},
+    "types": "btc/index.ts",
+    "keywords": [
+        "bitcoin",
+        "smart",
+        "contract",
+        "runtime",
+        "opnet",
+        "OP_NET"
+    ],
+    "homepage": "https://opnet.org",
+    "author": "BlobMaster41",
+    "license": "MIT",
+    "devDependencies": {
+        "@types/node": "^22.14.0",
+        "assemblyscript": "^0.27.35"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/btc-vision/btc-runtime"
+    },
+    "type": "module",
+    "files": [
+        "package.json",
+        "runtime",
+        "runtime/*.ts",
+        "runtime/**/*.ts",
+        "!**/*.js.map",
+        "!**/*.tsbuildinfo",
+        "test/*.ts"
+    ],
+    "dependencies": {
+        "@assemblyscript/loader": "^0.27.35",
+        "@btc-vision/as-bignum": "^0.0.5",
+        "@eslint/js": "^9.24.0",
+        "gulplog": "^2.2.0",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.8.3",
+        "typescript-eslint": "^8.29.1"
+    }
 }

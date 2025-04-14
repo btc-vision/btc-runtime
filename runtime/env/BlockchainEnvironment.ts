@@ -29,12 +29,9 @@ import { eqUint, MapUint8Array } from '../generic/MapUint8Array';
 import { EMPTY_BUFFER } from '../math/bytes';
 import { Plugin } from '../plugins/Plugin';
 import { Calldata } from '../types';
+import { Revert } from '../types/Revert';
 
 export * from '../env/global';
-
-export function runtimeError(msg: string): Error {
-    return new Error(`RuntimeException: ${msg}`);
-}
 
 @final
 export class BlockchainEnvironment {
@@ -52,7 +49,7 @@ export class BlockchainEnvironment {
     @inline
     public get block(): Block {
         if (!this._block) {
-            throw this.error('Block is required');
+            throw new Revert('Block is required');
         }
 
         return this._block as Block;
@@ -63,7 +60,7 @@ export class BlockchainEnvironment {
     @inline
     public get tx(): Transaction {
         if (!this._tx) {
-            throw this.error('Transaction is required');
+            throw new Revert('Transaction is required');
         }
 
         return this._tx as Transaction;
@@ -85,7 +82,7 @@ export class BlockchainEnvironment {
 
     public get nextPointer(): u16 {
         if (this._nextPointer === BlockchainEnvironment.MAX_U16) {
-            throw this.error(`Out of storage pointer.`);
+            throw new Revert(`Out of storage pointer.`);
         }
 
         this._nextPointer += 1;
@@ -97,7 +94,7 @@ export class BlockchainEnvironment {
 
     public get contractDeployer(): Address {
         if (!this._contractDeployer) {
-            throw this.error('Deployer is required');
+            throw new Revert('Deployer is required');
         }
 
         return this._contractDeployer as Address;
@@ -107,7 +104,7 @@ export class BlockchainEnvironment {
 
     public get contractAddress(): Address {
         if (!this._contractAddress) {
-            throw this.error('Contract address is required');
+            throw new Revert('Contract address is required');
         }
 
         return this._contractAddress as Address;
@@ -176,12 +173,8 @@ export class BlockchainEnvironment {
     }
 
     public call(destinationContract: Address, calldata: BytesWriter): BytesReader {
-        if (destinationContract === this.contractAddress) {
-            throw this.error('Cannot call self');
-        }
-
         if (!destinationContract) {
-            throw this.error('Destination contract is required');
+            throw new Revert('Destination contract is required');
         }
 
         const resultLengthBuffer = new ArrayBuffer(32);
@@ -229,17 +222,21 @@ export class BlockchainEnvironment {
     public deployContractFromExisting(
         existingAddress: Address,
         salt: u256,
+        calldata: BytesWriter,
     ): Address {
         const resultAddressBuffer = new ArrayBuffer(ADDRESS_BYTE_LENGTH);
+        const callDataBuffer = calldata.getBuffer().buffer;
 
         const status = deployFromAddress(
             existingAddress.buffer,
             salt.toUint8Array(true).buffer,
+            callDataBuffer,
+            callDataBuffer.byteLength,
             resultAddressBuffer,
         );
 
         if (status !== 0) {
-            throw this.error('Failed to deploy contract');
+            throw new Revert('Failed to deploy contract');
         }
 
         const contractAddressReader = new BytesReader(Uint8Array.wrap(resultAddressBuffer));
@@ -310,16 +307,12 @@ export class BlockchainEnvironment {
 
     private createContractIfNotExists(): void {
         if (!this._contract) {
-            throw this.error('Contract is required');
+            throw new Revert('Contract is required');
         }
 
         if (!this._selfContract) {
             this._selfContract = this._contract();
         }
-    }
-
-    private error(msg: string): Error {
-        return runtimeError(msg);
     }
 
     private _internalSetStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {
