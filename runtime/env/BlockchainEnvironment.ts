@@ -15,11 +15,15 @@ import {
     env_exit,
     getCallResult,
     loadPointer,
+    tLoadPointer,
     log,
     sha256,
     storePointer,
+    tStorePointer,
     validateBitcoinAddress,
     verifySchnorrSignature,
+    getAccountType,
+    getBlockHash,
 } from './global';
 import { eqUint, MapUint8Array } from '../generic/MapUint8Array';
 import { EMPTY_BUFFER } from '../math/bytes';
@@ -36,6 +40,7 @@ export class BlockchainEnvironment {
     public readonly DEAD_ADDRESS: Address = Address.dead();
 
     private storage: MapUint8Array = new MapUint8Array();
+    private transientStorage: MapUint8Array = new MapUint8Array();
     private _selfContract: Potential<OP_NET> = null;
     private _plugins: Plugin[] = [];
 
@@ -249,6 +254,17 @@ export class BlockchainEnvironment {
         return new Uint8Array(32);
     }
 
+    public getTransientStorageAt(
+        pointerHash: Uint8Array,
+    ): Uint8Array {
+        this.hasPointerTransientStorageHash(pointerHash);
+        if (this.transientStorage.has(pointerHash)) {
+            return this.transientStorage.get(pointerHash);
+        }
+
+        return new Uint8Array(32);
+    }
+
     public sha256(buffer: Uint8Array): Uint8Array {
         return sha256(buffer);
     }
@@ -274,8 +290,19 @@ export class BlockchainEnvironment {
         return !eqUint(val, EMPTY_BUFFER);
     }
 
+    public hasTransientStorageAt(pointerHash: Uint8Array): bool {
+        // We mark zero as the default value for the storage, if something is 0, the storage slot get deleted or is non-existent
+        const val: Uint8Array = this.getTransientStorageAt(pointerHash);
+
+        return !eqUint(val, EMPTY_BUFFER);
+    }
+
     public setStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {
         this._internalSetStorageAt(pointerHash, value);
+    }
+
+    public setTransientStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {
+        this._internalSetTransientStorageAt(pointerHash, value);
     }
 
     private createContractIfNotExists(): void {
@@ -294,6 +321,12 @@ export class BlockchainEnvironment {
         storePointer(pointerHash.buffer, value.buffer);
     }
 
+    private _internalSetTransientStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {
+        this.transientStorage.set(pointerHash, value);
+
+        tStorePointer(pointerHash.buffer, value.buffer);
+    }
+
     private hasPointerStorageHash(pointer: Uint8Array): bool {
         if (this.storage.has(pointer)) {
             return true;
@@ -307,5 +340,30 @@ export class BlockchainEnvironment {
         this.storage.set(pointer, value); // cache the value
 
         return !eqUint(value, EMPTY_BUFFER);
+    }
+
+    private hasPointerTransientStorageHash(pointer: Uint8Array): bool {
+        if (this.storage.has(pointer)) {
+            return true;
+        }
+
+        // we attempt to load the requested pointer.
+        const resultBuffer = new ArrayBuffer(32);
+        tLoadPointer(pointer.buffer, resultBuffer);
+
+        const value: Uint8Array = Uint8Array.wrap(resultBuffer);
+        this.storage.set(pointer, value); // cache the value
+
+        return !eqUint(value, EMPTY_BUFFER);
+    }
+
+    public getAccountType(address: Address): u32 {
+        return getAccountType(address.buffer)
+    }
+
+    public getBlockHash(blockNumber: u64): Uint8Array {
+        const hash = new ArrayBuffer(32);
+        getBlockHash(blockNumber, hash);
+        return Uint8Array.wrap(hash);
     }
 }
