@@ -235,6 +235,7 @@ export class BlockchainEnvironment {
             resultAddressBuffer,
         );
 
+        // TODO: Decode revert data if status is not 0
         if (status !== 0) {
             throw new Revert('Failed to deploy contract');
         }
