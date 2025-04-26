@@ -286,6 +286,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         writer.writeAddress(spender);
         writer.writeU256(value);
         writer.writeU256(nonce);
+        writer.writeAddress(this.address);
 
         const hash = sha256(writer.getBuffer());
         if (!Blockchain.verifySchnorrSignature(owner, signature, hash)) {
