@@ -279,13 +279,14 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
 
         // Build the hash to match exactly what the user signed, including the nonce
         const writer = new BytesWriter(
-            ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH + U256_BYTE_LENGTH,
+            ADDRESS_BYTE_LENGTH * 3 + U256_BYTE_LENGTH + U256_BYTE_LENGTH,
         );
 
         writer.writeAddress(owner);
         writer.writeAddress(spender);
         writer.writeU256(value);
         writer.writeU256(nonce);
+        writer.writeAddress(this.address);
 
         const hash = sha256(writer.getBuffer());
         if (!Blockchain.verifySchnorrSignature(owner, signature, hash)) {
