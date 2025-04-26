@@ -7,28 +7,14 @@ import { Potential } from '../lang/Definitions';
 import { Address } from '../types/Address';
 import { Block } from './classes/Block';
 import { Transaction } from './classes/Transaction';
-import {
-    callContract,
-    deployFromAddress,
-    emit,
-    env_exit,
-    getCallResult,
-    loadPointer,
-    tLoadPointer,
-    log,
-    storePointer,
-    tStorePointer,
-    validateBitcoinAddress,
-    verifySchnorrSignature,
-    getAccountType,
-    getBlockHash
-} from './global';
+
 import { eqUint, MapUint8Array } from '../generic/MapUint8Array';
 import { EMPTY_BUFFER } from '../math/bytes';
 import { Plugin } from '../plugins/Plugin';
 import { Calldata } from '../types';
 import { TransactionOutput } from './classes/UTXO';
 import { Revert } from '../types/Revert';
+import { sha256 } from './global';
 
 export * from '../env/global';
 
@@ -260,7 +246,7 @@ export class BlockchainEnvironment {
     public deployContractFromExisting(
         _existingAddress: Address,
         _salt: u256,
-        calldata: BytesWriter
+        calldata: BytesWriter,
     ): Address {
         return this._mockedDeployContractResponse;
     }
@@ -325,6 +311,14 @@ export class BlockchainEnvironment {
         this._internalSetTransientStorageAt(pointerHash, value);
     }
 
+    public getAccountType(address: Address): u32 {
+        return 0;
+    }
+
+    public getBlockHash(blockNumber: u64): Uint8Array {
+        return new Uint8Array(32);
+    }
+
     private createContractIfNotExists(): void {
         if (!this._contract) {
             throw new Revert('Contract is required');
@@ -341,8 +335,6 @@ export class BlockchainEnvironment {
 
     private _internalSetTransientStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {
         this.transientStorage.set(pointerHash, value);
-
-        tStorePointer(pointerHash.buffer, value.buffer);
     }
 
     private hasPointerStorageHash(pointer: Uint8Array): bool {
@@ -350,27 +342,6 @@ export class BlockchainEnvironment {
     }
 
     private hasPointerTransientStorageHash(pointer: Uint8Array): bool {
-        if (this.storage.has(pointer)) {
-            return true;
-        }
-
-        // we attempt to load the requested pointer.
-        const resultBuffer = new ArrayBuffer(32);
-        tLoadPointer(pointer.buffer, resultBuffer);
-
-        const value: Uint8Array = Uint8Array.wrap(resultBuffer);
-        this.storage.set(pointer, value); // cache the value
-
-        return !eqUint(value, EMPTY_BUFFER);
-    }
-
-    public getAccountType(address: Address): u32 {
-        return getAccountType(address.buffer)
-    }
-
-    public getBlockHash(blockNumber: u64): Uint8Array {
-        const hash = new ArrayBuffer(32);
-        getBlockHash(blockNumber, hash);
-        return Uint8Array.wrap(hash);
+        return this.storage.has(pointer);
     }
 }
