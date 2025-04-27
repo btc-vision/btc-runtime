@@ -13,17 +13,17 @@ import {
     deployFromAddress,
     emit,
     env_exit,
+    getAccountType,
+    getBlockHash,
     getCallResult,
     loadPointer,
-    tLoadPointer,
     log,
     sha256,
     storePointer,
+    tLoadPointer,
     tStorePointer,
     validateBitcoinAddress,
     verifySchnorrSignature,
-    getAccountType,
-    getBlockHash,
 } from './global';
 import { eqUint, MapUint8Array } from '../generic/MapUint8Array';
 import { EMPTY_BUFFER } from '../math/bytes';
@@ -258,8 +258,7 @@ export class BlockchainEnvironment {
     public getTransientStorageAt(
         pointerHash: Uint8Array,
     ): Uint8Array {
-        this.hasPointerTransientStorageHash(pointerHash);
-        if (this.transientStorage.has(pointerHash)) {
+        if (this.hasPointerTransientStorageHash(pointerHash)) {
             return this.transientStorage.get(pointerHash);
         }
 
@@ -306,6 +305,16 @@ export class BlockchainEnvironment {
         this._internalSetTransientStorageAt(pointerHash, value);
     }
 
+    public getAccountType(address: Address): u32 {
+        return getAccountType(address.buffer);
+    }
+
+    public getBlockHash(blockNumber: u64): Uint8Array {
+        const hash = new ArrayBuffer(32);
+        getBlockHash(blockNumber, hash);
+        return Uint8Array.wrap(hash);
+    }
+
     private createContractIfNotExists(): void {
         if (!this._contract) {
             throw new Revert('Contract is required');
@@ -344,7 +353,7 @@ export class BlockchainEnvironment {
     }
 
     private hasPointerTransientStorageHash(pointer: Uint8Array): bool {
-        if (this.storage.has(pointer)) {
+        if (this.transientStorage.has(pointer)) {
             return true;
         }
 
@@ -353,18 +362,8 @@ export class BlockchainEnvironment {
         tLoadPointer(pointer.buffer, resultBuffer);
 
         const value: Uint8Array = Uint8Array.wrap(resultBuffer);
-        this.storage.set(pointer, value); // cache the value
+        this.transientStorage.set(pointer, value); // cache the value
 
         return !eqUint(value, EMPTY_BUFFER);
-    }
-
-    public getAccountType(address: Address): u32 {
-        return getAccountType(address.buffer)
-    }
-
-    public getBlockHash(blockNumber: u64): Uint8Array {
-        const hash = new ArrayBuffer(32);
-        getBlockHash(blockNumber, hash);
-        return Uint8Array.wrap(hash);
     }
 }
