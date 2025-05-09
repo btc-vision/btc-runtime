@@ -21,21 +21,22 @@ import {
  *  - slot 0 stores indexes [0..255]
  *  - slot 1 stores indexes [256..511]
  *  - ...
+ *  Note: This is designed to wrap around.
  */
 @final
 export class StoredBooleanArray {
     private readonly basePointer: Uint8Array;
     private readonly lengthPointer: Uint8Array;
 
-    private _values: Map<u64, Uint8Array> = new Map();
-    private _isChanged: Set<u64> = new Set();
+    private _values: Map<u32, Uint8Array> = new Map();
+    private _isChanged: Set<u32> = new Set();
 
-    private _length: u64 = 0;
-    private _startIndex: u64 = 0;
+    private _length: u32 = 0;
+    private _startIndex: u32 = 0;
     private _isChangedLength: bool = false;
     private _isChangedStartIndex: bool = false;
 
-    private readonly MAX_LENGTH: u64 = u32.MAX_VALUE;
+    private MAX_LENGTH: u32 = u32.MAX_VALUE - 1;
 
     /**
      * @constructor
@@ -61,10 +62,21 @@ export class StoredBooleanArray {
         this._startIndex = data[1];
     }
 
-    // -------------- Public Accessors -------------- //
+    /**
+     * Set the maximum length of the array.
+     * This is a safety check to prevent unbounded usage.
+     */
+    @inline
+    public setMaxLength(maxLength: u32): void {
+        if (maxLength > this.MAX_LENGTH) {
+            throw new Revert('setMaxLength: maxLength exceeds MAX_LENGTH');
+        }
+
+        this.MAX_LENGTH = maxLength;
+    }
 
     @inline
-    public has(index: u64): bool {
+    public has(index: u32): bool {
         return index < this._length;
     }
 
@@ -73,7 +85,7 @@ export class StoredBooleanArray {
      */
     @operator('[]')
     @inline
-    public get(index: u64): bool {
+    public get(index: u32): bool {
         if (index >= this._length) {
             throw new Revert(`get: index out of range (${index} >= ${this._length}, boolean array)`);
         }
@@ -97,7 +109,7 @@ export class StoredBooleanArray {
      */
     @operator('[]=')
     @inline
-    public set(index: u64, value: bool): void {
+    public set(index: u32, value: bool): void {
         if (index >= this._length) {
             throw new Revert(`set: index out of range (${index} >= ${this._length}, boolean array)`);
         }
@@ -156,7 +168,7 @@ export class StoredBooleanArray {
      * Delete the boolean at `index` by setting it to false.
      */
     @inline
-    public delete(index: u64): void {
+    public delete(index: u32): void {
         if (index >= this._length) {
             throw new Revert('delete: index out of range (boolean array)');
         }
@@ -212,7 +224,6 @@ export class StoredBooleanArray {
 
         this._isChanged.clear();
 
-        // 2) If length or startIndex changed, store them
         if (this._isChangedLength || this._isChangedStartIndex) {
             const w = new BytesWriter(32);
             w.writeU64(this._length);
@@ -255,8 +266,8 @@ export class StoredBooleanArray {
      * Set multiple bools starting at `startIndex`.
      */
     @inline
-    public setMultiple(startIndex: u64, values: bool[]): void {
-        for (let i: u64 = 0; i < values.length; i++) {
+    public setMultiple(startIndex: u32, values: bool[]): void {
+        for (let i: u32 = 0; i < values.length; i++) {
             this.set(startIndex + i, values[i]);
         }
     }
@@ -265,17 +276,17 @@ export class StoredBooleanArray {
      * Retrieve a batch of bools.
      */
     @inline
-    public getAll(start: u64, count: u64): bool[] {
+    public getAll(start: u32, count: u32): bool[] {
         if (start + count > this._length) {
             throw new Revert('getAll: range exceeds array length (boolean array)');
         }
 
-        if (count > u64(u32.MAX_VALUE)) {
+        if (count > u32(u32.MAX_VALUE)) {
             throw new Revert('getAll: range exceeds max allowed (boolean array)');
         }
 
         const result = new Array<bool>(<i32>count);
-        for (let i: u64 = 0; i < count; i++) {
+        for (let i: u32 = 0; i < count; i++) {
             result[<i32>i] = this.get(start + i);
         }
 
@@ -288,7 +299,7 @@ export class StoredBooleanArray {
     @inline
     public toString(): string {
         let s = '[';
-        for (let i: u64 = 0; i < this._length; i++) {
+        for (let i: u32 = 0; i < this._length; i++) {
             s += this.get(i).toString();
             if (i < this._length - 1) {
                 s += ', ';
@@ -318,12 +329,12 @@ export class StoredBooleanArray {
      * Current array length (number of booleans stored).
      */
     @inline
-    public getLength(): u64 {
+    public getLength(): u32 {
         return this._length;
     }
 
     @inline
-    public setStartingIndex(index: u64): void {
+    public setStartingIndex(index: u32): void {
         this._startIndex = index;
         this._isChangedStartIndex = true;
     }
@@ -332,14 +343,14 @@ export class StoredBooleanArray {
      * Current starting index for the array.
      */
     @inline
-    public startingIndex(): u64 {
+    public startingIndex(): u32 {
         return this._startIndex;
     }
 
     /**
      * Ensure the 32-byte slot for `slotIndex` is loaded into _values.
      */
-    private ensureSlotLoaded(slotIndex: u64): void {
+    private ensureSlotLoaded(slotIndex: u32): void {
         if (!this._values.has(slotIndex)) {
             const pointer = this.calculateStoragePointer(slotIndex);
             const stored = Blockchain.getStorageAt(pointer);
@@ -350,7 +361,7 @@ export class StoredBooleanArray {
     /**
      * Convert `slotIndex` -> pointer = basePointer + (slotIndex + 1), as big-endian addition.
      */
-    private calculateStoragePointer(slotIndex: u64): Uint8Array {
+    private calculateStoragePointer(slotIndex: u32): Uint8Array {
         const offset = u64ToBE32Bytes(slotIndex);
         return addUint8ArraysBE(this.basePointer, offset);
     }

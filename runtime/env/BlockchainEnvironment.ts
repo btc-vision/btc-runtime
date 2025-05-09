@@ -7,7 +7,6 @@ import { Potential } from '../lang/Definitions';
 import { Address } from '../types/Address';
 import { Block } from './classes/Block';
 import { Transaction } from './classes/Transaction';
-
 import { eqUint, MapUint8Array } from '../generic/MapUint8Array';
 import { EMPTY_BUFFER } from '../math/bytes';
 import { Plugin } from '../plugins/Plugin';
@@ -265,8 +264,7 @@ export class BlockchainEnvironment {
     public getTransientStorageAt(
         pointerHash: Uint8Array,
     ): Uint8Array {
-        this.hasPointerTransientStorageHash(pointerHash);
-        if (this.transientStorage.has(pointerHash)) {
+        if (this.hasPointerTransientStorageHash(pointerHash)) {
             return this.transientStorage.get(pointerHash);
         }
 
@@ -342,6 +340,6 @@ export class BlockchainEnvironment {
     }
 
     private hasPointerTransientStorageHash(pointer: Uint8Array): bool {
-        return this.storage.has(pointer);
+        return this.transientStorage.has(pointer);
     }
 }
