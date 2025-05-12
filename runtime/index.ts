@@ -62,8 +62,12 @@ export * from './nested/codecs/VariableBytesCodec';
 export * from './storage/StoredU256';
 export * from './storage/StoredU64';
 export * from './storage/StoredString';
+export * from './storage/AdvancedStoredString';
 export * from './storage/StoredAddress';
 export * from './storage/StoredBoolean';
+
+/** Maps */
+export * from './storage/maps/StoredMapU256';
 
 /** Arrays */
 export * from './storage/arrays/StoredAddressArray';
