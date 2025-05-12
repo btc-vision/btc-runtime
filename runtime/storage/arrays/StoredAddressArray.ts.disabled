@@ -1,0 +1,308 @@
+import { BytesWriter } from '../../buffer/BytesWriter';
+import { Blockchain } from '../../env';
+import {
+    addUint8ArraysBE,
+    bigEndianAdd,
+    encodeBasePointer,
+    readLengthAndStartIndex,
+    u64ToBE32Bytes,
+} from '../../math/bytes';
+import { Address } from '../../types/Address';
+import { Revert } from '../../types/Revert';
+
+/**
+ * @class StoredAddressArray
+ * @description Manages an array of Address values across multiple storage slots.
+ * Each slot holds one Address (stored as a raw Uint8Array in storage).
+ *
+ * Note: This is designed to wrap around.
+ */
+@final
+export class StoredAddressArray {
+    private readonly baseU256Pointer: Uint8Array;
+    private readonly lengthPointer: Uint8Array;
+
+    private _values: Map<u32, Address> = new Map();
+    private _isChanged: Set<u32> = new Set();
+
+    private _length: u32 = 0;
+    private _startIndex: u32 = 0;
+    private _isChangedLength: bool = false;
+    private _isChangedStartIndex: bool = false;
+
+    private MAX_LENGTH: u32 = u32.MAX_VALUE - 1;
+
+    private readonly defaultValue: Address = Address.zero();
+
+    /**
+     * @constructor
+     * @param {u16} pointer - The primary pointer identifier.
+     * @param {Uint8Array} subPointer - The sub-pointer for memory slot addressing.
+     */
+    constructor(public pointer: u16, public subPointer: Uint8Array) {
+        assert(
+            subPointer.length <= 30,
+            `You must pass a 30 bytes sub-pointer. (AddressArray, got ${subPointer.length})`,
+        );
+
+        const basePointer = encodeBasePointer(pointer, subPointer);
+        this.lengthPointer = Uint8Array.wrap(basePointer.buffer);
+        this.baseU256Pointer = bigEndianAdd(basePointer, 1);
+
+        const storedLenStart = Blockchain.getStorageAt(basePointer);
+        const data = readLengthAndStartIndex(storedLenStart);
+
+        this._length = data[0];
+        this._startIndex = data[1];
+    }
+
+    /**
+     * Set the maximum length of the array.
+     * This is a safety check to prevent unbounded usage.
+     */
+    @inline
+    public setMaxLength(maxLength: u32): void {
+        if (maxLength > this.MAX_LENGTH) {
+            throw new Revert('setMaxLength: maxLength exceeds MAX_LENGTH');
+        }
+
+        this.MAX_LENGTH = maxLength;
+    }
+
+    @inline
+    public has(index: u32): bool {
+        return index < this._length;
+    }
+
+    /** Get an element by its global index. */
+    @inline
+    @operator('[]')
+    public get(index: u32): Address {
+        if (index >= this._length) {
+            throw new Revert('get: index out of range (address array)');
+        }
+
+        const slotIndex: u32 = (this._startIndex + index) % this.MAX_LENGTH;
+        this.ensureValues(slotIndex);
+
+        return this._values.get(slotIndex);
+    }
+
+    /** Set an element by its global index. */
+    @inline
+    @operator('[]=')
+    public set(index: u32, value: Address): void {
+        if (index >= this._length) {
+            throw new Revert('set: index out of range (address array)');
+        }
+
+        const slotIndex: u32 = (this._startIndex + index) % this.MAX_LENGTH;
+        this.ensureValues(slotIndex);
+
+        const currentValue = this._values.get(slotIndex);
+        if (currentValue != value) {
+            this._values.set(slotIndex, value);
+            this._isChanged.add(slotIndex);
+        }
+    }
+
+    /** Append an address at the end of the array. */
+    @inline
+    public push(value: Address): void {
+        if (this._length >= this.MAX_LENGTH) {
+            throw new Revert('push: array reached maximum length (address array)');
+        }
+
+        const newLogicalIndex: u32 = this._length;
+        const slotIndex: u32 = (this._startIndex + newLogicalIndex) % this.MAX_LENGTH;
+
+        this.ensureValues(slotIndex);
+        this._values.set(slotIndex, value);
+        this._isChanged.add(slotIndex);
+
+        this._length += 1;
+        this._isChangedLength = true;
+    }
+
+    /** Delete the last element. */
+    public deleteLast(): void {
+        if (this._length === 0) {
+            throw new Revert('deleteLast: array is empty (address array)');
+        }
+
+        const lastLogicalIndex: u32 = this._length - 1;
+        const slotIndex: u32 = (this._startIndex + lastLogicalIndex) % this.MAX_LENGTH;
+        this.ensureValues(slotIndex);
+
+        const currentValue = this._values.get(slotIndex);
+        if (currentValue != this.defaultValue) {
+            this._values.set(slotIndex, this.defaultValue);
+            this._isChanged.add(slotIndex);
+        }
+
+        this._length -= 1;
+        this._isChangedLength = true;
+    }
+
+    /** Adjust the starting index. */
+    public setStartingIndex(index: u32): void {
+        this._startIndex = index;
+        this._isChangedStartIndex = true;
+    }
+
+    /** Delete a specific element by setting it to `defaultValue`. */
+    @inline
+    public delete(index: u32): void {
+        if (index > this.MAX_LENGTH) {
+            throw new Revert('delete: index out of range (address array)');
+        }
+
+        const slotIndex: u32 = (this._startIndex + index) % this.MAX_LENGTH;
+        this.ensureValues(slotIndex);
+
+        const currentValue = this._values.get(slotIndex);
+        if (currentValue != this.defaultValue) {
+            this._values.set(slotIndex, this.defaultValue);
+            this._isChanged.add(slotIndex);
+        }
+    }
+
+    /**
+     * Persist changes to storage.
+     *  - Store any changed slotIndex -> Address
+     *  - Store updated length and startIndex if changed
+     */
+    @inline
+    public save(): void {
+        // 1) Save changed slots
+        const changed = this._isChanged.values();
+        for (let i = 0; i < changed.length; i++) {
+            const slotIndex = changed[i];
+            const storagePointer = this.calculateStoragePointer(slotIndex);
+
+            const value = this._values.get(slotIndex);
+            Blockchain.setStorageAt(storagePointer, value);
+        }
+        this._isChanged.clear();
+
+        // 2) Save length and startIndex if changed
+        if (this._isChangedLength || this._isChangedStartIndex) {
+            const writer = new BytesWriter(16);
+            writer.writeU64(this._length);
+            writer.writeU64(this._startIndex);
+
+            Blockchain.setStorageAt(this.lengthPointer, writer.getBuffer());
+            this._isChangedLength = false;
+            this._isChangedStartIndex = false;
+        }
+    }
+
+    /** Clear entire array content from storage, reset length and startIndex. */
+    public deleteAll(): void {
+        const keys = this._values.keys();
+        for (let i = 0; i < keys.length; i++) {
+            const slotIndex = keys[i];
+            const storagePointer = this.calculateStoragePointer(slotIndex);
+            Blockchain.setStorageAt(storagePointer, this.defaultValue);
+        }
+
+        Blockchain.setStorageAt(this.lengthPointer, new Uint8Array(32));
+
+        this._length = 0;
+        this._startIndex = 0;
+        this._isChangedLength = false;
+        this._isChangedStartIndex = false;
+
+        this._values.clear();
+        this._isChanged.clear();
+    }
+
+    /** Bulk-set multiple addresses starting at `startIndex`. */
+    @inline
+    public setMultiple(startIndex: u32, values: Address[]): void {
+        for (let i: u32 = 0; i < values.length; i++) {
+            this.set(startIndex + i, values[i]);
+        }
+    }
+
+    /** Retrieve a batch of addresses (range). */
+    @inline
+    public getAll(startIndex: u32, count: u32): Address[] {
+        if (startIndex + count > this._length) {
+            throw new Revert('getAll: index out of range (address array)');
+        }
+
+        const result = new Array<Address>(count);
+        for (let i: u32 = 0; i < count; i++) {
+            result[i] = this.get(startIndex + i);
+        }
+        return result;
+    }
+
+    /** Returns a string of the form "[addr0, addr1, ...]". */
+    @inline
+    public toString(): string {
+        let str = '[';
+        for (let i: u32 = 0; i < this._length; i++) {
+            const value = this.get(i);
+            str += value.toString();
+            if (i !== this._length - 1) {
+                str += ', ';
+            }
+        }
+        str += ']';
+        return str;
+    }
+
+    /** Reset in-memory and persist. */
+    @inline
+    public reset(): void {
+        this._length = 0;
+        this._startIndex = 0;
+        this._isChangedLength = true;
+        this._isChangedStartIndex = true;
+
+        this._values.clear();
+        this._isChanged.clear();
+
+        this.save();
+    }
+
+    /** Current array length. */
+    @inline
+    public getLength(): u32 {
+        return this._length;
+    }
+
+    /** Current starting index. */
+    public startingIndex(): u32 {
+        return this._startIndex;
+    }
+
+    /**
+     * Ensure the given slot index is loaded into `_values`.
+     */
+    private ensureValues(slotIndex: u32): void {
+        if (!this._values.has(slotIndex)) {
+            const storagePointer = this.calculateStoragePointer(slotIndex);
+
+            // Load raw bytes from storage
+            const stored: Uint8Array = Blockchain.getStorageAt(storagePointer);
+
+            const storedAddress: Address =
+                stored.length == 0 ? this.defaultValue : Address.fromUint8Array(stored);
+
+            this._values.set(slotIndex, storedAddress);
+        }
+    }
+
+    /**
+     * Compute a 32-byte storage pointer = basePointer + (slotIndex + 1) big-endian.
+     */
+    private calculateStoragePointer(slotIndex: u32): Uint8Array {
+        // Convert (slotIndex) to a 32-byte big-endian offset
+        const offset = u64ToBE32Bytes(slotIndex);
+
+        return addUint8ArraysBE(this.baseU256Pointer, offset);
+    }
+}
