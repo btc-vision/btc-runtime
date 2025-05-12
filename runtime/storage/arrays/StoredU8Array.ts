@@ -11,7 +11,7 @@ export class StoredU8Array extends StoredPackedArray<u8> {
         super(pointer, subPointer, 0);
     }
 
-    protected getSlotCapacity(): u64 {
+    protected getSlotCapacity(): u32 {
         return 32; // 32 bytes => 32 x u8
     }
 

@@ -1,12 +1,12 @@
-import {u256} from '@btc-vision/as-bignum/assembly';
-import {BytesWriter} from '../buffer/BytesWriter';
-import {Blockchain} from '../env';
-import {encodePointer} from '../math/abi';
-import {BytesReader} from '../buffer/BytesReader';
+import { u256 } from '@btc-vision/as-bignum/assembly';
+import { BytesWriter } from '../buffer/BytesWriter';
+import { Blockchain } from '../env';
+import { encodePointer } from '../math/abi';
+import { BytesReader } from '../buffer/BytesReader';
 
 /**
  * @class StoredU32
- * @description Manages up to height u64 values within a single u256 storage slot.
+ * @description Manages up to height u32 values within a single u256 storage slot.
  */
 @final
 export class StoredU32 {
@@ -30,7 +30,10 @@ export class StoredU32 {
         public pointer: u16,
         public subPointer: Uint8Array,
     ) {
-        assert(subPointer.length <= 30, `You must pass a 30 bytes sub-pointer. (StoredU64, got ${subPointer.length})`);
+        assert(
+            subPointer.length <= 30,
+            `You must pass a 30 bytes sub-pointer. (StoredU32, got ${subPointer.length})`,
+        );
 
         this.bufferPointer = encodePointer(pointer, subPointer);
     }
@@ -43,20 +46,20 @@ export class StoredU32 {
      */
     @inline
     public get(index: u8): u32 {
-        assert(index < 8, 'Index out of bounds for StoredU64 (0-7)');
+        assert(index < 8, 'Index out of bounds for StoredU32 (0-7)');
         this.ensureValues();
         return this._values[index];
     }
 
     /**
      * @method set
-     * @description Sets the u64 value at the specified offset.
+     * @description Sets the u32 value at the specified offset.
      * @param {u8} index - The index (0 to 7) of the u32 value to set.
      * @param {u32} value - The u32 value to assign.
      */
     @inline
     public set(index: u8, value: u32): void {
-        assert(index < 8, 'Index out of bounds for StoredU64 (0-7)');
+        assert(index < 8, 'Index out of bounds for StoredU32 (0-7)');
         this.ensureValues();
         if (this._values[index] != value) {
             this._values[index] = value;
@@ -117,7 +120,6 @@ export class StoredU32 {
         this.ensureValues();
         return `[${this._values[0].toString()}, ${this._values[1].toString()}, ${this._values[2].toString()}, ${this._values[3].toString()},, ${this._values[4].toString()},, ${this._values[5].toString()},, ${this._values[6].toString()},, ${this._values[7].toString()}]`;
     }
-
 
     /**
      * @method reset

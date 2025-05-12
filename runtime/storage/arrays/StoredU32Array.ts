@@ -11,7 +11,7 @@ export class StoredU32Array extends StoredPackedArray<u32> {
         super(pointer, subPointer, 0);
     }
 
-    protected getSlotCapacity(): u64 {
+    protected getSlotCapacity(): u32 {
         return 8; // 8 x u32 => 32 bytes
     }
 
@@ -45,7 +45,7 @@ export class StoredU32Array extends StoredPackedArray<u32> {
             const b1 = slotData[offset + 1];
             const b2 = slotData[offset + 2];
             const b3 = slotData[offset + 3];
-            out[i] = ((<u32>b0 << 24) | (<u32>b1 << 16) | (<u32>b2 << 8) | b3) as u32;
+            out[i] = (((<u32>b0) << 24) | ((<u32>b1) << 16) | ((<u32>b2) << 8) | b3) as u32;
             offset += 4;
         }
         return out;

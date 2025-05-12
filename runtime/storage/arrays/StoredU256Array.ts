@@ -12,7 +12,7 @@ export class StoredU256Array extends StoredPackedArray<u256> {
         super(pointer, subPointer, u256.Zero);
     }
 
-    protected getSlotCapacity(): u64 {
+    protected getSlotCapacity(): u32 {
         return 1; // 1 x u256 => 32 bytes
     }
 

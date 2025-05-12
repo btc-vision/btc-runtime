@@ -13,7 +13,7 @@ export class StoredAddressArray extends StoredPackedArray<Address> {
         super(pointer, subPointer, Address.zero());
     }
 
-    protected getSlotCapacity(): u64 {
+    protected getSlotCapacity(): u32 {
         return 1; // 1 x u256 => 32 bytes
     }
 
