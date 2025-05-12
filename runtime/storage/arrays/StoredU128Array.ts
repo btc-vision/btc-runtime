@@ -13,12 +13,12 @@ export class StoredU128Array extends StoredPackedArray<u128> {
         super(pointer, subPointer, u128.Zero);
     }
 
-    protected getSlotCapacity(): u64 {
+    protected getSlotCapacity(): u32 {
         return 2; // 2 x u128 => 32 bytes
     }
 
     protected zeroValue(): u128 {
-        return u128.Zero;  // from the as-bignum library
+        return u128.Zero; // from the as-bignum library
     }
 
     protected eq(a: u128, b: u128): bool {

@@ -51,8 +51,15 @@ export abstract class StoredPackedArray<T> {
      */
     protected MAX_LENGTH: u32 = u32.MAX_VALUE - 1;
 
-    protected constructor(public pointer: u16, public subPointer: Uint8Array, protected defaultValue: T) {
-        assert(subPointer.length <= 30, `You must pass a 30 bytes sub-pointer. (Array, got ${subPointer.length})`);
+    protected constructor(
+        public pointer: u16,
+        public subPointer: Uint8Array,
+        protected defaultValue: T,
+    ) {
+        assert(
+            subPointer.length <= 30,
+            `You must pass a 30 bytes sub-pointer. (Array, got ${subPointer.length})`,
+        );
 
         const basePointer = encodeBasePointer(pointer, subPointer);
         this.lengthPointer = Uint8Array.wrap(basePointer.buffer);
@@ -87,7 +94,7 @@ export abstract class StoredPackedArray<T> {
         }
 
         const realIndex = (this._startIndex + index) % this.MAX_LENGTH;
-        const cap = this.getSlotCapacity();
+        const cap: u32 = this.getSlotCapacity();
         const slotIndex = realIndex / cap;
         const subIndex = <u32>(realIndex % cap);
 
@@ -344,7 +351,7 @@ export abstract class StoredPackedArray<T> {
             const slotIndex = changed[i];
             const slotData = this._slots.get(slotIndex);
             if (slotData) {
-                const ptr = this.calculateStoragePointer(slotIndex);
+                const ptr = this.calculateStoragePointer(<u64>slotIndex);
                 Blockchain.setStorageAt(ptr, slotData);
             }
         }
@@ -363,7 +370,7 @@ export abstract class StoredPackedArray<T> {
         const keys = this._slots.keys();
         for (let i = 0; i < keys.length; i++) {
             const slotIndex = keys[i];
-            const ptr = this.calculateStoragePointer(slotIndex);
+            const ptr = this.calculateStoragePointer(<u64>slotIndex);
             Blockchain.setStorageAt(ptr, GET_EMPTY_BUFFER()); // 32 bytes of zero
         }
 
@@ -421,7 +428,7 @@ export abstract class StoredPackedArray<T> {
      * Typically "basePointer + (slotIndex+1)" in big-endian addition,
      * but you can do your own approach.
      */
-    protected abstract calculateStoragePointer(slotIndex: u32): Uint8Array;
+    protected abstract calculateStoragePointer(slotIndex: u64): Uint8Array;
 
     // -----------------------------------------------------------
     //              Internal Slot-Loading Helpers
@@ -432,7 +439,7 @@ export abstract class StoredPackedArray<T> {
      */
     protected ensureSlot(slotIndex: u32): Uint8Array {
         if (!this._slots.has(slotIndex)) {
-            const ptr = this.calculateStoragePointer(slotIndex);
+            const ptr = this.calculateStoragePointer(<u64>slotIndex);
             const data = Blockchain.getStorageAt(ptr);
 
             // Must be exactly 32 bytes; if it's empty, you get 32 zero bytes from GET_EMPTY_BUFFER()
