@@ -10,7 +10,7 @@ export class StoredU16Array extends StoredPackedArray<u16> {
         super(pointer, subPointer, 0);
     }
 
-    protected getSlotCapacity(): u64 {
+    protected getSlotCapacity(): u32 {
         return 16; // 16 x u16 = 32 bytes
     }
 
@@ -30,8 +30,8 @@ export class StoredU16Array extends StoredPackedArray<u16> {
         let offset = 0;
         for (let i = 0; i < 16; i++) {
             const v = values[i];
-            out[offset] = <u8>((v >> 8) & 0xff);   // high byte
-            out[offset + 1] = <u8>(v & 0xff);         // low byte
+            out[offset] = <u8>((v >> 8) & 0xff); // high byte
+            out[offset + 1] = <u8>(v & 0xff); // low byte
             offset += 2;
         }
         return out;
