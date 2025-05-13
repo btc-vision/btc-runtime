@@ -1,5 +1,5 @@
 export enum TransactionInputFlags {
-    isCoinbase = 0b00000001,
+    hasCoinbase = 0b00000001,
 }
 
 export enum TransactionOutputFlags {

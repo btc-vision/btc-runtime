@@ -1,5 +1,5 @@
 import { TransactionInput, TransactionOutput } from '../classes/UTXO';
-import { TransactionOutputFlags } from '../enums/TransactionFlags';
+import { TransactionInputFlags, TransactionOutputFlags } from '../enums/TransactionFlags';
 import { BytesReader } from '../../buffer/BytesReader';
 
 export class TransactionDecoder {
@@ -31,7 +31,11 @@ export class TransactionDecoder {
         const outputIndex = buffer.readU16();
         const scriptSig = buffer.readBytesWithLength();
 
-        return new TransactionInput(flags, txId, outputIndex, scriptSig);
+        const coinbase: Uint8Array | null = this.hasFlag(flags, TransactionInputFlags.hasCoinbase)
+            ? buffer.readBytesWithLength()
+            : null;
+
+        return new TransactionInput(flags, txId, outputIndex, scriptSig, coinbase);
     }
 
     private decodeOutput(buffer: BytesReader): TransactionOutput {
