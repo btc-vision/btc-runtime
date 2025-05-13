@@ -1,5 +1,5 @@
 import { TransactionInput, TransactionOutput } from '../classes/UTXO';
-import { TransactionInputFlags, TransactionOutputFlags } from '../enums/TransactionFlags';
+import { TransactionOutputFlags } from '../enums/TransactionFlags';
 import { BytesReader } from '../../buffer/BytesReader';
 
 export class TransactionDecoder {
@@ -24,7 +24,7 @@ export class TransactionDecoder {
 
         return result;
     }
-    
+
     private decodeInput(buffer: BytesReader): TransactionInput {
         const flags = buffer.readU8();
         const txId = buffer.readBytes(32);
@@ -56,7 +56,7 @@ export class TransactionDecoder {
     /**
      * Checks if the given flag is set in the flags byte.
      */
-    private hasFlag(flags: u8, flag: TransactionInputFlags | TransactionOutputFlags): boolean {
+    private hasFlag<T extends u8>(flags: u8, flag: T): boolean {
         return (flags & flag) !== 0;
     }
 }
