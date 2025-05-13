@@ -8,12 +8,7 @@ export class TransactionDecoder {
         const result = new Array<TransactionInput>(length);
 
         for (let i: u16 = 0; i < length; i++) {
-            const flags = buffer.readU8();
-            const txId = buffer.readBytes(32);
-            const outputIndex = buffer.readU16();
-            const scriptSig = buffer.readBytesWithLength();
-
-            result[i] = new TransactionInput(flags, txId, outputIndex, scriptSig);
+            result[i] = this.decodeInput(buffer);
         }
 
         return result;
@@ -28,6 +23,15 @@ export class TransactionDecoder {
         }
 
         return result;
+    }
+    
+    private decodeInput(buffer: BytesReader): TransactionInput {
+        const flags = buffer.readU8();
+        const txId = buffer.readBytes(32);
+        const outputIndex = buffer.readU16();
+        const scriptSig = buffer.readBytesWithLength();
+
+        return new TransactionInput(flags, txId, outputIndex, scriptSig);
     }
 
     private decodeOutput(buffer: BytesReader): TransactionOutput {
