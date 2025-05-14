@@ -1,4 +1,4 @@
-import { StoredPackedArray } from './StoredPackedArray';
+import { DEFAULT_MAX_LENGTH, StoredPackedArray } from './StoredPackedArray';
 import { u128 } from '@btc-vision/as-bignum/assembly';
 import { bigEndianAdd } from '../../math/bytes';
 
@@ -9,8 +9,8 @@ import { bigEndianAdd } from '../../math/bytes';
  */
 @final
 export class StoredU128Array extends StoredPackedArray<u128> {
-    public constructor(pointer: u16, subPointer: Uint8Array) {
-        super(pointer, subPointer, u128.Zero);
+    public constructor(pointer: u16, subPointer: Uint8Array, maxLength: u64 = DEFAULT_MAX_LENGTH) {
+        super(pointer, subPointer, u128.Zero, maxLength);
     }
 
     protected getSlotCapacity(): u32 {

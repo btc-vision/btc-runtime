@@ -1,4 +1,4 @@
-import { StoredPackedArray } from './StoredPackedArray';
+import { DEFAULT_MAX_LENGTH, StoredPackedArray } from './StoredPackedArray';
 import { bigEndianAdd } from '../../math/bytes';
 
 /**
@@ -6,8 +6,8 @@ import { bigEndianAdd } from '../../math/bytes';
  */
 @final
 export class StoredU16Array extends StoredPackedArray<u16> {
-    public constructor(pointer: u16, subPointer: Uint8Array) {
-        super(pointer, subPointer, 0);
+    public constructor(pointer: u16, subPointer: Uint8Array, maxLength: u64 = DEFAULT_MAX_LENGTH) {
+        super(pointer, subPointer, 0, maxLength);
     }
 
     protected getSlotCapacity(): u32 {
