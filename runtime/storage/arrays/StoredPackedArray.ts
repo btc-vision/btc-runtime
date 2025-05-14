@@ -73,8 +73,12 @@ export abstract class StoredPackedArray<T> {
     }
 
     @inline
-    public get nextOffset(): u32 {
-        return this.nextItemOffset;
+    public get previousOffset(): u32 {
+        return <u32>(
+            ((this._startIndex +
+                <u64>(this.nextItemOffset === 0 ? this.nextItemOffset : this.nextItemOffset - 1)) %
+                this.MAX_LENGTH)
+        );
     }
 
     @inline
@@ -162,13 +166,21 @@ export abstract class StoredPackedArray<T> {
      */
     @inline
     public next(): T {
-        if (this.nextItemOffset >= this._length) {
-            throw new Revert('next: out of range');
-        }
-
         const value = this.get(this.nextItemOffset);
         this.nextItemOffset += 1;
+
         return value;
+    }
+
+    @inline
+    public incrementStartingIndex(): void {
+        if (this._startIndex >= this.MAX_LENGTH) {
+            this._startIndex = 0;
+        } else {
+            this._startIndex += 1;
+        }
+
+        this._isChangedStartIndex = true;
     }
 
     /**
@@ -178,11 +190,7 @@ export abstract class StoredPackedArray<T> {
     public applyNextOffsetToStartingIndex(): void {
         if (!this.nextItemOffset) return;
 
-        if (this.nextItemOffset > this._length) {
-            throw new Revert('applyNextOffsetToStartingIndex: out of range');
-        }
-
-        this._startIndex += this.nextItemOffset;
+        this._startIndex += this.nextItemOffset - 1;
         this._isChangedStartIndex = true;
         this.nextItemOffset = 0;
     }

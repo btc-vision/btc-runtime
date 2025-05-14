@@ -35,7 +35,7 @@ export class StoredBooleanArray {
     private _isChangedLength: bool = false;
     private _isChangedStartIndex: bool = false;
 
-    private readonly MAX_LENGTH: u64 = u32.MAX_VALUE;
+    private readonly MAX_LENGTH: u64 = u32.MAX_VALUE - 1;
 
     private nextItemOffset: u32 = 0;
 
@@ -69,8 +69,12 @@ export class StoredBooleanArray {
     // -------------- Public Accessors -------------- //
 
     @inline
-    public get nextOffset(): u32 {
-        return this.nextItemOffset;
+    public get previousOffset(): u32 {
+        return <u32>(
+            ((this._startIndex +
+                <u64>(this.nextItemOffset === 0 ? this.nextItemOffset : this.nextItemOffset - 1)) %
+                this.MAX_LENGTH)
+        );
     }
 
     @inline
@@ -84,12 +88,9 @@ export class StoredBooleanArray {
      */
     @inline
     public next(): bool {
-        if (this.nextItemOffset >= this._length) {
-            throw new Revert('next: out of range');
-        }
-
         const value = this.get(this.nextItemOffset);
         this.nextItemOffset += 1;
+
         return value;
     }
 
@@ -100,13 +101,20 @@ export class StoredBooleanArray {
     public applyNextOffsetToStartingIndex(): void {
         if (!this.nextItemOffset) return;
 
-        if (this.nextItemOffset > this._length) {
-            throw new Revert('applyNextOffsetToStartingIndex: out of range');
-        }
-
-        this._startIndex += this.nextItemOffset;
+        this._startIndex += this.nextItemOffset - 1;
         this._isChangedStartIndex = true;
         this.nextItemOffset = 0;
+    }
+
+    @inline
+    public incrementStartingIndex(): void {
+        if (this._startIndex >= this.MAX_LENGTH) {
+            this._startIndex = 0;
+        } else {
+            this._startIndex += 1;
+        }
+
+        this._isChangedStartIndex = true;
     }
 
     /**
