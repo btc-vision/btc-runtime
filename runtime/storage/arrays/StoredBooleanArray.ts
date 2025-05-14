@@ -94,6 +94,22 @@ export class StoredBooleanArray {
     }
 
     /**
+     * Apply the starting index with n offset.
+     */
+    @inline
+    public applyNextOffsetToStartingIndex(): void {
+        if (!this.nextItemOffset) return;
+
+        if (this.nextItemOffset > this._length) {
+            throw new Revert('applyNextOffsetToStartingIndex: out of range');
+        }
+
+        this._startIndex += this.nextItemOffset;
+        this._isChangedStartIndex = true;
+        this.nextItemOffset = 0;
+    }
+
+    /**
      * Retrieve boolean at `index`.
      */
     @operator('[]')
@@ -204,6 +220,13 @@ export class StoredBooleanArray {
                 this._isChanged.add(slotIndex);
             }
         }
+
+        if (this._length == 0) {
+            throw new Revert('delete: array is empty');
+        }
+
+        this._length -= 1;
+        this._isChangedLength = true;
     }
 
     /**
