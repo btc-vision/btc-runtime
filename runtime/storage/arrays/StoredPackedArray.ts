@@ -268,7 +268,10 @@ export abstract class StoredPackedArray<T> {
             this._slots.set(slotIndex, slotData);
             this._isChanged.add(slotIndex);
         }
+    }
 
+    @inline
+    public removeItemFromLength(): void {
         if (this._length == 0) {
             throw new Revert('delete: array is empty');
         }

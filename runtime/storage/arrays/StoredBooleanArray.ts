@@ -220,7 +220,10 @@ export class StoredBooleanArray {
                 this._isChanged.add(slotIndex);
             }
         }
+    }
 
+    @inline
+    public removeItemFromLength(): void {
         if (this._length == 0) {
             throw new Revert('delete: array is empty');
         }
