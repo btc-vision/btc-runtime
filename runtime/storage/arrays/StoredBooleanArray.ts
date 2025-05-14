@@ -38,6 +38,8 @@ export class StoredBooleanArray {
 
     private MAX_LENGTH: u32 = u32.MAX_VALUE - 1;
 
+    private nextItemOffset: u32 = 0;
+
     /**
      * @constructor
      * @param {u16} pointer       - The primary pointer identifier.
@@ -49,7 +51,10 @@ export class StoredBooleanArray {
         public pointer: u16,
         public subPtr: Uint8Array,
     ) {
-        assert(subPtr.length <= 30, `You must pass a 30 bytes sub-pointer. (StoredBooleanArray, got ${subPtr.length})`);
+        assert(
+            subPtr.length <= 30,
+            `You must pass a 30 bytes sub-pointer. (StoredBooleanArray, got ${subPtr.length})`,
+        );
 
         const basePointer = encodeBasePointer(pointer, subPtr);
         this.lengthPointer = Uint8Array.wrap(basePointer.buffer);
@@ -60,6 +65,15 @@ export class StoredBooleanArray {
 
         this._length = data[0];
         this._startIndex = data[1];
+    }
+
+    @inline
+    public get previousOffset(): u32 {
+        return <u32>(
+            ((this._startIndex +
+                    <u64>(this.nextItemOffset === 0 ? this.nextItemOffset : this.nextItemOffset - 1)) %
+                this.MAX_LENGTH)
+        );
     }
 
     /**
@@ -81,19 +95,55 @@ export class StoredBooleanArray {
     }
 
     /**
+     * Get the next item in the array, starting from the current offset.
+     * This is useful for iterating through the array.
+     */
+    @inline
+    public next(): bool {
+        const value = this.get(this.nextItemOffset);
+        this.nextItemOffset += 1;
+
+        return value;
+    }
+
+    /**
+     * Apply the starting index with n offset.
+     */
+    @inline
+    public applyNextOffsetToStartingIndex(): void {
+        if (!this.nextItemOffset) return;
+
+        this._startIndex += this.nextItemOffset - 1;
+        this._isChangedStartIndex = true;
+        this.nextItemOffset = 0;
+    }
+
+    @inline
+    public incrementStartingIndex(): void {
+        if (this._startIndex >= this.MAX_LENGTH) {
+            this._startIndex = 0;
+        } else {
+            this._startIndex += 1;
+        }
+
+        this._isChangedStartIndex = true;
+    }
+
+    /**
      * Retrieve boolean at `index`.
      */
     @operator('[]')
     @inline
     public get(index: u32): bool {
         if (index >= this._length) {
-            throw new Revert(`get: index out of range (${index} >= ${this._length}, boolean array)`);
+            throw new Revert(
+                `get: index out of range (${index} >= ${this._length}, boolean array)`,
+            );
         }
 
         const effectiveIndex = this._startIndex + index;
-        const wrappedIndex = effectiveIndex < this.MAX_LENGTH
-            ? effectiveIndex
-            : effectiveIndex % this.MAX_LENGTH;
+        const wrappedIndex =
+            effectiveIndex < this.MAX_LENGTH ? effectiveIndex : effectiveIndex % this.MAX_LENGTH;
 
         const slotIndex = wrappedIndex / 256;
         const bitIndex = <u16>(wrappedIndex % 256);
@@ -111,13 +161,14 @@ export class StoredBooleanArray {
     @inline
     public set(index: u32, value: bool): void {
         if (index >= this._length) {
-            throw new Revert(`set: index out of range (${index} >= ${this._length}, boolean array)`);
+            throw new Revert(
+                `set: index out of range (${index} >= ${this._length}, boolean array)`,
+            );
         }
 
         const effectiveIndex = this._startIndex + index;
-        const wrappedIndex = effectiveIndex < this.MAX_LENGTH
-            ? effectiveIndex
-            : effectiveIndex % this.MAX_LENGTH;
+        const wrappedIndex =
+            effectiveIndex < this.MAX_LENGTH ? effectiveIndex : effectiveIndex % this.MAX_LENGTH;
 
         const slotIndex = wrappedIndex / 256;
         const bitIndex = <u16>(wrappedIndex % 256);
@@ -145,9 +196,8 @@ export class StoredBooleanArray {
 
         const newIndex = this._length;
         const effectiveIndex = this._startIndex + newIndex;
-        const wrappedIndex = effectiveIndex < this.MAX_LENGTH
-            ? effectiveIndex
-            : effectiveIndex % this.MAX_LENGTH;
+        const wrappedIndex =
+            effectiveIndex < this.MAX_LENGTH ? effectiveIndex : effectiveIndex % this.MAX_LENGTH;
 
         const slotIndex = wrappedIndex / 256;
         const bitIndex = <u16>(wrappedIndex % 256);
@@ -174,9 +224,8 @@ export class StoredBooleanArray {
         }
 
         const effectiveIndex = this._startIndex + index;
-        const wrappedIndex = effectiveIndex < this.MAX_LENGTH
-            ? effectiveIndex
-            : effectiveIndex % this.MAX_LENGTH;
+        const wrappedIndex =
+            effectiveIndex < this.MAX_LENGTH ? effectiveIndex : effectiveIndex % this.MAX_LENGTH;
 
         const slotIndex = wrappedIndex / 256;
         const bitIndex = <u16>(wrappedIndex % 256);
@@ -191,6 +240,16 @@ export class StoredBooleanArray {
                 this._isChanged.add(slotIndex);
             }
         }
+    }
+
+    @inline
+    public removeItemFromLength(): void {
+        if (this._length == 0) {
+            throw new Revert('delete: array is empty');
+        }
+
+        this._length -= 1;
+        this._isChangedLength = true;
     }
 
     /**
