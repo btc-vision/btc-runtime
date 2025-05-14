@@ -49,8 +49,17 @@ export abstract class StoredPackedArray<T> {
      */
     protected readonly MAX_LENGTH: u64 = <u64>(u32.MAX_VALUE - 1);
 
-    protected constructor(public pointer: u16, public subPointer: Uint8Array, protected defaultValue: T) {
-        assert(subPointer.length <= 30, `You must pass a 30 bytes sub-pointer. (Array, got ${subPointer.length})`);
+    private nextItemOffset: u32 = 0;
+
+    protected constructor(
+        public pointer: u16,
+        public subPointer: Uint8Array,
+        protected defaultValue: T,
+    ) {
+        assert(
+            subPointer.length <= 30,
+            `You must pass a 30 bytes sub-pointer. (Array, got ${subPointer.length})`,
+        );
 
         const basePointer = encodeBasePointer(pointer, subPointer);
         this.lengthPointer = Uint8Array.wrap(basePointer.buffer);
@@ -140,6 +149,21 @@ export abstract class StoredPackedArray<T> {
             this._slots.set(slotIndex, slotData);
             this._isChanged.add(slotIndex);
         }
+    }
+
+    /**
+     * Get the next item in the array, starting from the current offset.
+     * This is useful for iterating through the array.
+     */
+    @inline
+    public next(): T {
+        if (this.nextItemOffset >= this._length) {
+            throw new Revert('next: out of range');
+        }
+
+        const value = this.get(this.nextItemOffset);
+        this.nextItemOffset += 1;
+        return value;
     }
 
     @inline
