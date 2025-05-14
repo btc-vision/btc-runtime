@@ -1,4 +1,4 @@
-import { StoredPackedArray } from './StoredPackedArray';
+import { DEFAULT_MAX_LENGTH, StoredPackedArray } from './StoredPackedArray';
 import { bigEndianAdd } from '../../math/bytes';
 import { Address } from '../../types/Address';
 
@@ -9,8 +9,8 @@ import { Address } from '../../types/Address';
  */
 @final
 export class StoredAddressArray extends StoredPackedArray<Address> {
-    public constructor(pointer: u16, subPointer: Uint8Array) {
-        super(pointer, subPointer, Address.zero());
+    public constructor(pointer: u16, subPointer: Uint8Array, maxLength: u32 = DEFAULT_MAX_LENGTH) {
+        super(pointer, subPointer, Address.zero(), maxLength);
     }
 
     protected getSlotCapacity(): u32 {
