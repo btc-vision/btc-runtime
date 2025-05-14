@@ -69,6 +69,11 @@ export class StoredBooleanArray {
     // -------------- Public Accessors -------------- //
 
     @inline
+    public get nextOffset(): u32 {
+        return this.nextItemOffset;
+    }
+
+    @inline
     public has(index: u64): bool {
         return index < this._length;
     }

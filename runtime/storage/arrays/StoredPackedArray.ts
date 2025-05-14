@@ -73,6 +73,11 @@ export abstract class StoredPackedArray<T> {
     }
 
     @inline
+    public get nextOffset(): u32 {
+        return this.nextItemOffset;
+    }
+
+    @inline
     @operator('[]')
     public get(index: u64): T {
         // max length used on purpose to prevent unbounded usage
