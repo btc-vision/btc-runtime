@@ -1,4 +1,4 @@
-import { StoredPackedArray } from './StoredPackedArray';
+import { DEFAULT_MAX_LENGTH, StoredPackedArray } from './StoredPackedArray';
 import { bigEndianAdd } from '../../math/bytes';
 
 /**
@@ -6,8 +6,8 @@ import { bigEndianAdd } from '../../math/bytes';
  */
 @final
 export class StoredU16Array extends StoredPackedArray<u16> {
-    public constructor(pointer: u16, subPointer: Uint8Array) {
-        super(pointer, subPointer, 0);
+    public constructor(pointer: u16, subPointer: Uint8Array, maxLength: u64 = DEFAULT_MAX_LENGTH) {
+        super(pointer, subPointer, 0, maxLength);
     }
 
     protected getSlotCapacity(): u64 {
@@ -30,8 +30,8 @@ export class StoredU16Array extends StoredPackedArray<u16> {
         let offset = 0;
         for (let i = 0; i < 16; i++) {
             const v = values[i];
-            out[offset] = <u8>((v >> 8) & 0xff);   // high byte
-            out[offset + 1] = <u8>(v & 0xff);         // low byte
+            out[offset] = <u8>((v >> 8) & 0xff); // high byte
+            out[offset + 1] = <u8>(v & 0xff); // low byte
             offset += 2;
         }
         return out;
