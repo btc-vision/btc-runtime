@@ -8,6 +8,8 @@ import {
 import { Blockchain } from '../../env';
 import { Revert } from '../../types/Revert';
 
+export const DEFAULT_MAX_LENGTH: u64 = <u64>(u32.MAX_VALUE - 1);
+
 /**
  * Abstract base class for an array of T values that are packed
  * in 32-byte (Uint8Array) "slots" in storage.
@@ -45,18 +47,13 @@ export abstract class StoredPackedArray<T> {
     /** Track which slotIndexes are changed and need saving. */
     protected _isChanged: Set<u32> = new Set();
 
-    /**
-     * Maximum length to prevent unbounded usage.
-     * Adjust to fit your constraints (e.g. `u32.MAX_VALUE`).
-     */
-    protected MAX_LENGTH: u32 = u32.MAX_VALUE - 1;
-
     private nextItemOffset: u32 = 0;
 
     protected constructor(
         public pointer: u16,
         public subPointer: Uint8Array,
         protected defaultValue: T,
+        protected MAX_LENGTH: u32 = DEFAULT_MAX_LENGTH,
     ) {
         assert(
             subPointer.length <= 30,

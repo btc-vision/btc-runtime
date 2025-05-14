@@ -11,6 +11,7 @@ import {
     setBit,
     u64ToBE32Bytes,
 } from '../../math/bytes';
+import { DEFAULT_MAX_LENGTH } from './StoredPackedArray';
 
 /**
  * @class StoredBooleanArray
@@ -36,20 +37,20 @@ export class StoredBooleanArray {
     private _isChangedLength: bool = false;
     private _isChangedStartIndex: bool = false;
 
-    private MAX_LENGTH: u32 = u32.MAX_VALUE - 1;
-
     private nextItemOffset: u32 = 0;
 
     /**
      * @constructor
      * @param {u16} pointer       - The primary pointer identifier.
      * @param {Uint8Array} subPtr - The sub-pointer for memory slot addressing.
+     * @param {u64} [MAX_LENGTH=DEFAULT_MAX_LENGTH] - The maximum length of the array.
      *
      * The code below treats the first 16 bytes of `lengthPointer` as storing [length, startIndex].
      */
     constructor(
         public pointer: u16,
         public subPtr: Uint8Array,
+        protected MAX_LENGTH: u32 = DEFAULT_MAX_LENGTH,
     ) {
         assert(
             subPtr.length <= 30,
