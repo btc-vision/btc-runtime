@@ -51,6 +51,8 @@ export abstract class StoredPackedArray<T> {
      */
     protected MAX_LENGTH: u32 = u32.MAX_VALUE - 1;
 
+    private nextItemOffset: u32 = 0;
+
     protected constructor(
         public pointer: u16,
         public subPointer: Uint8Array,
@@ -70,6 +72,15 @@ export abstract class StoredPackedArray<T> {
 
         this._length = data[0];
         this._startIndex = data[1];
+    }
+
+    @inline
+    public get previousOffset(): u32 {
+        return <u32>(
+            ((this._startIndex +
+                    <u64>(this.nextItemOffset === 0 ? this.nextItemOffset : this.nextItemOffset - 1)) %
+                this.MAX_LENGTH)
+        );
     }
 
     /**
@@ -164,6 +175,41 @@ export abstract class StoredPackedArray<T> {
         }
     }
 
+    /**
+     * Get the next item in the array, starting from the current offset.
+     * This is useful for iterating through the array.
+     */
+    @inline
+    public next(): T {
+        const value = this.get(this.nextItemOffset);
+        this.nextItemOffset += 1;
+
+        return value;
+    }
+
+    @inline
+    public incrementStartingIndex(): void {
+        if (this._startIndex >= this.MAX_LENGTH) {
+            this._startIndex = 0;
+        } else {
+            this._startIndex += 1;
+        }
+
+        this._isChangedStartIndex = true;
+    }
+
+    /**
+     * Apply the starting index with n offset.
+     */
+    @inline
+    public applyNextOffsetToStartingIndex(): void {
+        if (!this.nextItemOffset) return;
+
+        this._startIndex += this.nextItemOffset - 1;
+        this._isChangedStartIndex = true;
+        this.nextItemOffset = 0;
+    }
+
     @inline
     public push(value: T, isPhysical: bool = false): void {
         if (this._length >= this.MAX_LENGTH) {
@@ -245,6 +291,16 @@ export abstract class StoredPackedArray<T> {
             this._slots.set(slotIndex, slotData);
             this._isChanged.add(slotIndex);
         }
+    }
+
+    @inline
+    public removeItemFromLength(): void {
+        if (this._length == 0) {
+            throw new Revert('delete: array is empty');
+        }
+
+        this._length -= 1;
+        this._isChangedLength = true;
     }
 
     /**
