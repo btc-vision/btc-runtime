@@ -187,13 +187,13 @@ export abstract class StoredPackedArray<T> {
     public applyNextOffsetToStartingIndex(): void {
         if (!this.nextItemOffset) return;
 
-        this._startIndex += this.nextItemOffset - 1;
+        this._startIndex += this.nextItemOffset;
         this._isChangedStartIndex = true;
         this.nextItemOffset = 0;
     }
 
     @inline
-    public push(value: T, isPhysical: bool = false): void {
+    public push(value: T, isPhysical: bool = false): u64 {
         if (this._length >= this.MAX_LENGTH) {
             throw new Revert('push: array has reached MAX_LENGTH');
         }
@@ -215,6 +215,8 @@ export abstract class StoredPackedArray<T> {
 
         this._length += 1;
         this._isChangedLength = true;
+
+        return realIndex;
     }
 
     /**
