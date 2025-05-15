@@ -130,10 +130,7 @@ export class StoredBooleanArray {
             );
         }
 
-        const effectiveIndex = this._startIndex + index;
-        const wrappedIndex =
-            effectiveIndex < this.MAX_LENGTH ? effectiveIndex : effectiveIndex % this.MAX_LENGTH;
-
+        const wrappedIndex = this.getRealIndex(index);
         const slotIndex = wrappedIndex / 256;
         const bitIndex = <u16>(wrappedIndex % 256);
 
@@ -155,10 +152,7 @@ export class StoredBooleanArray {
             );
         }
 
-        const effectiveIndex = this._startIndex + index;
-        const wrappedIndex =
-            effectiveIndex < this.MAX_LENGTH ? effectiveIndex : effectiveIndex % this.MAX_LENGTH;
-
+        const wrappedIndex = this.getRealIndex(index);
         const slotIndex = wrappedIndex / 256;
         const bitIndex = <u16>(wrappedIndex % 256);
 
@@ -183,11 +177,7 @@ export class StoredBooleanArray {
             throw new Revert('push: reached max allowed length (boolean array)');
         }
 
-        const newIndex = this._length;
-        const effectiveIndex = this._startIndex + newIndex;
-        const wrappedIndex =
-            effectiveIndex < this.MAX_LENGTH ? effectiveIndex : effectiveIndex % this.MAX_LENGTH;
-
+        const wrappedIndex = this.getRealIndex(this._length);
         const slotIndex = wrappedIndex / 256;
         const bitIndex = <u16>(wrappedIndex % 256);
 
@@ -212,10 +202,7 @@ export class StoredBooleanArray {
             throw new Revert('delete: index out of range (boolean array)');
         }
 
-        const effectiveIndex = this._startIndex + index;
-        const wrappedIndex =
-            effectiveIndex < this.MAX_LENGTH ? effectiveIndex : effectiveIndex % this.MAX_LENGTH;
-
+        const wrappedIndex = this.getRealIndex(index);
         const slotIndex = wrappedIndex / 256;
         const bitIndex = <u16>(wrappedIndex % 256);
 
@@ -394,6 +381,16 @@ export class StoredBooleanArray {
     @inline
     public startingIndex(): u64 {
         return this._startIndex;
+    }
+
+    private getRealIndex(index: u64, isPhysical: bool = false): u64 {
+        const maxLength: u64 = <u64>this.MAX_LENGTH;
+        let realIndex: u64 = (isPhysical ? 0 : <u64>this._startIndex) + <u64>index;
+        if (!(realIndex < maxLength)) {
+            realIndex %= maxLength;
+        }
+
+        return <u64>realIndex;
     }
 
     /**

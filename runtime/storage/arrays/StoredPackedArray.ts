@@ -86,7 +86,7 @@ export abstract class StoredPackedArray<T> {
             throw new Revert('get: out of range');
         }
 
-        const realIndex = (this._startIndex + index) % this.MAX_LENGTH;
+        const realIndex = this.getRealIndex(index);
         const cap = this.getSlotCapacity();
         const slotIndex = realIndex / cap;
         const subIndex = <u32>(realIndex % cap);
@@ -120,7 +120,7 @@ export abstract class StoredPackedArray<T> {
             throw new Revert('set: index exceeds MAX_LENGTH (packed array)');
         }
 
-        const realIndex = (this._startIndex + index) % this.MAX_LENGTH;
+        const realIndex = this.getRealIndex(index);
         const cap = this.getSlotCapacity();
         const slotIndex = realIndex / cap;
         const subIndex = <u32>(realIndex % cap);
@@ -198,7 +198,7 @@ export abstract class StoredPackedArray<T> {
             throw new Revert('push: array has reached MAX_LENGTH');
         }
 
-        const realIndex = ((isPhysical ? 0 : this._startIndex) + this._length) % this.MAX_LENGTH;
+        const realIndex = this.getRealIndex(this._length, isPhysical);
         const cap = this.getSlotCapacity();
         const slotIndex = realIndex / cap;
         const subIndex = <u32>(realIndex % cap);
@@ -260,7 +260,7 @@ export abstract class StoredPackedArray<T> {
      */
     @inline
     public delete(index: u64): void {
-        const realIndex = (this._startIndex + index) % this.MAX_LENGTH;
+        const realIndex = this.getRealIndex(index);
         const cap = this.getSlotCapacity();
         const slotIndex = realIndex / cap;
         const subIndex = <u32>(realIndex % cap);
@@ -487,5 +487,15 @@ export abstract class StoredPackedArray<T> {
         }
 
         return this._slots.get(slotIndex);
+    }
+
+    private getRealIndex(index: u64, isPhysical: bool = false): u64 {
+        const maxLength: u64 = <u64>this.MAX_LENGTH;
+        let realIndex: u64 = (isPhysical ? 0 : <u64>this._startIndex) + <u64>index;
+        if (!(realIndex < maxLength)) {
+            realIndex %= maxLength;
+        }
+
+        return <u64>realIndex;
     }
 }
