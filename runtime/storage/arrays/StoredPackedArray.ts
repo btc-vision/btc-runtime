@@ -8,7 +8,7 @@ import {
 import { Blockchain } from '../../env';
 import { Revert } from '../../types/Revert';
 
-export const DEFAULT_MAX_LENGTH: u64 = <u64>(u32.MAX_VALUE - 1);
+export const DEFAULT_MAX_LENGTH: u32 = u32.MAX_VALUE - 1;
 
 /**
  * Abstract base class for an array of T values that are packed
@@ -75,7 +75,7 @@ export abstract class StoredPackedArray<T> {
     public get previousOffset(): u32 {
         return <u32>(
             ((this._startIndex +
-                    <u64>(this.nextItemOffset === 0 ? this.nextItemOffset : this.nextItemOffset - 1)) %
+                <u64>(this.nextItemOffset === 0 ? this.nextItemOffset : this.nextItemOffset - 1)) %
                 this.MAX_LENGTH)
         );
     }
