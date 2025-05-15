@@ -76,7 +76,7 @@ export abstract class StoredPackedArray<T> {
         return <u32>(
             ((this._startIndex +
                 <u64>(this.nextItemOffset === 0 ? this.nextItemOffset : this.nextItemOffset - 1)) %
-                this.MAX_LENGTH)
+                <u64>this.MAX_LENGTH)
         );
     }
 
@@ -101,7 +101,7 @@ export abstract class StoredPackedArray<T> {
             throw new Revert('get: out of range');
         }
 
-        const realIndex = (this._startIndex + index) % this.MAX_LENGTH;
+        const realIndex: u32 = this.getRealIndex(index);
         const cap: u32 = this.getSlotCapacity();
         const slotIndex = realIndex / cap;
         const subIndex = <u32>(realIndex % cap);
@@ -135,7 +135,7 @@ export abstract class StoredPackedArray<T> {
             throw new Revert('set: index exceeds MAX_LENGTH (packed array)');
         }
 
-        const realIndex = (this._startIndex + index) % this.MAX_LENGTH;
+        const realIndex: u32 = this.getRealIndex(index);
         const cap = this.getSlotCapacity();
         const slotIndex = realIndex / cap;
         const subIndex = <u32>(realIndex % cap);
@@ -208,12 +208,12 @@ export abstract class StoredPackedArray<T> {
     }
 
     @inline
-    public push(value: T, isPhysical: bool = false): u64 {
+    public push(value: T, isPhysical: bool = false): u32 {
         if (this._length >= this.MAX_LENGTH) {
             throw new Revert('push: array has reached MAX_LENGTH');
         }
 
-        const realIndex = ((isPhysical ? 0 : this._startIndex) + this._length) % this.MAX_LENGTH;
+        const realIndex: u32 = this.getRealIndex(this._length, isPhysical);
         const cap = this.getSlotCapacity();
         const slotIndex = realIndex / cap;
         const subIndex = <u32>(realIndex % cap);
@@ -275,7 +275,7 @@ export abstract class StoredPackedArray<T> {
      */
     @inline
     public delete(index: u32): void {
-        const realIndex = (this._startIndex + index) % this.MAX_LENGTH;
+        const realIndex = this.getRealIndex(index);
         const cap = this.getSlotCapacity();
         const slotIndex = realIndex / cap;
         const subIndex = <u32>(realIndex % cap);
@@ -353,8 +353,6 @@ export abstract class StoredPackedArray<T> {
     }
 
     // -----------------------------------------------------------
-    //              Public Array-Like Methods
-    // -----------------------------------------------------------
     @inline
     public getAll(startIndex: u32, count: u32): T[] {
         if (count > <u32>u32.MAX_VALUE) {
@@ -368,6 +366,9 @@ export abstract class StoredPackedArray<T> {
 
         return out;
     }
+
+    // -----------------------------------------------------------
+    //              Public Array-Like Methods
 
     @inline
     public getLength(): u32 {
@@ -464,14 +465,14 @@ export abstract class StoredPackedArray<T> {
     /** Compare two T values for equality. */
     protected abstract eq(a: T, b: T): bool;
 
-    // -----------------------------------------------------------
-    //                 Persistence (save, reset, etc.)
-    // -----------------------------------------------------------
-
     /**
      * Pack an array of T (length = getSlotCapacity()) into a 32-byte buffer.
      */
     protected abstract packSlot(values: T[]): Uint8Array;
+
+    // -----------------------------------------------------------
+    //                 Persistence (save, reset, etc.)
+    // -----------------------------------------------------------
 
     /**
      * Unpack a 32-byte buffer into an array of T (length = getSlotCapacity()).
@@ -484,10 +485,6 @@ export abstract class StoredPackedArray<T> {
      * but you can do your own approach.
      */
     protected abstract calculateStoragePointer(slotIndex: u64): Uint8Array;
-
-    // -----------------------------------------------------------
-    //              Internal Slot-Loading Helpers
-    // -----------------------------------------------------------
 
     /**
      * Ensure that slotIndex is loaded into _slots. If missing, read from storage.
@@ -502,5 +499,19 @@ export abstract class StoredPackedArray<T> {
         }
 
         return this._slots.get(slotIndex);
+    }
+
+    // -----------------------------------------------------------
+    //              Internal Slot-Loading Helpers
+    // -----------------------------------------------------------
+
+    private getRealIndex(index: u32, isPhysical: bool = false): u32 {
+        const maxLength: u64 = <u64>this.MAX_LENGTH;
+        let realIndex: u64 = (isPhysical ? 0 : <u64>this._startIndex) + <u64>index;
+        if (!(realIndex < maxLength)) {
+            realIndex %= maxLength;
+        }
+
+        return <u32>realIndex;
     }
 }
