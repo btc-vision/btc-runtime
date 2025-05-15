@@ -72,7 +72,7 @@ export class StoredBooleanArray {
     public get previousOffset(): u32 {
         return <u32>(
             ((this._startIndex +
-                    <u64>(this.nextItemOffset === 0 ? this.nextItemOffset : this.nextItemOffset - 1)) %
+                <u64>(this.nextItemOffset === 0 ? this.nextItemOffset : this.nextItemOffset - 1)) %
                 this.MAX_LENGTH)
         );
     }
@@ -142,10 +142,7 @@ export class StoredBooleanArray {
             );
         }
 
-        const effectiveIndex = this._startIndex + index;
-        const wrappedIndex =
-            effectiveIndex < this.MAX_LENGTH ? effectiveIndex : effectiveIndex % this.MAX_LENGTH;
-
+        const wrappedIndex = this.getRealIndex(index);
         const slotIndex = wrappedIndex / 256;
         const bitIndex = <u16>(wrappedIndex % 256);
 
@@ -167,10 +164,7 @@ export class StoredBooleanArray {
             );
         }
 
-        const effectiveIndex = this._startIndex + index;
-        const wrappedIndex =
-            effectiveIndex < this.MAX_LENGTH ? effectiveIndex : effectiveIndex % this.MAX_LENGTH;
-
+        const wrappedIndex = this.getRealIndex(index);
         const slotIndex = wrappedIndex / 256;
         const bitIndex = <u16>(wrappedIndex % 256);
 
@@ -190,16 +184,12 @@ export class StoredBooleanArray {
      * Push a new boolean at the "end" of the array.
      */
     @inline
-    public push(value: bool): void {
+    public push(value: bool): u32 {
         if (this._length >= this.MAX_LENGTH) {
             throw new Revert('push: reached max allowed length (boolean array)');
         }
 
-        const newIndex = this._length;
-        const effectiveIndex = this._startIndex + newIndex;
-        const wrappedIndex =
-            effectiveIndex < this.MAX_LENGTH ? effectiveIndex : effectiveIndex % this.MAX_LENGTH;
-
+        const wrappedIndex = this.getRealIndex(this._length);
         const slotIndex = wrappedIndex / 256;
         const bitIndex = <u16>(wrappedIndex % 256);
 
@@ -213,6 +203,8 @@ export class StoredBooleanArray {
 
         this._length += 1;
         this._isChangedLength = true;
+
+        return wrappedIndex;
     }
 
     /**
@@ -224,10 +216,7 @@ export class StoredBooleanArray {
             throw new Revert('delete: index out of range (boolean array)');
         }
 
-        const effectiveIndex = this._startIndex + index;
-        const wrappedIndex =
-            effectiveIndex < this.MAX_LENGTH ? effectiveIndex : effectiveIndex % this.MAX_LENGTH;
-
+        const wrappedIndex = this.getRealIndex(index);
         const slotIndex = wrappedIndex / 256;
         const bitIndex = <u16>(wrappedIndex % 256);
 
@@ -405,6 +394,16 @@ export class StoredBooleanArray {
     @inline
     public startingIndex(): u32 {
         return this._startIndex;
+    }
+
+    private getRealIndex(index: u32): u32 {
+        const maxLength: u64 = <u64>this.MAX_LENGTH;
+        let realIndex: u64 = <u64>this._startIndex + <u64>index;
+        if (!(realIndex < maxLength)) {
+            realIndex %= maxLength;
+        }
+
+        return <u32>realIndex;
     }
 
     /**
