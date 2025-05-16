@@ -507,7 +507,7 @@ export abstract class StoredPackedArray<T> {
 
     private getRealIndex(index: u32, isPhysical: bool = false): u32 {
         const maxLength: u64 = <u64>this.MAX_LENGTH;
-        let realIndex: u64 = (isPhysical ? 0 : <u64>this._startIndex) + <u64>index;
+        let realIndex: u64 = (isPhysical ? <u64>0 : <u64>this._startIndex) + <u64>index;
         if (!(realIndex < maxLength)) {
             realIndex %= maxLength;
         }
