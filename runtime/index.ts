@@ -61,6 +61,7 @@ export * from './nested/codecs/VariableBytesCodec';
 /** Storage */
 export * from './storage/StoredU256';
 export * from './storage/StoredU64';
+export * from './storage/StoredU32';
 export * from './storage/StoredString';
 export * from './storage/AdvancedStoredString';
 export * from './storage/StoredAddress';

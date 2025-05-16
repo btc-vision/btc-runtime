@@ -133,14 +133,14 @@ export function setBit(buffer: Uint8Array, bitIndex: u16, bitValue: bool): void 
  * Assume the data is at least 16 bytes, read two u64s from it in big-endian order.
  */
 @inline
-export function readLengthAndStartIndex(data: Uint8Array): u64[] {
+export function readLengthAndStartIndex(data: Uint8Array): u32[] {
     if (data.length < 16) {
         return [0, 0];
     }
 
     const reader = new BytesReader(data);
-    const length = reader.readU64();
-    const startIndex = reader.readU64();
+    const length = reader.readU32();
+    const startIndex = reader.readU32();
 
     return [length, startIndex];
 }
@@ -149,10 +149,10 @@ export function readLengthAndStartIndex(data: Uint8Array): u64[] {
  * Write two u64s into a 32-byte buffer in big-endian order
  */
 @inline
-export function writeLengthAndStartIndex(length: u64, startIndex: u64): Uint8Array {
+export function writeLengthAndStartIndex(length: u32, startIndex: u32): Uint8Array {
     const writer = new BytesWriter(32);
-    writer.writeU64(length);
-    writer.writeU64(startIndex);
+    writer.writeU32(length);
+    writer.writeU32(startIndex);
 
     return writer.getBuffer();
 }

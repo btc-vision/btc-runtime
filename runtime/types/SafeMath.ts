@@ -154,6 +154,40 @@ export class SafeMath {
         return c;
     }
 
+    public static mul64(a: u64, b: u64): u64 {
+        if (a === 0 || b === 0) {
+            return 0;
+        }
+
+        const c: u64 = a * b;
+
+        if (c / a !== b) {
+            throw new Error('SafeMath: multiplication overflow');
+        }
+
+        return c;
+    }
+
+    public static div64(a: u64, b: u64): u64 {
+        if (b === 0) {
+            throw new Error('Division by zero');
+        }
+
+        if (a === 0) {
+            return 0;
+        }
+
+        if (a < b) {
+            return 0; // Return 0 if a < b
+        }
+
+        if (a === b) {
+            return 1; // Return 1 if a == b
+        }
+
+        return a / b;
+    }
+
     public static div128(a: u128, b: u128): u128 {
         if (b.isZero()) {
             throw new Error('Division by zero');
@@ -224,6 +258,22 @@ export class SafeMath {
         }
 
         return result;
+    }
+
+    public static min64(a: u64, b: u64): u64 {
+        return a < b ? a : b;
+    }
+
+    public static max64(a: u64, b: u64): u64 {
+        return a > b ? a : b;
+    }
+
+    public static min128(a: u128, b: u128): u128 {
+        return u128.lt(a, b) ? a : b;
+    }
+
+    public static max128(a: u128, b: u128): u128 {
+        return u128.gt(a, b) ? a : b;
     }
 
     public static min(a: u256, b: u256): u256 {
