@@ -352,7 +352,6 @@ export abstract class StoredPackedArray<T> {
         }
     }
 
-    // -----------------------------------------------------------
     @inline
     public getAll(startIndex: u32, count: u32): T[] {
         if (count > <u32>u32.MAX_VALUE) {
@@ -366,9 +365,6 @@ export abstract class StoredPackedArray<T> {
 
         return out;
     }
-
-    // -----------------------------------------------------------
-    //              Public Array-Like Methods
 
     @inline
     public getLength(): u32 {
@@ -470,10 +466,6 @@ export abstract class StoredPackedArray<T> {
      */
     protected abstract packSlot(values: T[]): Uint8Array;
 
-    // -----------------------------------------------------------
-    //                 Persistence (save, reset, etc.)
-    // -----------------------------------------------------------
-
     /**
      * Unpack a 32-byte buffer into an array of T (length = getSlotCapacity()).
      */
@@ -500,10 +492,6 @@ export abstract class StoredPackedArray<T> {
 
         return this._slots.get(slotIndex);
     }
-
-    // -----------------------------------------------------------
-    //              Internal Slot-Loading Helpers
-    // -----------------------------------------------------------
 
     private getRealIndex(index: u32, isPhysical: bool = false): u32 {
         const maxLength: u64 = <u64>this.MAX_LENGTH;
