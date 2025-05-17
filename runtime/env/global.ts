@@ -98,3 +98,5 @@ export declare function getAccountType(address: ArrayBuffer): u32;
 // @ts-ignore
 @external('env', 'exit')
 export declare function env_exit(status: u32, data: ArrayBuffer, dataLength: u32): void;
+
+export * from './Atomic';
