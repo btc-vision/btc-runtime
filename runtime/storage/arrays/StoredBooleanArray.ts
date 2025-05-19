@@ -1,6 +1,6 @@
-import { BytesWriter } from '../../buffer/BytesWriter';
-import { Blockchain } from '../../env';
-import { Revert } from '../../types/Revert';
+import {BytesWriter} from '../../buffer/BytesWriter';
+import {Blockchain} from '../../env';
+import {Revert} from '../../types/Revert';
 import {
     addUint8ArraysBE,
     bigEndianAdd,
@@ -11,7 +11,7 @@ import {
     setBit,
     u64ToBE32Bytes,
 } from '../../math/bytes';
-import { DEFAULT_MAX_LENGTH } from './StoredPackedArray';
+import {DEFAULT_MAX_LENGTH} from './StoredPackedArray';
 
 /**
  * @class StoredBooleanArray
@@ -43,7 +43,7 @@ export class StoredBooleanArray {
      * @constructor
      * @param {u16} pointer       - The primary pointer identifier.
      * @param {Uint8Array} subPtr - The sub-pointer for memory slot addressing.
-     * @param {u64} [MAX_LENGTH=DEFAULT_MAX_LENGTH] - The maximum length of the array.
+     * @param {u32} [MAX_LENGTH=DEFAULT_MAX_LENGTH] - The maximum length of the array.
      *
      * The code below treats the first 16 bytes of `lengthPointer` as storing [length, startIndex].
      */
@@ -72,7 +72,7 @@ export class StoredBooleanArray {
     public get previousOffset(): u32 {
         return <u32>(
             ((this._startIndex +
-                <u64>(this.nextItemOffset === 0 ? this.nextItemOffset : this.nextItemOffset - 1)) %
+                    <u64>(this.nextItemOffset === 0 ? this.nextItemOffset : this.nextItemOffset - 1)) %
                 this.MAX_LENGTH)
         );
     }
@@ -275,8 +275,8 @@ export class StoredBooleanArray {
 
         if (this._isChangedLength || this._isChangedStartIndex) {
             const w = new BytesWriter(32);
-            w.writeU64(this._length);
-            w.writeU64(this._startIndex);
+            w.writeU32(this._length);
+            w.writeU32(this._startIndex);
 
             const data = w.getBuffer();
             Blockchain.setStorageAt(this.lengthPointer, data);
