@@ -17,3 +17,5 @@ export function inputs(): Uint8Array {
 export function outputs(): Uint8Array {
     return Blockchain.mockedTransactionOutput();
 }
+
+export * from './Atomic';
