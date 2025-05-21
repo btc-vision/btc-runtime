@@ -8,7 +8,7 @@ import {
 import { Blockchain } from '../../env';
 import { Revert } from '../../types/Revert';
 
-export const DEFAULT_MAX_LENGTH: u64 = <u64>(u32.MAX_VALUE - 1);
+export const DEFAULT_MAX_LENGTH: u32 = u32.MAX_VALUE - 1;
 
 /**
  * Abstract base class for an array of T values that are packed
@@ -18,6 +18,8 @@ export const DEFAULT_MAX_LENGTH: u64 = <u64>(u32.MAX_VALUE - 1);
  * - Maps each global index to (slotIndex, subIndex).
  * - Child classes define how many T items fit per 32-byte slot
  *   and how to pack/unpack them.
+ *
+ *   Note: This is designed to wrap around.
  */
 export abstract class StoredPackedArray<T> {
     /** 32-byte base pointer (used to derive storage keys). */
@@ -27,10 +29,10 @@ export abstract class StoredPackedArray<T> {
     protected readonly lengthPointer: Uint8Array;
 
     /** Internal length of the array. */
-    protected _length: u64 = 0;
+    protected _length: u32 = 0;
 
     /** Optional "start index" if needed by your logic. */
-    protected _startIndex: u64 = 0;
+    protected _startIndex: u32 = 0;
 
     /** Whether length or startIndex changed. */
     protected _isChangedLength: bool = false;
@@ -40,10 +42,10 @@ export abstract class StoredPackedArray<T> {
      * A map from slotIndex => the 32-byte slot data in memory.
      * Child classes will parse that 32 bytes into an array of T, or vice versa.
      */
-    protected _slots: Map<u64, Uint8Array> = new Map();
+    protected _slots: Map<u32, Uint8Array> = new Map();
 
     /** Track which slotIndexes are changed and need saving. */
-    protected _isChanged: Set<u64> = new Set();
+    protected _isChanged: Set<u32> = new Set();
 
     private nextItemOffset: u32 = 0;
 
@@ -51,7 +53,7 @@ export abstract class StoredPackedArray<T> {
         public pointer: u16,
         public subPointer: Uint8Array,
         protected defaultValue: T,
-        protected readonly MAX_LENGTH: u64 = DEFAULT_MAX_LENGTH,
+        protected MAX_LENGTH: u32 = DEFAULT_MAX_LENGTH,
     ) {
         assert(
             subPointer.length <= 30,
@@ -74,20 +76,33 @@ export abstract class StoredPackedArray<T> {
         return <u32>(
             ((this._startIndex +
                 <u64>(this.nextItemOffset === 0 ? this.nextItemOffset : this.nextItemOffset - 1)) %
-                this.MAX_LENGTH)
+                <u64>this.MAX_LENGTH)
         );
+    }
+
+    /**
+     * Set the maximum length of the array.
+     * This is a safety check to prevent unbounded usage.
+     */
+    @inline
+    public setMaxLength(maxLength: u32): void {
+        if (maxLength > this.MAX_LENGTH) {
+            throw new Revert('setMaxLength: maxLength exceeds MAX_LENGTH');
+        }
+
+        this.MAX_LENGTH = maxLength;
     }
 
     @inline
     @operator('[]')
-    public get(index: u64): T {
+    public get(index: u32): T {
         // max length used on purpose to prevent unbounded usage
         if (index > this.MAX_LENGTH) {
             throw new Revert('get: out of range');
         }
 
-        const realIndex = this.getRealIndex(index);
-        const cap = this.getSlotCapacity();
+        const realIndex: u32 = this.getRealIndex(index);
+        const cap: u32 = this.getSlotCapacity();
         const slotIndex = realIndex / cap;
         const subIndex = <u32>(realIndex % cap);
 
@@ -98,7 +113,7 @@ export abstract class StoredPackedArray<T> {
     }
 
     @inline
-    public get_physical(index: u64): T {
+    public get_physical(index: u32): T {
         if (index > this.MAX_LENGTH) {
             throw new Revert('get: index exceeds MAX_LENGTH (packed array)');
         }
@@ -115,12 +130,12 @@ export abstract class StoredPackedArray<T> {
 
     @inline
     @operator('[]=')
-    public set(index: u64, value: T): void {
+    public set(index: u32, value: T): void {
         if (index > this.MAX_LENGTH) {
             throw new Revert('set: index exceeds MAX_LENGTH (packed array)');
         }
 
-        const realIndex = this.getRealIndex(index);
+        const realIndex: u32 = this.getRealIndex(index);
         const cap = this.getSlotCapacity();
         const slotIndex = realIndex / cap;
         const subIndex = <u32>(realIndex % cap);
@@ -137,7 +152,7 @@ export abstract class StoredPackedArray<T> {
     }
 
     @inline
-    public set_physical(index: u64, value: T): void {
+    public set_physical(index: u32, value: T): void {
         if (index > this.MAX_LENGTH) {
             throw new Revert('set: index exceeds MAX_LENGTH (packed array)');
         }
@@ -193,12 +208,12 @@ export abstract class StoredPackedArray<T> {
     }
 
     @inline
-    public push(value: T, isPhysical: bool = false): u64 {
+    public push(value: T, isPhysical: bool = false): u32 {
         if (this._length >= this.MAX_LENGTH) {
             throw new Revert('push: array has reached MAX_LENGTH');
         }
 
-        const realIndex = this.getRealIndex(this._length, isPhysical);
+        const realIndex: u32 = this.getRealIndex(this._length, isPhysical);
         const cap = this.getSlotCapacity();
         const slotIndex = realIndex / cap;
         const subIndex = <u32>(realIndex % cap);
@@ -259,7 +274,7 @@ export abstract class StoredPackedArray<T> {
      * but does not reduce the length.
      */
     @inline
-    public delete(index: u64): void {
+    public delete(index: u32): void {
         const realIndex = this.getRealIndex(index);
         const cap = this.getSlotCapacity();
         const slotIndex = realIndex / cap;
@@ -292,7 +307,7 @@ export abstract class StoredPackedArray<T> {
      * but does not reduce the length.
      */
     @inline
-    public delete_physical(index: u64): void {
+    public delete_physical(index: u32): void {
         const cap = this.getSlotCapacity();
         const slotIndex = index / cap;
         const subIndex = <u32>(index % cap);
@@ -326,28 +341,25 @@ export abstract class StoredPackedArray<T> {
     }
 
     @inline
-    public setMultiple(startIndex: u64, values: T[]): void {
-        const end = startIndex + <u64>values.length;
+    public setMultiple(startIndex: u32, values: T[]): void {
+        const end = startIndex + <u32>values.length;
         if (end > this._length) {
             throw new Revert('setMultiple: out of range (packed array)');
         }
 
         for (let i = 0; i < values.length; i++) {
-            this.set(startIndex + <u64>i, values[i]);
+            this.set(startIndex + <u32>i, values[i]);
         }
     }
 
-    // -----------------------------------------------------------
-    //              Public Array-Like Methods
-    // -----------------------------------------------------------
     @inline
-    public getAll(startIndex: u64, count: u64): T[] {
-        if (count > <u64>u32.MAX_VALUE) {
+    public getAll(startIndex: u32, count: u32): T[] {
+        if (count > <u32>u32.MAX_VALUE) {
             throw new Revert('getAll: count too large (packed array)');
         }
 
         const out = new Array<T>(<i32>count);
-        for (let i: u64 = 0; i < count; i++) {
+        for (let i: u32 = 0; i < count; i++) {
             out[<i32>i] = this.get(startIndex + i);
         }
 
@@ -355,17 +367,17 @@ export abstract class StoredPackedArray<T> {
     }
 
     @inline
-    public getLength(): u64 {
+    public getLength(): u32 {
         return this._length;
     }
 
     @inline
-    public startingIndex(): u64 {
+    public startingIndex(): u32 {
         return this._startIndex;
     }
 
     @inline
-    public setStartingIndex(index: u64): void {
+    public setStartingIndex(index: u32): void {
         this._startIndex = index;
         this._isChangedStartIndex = true;
     }
@@ -375,7 +387,7 @@ export abstract class StoredPackedArray<T> {
      */
     public toString(): string {
         let s = '[';
-        for (let i: u64 = 0; i < this._length; i++) {
+        for (let i: u32 = 0; i < this._length; i++) {
             s += `${this.get(i)}`;
             if (i < this._length - 1) {
                 s += ', ';
@@ -391,7 +403,7 @@ export abstract class StoredPackedArray<T> {
             const slotIndex = changed[i];
             const slotData = this._slots.get(slotIndex);
             if (slotData) {
-                const ptr = this.calculateStoragePointer(slotIndex);
+                const ptr = this.calculateStoragePointer(<u64>slotIndex);
                 Blockchain.setStorageAt(ptr, slotData);
             }
         }
@@ -410,7 +422,7 @@ export abstract class StoredPackedArray<T> {
         const keys = this._slots.keys();
         for (let i = 0; i < keys.length; i++) {
             const slotIndex = keys[i];
-            const ptr = this.calculateStoragePointer(slotIndex);
+            const ptr = this.calculateStoragePointer(<u64>slotIndex);
             Blockchain.setStorageAt(ptr, GET_EMPTY_BUFFER()); // 32 bytes of zero
         }
 
@@ -441,17 +453,13 @@ export abstract class StoredPackedArray<T> {
     }
 
     /** Number of T items that fit in one 32-byte slot. */
-    protected abstract getSlotCapacity(): u64;
+    protected abstract getSlotCapacity(): u32;
 
     /** Return the "zero" value of type T. */
     protected abstract zeroValue(): T;
 
     /** Compare two T values for equality. */
     protected abstract eq(a: T, b: T): bool;
-
-    // -----------------------------------------------------------
-    //                 Persistence (save, reset, etc.)
-    // -----------------------------------------------------------
 
     /**
      * Pack an array of T (length = getSlotCapacity()) into a 32-byte buffer.
@@ -470,16 +478,12 @@ export abstract class StoredPackedArray<T> {
      */
     protected abstract calculateStoragePointer(slotIndex: u64): Uint8Array;
 
-    // -----------------------------------------------------------
-    //              Internal Slot-Loading Helpers
-    // -----------------------------------------------------------
-
     /**
      * Ensure that slotIndex is loaded into _slots. If missing, read from storage.
      */
-    protected ensureSlot(slotIndex: u64): Uint8Array {
+    protected ensureSlot(slotIndex: u32): Uint8Array {
         if (!this._slots.has(slotIndex)) {
-            const ptr = this.calculateStoragePointer(slotIndex);
+            const ptr = this.calculateStoragePointer(<u64>slotIndex);
             const data = Blockchain.getStorageAt(ptr);
 
             // Must be exactly 32 bytes; if it's empty, you get 32 zero bytes from GET_EMPTY_BUFFER()
@@ -489,13 +493,13 @@ export abstract class StoredPackedArray<T> {
         return this._slots.get(slotIndex);
     }
 
-    private getRealIndex(index: u64, isPhysical: bool = false): u64 {
+    private getRealIndex(index: u32, isPhysical: bool = false): u32 {
         const maxLength: u64 = <u64>this.MAX_LENGTH;
         let realIndex: u64 = (isPhysical ? <u64>0 : <u64>this._startIndex) + <u64>index;
         if (!(realIndex < maxLength)) {
             realIndex %= maxLength;
         }
 
-        return <u64>realIndex;
+        return <u32>realIndex;
     }
 }
