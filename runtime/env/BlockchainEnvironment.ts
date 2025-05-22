@@ -35,8 +35,6 @@ export * from '../env/global';
 
 @final
 export class BlockchainEnvironment {
-    private static readonly MAX_U16: u16 = 65535;
-
     public readonly DEAD_ADDRESS: Address = Address.dead();
 
     private storage: MapUint8Array = new MapUint8Array();
@@ -81,7 +79,7 @@ export class BlockchainEnvironment {
     private _nextPointer: u16 = 0;
 
     public get nextPointer(): u16 {
-        if (this._nextPointer === BlockchainEnvironment.MAX_U16) {
+        if (this._nextPointer === u16.MAX_VALUE) {
             throw new Revert(`Out of storage pointer.`);
         }
 
@@ -157,12 +155,7 @@ export class BlockchainEnvironment {
         const caller = reader.readAddress();
         const origin = reader.readAddress();
 
-        this._tx = new Transaction(
-            caller,
-            origin,
-            txId,
-            txHash,
-        );
+        this._tx = new Transaction(caller, origin, txId, txHash);
 
         this._contractDeployer = contractDeployer;
         this._contractAddress = contractAddress;
@@ -178,7 +171,12 @@ export class BlockchainEnvironment {
         }
 
         const resultLengthBuffer = new ArrayBuffer(32);
-        const status = callContract(destinationContract.buffer, calldata.getBuffer().buffer, calldata.bufferLength(), resultLengthBuffer);
+        const status = callContract(
+            destinationContract.buffer,
+            calldata.getBuffer().buffer,
+            calldata.bufferLength(),
+            resultLengthBuffer,
+        );
 
         const reader = new BytesReader(Uint8Array.wrap(resultLengthBuffer));
         const resultLength = reader.readU32(true);
@@ -244,9 +242,7 @@ export class BlockchainEnvironment {
         return contractAddressReader.readAddress();
     }
 
-    public getStorageAt(
-        pointerHash: Uint8Array,
-    ): Uint8Array {
+    public getStorageAt(pointerHash: Uint8Array): Uint8Array {
         this.hasPointerStorageHash(pointerHash);
         if (this.storage.has(pointerHash)) {
             return this.storage.get(pointerHash);
@@ -255,9 +251,7 @@ export class BlockchainEnvironment {
         return new Uint8Array(32);
     }
 
-    public getTransientStorageAt(
-        pointerHash: Uint8Array,
-    ): Uint8Array {
+    public getTransientStorageAt(pointerHash: Uint8Array): Uint8Array {
         if (this.hasPointerTransientStorageHash(pointerHash)) {
             return this.transientStorage.get(pointerHash);
         }
