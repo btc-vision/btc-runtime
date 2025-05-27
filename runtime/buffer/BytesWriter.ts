@@ -286,7 +286,7 @@ export class BytesWriter {
     }
 
     public writeStringWithLength(value: string): void {
-        this.writeU16(u16(value.length));
+        this.writeU32(u32(value.length));
         this.writeString(value);
     }
 
@@ -352,8 +352,8 @@ export class BytesWriter {
     private resize(size: u32): void {
         throw new Revert(
             `Buffer is getting resized. This is bad for performance. ` +
-            `Expected size: ${this.buffer.byteLength + size} - ` +
-            `Current size: ${this.buffer.byteLength}`,
+                `Expected size: ${this.buffer.byteLength + size} - ` +
+                `Current size: ${this.buffer.byteLength}`,
         );
     }
 }

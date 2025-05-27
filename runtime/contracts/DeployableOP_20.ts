@@ -205,23 +205,23 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         let response: BytesWriter;
 
         switch (method) {
-            case encodeSelector('decimals'):
+            case encodeSelector('decimals()'):
                 response = new BytesWriter(BOOLEAN_BYTE_LENGTH);
                 response.writeU8(this.decimals);
                 break;
-            case encodeSelector('name'):
+            case encodeSelector('name()'):
                 response = new BytesWriter(this.name.length + 2);
                 response.writeStringWithLength(this.name);
                 break;
-            case encodeSelector('symbol'):
+            case encodeSelector('symbol()'):
                 response = new BytesWriter(this.symbol.length + 2);
                 response.writeStringWithLength(this.symbol);
                 break;
-            case encodeSelector('totalSupply'):
+            case encodeSelector('totalSupply()'):
                 response = new BytesWriter(U256_BYTE_LENGTH);
                 response.writeU256(this.totalSupply);
                 break;
-            case encodeSelector('maximumSupply'):
+            case encodeSelector('maximumSupply()'):
                 response = new BytesWriter(U256_BYTE_LENGTH);
                 response.writeU256(this.maxSupply);
                 break;

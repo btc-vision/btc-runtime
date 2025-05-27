@@ -1,5 +1,4 @@
 import { i128, u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { TransactionInput, TransactionOutput } from '../env/classes/UTXO';
 import { AddressMap } from '../generic/AddressMap';
 import { Selector } from '../math/abi';
 import { Address } from '../types/Address';
@@ -207,7 +206,7 @@ export class BytesReader {
      * Reads a string of `length` raw bytes, zeroStop = true for convenience.
      * (Or the writer may not have used zeroStop.)
      */
-    public readString(length: u16): string {
+    public readString(length: u32): string {
         const bytes = this.readBytes(length, true);
         return String.UTF8.decode(bytes.buffer);
     }
@@ -217,7 +216,7 @@ export class BytesReader {
      * The AS writer calls `writeStringWithLength(value: string)` => writes length big-endian by default.
      */
     public readStringWithLength(be: boolean = true): string {
-        const length = this.readU16(be);
+        const length = this.readU32(be);
         return this.readString(length);
     }
 
@@ -242,7 +241,7 @@ export class BytesReader {
         return addr;
     }
 
-// ------------------- Arrays ------------------- //
+    // ------------------- Arrays ------------------- //
 
     /**
      * The AS writer does `writeU32(length)` for U256 arrays, so we read a u32.
@@ -330,34 +329,6 @@ export class BytesReader {
         return result;
     }
 
-    public readTransactionInputs(): TransactionInput[] {
-        const length = this.readU16();
-        const result = new Array<TransactionInput>(length);
-
-        for (let i: u16 = 0; i < length; i++) {
-            const txId = this.readBytes(32);
-            const outputIndex = this.readU16();
-            const scriptSig = this.readBytesWithLength();
-            result[i] = new TransactionInput(txId, outputIndex, scriptSig);
-        }
-
-        return result;
-    }
-
-    public readTransactionOutputs(): TransactionOutput[] {
-        const length = this.readU16();
-        const result = new Array<TransactionOutput>(length);
-
-        for (let i: u16 = 0; i < length; i++) {
-            const index = this.readU16();
-            const scriptPubKey = this.readStringWithLength();
-            const value = this.readU64();
-            result[i] = new TransactionOutput(index, scriptPubKey, value);
-        }
-
-        return result;
-    }
-
     public getOffset(): i32 {
         return this.currentOffset;
     }
@@ -373,7 +344,7 @@ export class BytesReader {
         if (size > this.buffer.byteLength) {
             throw new Error(
                 `Attempt to read beyond buffer length. Requested up to offset ${size}, ` +
-                `but buffer is only ${this.buffer.byteLength} bytes.`,
+                    `but buffer is only ${this.buffer.byteLength} bytes.`,
             );
         }
     }

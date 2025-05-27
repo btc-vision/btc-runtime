@@ -3,17 +3,19 @@ import { TransactionInput, TransactionOutput } from './UTXO';
 import { Potential } from '../../lang/Definitions';
 import { BytesReader } from '../../buffer/BytesReader';
 import { inputs, outputs } from '../global';
+import { TransactionDecoder } from '../decoders/TransactionDecoder';
 
 @final
 export class Transaction {
+    private readonly transactionDecoder: TransactionDecoder = new TransactionDecoder();
+
     public constructor(
         public readonly sender: Address, // "immediate caller"
         public readonly origin: Address, // "leftmost thing in the call chain"
         public readonly txId: Uint8Array,
         public readonly hash: Uint8Array,
         public readonly disableCache: bool = false,
-    ) {
-    }
+    ) {}
 
     private _inputs: Potential<TransactionInput[]> = null;
 
@@ -47,11 +49,11 @@ export class Transaction {
 
     private loadInputs(): TransactionInput[] {
         const reader = new BytesReader(inputs());
-        return reader.readTransactionInputs();
+        return this.transactionDecoder.readTransactionInputs(reader);
     }
 
     private loadOutputs(): TransactionOutput[] {
         const reader = new BytesReader(outputs());
-        return reader.readTransactionOutputs();
+        return this.transactionDecoder.readTransactionOutputs(reader);
     }
 }
