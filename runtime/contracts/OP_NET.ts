@@ -27,7 +27,7 @@ export class OP_NET implements IBTC {
         let response: BytesWriter;
 
         switch (method) {
-            case encodeSelector('deployer'):
+            case encodeSelector('deployer()'):
                 response = new BytesWriter(ADDRESS_BYTE_LENGTH);
                 response.writeAddress(this.contractDeployer);
                 break;
