@@ -61,9 +61,9 @@ export class MyToken extends DeployableOP_20 {
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
         switch (method) {
-            case encodeSelector('airdrop'):
+            case encodeSelector('airdrop()'):
                 return this.airdrop(calldata);
-            case encodeSelector('airdropWithAmount'):
+            case encodeSelector('airdropWithAmount()'):
                 return this.airdropWithAmount(calldata);
             default:
                 return super.execute(method, calldata);
@@ -173,7 +173,7 @@ To add new methods to your contract, you'll need to:
     ```typescript
     public override callMethod(method: Selector, calldata: Calldata): BytesWriter {
         switch (method) {
-            case encodeSelector('myNewMethod'):
+            case encodeSelector('myNewMethod()'):
                 return this.myNewMethod(calldata);
             default:
                 return super.callMethod(method, calldata);
@@ -208,7 +208,7 @@ public override callView(method: Selector): BytesWriter {
    const response = new BytesWriter();
 
    switch (method) {
-       case encodeSelector('myProperty'):
+       case encodeSelector('myProperty()'):
            response.writeString('My view method response');
            break;
        default:
@@ -231,7 +231,7 @@ involves decoding the calldata, performing the desired operations, and returning
 ```typescript
 public override callMethod(method: Selector, calldata: Calldata): BytesWriter {
     switch (method) {
-        case encodeSelector('airdrop'):
+        case encodeSelector('airdrop()'):
             return this.airdrop(calldata);
         default:
             return super.callMethod(method, calldata);
@@ -267,7 +267,7 @@ public override callView(method: Selector): BytesWriter {
     const response = new BytesWriter();
 
     switch (method) {
-        case encodeSelector('myViewMethod'):
+        case encodeSelector('myViewMethod()'):
             response.writeString('My view method response');
             break;
         default:

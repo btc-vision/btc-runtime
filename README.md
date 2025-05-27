@@ -132,9 +132,9 @@ export class MyToken extends DeployableOP_20 {
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
         switch (method) {
-            case encodeSelector('airdrop'):
+            case encodeSelector('airdrop()'):
                 return this.airdrop(calldata);
-            case encodeSelector('airdropWithAmount'):
+            case encodeSelector('airdropWithAmount()'):
                 return this.airdropWithAmount(calldata);
             default:
                 return super.execute(method, calldata);

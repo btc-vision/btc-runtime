@@ -206,7 +206,7 @@ export class BytesReader {
      * Reads a string of `length` raw bytes, zeroStop = true for convenience.
      * (Or the writer may not have used zeroStop.)
      */
-    public readString(length: u16): string {
+    public readString(length: u32): string {
         const bytes = this.readBytes(length, true);
         return String.UTF8.decode(bytes.buffer);
     }
@@ -216,7 +216,7 @@ export class BytesReader {
      * The AS writer calls `writeStringWithLength(value: string)` => writes length big-endian by default.
      */
     public readStringWithLength(be: boolean = true): string {
-        const length = this.readU16(be);
+        const length = this.readU32(be);
         return this.readString(length);
     }
 
