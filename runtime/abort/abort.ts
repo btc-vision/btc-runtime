@@ -7,18 +7,16 @@ export function revertOnError(message: string, fileName: string, line: u32, colu
 
     const revertMessage = `${message} at ${fileName}:${line}:${column}`;
 
-    // THIS MIGHT OVERFLOW, IT'S OK.
-    const length = u16(revertMessage.length);
-    const _length_i32 = i32(length);
+    const length = revertMessage.length;
 
-    const arrayBuffer = new ArrayBuffer(4 + _length_i32 + 2);
+    const arrayBuffer = new ArrayBuffer(4 + length + 4);
     const writer = new DataView(arrayBuffer);
 
     writer.setUint32(0, selector, false);
-    writer.setUint16(4, length, false);
+    writer.setUint32(4, length, false);
 
-    for (let i = 0; i < _length_i32; i++) {
-        writer.setUint8(6 + i, <u8>revertMessage.charCodeAt(i));
+    for (let i = 0; i < length; i++) {
+        writer.setUint8(8 + i, <u8>revertMessage.charCodeAt(i));
     }
 
     env_exit(1, arrayBuffer, arrayBuffer.byteLength);
