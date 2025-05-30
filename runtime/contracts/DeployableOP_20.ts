@@ -210,11 +210,11 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
                 response.writeU8(this.decimals);
                 break;
             case encodeSelector('name()'):
-                response = new BytesWriter(this.name.length + 2);
+                response = new BytesWriter(this.name.length + 4);
                 response.writeStringWithLength(this.name);
                 break;
             case encodeSelector('symbol()'):
-                response = new BytesWriter(this.symbol.length + 2);
+                response = new BytesWriter(this.symbol.length + 4);
                 response.writeStringWithLength(this.symbol);
                 break;
             case encodeSelector('totalSupply()'):
