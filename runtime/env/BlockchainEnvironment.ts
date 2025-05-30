@@ -1,19 +1,20 @@
-import { u256 } from '@btc-vision/as-bignum/assembly';
-import { BytesReader } from '../buffer/BytesReader';
-import { BytesWriter } from '../buffer/BytesWriter';
-import { OP_NET } from '../contracts/OP_NET';
-import { NetEvent } from '../events/NetEvent';
-import { Potential } from '../lang/Definitions';
-import { Address } from '../types/Address';
-import { Block } from './classes/Block';
-import { Transaction } from './classes/Transaction';
-import { eqUint, MapUint8Array } from '../generic/MapUint8Array';
-import { EMPTY_BUFFER } from '../math/bytes';
-import { Plugin } from '../plugins/Plugin';
-import { Calldata } from '../types';
-import { TransactionOutput } from './classes/UTXO';
-import { Revert } from '../types/Revert';
-import { sha256 } from './global';
+import {u256} from '@btc-vision/as-bignum/assembly';
+import {BytesReader} from '../buffer/BytesReader';
+import {BytesWriter} from '../buffer/BytesWriter';
+import {OP_NET} from '../contracts/OP_NET';
+import {NetEvent} from '../events/NetEvent';
+import {Potential} from '../lang/Definitions';
+import {Address} from '../types/Address';
+import {Block} from './classes/Block';
+import {Transaction} from './classes/Transaction';
+import {eqUint, MapUint8Array} from '../generic/MapUint8Array';
+import {EMPTY_BUFFER} from '../math/bytes';
+import {Plugin} from '../plugins/Plugin';
+import {Calldata} from '../types';
+import {TransactionOutput} from './classes/UTXO';
+import {Revert} from '../types/Revert';
+import {sha256} from './global';
+import {U16_BYTE_LENGTH, U32_BYTE_LENGTH, U64_BYTE_LENGTH, U8_BYTE_LENGTH} from "../utils";
 
 export * from '../env/global';
 
@@ -169,14 +170,28 @@ export class BlockchainEnvironment {
             throw new Revert(`Out of storage pointer.`);
         }
 
-        const writer = new BytesWriter(this._mockedOutputs.length * (2 + 2 + 64 + 8) + 2);
+        //const writer = new BytesWriter(this._mockedOutputs.length * (2 + 2 + 8 + 64 + 8) + 2);
+        const writer = new BytesWriter(this._mockedOutputs.length * (U8_BYTE_LENGTH + U16_BYTE_LENGTH + U32_BYTE_LENGTH + 64 + U64_BYTE_LENGTH) + U16_BYTE_LENGTH);
         writer.writeU16(u16(this._mockedOutputs.length));
 
         for (let i = 0; i < this._mockedOutputs.length; i++) {
             const output = this._mockedOutputs[i];
 
+            //!!! Add support for flags
+            writer.writeU8(1);
             writer.writeU16(output.index);
-            writer.writeStringWithLength(output.to);
+
+            /*!!! Add support
+            if (output.scriptPublicKey !== null) {
+                writer.writeBytesWithLength(<Uint8Array>output.scriptPublicKey)
+            }
+            */
+
+            /*!!! Add support for null to*/
+            if (output.to !== null) {
+                writer.writeStringWithLength(<string>output.to);
+            }
+
             writer.writeU64(output.value);
         }
 
