@@ -200,7 +200,7 @@ export class BlockchainEnvironment {
 
     public emit(event: NetEvent): void {
         const data = event.getEventData();
-        const writer = new BytesWriter(event.eventType.length + 6 + data.byteLength);
+        const writer = new BytesWriter(event.eventType.length + 8 + data.byteLength);
 
         writer.writeStringWithLength(event.eventType);
         writer.writeBytesWithLength(data);
