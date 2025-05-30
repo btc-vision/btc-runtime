@@ -1,24 +1,31 @@
 {
     "targets": {
         "release": {
-            "outFile": "build/release.wasm",
-            "textFile": "build/release.wat",
-            "sourceMap": false,
-            "optimizeLevel": 3,
-            "shrinkLevel": 2,
-            "converge": true,
-            "noAssert": true,
-            "disable": ["mutable-globals","sign-extension","nontrapping-f2i","bulk-memory"],
-            "runtime": "stub",
-            "memoryBase": 1024,
-            "lowMemoryLimit": 65536,
-            "initialMemory": 4,
-            "maximumMemory": 16,
-            "debug": false,
-            "trapMode": "allow"
+            "outFile": "build/release.wasm"
         }
     },
     "options": {
-        "bindings": "esm"
+        "sourceMap": false,
+        "optimizeLevel": 3,
+        "shrinkLevel": 1,
+        "converge": true,
+        "noAssert": false,
+        "enable": [
+            "sign-extension",
+            "mutable-globals",
+            "nontrapping-f2i",
+            "bulk-memory",
+            "simd",
+            "reference-types",
+            "multi-value"
+        ],
+        "runtime": "stub",
+        "memoryBase": 1024,
+        "lowMemoryLimit": 65536,
+        "initialMemory": 4,
+        "maximumMemory": 16,
+        "debug": false,
+        "trapMode": "allow",
+        "transform": "@btc-vision/opnet-transform"
     }
 }
