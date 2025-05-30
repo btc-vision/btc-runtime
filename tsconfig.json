@@ -1,6 +1,8 @@
 {
-    "extends": "./node_modules/assemblyscript/std/assembly.json",
-    "include": ["./*.ts", "./**/*.ts", "./runtime/**/*.ts", "./runtime/*.ts"],
+    "extends": "@btc-vision/opnet-transform/std/assembly.json",
+    "include": [
+        "./**/*.ts"
+    ],
     "compilerOptions": {
         "preserveConstEnums": true
     }
