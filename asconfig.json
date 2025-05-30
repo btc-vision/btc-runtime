@@ -20,10 +20,8 @@
             "multi-value"
         ],
         "runtime": "stub",
-        "memoryBase": 1024,
-        "lowMemoryLimit": 65536,
-        "initialMemory": 4,
-        "maximumMemory": 16,
+        "memoryBase": 0,
+        "initialMemory": 1,
         "debug": false,
         "trapMode": "allow",
         "transform": "@btc-vision/opnet-transform"
