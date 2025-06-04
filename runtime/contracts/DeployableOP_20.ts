@@ -152,8 +152,18 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         { name: 'amount', type: ABIDataTypes.UINT256 },
     )
     @emit('Approve')
-    public approve(calldata: Calldata): BytesWriter {
-        this._approve(Blockchain.tx.sender, calldata.readAddress(), calldata.readU256());
+    public increaseAllowance(calldata: Calldata): BytesWriter {
+        this._increaseAllowance(Blockchain.tx.sender, calldata.readAddress(), calldata.readU256());
+        return new BytesWriter(0);
+    }
+
+    @method(
+        { name: 'spender', type: ABIDataTypes.ADDRESS },
+        { name: 'amount', type: ABIDataTypes.UINT256 },
+    )
+    @emit('Approve')
+    public decreaseAllowance(calldata: Calldata): BytesWriter {
+        this._decreaseAllowance(Blockchain.tx.sender, calldata.readAddress(), calldata.readU256());
         return new BytesWriter(0);
     }
 
@@ -270,12 +280,26 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         this.createApproveEvent(owner, spender, value);
     }
 
-    protected _approve(owner: Address, spender: Address, value: u256): void {
+    protected _increaseAllowance(owner: Address, spender: Address, value: u256): void {
         if (owner === Blockchain.DEAD_ADDRESS) throw new Revert('Address can not be dead');
         if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
 
         const senderMap = this.allowanceMap.get(owner);
-        senderMap.set(spender, value);
+        const previousAllowance = senderMap.get(spender);
+        const newAllowance: u256 = SafeMath.add(previousAllowance, value);
+        senderMap.set(spender, newAllowance);
+
+        this.createApproveEvent(owner, spender, value);
+    }
+
+    protected _decreaseAllowance(owner: Address, spender: Address, value: u256): void {
+        if (owner === Blockchain.DEAD_ADDRESS) throw new Revert('Address can not be dead');
+        if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
+
+        const senderMap = this.allowanceMap.get(owner);
+        const previousAllowance = senderMap.get(spender);
+        const newAllowance: u256 = SafeMath.sub(previousAllowance, value);
+        senderMap.set(spender, newAllowance);
 
         this.createApproveEvent(owner, spender, value);
     }
