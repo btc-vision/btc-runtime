@@ -289,7 +289,11 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
 
         const senderMap = this.allowanceMap.get(owner);
         const previousAllowance = senderMap.get(spender);
-        const newAllowance: u256 = SafeMath.add(previousAllowance, value);
+        let newAllowance: u256 = u256.add(previousAllowance, value);
+        // If it overflows, set to max
+        if (newAllowance < previousAllowance) {
+            newAllowance = u256.Max;
+        }
         senderMap.set(spender, newAllowance);
 
         this.createApproveEvent(owner, spender, value);
@@ -301,7 +305,13 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
 
         const senderMap = this.allowanceMap.get(owner);
         const previousAllowance = senderMap.get(spender);
-        const newAllowance: u256 = SafeMath.sub(previousAllowance, value);
+        let newAllowance: u256;
+        // If it underflows, set to zero
+        if (value > previousAllowance) {
+            newAllowance = u256.Zero;
+        } else {
+            newAllowance = SafeMath.sub(previousAllowance, value);
+        }
         senderMap.set(spender, newAllowance);
 
         this.createApproveEvent(owner, spender, value);
