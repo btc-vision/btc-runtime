@@ -11,7 +11,9 @@ export interface IOP_20 {
 
     transferFrom(callData: Calldata): BytesWriter;
 
-    approve(callData: Calldata): BytesWriter;
+    increaseAllowance(callData: Calldata): BytesWriter;
+
+    decreaseAllowance(callData: Calldata): BytesWriter;
 
     allowance(callData: Calldata): BytesWriter;
 
