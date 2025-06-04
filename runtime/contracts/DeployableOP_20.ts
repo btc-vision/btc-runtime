@@ -13,7 +13,7 @@ import { EMPTY_POINTER } from '../math/bytes';
 import { AddressMemoryMap } from '../memory/AddressMemoryMap';
 import { MapOfMap } from '../memory/MapOfMap';
 import { Calldata } from '../types';
-import { ADDRESS_BYTE_LENGTH, BOOLEAN_BYTE_LENGTH, U256_BYTE_LENGTH } from '../utils';
+import { ADDRESS_BYTE_LENGTH, U256_BYTE_LENGTH } from '../utils';
 import { IOP_20 } from './interfaces/IOP_20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
@@ -151,13 +151,10 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         { name: 'spender', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
     )
-    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('Approve')
     public approve(calldata: Calldata): BytesWriter {
-        const ok = this._approve(Blockchain.tx.sender, calldata.readAddress(), calldata.readU256());
-        const w = new BytesWriter(BOOLEAN_BYTE_LENGTH);
-        w.writeBoolean(ok);
-        return w;
+        this._approve(Blockchain.tx.sender, calldata.readAddress(), calldata.readU256());
+        return new BytesWriter(0);
     }
 
     @method(
@@ -166,7 +163,6 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         { name: 'nonce', type: ABIDataTypes.UINT256 },
         { name: 'sig', type: ABIDataTypes.BYTES },
     )
-    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('Approve')
     public approveFrom(calldata: Calldata): BytesWriter {
         if (Blockchain.tx.origin == Blockchain.tx.sender) {
@@ -180,10 +176,8 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         const sig = calldata.readBytesWithLength();
         if (sig.length !== 64) throw new Revert('Invalid signature length');
 
-        const ok = this._approveFrom(owner, spender, value, nonce, sig);
-        const w = new BytesWriter(BOOLEAN_BYTE_LENGTH);
-        w.writeBoolean(ok);
-        return w;
+        this._approveFrom(owner, spender, value, nonce, sig);
+        return new BytesWriter(0);
     }
 
     @method({ name: 'owner', type: ABIDataTypes.ADDRESS })
@@ -205,26 +199,20 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     @method({ name: 'amount', type: ABIDataTypes.UINT256 })
-    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('Burn')
     public burn(calldata: Calldata): BytesWriter {
-        const ok = this._burn(calldata.readU256());
-        const w = new BytesWriter(BOOLEAN_BYTE_LENGTH);
-        w.writeBoolean(ok);
-        return w;
+        this._burn(calldata.readU256());
+        return new BytesWriter(0);
     }
 
     @method(
         { name: 'to', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
     )
-    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('Transfer')
     public transfer(calldata: Calldata): BytesWriter {
-        const ok = this._transfer(calldata.readAddress(), calldata.readU256());
-        const w = new BytesWriter(BOOLEAN_BYTE_LENGTH);
-        w.writeBoolean(ok);
-        return w;
+        this._transfer(calldata.readAddress(), calldata.readU256());
+        return new BytesWriter(0);
     }
 
     @method(
@@ -232,17 +220,14 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         { name: 'to', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
     )
-    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('Transfer')
     public transferFrom(calldata: Calldata): BytesWriter {
-        const ok = this._transferFrom(
+        this._transferFrom(
             calldata.readAddress(),
             calldata.readAddress(),
             calldata.readU256(),
         );
-        const w = new BytesWriter(BOOLEAN_BYTE_LENGTH);
-        w.writeBoolean(ok);
-        return w;
+        return new BytesWriter(0);
     }
 
     protected _allowance(owner: Address, spender: Address): u256 {
@@ -256,7 +241,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         value: u256,
         nonce: u256,
         signature: Uint8Array,
-    ): boolean {
+    ): void {
         if (owner === Blockchain.DEAD_ADDRESS) throw new Revert('Address can not be dead');
         if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
 
@@ -283,10 +268,9 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         senderMap.set(spender, value);
 
         this.createApproveEvent(owner, spender, value);
-        return true;
     }
 
-    protected _approve(owner: Address, spender: Address, value: u256): boolean {
+    protected _approve(owner: Address, spender: Address, value: u256): void {
         if (owner === Blockchain.DEAD_ADDRESS) throw new Revert('Address can not be dead');
         if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
 
@@ -294,7 +278,6 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         senderMap.set(spender, value);
 
         this.createApproveEvent(owner, spender, value);
-        return true;
     }
 
     protected _balanceOf(owner: Address): u256 {
@@ -302,7 +285,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         return this.balanceOfMap.get(owner);
     }
 
-    protected _burn(value: u256, onlyDeployer: boolean = true): boolean {
+    protected _burn(value: u256, onlyDeployer: boolean = true): void {
         if (u256.eq(value, u256.Zero)) throw new Revert('No tokens');
 
         if (onlyDeployer) this.onlyDeployer(Blockchain.tx.sender);
@@ -319,10 +302,9 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         this._totalSupply -= value;
 
         this.createBurnEvent(value);
-        return true;
     }
 
-    protected _mint(to: Address, value: u256, onlyDeployer: boolean = true): boolean {
+    protected _mint(to: Address, value: u256, onlyDeployer: boolean = true): void {
         if (onlyDeployer) this.onlyDeployer(Blockchain.tx.sender);
 
         if (!this.balanceOfMap.has(to)) {
@@ -337,10 +319,9 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
 
         if (this._totalSupply.value > this.maxSupply) throw new Revert('Max supply reached');
         this.createMintEvent(to, value);
-        return true;
     }
 
-    protected _transfer(to: Address, value: u256): boolean {
+    protected _transfer(to: Address, value: u256): void {
         const sender = Blockchain.tx.sender;
         if (this.isSelf(sender)) throw new Revert('Cannot transfer from self');
         if (u256.eq(value, u256.Zero)) throw new Revert('Cannot transfer 0');
@@ -354,11 +335,10 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         this.balanceOfMap.set(to, SafeMath.add(toBal, value));
 
         this.createTransferEvent(sender, to, value);
-        return true;
     }
 
     @unsafe
-    protected _unsafeTransferFrom(from: Address, to: Address, value: u256): boolean {
+    protected _unsafeTransferFrom(from: Address, to: Address, value: u256): void {
         const balance: u256 = this.balanceOfMap.get(from);
         if (balance < value) {
             throw new Revert(`TransferFrom insufficient balance`);
@@ -374,15 +354,13 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         }
 
         this.createTransferEvent(from, to, value);
-        return true;
     }
 
-    protected _transferFrom(from: Address, to: Address, value: u256): boolean {
+    protected _transferFrom(from: Address, to: Address, value: u256): void {
         if (from === Blockchain.DEAD_ADDRESS) throw new Revert('Cannot transfer from dead address');
 
         this._spendAllowance(from, Blockchain.tx.sender, value);
         this._unsafeTransferFrom(from, to, value);
-        return true;
     }
 
     protected _spendAllowance(owner: Address, spender: Address, value: u256): void {
