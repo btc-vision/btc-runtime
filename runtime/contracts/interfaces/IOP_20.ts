@@ -7,9 +7,9 @@ export interface IOP_20 {
 
     balanceOf(callData: Calldata): BytesWriter;
 
-    transfer(callData: Calldata): BytesWriter;
+    safeTransfer(callData: Calldata): BytesWriter;
 
-    transferFrom(callData: Calldata): BytesWriter;
+    safeTransferFrom(callData: Calldata): BytesWriter;
 
     increaseAllowance(callData: Calldata): BytesWriter;
 
