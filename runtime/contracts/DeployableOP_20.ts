@@ -18,6 +18,8 @@ import { IOP_20 } from './interfaces/IOP_20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
 
+const onOP20ReceivedSelector: u32 = 0xd83e7dbc;
+
 const nonceMapPointer: u16 = Blockchain.nextPointer;
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
 const decimalsPointer: u16 = Blockchain.nextPointer;
@@ -374,9 +376,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         this.createTransferEvent(sender, to, value);
 
         if (Blockchain.isContract(to)) {
-            const calldata = new BytesWriter(data.length);
-            calldata.writeBytes(data);
-            Blockchain.call(to, calldata);
+            this._callOnOP20Received(sender, sender, value, data);
         }
     }
 
@@ -399,10 +399,19 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         this.createTransferEvent(from, to, value);
 
         if (Blockchain.isContract(to)) {
-            const calldata = new BytesWriter(data.length);
-            calldata.writeBytes(data);
-            Blockchain.call(to, calldata);
+            const sender = Blockchain.tx.sender;
+            this._callOnOP20Received(sender, from, value, data);
         }
+    }
+
+    private _callOnOP20Received(operator: Address, from: Address, value: u256, data: Uint8Array) {
+        const calldata = new BytesWriter(data.length);
+        calldata.writeSelector(onOP20ReceivedSelector);
+        calldata.writeAddress(from);
+        calldata.writeAddress(from);
+        calldata.writeU256(value);
+        calldata.writeBytes(data);
+        Blockchain.call(operator, calldata);
     }
 
     protected _transferFrom(from: Address, to: Address, value: u256, data: Uint8Array): void {
