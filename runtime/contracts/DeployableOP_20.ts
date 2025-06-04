@@ -218,10 +218,11 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     @method(
         { name: 'to', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
+        { name: 'data', type: ABIDataTypes.BYTES },
     )
     @emit('Transfer')
-    public transfer(calldata: Calldata): BytesWriter {
-        this._transfer(calldata.readAddress(), calldata.readU256());
+    public safeTransfer(calldata: Calldata): BytesWriter {
+        this._transfer(calldata.readAddress(), calldata.readU256(), calldata.readBytesWithLength());
         return new BytesWriter(0);
     }
 
@@ -229,13 +230,15 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         { name: 'from', type: ABIDataTypes.ADDRESS },
         { name: 'to', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
+        { name: 'data', type: ABIDataTypes.BYTES },
     )
     @emit('Transfer')
-    public transferFrom(calldata: Calldata): BytesWriter {
+    public safeTransferFrom(calldata: Calldata): BytesWriter {
         this._transferFrom(
             calldata.readAddress(),
             calldata.readAddress(),
             calldata.readU256(),
+            calldata.readBytesWithLength(),
         );
         return new BytesWriter(0);
     }
@@ -345,7 +348,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         this.createMintEvent(to, value);
     }
 
-    protected _transfer(to: Address, value: u256): void {
+    protected _transfer(to: Address, value: u256, data: Uint8Array): void {
         const sender = Blockchain.tx.sender;
         if (this.isSelf(sender)) throw new Revert('Cannot transfer from self');
         if (u256.eq(value, u256.Zero)) throw new Revert('Cannot transfer 0');
@@ -359,10 +362,14 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         this.balanceOfMap.set(to, SafeMath.add(toBal, value));
 
         this.createTransferEvent(sender, to, value);
+
+        const calldata = new BytesWriter(data.length);
+        calldata.writeBytes(data);
+        Blockchain.call(to, calldata);
     }
 
     @unsafe
-    protected _unsafeTransferFrom(from: Address, to: Address, value: u256): void {
+    protected _unsafeTransferFrom(from: Address, to: Address, value: u256, data: Uint8Array): void {
         const balance: u256 = this.balanceOfMap.get(from);
         if (balance < value) {
             throw new Revert(`TransferFrom insufficient balance`);
@@ -378,13 +385,17 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         }
 
         this.createTransferEvent(from, to, value);
+
+        const calldata = new BytesWriter(data.length);
+        calldata.writeBytes(data);
+        Blockchain.call(to, calldata);
     }
 
-    protected _transferFrom(from: Address, to: Address, value: u256): void {
+    protected _transferFrom(from: Address, to: Address, value: u256, data: Uint8Array): void {
         if (from === Blockchain.DEAD_ADDRESS) throw new Revert('Cannot transfer from dead address');
 
         this._spendAllowance(from, Blockchain.tx.sender, value);
-        this._unsafeTransferFrom(from, to, value);
+        this._unsafeTransferFrom(from, to, value, data);
     }
 
     protected _spendAllowance(owner: Address, spender: Address, value: u256): void {
