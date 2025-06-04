@@ -363,9 +363,11 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
 
         this.createTransferEvent(sender, to, value);
 
-        const calldata = new BytesWriter(data.length);
-        calldata.writeBytes(data);
-        Blockchain.call(to, calldata);
+        if (Blockchain.isContract(to)) {
+            const calldata = new BytesWriter(data.length);
+            calldata.writeBytes(data);
+            Blockchain.call(to, calldata);
+        }
     }
 
     @unsafe
@@ -386,9 +388,11 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
 
         this.createTransferEvent(from, to, value);
 
-        const calldata = new BytesWriter(data.length);
-        calldata.writeBytes(data);
-        Blockchain.call(to, calldata);
+        if (Blockchain.isContract(to)) {
+            const calldata = new BytesWriter(data.length);
+            calldata.writeBytes(data);
+            Blockchain.call(to, calldata);
+        }
     }
 
     protected _transferFrom(from: Address, to: Address, value: u256, data: Uint8Array): void {
