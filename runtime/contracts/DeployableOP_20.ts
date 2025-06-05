@@ -353,7 +353,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         }
     }
 
-    private _callOnOP20Received(operator: Address, from: Address, value: u256, data: Uint8Array) {
+    protected _callOnOP20Received(operator: Address, from: Address, value: u256, data: Uint8Array) {
         const calldata = new BytesWriter(data.length);
         calldata.writeSelector(onOP20ReceivedSelector);
         calldata.writeAddress(from);
@@ -385,7 +385,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         this._decreaseAllowance(owner, spender, value);
     }
 
-    private _validateNonceAndSignature(owner: Address, nonce: u256, spender: Address, value: u256, signature: Uint8Array) {
+    protected _validateNonceAndSignature(owner: Address, nonce: u256, spender: Address, value: u256, signature: Uint8Array) {
         const storedNonce = this._nonceMap.get(owner);
         if (!u256.eq(storedNonce, nonce)) throw new Revert('Invalid nonce');
 
