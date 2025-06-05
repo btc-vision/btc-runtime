@@ -155,7 +155,14 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     )
     @emit('Approve')
     public increaseAllowance(calldata: Calldata): BytesWriter {
-        this._increaseAllowance(Blockchain.tx.sender, calldata.readAddress(), calldata.readU256());
+        const owner: Address = Blockchain.tx.sender;
+        const spender: Address = calldata.readAddress();
+        const value: u256 = calldata.readU256();
+
+        if (owner === Blockchain.DEAD_ADDRESS) throw new Revert('Address can not be dead');
+        if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
+
+        this._increaseAllowance(owner, spender, value);
         return new BytesWriter(0);
     }
 
@@ -165,7 +172,14 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     )
     @emit('Approve')
     public decreaseAllowance(calldata: Calldata): BytesWriter {
-        this._decreaseAllowance(Blockchain.tx.sender, calldata.readAddress(), calldata.readU256());
+        const owner: Address = Blockchain.tx.sender;
+        const spender: Address = calldata.readAddress();
+        const value: u256 = calldata.readU256();
+
+        if (owner === Blockchain.DEAD_ADDRESS) throw new Revert('Address can not be dead');
+        if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
+
+        this._decreaseAllowance(owner, spender, value);
         return new BytesWriter(0);
     }
 
@@ -176,19 +190,40 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         { name: 'sig', type: ABIDataTypes.BYTES },
     )
     @emit('Approve')
-    public approveFrom(calldata: Calldata): BytesWriter {
-        if (Blockchain.tx.origin == Blockchain.tx.sender) {
-            throw new Revert('Direct owner approval – use approve()');
-        }
-
+    public increaseAllowanceBySignature(calldata: Calldata): BytesWriter {
         const owner: Address = Blockchain.tx.origin;
         const spender: Address = calldata.readAddress();
         const value: u256 = calldata.readU256();
         const nonce: u256 = calldata.readU256();
         const sig = calldata.readBytesWithLength();
+
+        if (owner === Blockchain.DEAD_ADDRESS) throw new Revert('Address can not be dead');
+        if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
         if (sig.length !== 64) throw new Revert('Invalid signature length');
 
-        this._approveFrom(owner, spender, value, nonce, sig);
+        this._increaseAllowanceBySignature(owner, spender, value, nonce, sig);
+        return new BytesWriter(0);
+    }
+
+    @method(
+        { name: 'spender', type: ABIDataTypes.ADDRESS },
+        { name: 'amount', type: ABIDataTypes.UINT256 },
+        { name: 'nonce', type: ABIDataTypes.UINT256 },
+        { name: 'sig', type: ABIDataTypes.BYTES },
+    )
+    @emit('Approve')
+    public decreaseAllowanceBySignature(calldata: Calldata): BytesWriter {
+        const owner: Address = Blockchain.tx.origin;
+        const spender: Address = calldata.readAddress();
+        const value: u256 = calldata.readU256();
+        const nonce: u256 = calldata.readU256();
+        const sig = calldata.readBytesWithLength();
+
+        if (owner === Blockchain.DEAD_ADDRESS) throw new Revert('Address can not be dead');
+        if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
+        if (sig.length !== 64) throw new Revert('Invalid signature length');
+
+        this._decreaseAllowanceBySignature(owner, spender, value, nonce, sig);
         return new BytesWriter(0);
     }
 
@@ -250,16 +285,29 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         return senderMap.get(spender);
     }
 
-    protected _approveFrom(
+    protected _increaseAllowanceBySignature(
         owner: Address,
         spender: Address,
         value: u256,
         nonce: u256,
         signature: Uint8Array,
     ): void {
-        if (owner === Blockchain.DEAD_ADDRESS) throw new Revert('Address can not be dead');
-        if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
+        this._validateNonceAndSignature(owner, nonce, spender, value, signature);
+        this._increaseAllowance(owner, spender, value);
+    }
 
+    protected _decreaseAllowanceBySignature(
+        owner: Address,
+        spender: Address,
+        value: u256,
+        nonce: u256,
+        signature: Uint8Array,
+    ): void {
+        this._validateNonceAndSignature(owner, nonce, spender, value, signature);
+        this._decreaseAllowance(owner, spender, value);
+    }
+
+    private _validateNonceAndSignature(owner: Address, nonce: u256, spender: Address, value: u256, signature: Uint8Array) {
         const storedNonce = this._nonceMap.get(owner);
         if (!u256.eq(storedNonce, nonce)) throw new Revert('Invalid nonce');
 
@@ -278,17 +326,9 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         }
 
         this._nonceMap.set(owner, SafeMath.add(storedNonce, u256.One));
-
-        const senderMap = this.allowanceMap.get(owner);
-        senderMap.set(spender, value);
-
-        this.createApproveEvent(owner, spender, value);
     }
 
     protected _increaseAllowance(owner: Address, spender: Address, value: u256): void {
-        if (owner === Blockchain.DEAD_ADDRESS) throw new Revert('Address can not be dead');
-        if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
-
         const senderMap = this.allowanceMap.get(owner);
         const previousAllowance = senderMap.get(spender);
         let newAllowance: u256 = u256.add(previousAllowance, value);
@@ -302,9 +342,6 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _decreaseAllowance(owner: Address, spender: Address, value: u256): void {
-        if (owner === Blockchain.DEAD_ADDRESS) throw new Revert('Address can not be dead');
-        if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
-
         const senderMap = this.allowanceMap.get(owner);
         const previousAllowance = senderMap.get(spender);
         let newAllowance: u256;
