@@ -232,44 +232,44 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     @method(
         { name: 'spender', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
-        { name: 'nonce', type: ABIDataTypes.UINT256 },
-        { name: 'sig', type: ABIDataTypes.BYTES },
+        { name: 'deadline', type: ABIDataTypes.UINT64 },
+        { name: 'signature', type: ABIDataTypes.BYTES },
     )
     @emit('Approve')
     public increaseAllowanceBySignature(calldata: Calldata): BytesWriter {
         const owner: Address = Blockchain.tx.origin;
         const spender: Address = calldata.readAddress();
         const value: u256 = calldata.readU256();
-        const nonce: u256 = calldata.readU256();
-        const sig = calldata.readBytesWithLength();
+        const deadline: u64 = calldata.readU64();
+        const signature = calldata.readBytesWithLength();
 
         if (owner === Blockchain.DEAD_ADDRESS) throw new Revert('Address can not be dead');
         if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
-        if (sig.length !== 64) throw new Revert('Invalid signature length');
+        if (signature.length !== 64) throw new Revert('Invalid signature length');
 
-        this._increaseAllowanceBySignature(owner, spender, value, nonce, sig);
+        this._increaseAllowanceBySignature(owner, spender, value, deadline, signature);
         return new BytesWriter(0);
     }
 
     @method(
         { name: 'spender', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
-        { name: 'nonce', type: ABIDataTypes.UINT256 },
-        { name: 'sig', type: ABIDataTypes.BYTES },
+        { name: 'deadline', type: ABIDataTypes.UINT64 },
+        { name: 'signature', type: ABIDataTypes.BYTES },
     )
     @emit('Approve')
     public decreaseAllowanceBySignature(calldata: Calldata): BytesWriter {
         const owner: Address = Blockchain.tx.origin;
         const spender: Address = calldata.readAddress();
         const value: u256 = calldata.readU256();
-        const nonce: u256 = calldata.readU256();
-        const sig = calldata.readBytesWithLength();
+        const deadline: u64 = calldata.readU64();
+        const signature = calldata.readBytesWithLength();
 
         if (owner === Blockchain.DEAD_ADDRESS) throw new Revert('Address can not be dead');
         if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
-        if (sig.length !== 64) throw new Revert('Invalid signature length');
+        if (signature.length !== 64) throw new Revert('Invalid signature length');
 
-        this._decreaseAllowanceBySignature(owner, spender, value, nonce, sig);
+        this._decreaseAllowanceBySignature(owner, spender, value, deadline, signature);
         return new BytesWriter(0);
     }
 
@@ -367,10 +367,10 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         owner: Address,
         spender: Address,
         value: u256,
-        nonce: u256,
+        deadline: u64,
         signature: Uint8Array,
     ): void {
-        this._validateNonceAndSignature(owner, nonce, spender, value, signature);
+        this._validateNonceAndSignature(owner, spender, value, deadline, signature);
         this._increaseAllowance(owner, spender, value);
     }
 
@@ -378,16 +378,19 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         owner: Address,
         spender: Address,
         value: u256,
-        nonce: u256,
+        deadline: u64,
         signature: Uint8Array,
     ): void {
-        this._validateNonceAndSignature(owner, nonce, spender, value, signature);
+        this._validateNonceAndSignature(owner, spender, value, deadline, signature);
         this._decreaseAllowance(owner, spender, value);
     }
 
-    protected _validateNonceAndSignature(owner: Address, nonce: u256, spender: Address, value: u256, signature: Uint8Array) {
-        const storedNonce = this._nonceMap.get(owner);
-        if (!u256.eq(storedNonce, nonce)) throw new Revert('Invalid nonce');
+    protected _validateNonceAndSignature(owner: Address, spender: Address, value: u256, deadline: u64, signature: Uint8Array) {
+        if (Blockchain.block.number > deadline) {
+            throw new Revert('Signature expired');
+        }
+
+        const nonce = this._nonceMap.get(owner);
 
         const writer = new BytesWriter(
             ADDRESS_BYTE_LENGTH * 3 + U256_BYTE_LENGTH + U256_BYTE_LENGTH,
@@ -396,6 +399,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         writer.writeAddress(spender);
         writer.writeU256(value);
         writer.writeU256(nonce);
+        writer.writeU64(deadline);
         writer.writeAddress(this.address);
 
         const hash = sha256(writer.getBuffer());
@@ -403,7 +407,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             throw new Revert('Invalid signature');
         }
 
-        this._nonceMap.set(owner, SafeMath.add(storedNonce, u256.One));
+        this._nonceMap.set(owner, SafeMath.add(nonce, u256.One));
     }
 
     protected _increaseAllowance(owner: Address, spender: Address, value: u256): void {
