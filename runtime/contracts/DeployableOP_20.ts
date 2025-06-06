@@ -203,12 +203,12 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     public increaseAllowance(calldata: Calldata): BytesWriter {
         const owner: Address = Blockchain.tx.sender;
         const spender: Address = calldata.readAddress();
-        const value: u256 = calldata.readU256();
+        const amount: u256 = calldata.readU256();
 
         if (owner === Blockchain.DEAD_ADDRESS) throw new Revert('Address can not be dead');
         if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
 
-        this._increaseAllowance(owner, spender, value);
+        this._increaseAllowance(owner, spender, amount);
         return new BytesWriter(0);
     }
 
@@ -220,12 +220,12 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     public decreaseAllowance(calldata: Calldata): BytesWriter {
         const owner: Address = Blockchain.tx.sender;
         const spender: Address = calldata.readAddress();
-        const value: u256 = calldata.readU256();
+        const amount: u256 = calldata.readU256();
 
         if (owner === Blockchain.DEAD_ADDRESS) throw new Revert('Address can not be dead');
         if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
 
-        this._decreaseAllowance(owner, spender, value);
+        this._decreaseAllowance(owner, spender, amount);
         return new BytesWriter(0);
     }
 
@@ -239,7 +239,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     public increaseAllowanceBySignature(calldata: Calldata): BytesWriter {
         const owner: Address = Blockchain.tx.origin;
         const spender: Address = calldata.readAddress();
-        const value: u256 = calldata.readU256();
+        const amount: u256 = calldata.readU256();
         const deadline: u64 = calldata.readU64();
         const signature = calldata.readBytesWithLength();
 
@@ -247,7 +247,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
         if (signature.length !== 64) throw new Revert('Invalid signature length');
 
-        this._increaseAllowanceBySignature(owner, spender, value, deadline, signature);
+        this._increaseAllowanceBySignature(owner, spender, amount, deadline, signature);
         return new BytesWriter(0);
     }
 
@@ -261,7 +261,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     public decreaseAllowanceBySignature(calldata: Calldata): BytesWriter {
         const owner: Address = Blockchain.tx.origin;
         const spender: Address = calldata.readAddress();
-        const value: u256 = calldata.readU256();
+        const amount: u256 = calldata.readU256();
         const deadline: u64 = calldata.readU64();
         const signature = calldata.readBytesWithLength();
 
@@ -269,7 +269,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
         if (signature.length !== 64) throw new Revert('Invalid signature length');
 
-        this._decreaseAllowanceBySignature(owner, spender, value, deadline, signature);
+        this._decreaseAllowanceBySignature(owner, spender, amount, deadline, signature);
         return new BytesWriter(0);
     }
 
@@ -290,75 +290,75 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         return senderMap.get(spender);
     }
 
-    protected _transfer(to: Address, value: u256, data: Uint8Array): void {
+    protected _transfer(to: Address, amount: u256, data: Uint8Array): void {
         const sender = Blockchain.tx.sender;
         if (this.isSelf(sender)) throw new Revert('Cannot transfer from self');
-        if (u256.eq(value, u256.Zero)) throw new Revert('Cannot transfer 0');
+        if (u256.eq(amount, u256.Zero)) throw new Revert('Cannot transfer 0');
 
         const balance: u256 = this.balanceOfMap.get(sender);
-        if (balance < value) throw new Revert('Insufficient balance');
+        if (balance < amount) throw new Revert('Insufficient balance');
 
-        this.balanceOfMap.set(sender, SafeMath.sub(balance, value));
+        this.balanceOfMap.set(sender, SafeMath.sub(balance, amount));
 
         const toBal: u256 = this.balanceOfMap.get(to);
-        this.balanceOfMap.set(to, SafeMath.add(toBal, value));
+        this.balanceOfMap.set(to, SafeMath.add(toBal, amount));
 
-        this.createTransferEvent(sender, to, value);
+        this.createTransferEvent(sender, to, amount);
 
         if (Blockchain.isContract(to)) {
-            this._callOnOP20Received(sender, sender, value, data);
+            this._callOnOP20Received(sender, sender, amount, data);
         }
     }
 
-    protected _transferFrom(from: Address, to: Address, value: u256, data: Uint8Array): void {
+    protected _transferFrom(from: Address, to: Address, amount: u256, data: Uint8Array): void {
         if (from === Blockchain.DEAD_ADDRESS) throw new Revert('Cannot transfer from dead address');
 
-        this._spendAllowance(from, Blockchain.tx.sender, value);
-        this._unsafeTransferFrom(from, to, value, data);
+        this._spendAllowance(from, Blockchain.tx.sender, amount);
+        this._unsafeTransferFrom(from, to, amount, data);
     }
 
-    protected _spendAllowance(owner: Address, spender: Address, value: u256): void {
+    protected _spendAllowance(owner: Address, spender: Address, amount: u256): void {
         const ownerMap = this.allowanceMap.get(owner);
         const allowed: u256 = ownerMap.get(spender);
 
-        if (allowed < value) {
+        if (allowed < amount) {
             throw new Revert('Insufficient allowance');
         }
 
-        ownerMap.set(spender, SafeMath.sub(allowed, value));
+        ownerMap.set(spender, SafeMath.sub(allowed, amount));
         this.allowanceMap.set(owner, ownerMap);
     }
 
     @unsafe
-    protected _unsafeTransferFrom(from: Address, to: Address, value: u256, data: Uint8Array): void {
+    protected _unsafeTransferFrom(from: Address, to: Address, amount: u256, data: Uint8Array): void {
         const balance: u256 = this.balanceOfMap.get(from);
-        if (balance < value) {
+        if (balance < amount) {
             throw new Revert(`TransferFrom insufficient balance`);
         }
 
-        this.balanceOfMap.set(from, SafeMath.sub(balance, value));
+        this.balanceOfMap.set(from, SafeMath.sub(balance, amount));
 
         if (!this.balanceOfMap.has(to)) {
-            this.balanceOfMap.set(to, value);
+            this.balanceOfMap.set(to, amount);
         } else {
             const toBal: u256 = this.balanceOfMap.get(to);
-            this.balanceOfMap.set(to, SafeMath.add(toBal, value));
+            this.balanceOfMap.set(to, SafeMath.add(toBal, amount));
         }
 
-        this.createTransferEvent(from, to, value);
+        this.createTransferEvent(from, to, amount);
 
         if (Blockchain.isContract(to)) {
             const sender = Blockchain.tx.sender;
-            this._callOnOP20Received(sender, from, value, data);
+            this._callOnOP20Received(sender, from, amount, data);
         }
     }
 
-    protected _callOnOP20Received(operator: Address, from: Address, value: u256, data: Uint8Array) {
+    protected _callOnOP20Received(operator: Address, from: Address, amount: u256, data: Uint8Array) {
         const calldata = new BytesWriter(data.length);
         calldata.writeSelector(onOP20ReceivedSelector);
         calldata.writeAddress(from);
         calldata.writeAddress(from);
-        calldata.writeU256(value);
+        calldata.writeU256(amount);
         calldata.writeBytes(data);
         Blockchain.call(operator, calldata);
     }
@@ -366,26 +366,26 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     protected _increaseAllowanceBySignature(
         owner: Address,
         spender: Address,
-        value: u256,
+        amount: u256,
         deadline: u64,
         signature: Uint8Array,
     ): void {
-        this._validateNonceAndSignature(owner, spender, value, deadline, signature);
-        this._increaseAllowance(owner, spender, value);
+        this._validateNonceAndSignature(owner, spender, amount, deadline, signature);
+        this._increaseAllowance(owner, spender, amount);
     }
 
     protected _decreaseAllowanceBySignature(
         owner: Address,
         spender: Address,
-        value: u256,
+        amount: u256,
         deadline: u64,
         signature: Uint8Array,
     ): void {
-        this._validateNonceAndSignature(owner, spender, value, deadline, signature);
-        this._decreaseAllowance(owner, spender, value);
+        this._validateNonceAndSignature(owner, spender, amount, deadline, signature);
+        this._decreaseAllowance(owner, spender, amount);
     }
 
-    protected _validateNonceAndSignature(owner: Address, spender: Address, value: u256, deadline: u64, signature: Uint8Array) {
+    protected _validateNonceAndSignature(owner: Address, spender: Address, amount: u256, deadline: u64, signature: Uint8Array) {
         if (Blockchain.block.number > deadline) {
             throw new Revert('Signature expired');
         }
@@ -397,7 +397,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         );
         writer.writeAddress(owner);
         writer.writeAddress(spender);
-        writer.writeU256(value);
+        writer.writeU256(amount);
         writer.writeU256(nonce);
         writer.writeU64(deadline);
         writer.writeAddress(this.address);
@@ -410,83 +410,83 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         this._nonceMap.set(owner, SafeMath.add(nonce, u256.One));
     }
 
-    protected _increaseAllowance(owner: Address, spender: Address, value: u256): void {
+    protected _increaseAllowance(owner: Address, spender: Address, amount: u256): void {
         const senderMap = this.allowanceMap.get(owner);
         const previousAllowance = senderMap.get(spender);
-        let newAllowance: u256 = u256.add(previousAllowance, value);
+        let newAllowance: u256 = u256.add(previousAllowance, amount);
         // If it overflows, set to max
         if (newAllowance < previousAllowance) {
             newAllowance = u256.Max;
         }
         senderMap.set(spender, newAllowance);
 
-        this.createApproveEvent(owner, spender, value);
+        this.createApproveEvent(owner, spender, amount);
     }
 
-    protected _decreaseAllowance(owner: Address, spender: Address, value: u256): void {
+    protected _decreaseAllowance(owner: Address, spender: Address, amount: u256): void {
         const senderMap = this.allowanceMap.get(owner);
         const previousAllowance = senderMap.get(spender);
         let newAllowance: u256;
         // If it underflows, set to zero
-        if (value > previousAllowance) {
+        if (amount > previousAllowance) {
             newAllowance = u256.Zero;
         } else {
-            newAllowance = SafeMath.sub(previousAllowance, value);
+            newAllowance = SafeMath.sub(previousAllowance, amount);
         }
         senderMap.set(spender, newAllowance);
 
-        this.createApproveEvent(owner, spender, value);
+        this.createApproveEvent(owner, spender, amount);
     }
 
-    protected _mint(to: Address, value: u256, onlyDeployer: boolean = true): void {
+    protected _mint(to: Address, amount: u256, onlyDeployer: boolean = true): void {
         if (onlyDeployer) this.onlyDeployer(Blockchain.tx.sender);
 
         if (!this.balanceOfMap.has(to)) {
-            this.balanceOfMap.set(to, value);
+            this.balanceOfMap.set(to, amount);
         } else {
             const toBal: u256 = this.balanceOfMap.get(to);
-            this.balanceOfMap.set(to, SafeMath.add(toBal, value));
+            this.balanceOfMap.set(to, SafeMath.add(toBal, amount));
         }
 
         // @ts-expect-error AssemblyScript valid
-        this._totalSupply += value;
+        this._totalSupply += amount;
 
         if (this._totalSupply.value > this.maxSupply) throw new Revert('Max supply reached');
-        this.createMintEvent(to, value);
+        this.createMintEvent(to, amount);
     }
 
-    protected _burn(value: u256, onlyDeployer: boolean = true): void {
-        if (u256.eq(value, u256.Zero)) throw new Revert('No tokens');
+    protected _burn(amount: u256, onlyDeployer: boolean = true): void {
+        if (u256.eq(amount, u256.Zero)) throw new Revert('No tokens');
 
         if (onlyDeployer) this.onlyDeployer(Blockchain.tx.sender);
-        if (this._totalSupply.value < value) throw new Revert('Insufficient supply');
+        if (this._totalSupply.value < amount) throw new Revert('Insufficient supply');
         if (!this.balanceOfMap.has(Blockchain.tx.sender)) throw new Revert('No balance');
 
         const balance: u256 = this.balanceOfMap.get(Blockchain.tx.sender);
-        if (balance < value) throw new Revert('Insufficient balance');
+        if (balance < amount) throw new Revert('Insufficient balance');
 
-        const newBalance: u256 = SafeMath.sub(balance, value);
+        const newBalance: u256 = SafeMath.sub(balance, amount);
         this.balanceOfMap.set(Blockchain.tx.sender, newBalance);
 
         // @ts-expect-error AssemblyScript valid
-        this._totalSupply -= value;
+        this._totalSupply -= amount;
 
-        this.createBurnEvent(value);
+        this.createBurnEvent(amount);
     }
 
-    protected createBurnEvent(value: u256): void {
-        this.emitEvent(new BurnEvent(value));
+    protected createBurnEvent(amount: u256): void {
+        this.emitEvent(new BurnEvent(amount));
     }
 
-    protected createApproveEvent(owner: Address, spender: Address, value: u256): void {
-        this.emitEvent(new ApproveEvent(owner, spender, value));
+    protected createApproveEvent(owner: Address, spender: Address, amount: u256): void {
+        this.emitEvent(new ApproveEvent(owner, spender, amount));
     }
 
-    protected createMintEvent(recipient: Address, value: u256): void {
-        this.emitEvent(new MintEvent(recipient, value));
+    protected createMintEvent(recipient: Address, amount: u256): void {
+        this.emitEvent(new MintEvent(recipient, amount));
     }
 
-    protected createTransferEvent(from: Address, to: Address, value: u256): void {
-        this.emitEvent(new TransferEvent(from, to, value));
+    protected createTransferEvent(from: Address, to: Address, amount: u256): void {
+        this.emitEvent(new TransferEvent(from, to, amount));
     }
 }
