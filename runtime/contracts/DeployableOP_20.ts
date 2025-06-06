@@ -13,7 +13,7 @@ import { EMPTY_POINTER } from '../math/bytes';
 import { AddressMemoryMap } from '../memory/AddressMemoryMap';
 import { MapOfMap } from '../memory/MapOfMap';
 import { Calldata } from '../types';
-import { ADDRESS_BYTE_LENGTH, U256_BYTE_LENGTH } from '../utils';
+import { ADDRESS_BYTE_LENGTH, U256_BYTE_LENGTH, U64_BYTE_LENGTH } from '../utils';
 import { IOP_20 } from './interfaces/IOP_20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
@@ -370,7 +370,8 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         deadline: u64,
         signature: Uint8Array,
     ): void {
-        this._validateNonceAndSignature(owner, spender, amount, deadline, signature);
+        const typeHash = sha256(this.stringToBytes('OP20AllowanceIncrease(address owner,address spender,uint256 amount,uint256 nonce,uint64 deadline)'))
+        this._verifySignature(typeHash, owner, spender, amount, deadline, signature);
         this._increaseAllowance(owner, spender, amount);
     }
 
@@ -381,33 +382,56 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         deadline: u64,
         signature: Uint8Array,
     ): void {
-        this._validateNonceAndSignature(owner, spender, amount, deadline, signature);
+        const typeHash = sha256(this.stringToBytes('OP20AllowanceDecrease(address owner,address spender,uint256 amount,uint256 nonce,uint64 deadline)'));
+        this._verifySignature(typeHash, owner, spender, amount, deadline, signature);
         this._decreaseAllowance(owner, spender, amount);
     }
 
-    protected _validateNonceAndSignature(owner: Address, spender: Address, amount: u256, deadline: u64, signature: Uint8Array) {
+    protected _verifySignature(typeHash: Uint8Array, owner: Address, spender: Address, amount: u256, deadline: u64, signature: Uint8Array) {
         if (Blockchain.block.number > deadline) {
             throw new Revert('Signature expired');
         }
 
         const nonce = this._nonceMap.get(owner);
 
-        const writer = new BytesWriter(
-            ADDRESS_BYTE_LENGTH * 3 + U256_BYTE_LENGTH + U256_BYTE_LENGTH,
+        const structWriter = new BytesWriter(
+            32 + ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH + U256_BYTE_LENGTH + U64_BYTE_LENGTH,
         );
-        writer.writeAddress(owner);
-        writer.writeAddress(spender);
-        writer.writeU256(amount);
-        writer.writeU256(nonce);
-        writer.writeU64(deadline);
-        writer.writeAddress(this.address);
+        structWriter.writeBytes(typeHash);
+        structWriter.writeAddress(owner);
+        structWriter.writeAddress(spender);
+        structWriter.writeU256(amount);
+        structWriter.writeU256(nonce);
+        structWriter.writeU64(deadline);
 
-        const hash = sha256(writer.getBuffer());
+        const structHash = sha256(structWriter.getBuffer());
+
+        const messageWriter = new BytesWriter(2 + 32 + 32);
+        messageWriter.writeU16(0x1901);
+        messageWriter.writeBytes(this._buildDomainSeparator());
+        messageWriter.writeBytes(structHash);
+
+        const hash = sha256(messageWriter.getBuffer());
+
         if (!Blockchain.verifySchnorrSignature(owner, signature, hash)) {
             throw new Revert('Invalid signature');
         }
 
         this._nonceMap.set(owner, SafeMath.add(nonce, u256.One));
+    }
+
+    protected _buildDomainSeparator(): Uint8Array {
+        const writer = new BytesWriter(32 * 5);
+        writer.writeBytes(sha256(this.stringToBytes('OP712Domain(string name,string version,uint64 chainId,address verifyingContract)')));
+        writer.writeBytes(sha256(this.stringToBytes(this.name)));
+        writer.writeBytes(sha256(this.stringToBytes('1')));
+        writer.writeBytesU8Array(
+            // Bitcoin mainnet chain ID
+            [0x00, 0x00, 0x00, 0x00, 0x00, 0x19, 0xd6, 0x68, 0x9c, 0x08, 0x5a, 0xe1, 0x65, 0x83, 0x1e, 0x93, 0x4f, 0xf7, 0x63, 0xae, 0x46, 0xa2, 0xa6, 0xc1, 0x72, 0xb3, 0xf1, 0xb6, 0x0a, 0x8c, 0xe2, 0x6f],
+        );
+        writer.writeAddress(this.address);
+
+        return sha256(writer.getBuffer());
     }
 
     protected _increaseAllowance(owner: Address, spender: Address, amount: u256): void {
@@ -472,6 +496,11 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         this._totalSupply -= amount;
 
         this.createBurnEvent(amount);
+    }
+
+    protected stringToBytes(str: string): Uint8Array {
+        const bytes = String.UTF8.encode(str);
+        return Uint8Array.wrap(bytes);
     }
 
     protected createBurnEvent(amount: u256): void {
