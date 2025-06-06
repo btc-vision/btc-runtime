@@ -191,7 +191,7 @@ export class BlockchainEnvironment {
     }
 
     public log(data: string): void {
-        const writer = new BytesWriter(data.length + 2);
+        const writer = new BytesWriter(String.UTF8.byteLength(data));
         writer.writeString(data);
 
         const buffer = writer.getBuffer();
@@ -200,7 +200,7 @@ export class BlockchainEnvironment {
 
     public emit(event: NetEvent): void {
         const data = event.getEventData();
-        const writer = new BytesWriter(event.eventType.length + 8 + data.byteLength);
+        const writer = new BytesWriter(String.UTF8.byteLength(event.eventType) + 8 + data.byteLength);
 
         writer.writeStringWithLength(event.eventType);
         writer.writeBytesWithLength(data);
@@ -209,7 +209,7 @@ export class BlockchainEnvironment {
     }
 
     public validateBitcoinAddress(address: string): bool {
-        const writer = new BytesWriter(address.length);
+        const writer = new BytesWriter(String.UTF8.byteLength(address));
         writer.writeString(address);
 
         const result = validateBitcoinAddress(writer.getBuffer().buffer, address.length);

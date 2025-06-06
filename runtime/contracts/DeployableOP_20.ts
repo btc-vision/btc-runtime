@@ -106,7 +106,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     @method('name')
     @returns({ name: 'name', type: ABIDataTypes.STRING })
     public fn_name(_: Calldata): BytesWriter {
-        const w = new BytesWriter(this.name.length + 4);
+        const w = new BytesWriter(String.UTF8.byteLength(this.name) + 4);
         w.writeStringWithLength(this.name);
         return w;
     }
@@ -114,7 +114,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     @method('symbol')
     @returns({ name: 'symbol', type: ABIDataTypes.STRING })
     public fn_symbol(_: Calldata): BytesWriter {
-        const w = new BytesWriter(this.symbol.length + 4);
+        const w = new BytesWriter(String.UTF8.byteLength(this.symbol) + 4);
         w.writeStringWithLength(this.symbol);
         return w;
     }
