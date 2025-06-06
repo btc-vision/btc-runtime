@@ -18,7 +18,16 @@ import { IOP_20 } from './interfaces/IOP_20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
 
-const onOP20ReceivedSelector: u32 = 0xd83e7dbc;
+const ON_OP_20_RECEIVED_SELECTOR: u32 = 0xd83e7dbc;
+
+// sha256("OP712Domain(string name,string version,uint64 chainId,address verifyingContract)")
+const DOMAIN_TYPE_HASH: number[] = [0xe6, 0x0e, 0xd6, 0xa2, 0xd1, 0x1c, 0x66, 0x73, 0x59, 0x0e, 0xfe, 0x77, 0x21, 0x29, 0x9d, 0xe1, 0x6a, 0x36, 0x05, 0xd4, 0x39, 0x28, 0x18, 0x09, 0x3f, 0x8d, 0xdc, 0xef, 0xd1, 0x61, 0x27, 0x04];
+
+// sha256("OP20AllowanceIncrease(address owner,address spender,uint256 amount,uint256 nonce,uint64 deadline)")
+const ALLOWANCE_INCREASE_TYPE_HASH: number[] = [0x7e, 0x88, 0x02, 0xf1, 0xfd, 0x23, 0xe1, 0x0e, 0x0d, 0xde, 0x3f, 0x00, 0xc0, 0xaa, 0x48, 0x15, 0xd8, 0x85, 0xec, 0xd9, 0xcd, 0xa0, 0xdf, 0x56, 0xff, 0xa2, 0x5e, 0xcc, 0x70, 0x2d, 0x45, 0x8e];
+
+// sha256("OP20AllowanceDecrease(address owner,address spender,uint256 amount,uint256 nonce,uint64 deadline)")
+const ALLOWANCE_DECREASE_TYPE_HASH: number[] = [0x70, 0x87, 0x99, 0x34, 0x92, 0x1c, 0x2f, 0x48, 0x17, 0x78, 0x87, 0x89, 0x77, 0xd5, 0xb4, 0x5e, 0x2a, 0x59, 0xda, 0x1d, 0x28, 0x22, 0x41, 0xc9, 0x3f, 0xf1, 0xba, 0x6a, 0xf0, 0x98, 0xfc, 0xd0];
 
 const nonceMapPointer: u16 = Blockchain.nextPointer;
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
@@ -355,7 +364,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
 
     protected _callOnOP20Received(operator: Address, from: Address, amount: u256, data: Uint8Array) {
         const calldata = new BytesWriter(data.length);
-        calldata.writeSelector(onOP20ReceivedSelector);
+        calldata.writeSelector(ON_OP_20_RECEIVED_SELECTOR);
         calldata.writeAddress(from);
         calldata.writeAddress(from);
         calldata.writeU256(amount);
@@ -370,8 +379,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         deadline: u64,
         signature: Uint8Array,
     ): void {
-        const typeHash = sha256(this.stringToBytes('OP20AllowanceIncrease(address owner,address spender,uint256 amount,uint256 nonce,uint64 deadline)'))
-        this._verifySignature(typeHash, owner, spender, amount, deadline, signature);
+        this._verifySignature(ALLOWANCE_INCREASE_TYPE_HASH, owner, spender, amount, deadline, signature);
         this._increaseAllowance(owner, spender, amount);
     }
 
@@ -382,12 +390,11 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         deadline: u64,
         signature: Uint8Array,
     ): void {
-        const typeHash = sha256(this.stringToBytes('OP20AllowanceDecrease(address owner,address spender,uint256 amount,uint256 nonce,uint64 deadline)'));
-        this._verifySignature(typeHash, owner, spender, amount, deadline, signature);
+        this._verifySignature(ALLOWANCE_DECREASE_TYPE_HASH, owner, spender, amount, deadline, signature);
         this._decreaseAllowance(owner, spender, amount);
     }
 
-    protected _verifySignature(typeHash: Uint8Array, owner: Address, spender: Address, amount: u256, deadline: u64, signature: Uint8Array) {
+    protected _verifySignature(typeHash: u8[], owner: Address, spender: Address, amount: u256, deadline: u64, signature: Uint8Array) {
         if (Blockchain.block.number > deadline) {
             throw new Revert('Signature expired');
         }
@@ -397,7 +404,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         const structWriter = new BytesWriter(
             32 + ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH + U256_BYTE_LENGTH + U64_BYTE_LENGTH,
         );
-        structWriter.writeBytes(typeHash);
+        structWriter.writeBytesU8Array(typeHash);
         structWriter.writeAddress(owner);
         structWriter.writeAddress(spender);
         structWriter.writeU256(amount);
@@ -422,7 +429,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
 
     protected _buildDomainSeparator(): Uint8Array {
         const writer = new BytesWriter(32 * 5);
-        writer.writeBytes(sha256(this.stringToBytes('OP712Domain(string name,string version,uint64 chainId,address verifyingContract)')));
+        writer.writeBytesU8Array(DOMAIN_TYPE_HASH);
         writer.writeBytes(sha256(this.stringToBytes(this.name)));
         writer.writeBytes(sha256(this.stringToBytes('1')));
         writer.writeBytesU8Array(
