@@ -330,12 +330,14 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         const ownerMap = this.allowanceMap.get(owner);
         const allowed: u256 = ownerMap.get(spender);
 
-        if (allowed < amount) {
-            throw new Revert('Insufficient allowance');
-        }
+        if (allowed < u256.Max) {
+            if (allowed < amount) {
+                throw new Revert('Insufficient allowance');
+            }
 
-        ownerMap.set(spender, SafeMath.sub(allowed, amount));
-        this.allowanceMap.set(owner, ownerMap);
+            ownerMap.set(spender, SafeMath.sub(allowed, amount));
+            this.allowanceMap.set(owner, ownerMap);
+        }
     }
 
     @unsafe
