@@ -18,6 +18,7 @@ import { IOP_20 } from './interfaces/IOP_20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
 
+// onOP20Received(address,address,uint256,bytes)
 const ON_OP_20_RECEIVED_SELECTOR: u32 = 0xd83e7dbc;
 
 // sha256("OP712Domain(string name,string version,uint64 chainId,address verifyingContract)")
@@ -371,7 +372,14 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         calldata.writeAddress(from);
         calldata.writeU256(amount);
         calldata.writeBytes(data);
-        Blockchain.call(operator, calldata);
+
+        const response = Blockchain.call(operator, calldata);
+
+        const retval = response.readU32();
+
+        if (retval !== ON_OP_20_RECEIVED_SELECTOR) {
+            throw new Revert('Invalid response from recipient');
+        }
     }
 
     protected _increaseAllowanceBySignature(
