@@ -21,7 +21,7 @@ import { OP_NET } from './OP_NET';
 // onOP20Received(address,address,uint256,bytes)
 const ON_OP_20_RECEIVED_SELECTOR: u32 = 0xd83e7dbc;
 
-// sha256("OP712Domain(string name,string version,bytes32 chainId,uint256 protocolId,address verifyingContract)")
+// sha256("OP712Domain(string name,string version,bytes32 chainId,bytes32 protocolId,address verifyingContract)")
 const DOMAIN_TYPE_HASH: number[] = [0x6e, 0xb8, 0xa8, 0xf7, 0xcf, 0xee, 0x36, 0x33, 0xbe, 0xab, 0xa1, 0x1e, 0x3f, 0x40, 0x05, 0x71, 0x8f, 0xf5, 0x7a, 0x1e, 0xa4, 0x52, 0xf7, 0xb5, 0x28, 0x47, 0x4c, 0x54, 0x59, 0x2e, 0xce, 0xf8];
 
 // sha256("OP20AllowanceIncrease(address owner,address spender,uint256 amount,uint256 nonce,uint64 deadline)")
@@ -442,11 +442,8 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         writer.writeBytesU8Array(DOMAIN_TYPE_HASH);
         writer.writeBytes(sha256(this.stringToBytes(this.name)));
         writer.writeBytes(sha256(this.stringToBytes('1')));
-        writer.writeBytesU8Array( // TODO: get chain ID from environment
-            // Bitcoin mainnet chain ID
-            [0x00, 0x00, 0x00, 0x00, 0x00, 0x19, 0xd6, 0x68, 0x9c, 0x08, 0x5a, 0xe1, 0x65, 0x83, 0x1e, 0x93, 0x4f, 0xf7, 0x63, 0xae, 0x46, 0xa2, 0xa6, 0xc1, 0x72, 0xb3, 0xf1, 0xb6, 0x0a, 0x8c, 0xe2, 0x6f],
-        );
-        writer.writeU256(u256.One); // TODO: get protocol ID from environment
+        writer.writeBytes(Blockchain.chainId);
+        writer.writeBytes(Blockchain.protocolId);
         writer.writeAddress(this.address);
 
         return sha256(writer.getBuffer());
