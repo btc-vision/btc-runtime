@@ -438,10 +438,10 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _buildDomainSeparator(): Uint8Array {
-        const writer = new BytesWriter(32 * 5);
+        const writer = new BytesWriter(32 * 5 + ADDRESS_BYTE_LENGTH);
         writer.writeBytesU8Array(DOMAIN_TYPE_HASH);
-        writer.writeBytes(sha256(this.stringToBytes(this.name)));
-        writer.writeBytes(sha256(this.stringToBytes('1')));
+        writer.writeBytes(sha256(this.name));
+        writer.writeBytes(sha256('1'));
         writer.writeBytes(Blockchain.chainId);
         writer.writeBytes(Blockchain.protocolId);
         writer.writeAddress(this.address);
@@ -511,11 +511,6 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         this._totalSupply -= amount;
 
         this.createBurnEvent(amount);
-    }
-
-    protected stringToBytes(str: string): Uint8Array {
-        const bytes = String.UTF8.encode(str);
-        return Uint8Array.wrap(bytes);
     }
 
     protected createBurnEvent(amount: u256): void {
