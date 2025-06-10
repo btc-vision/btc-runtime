@@ -147,6 +147,14 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         return w;
     }
 
+    @method()
+    @returns({ name: 'domainSeparator', type: ABIDataTypes.BYTES32 })
+    public domainSeparator(_: Calldata): BytesWriter {
+        const w = new BytesWriter(32);
+        w.writeBytes(this._buildDomainSeparator());
+        return w;
+    }
+
     @method({ name: 'owner', type: ABIDataTypes.ADDRESS })
     @returns({ name: 'balance', type: ABIDataTypes.UINT256 })
     public balanceOf(calldata: Calldata): BytesWriter {
