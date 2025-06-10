@@ -108,6 +108,26 @@ export class BlockchainEnvironment {
         return this._contractAddress as Address;
     }
 
+    public _chainId: Potential<Uint8Array> = null;
+
+    public get chainId(): Uint8Array {
+        if (!this._chainId) {
+            throw new Revert('Chain id is required');
+        }
+
+        return this._chainId as Uint8Array;
+    }
+
+    public _protocolId: Potential<Uint8Array> = null;
+
+    public get protocolId(): Uint8Array {
+        if (!this._protocolId) {
+            throw new Revert('Protocol id is required');
+        }
+
+        return this._protocolId as Uint8Array;
+    }
+
     public registerPlugin(plugin: Plugin): void {
         this._plugins.push(plugin);
     }
@@ -154,11 +174,15 @@ export class BlockchainEnvironment {
         const contractDeployer = reader.readAddress();
         const caller = reader.readAddress();
         const origin = reader.readAddress();
+        const chainId = reader.readBytes(32);
+        const protocolId = reader.readBytes(32);
 
         this._tx = new Transaction(caller, origin, txId, txHash);
 
         this._contractDeployer = contractDeployer;
         this._contractAddress = contractAddress;
+        this._chainId = chainId;
+        this._protocolId = protocolId;
 
         this._block = new Block(blockHash, blockNumber, blockMedianTime);
 
@@ -191,7 +215,7 @@ export class BlockchainEnvironment {
     }
 
     public log(data: string): void {
-        const writer = new BytesWriter(data.length + 2);
+        const writer = new BytesWriter(String.UTF8.byteLength(data));
         writer.writeString(data);
 
         const buffer = writer.getBuffer();
@@ -200,7 +224,7 @@ export class BlockchainEnvironment {
 
     public emit(event: NetEvent): void {
         const data = event.getEventData();
-        const writer = new BytesWriter(event.eventType.length + 8 + data.byteLength);
+        const writer = new BytesWriter(String.UTF8.byteLength(event.eventType) + 8 + data.byteLength);
 
         writer.writeStringWithLength(event.eventType);
         writer.writeBytesWithLength(data);
@@ -209,7 +233,7 @@ export class BlockchainEnvironment {
     }
 
     public validateBitcoinAddress(address: string): bool {
-        const writer = new BytesWriter(address.length);
+        const writer = new BytesWriter(String.UTF8.byteLength(address));
         writer.writeString(address);
 
         const result = validateBitcoinAddress(writer.getBuffer().buffer, address.length);

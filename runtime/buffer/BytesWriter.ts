@@ -253,7 +253,6 @@ export class BytesWriter {
         }
     }
 
-    @inline
     public writeBytesU8Array(value: u8[]): void {
         this.allocSafe(value.length);
         for (let i = 0; i < value.length; i++) {
@@ -275,19 +274,19 @@ export class BytesWriter {
     }
 
     public writeString(value: string): void {
-        for (let i: i32 = 0; i < value.length; i++) {
-            this.writeU8(u8(value.charCodeAt(i)));
-        }
+        const bytes = String.UTF8.encode(value);
+        this.writeBytes(Uint8Array.wrap(bytes));
+    }
+
+    public writeStringWithLength(value: string): void {
+        const bytes = String.UTF8.encode(value);
+        this.writeU32(bytes.byteLength);
+        this.writeBytes(Uint8Array.wrap(bytes));
     }
 
     public writeAddress(value: Address): void {
         const bytes = this.fromAddress(value);
         this.writeBytes(bytes);
-    }
-
-    public writeStringWithLength(value: string): void {
-        this.writeU32(u32(value.length));
-        this.writeString(value);
     }
 
     /**
