@@ -321,11 +321,11 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         const toBal: u256 = this.balanceOfMap.get(to);
         this.balanceOfMap.set(to, SafeMath.add(toBal, amount));
 
-        this.createTransferEvent(sender, to, amount);
-
         if (Blockchain.isContract(to)) {
             this._callOnOP20Received(sender, sender, amount, data);
         }
+
+        this.createTransferEvent(sender, to, amount);
     }
 
     protected _transferFrom(from: Address, to: Address, amount: u256, data: Uint8Array): void {
@@ -365,12 +365,11 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             this.balanceOfMap.set(to, SafeMath.add(toBal, amount));
         }
 
-        this.createTransferEvent(from, to, amount);
-
         if (Blockchain.isContract(to)) {
-            const sender = Blockchain.tx.sender;
-            this._callOnOP20Received(sender, from, amount, data);
+            this._callOnOP20Received(Blockchain.tx.sender, from, amount, data);
         }
+
+        this.createTransferEvent(from, to, amount);
     }
 
     protected _callOnOP20Received(operator: Address, from: Address, amount: u256, data: Uint8Array) {
