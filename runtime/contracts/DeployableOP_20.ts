@@ -467,7 +467,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         }
         senderMap.set(spender, newAllowance);
 
-        this.createApproveEvent(owner, spender, amount);
+        this.createApproveEvent(owner, spender, newAllowance);
     }
 
     protected _decreaseAllowance(owner: Address, spender: Address, amount: u256): void {
@@ -482,7 +482,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         }
         senderMap.set(spender, newAllowance);
 
-        this.createApproveEvent(owner, spender, amount);
+        this.createApproveEvent(owner, spender, newAllowance);
     }
 
     protected _mint(to: Address, amount: u256, onlyDeployer: boolean = true): void {
