@@ -164,6 +164,15 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         return w;
     }
 
+    @method({ name: 'owner', type: ABIDataTypes.ADDRESS })
+    @returns({ name: 'nonce', type: ABIDataTypes.UINT256 })
+    public nonceOf(calldata: Calldata): BytesWriter {
+        const current = this._nonceMap.get(calldata.readAddress());
+        const w = new BytesWriter(U256_BYTE_LENGTH);
+        w.writeU256(current);
+        return w;
+    }
+
     @method(
         { name: 'owner', type: ABIDataTypes.ADDRESS },
         { name: 'spender', type: ABIDataTypes.ADDRESS },
@@ -173,15 +182,6 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         const w = new BytesWriter(U256_BYTE_LENGTH);
         const rem = this._allowance(calldata.readAddress(), calldata.readAddress());
         w.writeU256(rem);
-        return w;
-    }
-
-    @method({ name: 'owner', type: ABIDataTypes.ADDRESS })
-    @returns({ name: 'nonce', type: ABIDataTypes.UINT256 })
-    public nonceOf(calldata: Calldata): BytesWriter {
-        const current = this._nonceMap.get(calldata.readAddress());
-        const w = new BytesWriter(U256_BYTE_LENGTH);
-        w.writeU256(current);
         return w;
     }
 
