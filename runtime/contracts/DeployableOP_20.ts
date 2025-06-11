@@ -22,7 +22,7 @@ import { OP_NET } from './OP_NET';
 const ON_OP_20_RECEIVED_SELECTOR: u32 = 0xd83e7dbc;
 
 // sha256("OP712Domain(string name,string version,bytes32 chainId,bytes32 protocolId,address verifyingContract)")
-const DOMAIN_TYPE_HASH: number[] = [0xfe,0xe8,0x22,0x92,0x35,0x1d,0x1a,0x8b,0xab,0x21,0xc4,0xef,0xdd,0x15,0x7e,0x31,0x68,0xe8,0xf6,0x32,0x3a,0xd0,0x4c,0xba,0x12,0xf7,0x7c,0x0b,0xdc,0x46,0x22,0x58];
+const DOMAIN_TYPE_HASH: number[] = [0xfe, 0xe8, 0x22, 0x92, 0x35, 0x1d, 0x1a, 0x8b, 0xab, 0x21, 0xc4, 0xef, 0xdd, 0x15, 0x7e, 0x31, 0x68, 0xe8, 0xf6, 0x32, 0x3a, 0xd0, 0x4c, 0xba, 0x12, 0xf7, 0x7c, 0x0b, 0xdc, 0x46, 0x22, 0x58];
 
 // sha256("OP20AllowanceIncrease(address owner,address spender,uint256 amount,uint256 nonce,uint64 deadline)")
 const ALLOWANCE_INCREASE_TYPE_HASH: number[] = [0x7e, 0x88, 0x02, 0xf1, 0xfd, 0x23, 0xe1, 0x0e, 0x0d, 0xde, 0x3f, 0x00, 0xc0, 0xaa, 0x48, 0x15, 0xd8, 0x85, 0xec, 0xd9, 0xcd, 0xa0, 0xdf, 0x56, 0xff, 0xa2, 0x5e, 0xcc, 0x70, 0x2d, 0x45, 0x8e];
@@ -192,7 +192,12 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     )
     @emit('Transfer')
     public safeTransfer(calldata: Calldata): BytesWriter {
-        this._transfer(calldata.readAddress(), calldata.readU256(), calldata.readBytesWithLength());
+        this._transfer(
+            Blockchain.tx.sender,
+            calldata.readAddress(),
+            calldata.readU256(),
+            calldata.readBytesWithLength()
+        );
         return new BytesWriter(0);
     }
 
@@ -204,12 +209,15 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     )
     @emit('Transfer')
     public safeTransferFrom(calldata: Calldata): BytesWriter {
-        this._transferFrom(
-            calldata.readAddress(),
-            calldata.readAddress(),
-            calldata.readU256(),
-            calldata.readBytesWithLength(),
-        );
+        const from = calldata.readAddress();
+        const to = calldata.readAddress();
+        const amount = calldata.readU256();
+        const data = calldata.readBytesWithLength();
+        const spender = Blockchain.tx.sender;
+
+        this._spendAllowance(from, spender, amount);
+        this._transfer(from, to, amount, data);
+
         return new BytesWriter(0);
     }
 
@@ -308,31 +316,30 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         return senderMap.get(spender);
     }
 
-    protected _transfer(to: Address, amount: u256, data: Uint8Array): void {
-        const sender = Blockchain.tx.sender;
-        if (this.isSelf(sender)) throw new Revert('Cannot transfer from self');
-        if (u256.eq(amount, u256.Zero)) throw new Revert('Cannot transfer 0');
+    protected _transfer(from: Address, to: Address, amount: u256, data: Uint8Array): void {
+        if (from === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Invalid sender');
+        }
+        if (to === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Invalid receiver');
+        }
 
-        const balance: u256 = this.balanceOfMap.get(sender);
-        if (balance < amount) throw new Revert('Insufficient balance');
+        const balance: u256 = this.balanceOfMap.get(from);
 
-        this.balanceOfMap.set(sender, SafeMath.sub(balance, amount));
+        if (balance < amount) {
+            throw new Revert('Insufficient balance');
+        }
+
+        this.balanceOfMap.set(from, SafeMath.sub(balance, amount));
 
         const toBal: u256 = this.balanceOfMap.get(to);
         this.balanceOfMap.set(to, SafeMath.add(toBal, amount));
 
         if (Blockchain.isContract(to)) {
-            this._callOnOP20Received(sender, sender, amount, data);
+            this._callOnOP20Received(Blockchain.tx.sender, from, amount, data);
         }
 
-        this.createTransferEvent(sender, to, amount);
-    }
-
-    protected _transferFrom(from: Address, to: Address, amount: u256, data: Uint8Array): void {
-        if (from === Blockchain.DEAD_ADDRESS) throw new Revert('Cannot transfer from dead address');
-
-        this._spendAllowance(from, Blockchain.tx.sender, amount);
-        this._unsafeTransferFrom(from, to, amount, data);
+        this.createTransferEvent(from, to, amount);
     }
 
     protected _spendAllowance(owner: Address, spender: Address, amount: u256): void {
@@ -347,29 +354,6 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             ownerMap.set(spender, SafeMath.sub(allowed, amount));
             this.allowanceMap.set(owner, ownerMap);
         }
-    }
-
-    @unsafe
-    protected _unsafeTransferFrom(from: Address, to: Address, amount: u256, data: Uint8Array): void {
-        const balance: u256 = this.balanceOfMap.get(from);
-        if (balance < amount) {
-            throw new Revert(`TransferFrom insufficient balance`);
-        }
-
-        this.balanceOfMap.set(from, SafeMath.sub(balance, amount));
-
-        if (!this.balanceOfMap.has(to)) {
-            this.balanceOfMap.set(to, amount);
-        } else {
-            const toBal: u256 = this.balanceOfMap.get(to);
-            this.balanceOfMap.set(to, SafeMath.add(toBal, amount));
-        }
-
-        if (Blockchain.isContract(to)) {
-            this._callOnOP20Received(Blockchain.tx.sender, from, amount, data);
-        }
-
-        this.createTransferEvent(from, to, amount);
     }
 
     protected _callOnOP20Received(operator: Address, from: Address, amount: u256, data: Uint8Array) {
