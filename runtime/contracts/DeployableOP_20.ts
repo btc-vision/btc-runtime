@@ -13,7 +13,7 @@ import { EMPTY_POINTER } from '../math/bytes';
 import { AddressMemoryMap } from '../memory/AddressMemoryMap';
 import { MapOfMap } from '../memory/MapOfMap';
 import { Calldata } from '../types';
-import { ADDRESS_BYTE_LENGTH, U256_BYTE_LENGTH, U64_BYTE_LENGTH } from '../utils';
+import { ADDRESS_BYTE_LENGTH, SELECTOR_BYTE_LENGTH, U256_BYTE_LENGTH, U64_BYTE_LENGTH } from '../utils';
 import { IOP_20 } from './interfaces/IOP_20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
@@ -196,7 +196,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
             Blockchain.tx.sender,
             calldata.readAddress(),
             calldata.readU256(),
-            calldata.readBytesWithLength()
+            calldata.readBytesWithLength(),
         );
         return new BytesWriter(0);
     }
@@ -336,7 +336,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         this.balanceOfMap.set(to, SafeMath.add(toBal, amount));
 
         if (Blockchain.isContract(to)) {
-            this._callOnOP20Received(Blockchain.tx.sender, from, amount, data);
+            this._callOnOP20Received(from, to, amount, data);
         }
 
         this.createTransferEvent(from, to, amount);
@@ -356,20 +356,25 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         }
     }
 
-    protected _callOnOP20Received(operator: Address, from: Address, amount: u256, data: Uint8Array) {
+    protected _callOnOP20Received(from: Address, to: Address, amount: u256, data: Uint8Array) {
+        const operator = Blockchain.tx.sender;
         const calldata = new BytesWriter(data.length);
         calldata.writeSelector(ON_OP_20_RECEIVED_SELECTOR);
-        calldata.writeAddress(from);
+        calldata.writeAddress(operator);
         calldata.writeAddress(from);
         calldata.writeU256(amount);
         calldata.writeBytes(data);
 
-        const response = Blockchain.call(operator, calldata);
+        const response = Blockchain.call(to, calldata);
 
-        const retval = response.readU32();
+        if (response.byteLength < SELECTOR_BYTE_LENGTH) {
+            throw new Revert('Transfer rejected by recipient');
+        }
+
+        const retval = response.readSelector();
 
         if (retval !== ON_OP_20_RECEIVED_SELECTOR) {
-            throw new Revert('Invalid response from recipient');
+            throw new Revert('Transfer rejected by recipient');
         }
     }
 
@@ -403,7 +408,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         const nonce = this._nonceMap.get(owner);
 
         const structWriter = new BytesWriter(
-            32 + ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH + U256_BYTE_LENGTH + U64_BYTE_LENGTH,
+            32 + ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH * 2 + U64_BYTE_LENGTH,
         );
         structWriter.writeBytesU8Array(typeHash);
         structWriter.writeAddress(owner);
