@@ -13,10 +13,25 @@ import { EMPTY_POINTER } from '../math/bytes';
 import { AddressMemoryMap } from '../memory/AddressMemoryMap';
 import { MapOfMap } from '../memory/MapOfMap';
 import { Calldata } from '../types';
-import { ADDRESS_BYTE_LENGTH, BOOLEAN_BYTE_LENGTH, U256_BYTE_LENGTH } from '../utils';
+import { ADDRESS_BYTE_LENGTH, SELECTOR_BYTE_LENGTH, U256_BYTE_LENGTH, U64_BYTE_LENGTH } from '../utils';
 import { IOP_20 } from './interfaces/IOP_20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
+
+// onOP20Received(address,address,uint256,bytes)
+const ON_OP_20_RECEIVED_SELECTOR: u32 = 0xd83e7dbc;
+
+// sha256("OP712Domain(string name,string version,bytes32 chainId,bytes32 protocolId,address verifyingContract)")
+const OP712_DOMAIN_TYPE_HASH: number[] = [0xfe, 0xe8, 0x22, 0x92, 0x35, 0x1d, 0x1a, 0x8b, 0xab, 0x21, 0xc4, 0xef, 0xdd, 0x15, 0x7e, 0x31, 0x68, 0xe8, 0xf6, 0x32, 0x3a, 0xd0, 0x4c, 0xba, 0x12, 0xf7, 0x7c, 0x0b, 0xdc, 0x46, 0x22, 0x58];
+
+// sha256("1")
+const OP712_VERSION_HASH = [0x6b, 0x86, 0xb2, 0x73, 0xff, 0x34, 0xfc, 0xe1, 0x9d, 0x6b, 0x80, 0x4e, 0xff, 0x5a, 0x3f, 0x57, 0x47, 0xad, 0xa4, 0xea, 0xa2, 0x2f, 0x1d, 0x49, 0xc0, 0x1e, 0x52, 0xdd, 0xb7, 0x87, 0x5b, 0x4b];
+
+// sha256("OP20AllowanceIncrease(address owner,address spender,uint256 amount,uint256 nonce,uint64 deadline)")
+const ALLOWANCE_INCREASE_TYPE_HASH: number[] = [0x7e, 0x88, 0x02, 0xf1, 0xfd, 0x23, 0xe1, 0x0e, 0x0d, 0xde, 0x3f, 0x00, 0xc0, 0xaa, 0x48, 0x15, 0xd8, 0x85, 0xec, 0xd9, 0xcd, 0xa0, 0xdf, 0x56, 0xff, 0xa2, 0x5e, 0xcc, 0x70, 0x2d, 0x45, 0x8e];
+
+// sha256("OP20AllowanceDecrease(address owner,address spender,uint256 amount,uint256 nonce,uint64 deadline)")
+const ALLOWANCE_DECREASE_TYPE_HASH: number[] = [0x70, 0x87, 0x99, 0x34, 0x92, 0x1c, 0x2f, 0x48, 0x17, 0x78, 0x87, 0x89, 0x77, 0xd5, 0xb4, 0x5e, 0x2a, 0x59, 0xda, 0x1d, 0x28, 0x22, 0x41, 0xc9, 0x3f, 0xf1, 0xba, 0x6a, 0xf0, 0x98, 0xfc, 0xd0];
 
 const nonceMapPointer: u16 = Blockchain.nextPointer;
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
@@ -24,6 +39,7 @@ const decimalsPointer: u16 = Blockchain.nextPointer;
 const stringPointer: u16 = Blockchain.nextPointer;
 const totalSupplyPointer: u16 = Blockchain.nextPointer;
 const allowanceMapPointer: u16 = Blockchain.nextPointer;
+
 const balanceOfMapPointer: u16 = Blockchain.nextPointer;
 
 export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
@@ -35,6 +51,9 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     protected readonly _name: StoredString;
     protected readonly _symbol: StoredString;
     protected readonly _nonceMap: AddressMemoryMap;
+
+    /** Intentionally public for inherited classes */
+    public _totalSupply: StoredU256;
 
     public constructor(params: OP20InitParameters | null = null) {
         super();
@@ -54,23 +73,6 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         }
     }
 
-    /** Intentionally public for inherited classes */
-    public _totalSupply: StoredU256;
-
-    public get totalSupply(): u256 {
-        return this._totalSupply.value;
-    }
-
-    public get maxSupply(): u256 {
-        if (!this._maxSupply) throw new Revert('Max supply not set');
-        return this._maxSupply.value;
-    }
-
-    public get decimals(): u8 {
-        if (!this._decimals) throw new Revert('Decimals not set');
-        return u8(this._decimals.value.toU32());
-    }
-
     public get name(): string {
         if (!this._name) throw new Revert('Name not set');
         return this._name.value;
@@ -79,6 +81,20 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     public get symbol(): string {
         if (!this._symbol) throw new Revert('Symbol not set');
         return this._symbol.value;
+    }
+
+    public get decimals(): u8 {
+        if (!this._decimals) throw new Revert('Decimals not set');
+        return u8(this._decimals.value.toU32());
+    }
+
+    public get totalSupply(): u256 {
+        return this._totalSupply.value;
+    }
+
+    public get maxSupply(): u256 {
+        if (!this._maxSupply) throw new Revert('Max supply not set');
+        return this._maxSupply.value;
     }
 
     public instantiate(
@@ -95,14 +111,6 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         this._symbol.value = params.symbol;
     }
 
-    @method('decimals')
-    @returns({ name: 'decimals', type: ABIDataTypes.UINT8 })
-    public fn_decimals(_: Calldata): BytesWriter {
-        const w = new BytesWriter(1);
-        w.writeU8(this.decimals);
-        return w;
-    }
-
     @method('name')
     @returns({ name: 'name', type: ABIDataTypes.STRING })
     public fn_name(_: Calldata): BytesWriter {
@@ -116,6 +124,14 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     public fn_symbol(_: Calldata): BytesWriter {
         const w = new BytesWriter(String.UTF8.byteLength(this.symbol) + 4);
         w.writeStringWithLength(this.symbol);
+        return w;
+    }
+
+    @method('decimals')
+    @returns({ name: 'decimals', type: ABIDataTypes.UINT8 })
+    public fn_decimals(_: Calldata): BytesWriter {
+        const w = new BytesWriter(1);
+        w.writeU8(this.decimals);
         return w;
     }
 
@@ -135,6 +151,32 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         return w;
     }
 
+    @method()
+    @returns({ name: 'domainSeparator', type: ABIDataTypes.BYTES32 })
+    public domainSeparator(_: Calldata): BytesWriter {
+        const w = new BytesWriter(32);
+        w.writeBytes(this._buildDomainSeparator());
+        return w;
+    }
+
+    @method({ name: 'owner', type: ABIDataTypes.ADDRESS })
+    @returns({ name: 'balance', type: ABIDataTypes.UINT256 })
+    public balanceOf(calldata: Calldata): BytesWriter {
+        const bal = this._balanceOf(calldata.readAddress());
+        const w = new BytesWriter(U256_BYTE_LENGTH);
+        w.writeU256(bal);
+        return w;
+    }
+
+    @method({ name: 'owner', type: ABIDataTypes.ADDRESS })
+    @returns({ name: 'nonce', type: ABIDataTypes.UINT256 })
+    public nonceOf(calldata: Calldata): BytesWriter {
+        const current = this._nonceMap.get(calldata.readAddress());
+        const w = new BytesWriter(U256_BYTE_LENGTH);
+        w.writeU256(current);
+        return w;
+    }
+
     @method(
         { name: 'owner', type: ABIDataTypes.ADDRESS },
         { name: 'spender', type: ABIDataTypes.ADDRESS },
@@ -148,153 +190,110 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     @method(
-        { name: 'spender', type: ABIDataTypes.ADDRESS },
-        { name: 'amount', type: ABIDataTypes.UINT256 },
-    )
-    @returns({ name: 'success', type: ABIDataTypes.BOOL })
-    @emit('Approve')
-    public approve(calldata: Calldata): BytesWriter {
-        const ok = this._approve(Blockchain.tx.sender, calldata.readAddress(), calldata.readU256());
-        const w = new BytesWriter(BOOLEAN_BYTE_LENGTH);
-        w.writeBoolean(ok);
-        return w;
-    }
-
-    @method(
-        { name: 'spender', type: ABIDataTypes.ADDRESS },
-        { name: 'amount', type: ABIDataTypes.UINT256 },
-        { name: 'nonce', type: ABIDataTypes.UINT256 },
-        { name: 'sig', type: ABIDataTypes.BYTES },
-    )
-    @returns({ name: 'success', type: ABIDataTypes.BOOL })
-    @emit('Approve')
-    public approveFrom(calldata: Calldata): BytesWriter {
-        if (Blockchain.tx.origin == Blockchain.tx.sender) {
-            throw new Revert('Direct owner approval – use approve()');
-        }
-
-        const owner: Address = Blockchain.tx.origin;
-        const spender: Address = calldata.readAddress();
-        const value: u256 = calldata.readU256();
-        const nonce: u256 = calldata.readU256();
-        const sig = calldata.readBytesWithLength();
-        if (sig.length !== 64) throw new Revert('Invalid signature length');
-
-        const ok = this._approveFrom(owner, spender, value, nonce, sig);
-        const w = new BytesWriter(BOOLEAN_BYTE_LENGTH);
-        w.writeBoolean(ok);
-        return w;
-    }
-
-    @method({ name: 'owner', type: ABIDataTypes.ADDRESS })
-    @returns({ name: 'nonce', type: ABIDataTypes.UINT256 })
-    public nonceOf(calldata: Calldata): BytesWriter {
-        const current = this._nonceMap.get(calldata.readAddress());
-        const w = new BytesWriter(U256_BYTE_LENGTH);
-        w.writeU256(current);
-        return w;
-    }
-
-    @method({ name: 'owner', type: ABIDataTypes.ADDRESS })
-    @returns({ name: 'balance', type: ABIDataTypes.UINT256 })
-    public balanceOf(calldata: Calldata): BytesWriter {
-        const bal = this._balanceOf(calldata.readAddress());
-        const w = new BytesWriter(U256_BYTE_LENGTH);
-        w.writeU256(bal);
-        return w;
-    }
-
-    @method({ name: 'amount', type: ABIDataTypes.UINT256 })
-    @returns({ name: 'success', type: ABIDataTypes.BOOL })
-    @emit('Burn')
-    public burn(calldata: Calldata): BytesWriter {
-        const ok = this._burn(calldata.readU256());
-        const w = new BytesWriter(BOOLEAN_BYTE_LENGTH);
-        w.writeBoolean(ok);
-        return w;
-    }
-
-    @method(
         { name: 'to', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
+        { name: 'data', type: ABIDataTypes.BYTES },
     )
-    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('Transfer')
-    public transfer(calldata: Calldata): BytesWriter {
-        const ok = this._transfer(calldata.readAddress(), calldata.readU256());
-        const w = new BytesWriter(BOOLEAN_BYTE_LENGTH);
-        w.writeBoolean(ok);
-        return w;
+    public safeTransfer(calldata: Calldata): BytesWriter {
+        this._transfer(
+            Blockchain.tx.sender,
+            calldata.readAddress(),
+            calldata.readU256(),
+            calldata.readBytesWithLength(),
+        );
+        return new BytesWriter(0);
     }
 
     @method(
         { name: 'from', type: ABIDataTypes.ADDRESS },
         { name: 'to', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
+        { name: 'data', type: ABIDataTypes.BYTES },
     )
-    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('Transfer')
-    public transferFrom(calldata: Calldata): BytesWriter {
-        const ok = this._transferFrom(
-            calldata.readAddress(),
-            calldata.readAddress(),
-            calldata.readU256(),
-        );
-        const w = new BytesWriter(BOOLEAN_BYTE_LENGTH);
-        w.writeBoolean(ok);
-        return w;
+    public safeTransferFrom(calldata: Calldata): BytesWriter {
+        const from = calldata.readAddress();
+        const to = calldata.readAddress();
+        const amount = calldata.readU256();
+        const data = calldata.readBytesWithLength();
+        const spender = Blockchain.tx.sender;
+
+        this._spendAllowance(from, spender, amount);
+        this._transfer(from, to, amount, data);
+
+        return new BytesWriter(0);
     }
 
-    protected _allowance(owner: Address, spender: Address): u256 {
-        const senderMap = this.allowanceMap.get(owner);
-        return senderMap.get(spender);
+    @method(
+        { name: 'spender', type: ABIDataTypes.ADDRESS },
+        { name: 'amount', type: ABIDataTypes.UINT256 },
+    )
+    @emit('Approve')
+    public increaseAllowance(calldata: Calldata): BytesWriter {
+        const owner: Address = Blockchain.tx.sender;
+        const spender: Address = calldata.readAddress();
+        const amount: u256 = calldata.readU256();
+
+        this._increaseAllowance(owner, spender, amount);
+        return new BytesWriter(0);
     }
 
-    protected _approveFrom(
-        owner: Address,
-        spender: Address,
-        value: u256,
-        nonce: u256,
-        signature: Uint8Array,
-    ): boolean {
-        if (owner === Blockchain.DEAD_ADDRESS) throw new Revert('Address can not be dead');
-        if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
+    @method(
+        { name: 'spender', type: ABIDataTypes.ADDRESS },
+        { name: 'amount', type: ABIDataTypes.UINT256 },
+    )
+    @emit('Approve')
+    public decreaseAllowance(calldata: Calldata): BytesWriter {
+        const owner: Address = Blockchain.tx.sender;
+        const spender: Address = calldata.readAddress();
+        const amount: u256 = calldata.readU256();
 
-        const storedNonce = this._nonceMap.get(owner);
-        if (!u256.eq(storedNonce, nonce)) throw new Revert('Invalid nonce');
-
-        const writer = new BytesWriter(
-            ADDRESS_BYTE_LENGTH * 3 + U256_BYTE_LENGTH + U256_BYTE_LENGTH,
-        );
-        writer.writeAddress(owner);
-        writer.writeAddress(spender);
-        writer.writeU256(value);
-        writer.writeU256(nonce);
-        writer.writeAddress(this.address);
-
-        const hash = sha256(writer.getBuffer());
-        if (!Blockchain.verifySchnorrSignature(owner, signature, hash)) {
-            throw new Revert('Invalid signature');
-        }
-
-        this._nonceMap.set(owner, SafeMath.add(storedNonce, u256.One));
-
-        const senderMap = this.allowanceMap.get(owner);
-        senderMap.set(spender, value);
-
-        this.createApproveEvent(owner, spender, value);
-        return true;
+        this._decreaseAllowance(owner, spender, amount);
+        return new BytesWriter(0);
     }
 
-    protected _approve(owner: Address, spender: Address, value: u256): boolean {
-        if (owner === Blockchain.DEAD_ADDRESS) throw new Revert('Address can not be dead');
-        if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
+    @method(
+        { name: 'spender', type: ABIDataTypes.ADDRESS },
+        { name: 'amount', type: ABIDataTypes.UINT256 },
+        { name: 'deadline', type: ABIDataTypes.UINT64 },
+        { name: 'signature', type: ABIDataTypes.BYTES },
+    )
+    @emit('Approve')
+    public increaseAllowanceBySignature(calldata: Calldata): BytesWriter {
+        const owner: Address = Blockchain.tx.origin;
+        const spender: Address = calldata.readAddress();
+        const amount: u256 = calldata.readU256();
+        const deadline: u64 = calldata.readU64();
+        const signature = calldata.readBytesWithLength();
 
-        const senderMap = this.allowanceMap.get(owner);
-        senderMap.set(spender, value);
+        this._increaseAllowanceBySignature(owner, spender, amount, deadline, signature);
+        return new BytesWriter(0);
+    }
 
-        this.createApproveEvent(owner, spender, value);
-        return true;
+    @method(
+        { name: 'spender', type: ABIDataTypes.ADDRESS },
+        { name: 'amount', type: ABIDataTypes.UINT256 },
+        { name: 'deadline', type: ABIDataTypes.UINT64 },
+        { name: 'signature', type: ABIDataTypes.BYTES },
+    )
+    @emit('Approve')
+    public decreaseAllowanceBySignature(calldata: Calldata): BytesWriter {
+        const owner: Address = Blockchain.tx.origin;
+        const spender: Address = calldata.readAddress();
+        const amount: u256 = calldata.readU256();
+        const deadline: u64 = calldata.readU64();
+        const signature = calldata.readBytesWithLength();
+
+        this._decreaseAllowanceBySignature(owner, spender, amount, deadline, signature);
+        return new BytesWriter(0);
+    }
+
+    @method({ name: 'amount', type: ABIDataTypes.UINT256 })
+    @emit('Burn')
+    public burn(calldata: Calldata): BytesWriter {
+        this._burn(Blockchain.tx.sender, calldata.readU256());
+        return new BytesWriter(0);
     }
 
     protected _balanceOf(owner: Address): u256 {
@@ -302,114 +301,231 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         return this.balanceOfMap.get(owner);
     }
 
-    protected _burn(value: u256, onlyDeployer: boolean = true): boolean {
-        if (u256.eq(value, u256.Zero)) throw new Revert('No tokens');
-
-        if (onlyDeployer) this.onlyDeployer(Blockchain.tx.sender);
-        if (this._totalSupply.value < value) throw new Revert('Insufficient supply');
-        if (!this.balanceOfMap.has(Blockchain.tx.sender)) throw new Revert('No balance');
-
-        const balance: u256 = this.balanceOfMap.get(Blockchain.tx.sender);
-        if (balance < value) throw new Revert('Insufficient balance');
-
-        const newBalance: u256 = SafeMath.sub(balance, value);
-        this.balanceOfMap.set(Blockchain.tx.sender, newBalance);
-
-        // @ts-expect-error AssemblyScript valid
-        this._totalSupply -= value;
-
-        this.createBurnEvent(value);
-        return true;
+    protected _allowance(owner: Address, spender: Address): u256 {
+        const senderMap = this.allowanceMap.get(owner);
+        return senderMap.get(spender);
     }
 
-    protected _mint(to: Address, value: u256, onlyDeployer: boolean = true): boolean {
-        if (onlyDeployer) this.onlyDeployer(Blockchain.tx.sender);
-
-        if (!this.balanceOfMap.has(to)) {
-            this.balanceOfMap.set(to, value);
-        } else {
-            const toBal: u256 = this.balanceOfMap.get(to);
-            this.balanceOfMap.set(to, SafeMath.add(toBal, value));
+    protected _transfer(from: Address, to: Address, amount: u256, data: Uint8Array): void {
+        if (from === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Invalid sender');
+        }
+        if (to === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Invalid receiver');
         }
 
-        // @ts-expect-error AssemblyScript valid
-        this._totalSupply += value;
+        const balance: u256 = this.balanceOfMap.get(from);
 
-        if (this._totalSupply.value > this.maxSupply) throw new Revert('Max supply reached');
-        this.createMintEvent(to, value);
-        return true;
-    }
+        if (balance < amount) {
+            throw new Revert('Insufficient balance');
+        }
 
-    protected _transfer(to: Address, value: u256): boolean {
-        const sender = Blockchain.tx.sender;
-        if (this.isSelf(sender)) throw new Revert('Cannot transfer from self');
-        if (u256.eq(value, u256.Zero)) throw new Revert('Cannot transfer 0');
-
-        const balance: u256 = this.balanceOfMap.get(sender);
-        if (balance < value) throw new Revert('Insufficient balance');
-
-        this.balanceOfMap.set(sender, SafeMath.sub(balance, value));
+        this.balanceOfMap.set(from, SafeMath.sub(balance, amount));
 
         const toBal: u256 = this.balanceOfMap.get(to);
-        this.balanceOfMap.set(to, SafeMath.add(toBal, value));
+        this.balanceOfMap.set(to, SafeMath.add(toBal, amount));
 
-        this.createTransferEvent(sender, to, value);
-        return true;
-    }
-
-    @unsafe
-    protected _unsafeTransferFrom(from: Address, to: Address, value: u256): boolean {
-        const balance: u256 = this.balanceOfMap.get(from);
-        if (balance < value) {
-            throw new Revert(`TransferFrom insufficient balance`);
+        if (Blockchain.isContract(to)) {
+            this._callOnOP20Received(from, to, amount, data);
         }
 
-        this.balanceOfMap.set(from, SafeMath.sub(balance, value));
-
-        if (!this.balanceOfMap.has(to)) {
-            this.balanceOfMap.set(to, value);
-        } else {
-            const toBal: u256 = this.balanceOfMap.get(to);
-            this.balanceOfMap.set(to, SafeMath.add(toBal, value));
-        }
-
-        this.createTransferEvent(from, to, value);
-        return true;
+        this.createTransferEvent(from, to, amount);
     }
 
-    protected _transferFrom(from: Address, to: Address, value: u256): boolean {
-        if (from === Blockchain.DEAD_ADDRESS) throw new Revert('Cannot transfer from dead address');
-
-        this._spendAllowance(from, Blockchain.tx.sender, value);
-        this._unsafeTransferFrom(from, to, value);
-        return true;
-    }
-
-    protected _spendAllowance(owner: Address, spender: Address, value: u256): void {
+    protected _spendAllowance(owner: Address, spender: Address, amount: u256): void {
         const ownerMap = this.allowanceMap.get(owner);
         const allowed: u256 = ownerMap.get(spender);
 
-        if (allowed < value) {
-            throw new Revert('Insufficient allowance');
+        if (allowed < u256.Max) {
+            if (allowed < amount) {
+                throw new Revert('Insufficient allowance');
+            }
+
+            ownerMap.set(spender, SafeMath.sub(allowed, amount));
+            this.allowanceMap.set(owner, ownerMap);
+        }
+    }
+
+    protected _callOnOP20Received(from: Address, to: Address, amount: u256, data: Uint8Array) {
+        const operator = Blockchain.tx.sender;
+        const calldata = new BytesWriter(data.length);
+        calldata.writeSelector(ON_OP_20_RECEIVED_SELECTOR);
+        calldata.writeAddress(operator);
+        calldata.writeAddress(from);
+        calldata.writeU256(amount);
+        calldata.writeBytes(data);
+
+        const response = Blockchain.call(to, calldata);
+
+        if (response.byteLength < SELECTOR_BYTE_LENGTH) {
+            throw new Revert('Transfer rejected by recipient');
         }
 
-        ownerMap.set(spender, SafeMath.sub(allowed, value));
-        this.allowanceMap.set(owner, ownerMap);
+        const retval = response.readSelector();
+
+        if (retval !== ON_OP_20_RECEIVED_SELECTOR) {
+            throw new Revert('Transfer rejected by recipient');
+        }
     }
 
-    protected createBurnEvent(value: u256): void {
-        this.emitEvent(new BurnEvent(value));
+    protected _increaseAllowanceBySignature(
+        owner: Address,
+        spender: Address,
+        amount: u256,
+        deadline: u64,
+        signature: Uint8Array,
+    ): void {
+        this._verifySignature(ALLOWANCE_INCREASE_TYPE_HASH, owner, spender, amount, deadline, signature);
+        this._increaseAllowance(owner, spender, amount);
     }
 
-    protected createApproveEvent(owner: Address, spender: Address, value: u256): void {
-        this.emitEvent(new ApproveEvent(owner, spender, value));
+    protected _decreaseAllowanceBySignature(
+        owner: Address,
+        spender: Address,
+        amount: u256,
+        deadline: u64,
+        signature: Uint8Array,
+    ): void {
+        this._verifySignature(ALLOWANCE_DECREASE_TYPE_HASH, owner, spender, amount, deadline, signature);
+        this._decreaseAllowance(owner, spender, amount);
     }
 
-    protected createMintEvent(recipient: Address, value: u256): void {
-        this.emitEvent(new MintEvent(recipient, value));
+    protected _verifySignature(typeHash: u8[], owner: Address, spender: Address, amount: u256, deadline: u64, signature: Uint8Array) {
+        if (signature.length !== 64) {
+            throw new Revert('Invalid signature length');
+        }
+        if (Blockchain.block.number > deadline) {
+            throw new Revert('Signature expired');
+        }
+
+        const nonce = this._nonceMap.get(owner);
+
+        const structWriter = new BytesWriter(
+            32 + ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH * 2 + U64_BYTE_LENGTH,
+        );
+        structWriter.writeBytesU8Array(typeHash);
+        structWriter.writeAddress(owner);
+        structWriter.writeAddress(spender);
+        structWriter.writeU256(amount);
+        structWriter.writeU256(nonce);
+        structWriter.writeU64(deadline);
+
+        const structHash = sha256(structWriter.getBuffer());
+
+        const messageWriter = new BytesWriter(2 + 32 + 32);
+        messageWriter.writeU16(0x1901);
+        messageWriter.writeBytes(this._buildDomainSeparator());
+        messageWriter.writeBytes(structHash);
+
+        const hash = sha256(messageWriter.getBuffer());
+
+        if (!Blockchain.verifySchnorrSignature(owner, signature, hash)) {
+            throw new Revert('Invalid signature');
+        }
+
+        this._nonceMap.set(owner, SafeMath.add(nonce, u256.One));
     }
 
-    protected createTransferEvent(from: Address, to: Address, value: u256): void {
-        this.emitEvent(new TransferEvent(from, to, value));
+    protected _buildDomainSeparator(): Uint8Array {
+        const writer = new BytesWriter(32 * 5 + ADDRESS_BYTE_LENGTH);
+        writer.writeBytesU8Array(OP712_DOMAIN_TYPE_HASH);
+        writer.writeBytes(sha256(this.name));
+        writer.writeBytesU8Array(OP712_VERSION_HASH);
+        writer.writeBytes(Blockchain.chainId);
+        writer.writeBytes(Blockchain.protocolId);
+        writer.writeAddress(this.address);
+
+        return sha256(writer.getBuffer());
+    }
+
+    protected _increaseAllowance(owner: Address, spender: Address, amount: u256): void {
+        if (owner === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Invalid approver');
+        }
+        if (spender === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Invalid spender');
+        }
+
+        const senderMap = this.allowanceMap.get(owner);
+        const previousAllowance = senderMap.get(spender);
+        let newAllowance: u256 = u256.add(previousAllowance, amount);
+        // If it overflows, set to max
+        if (newAllowance < previousAllowance) {
+            newAllowance = u256.Max;
+        }
+        senderMap.set(spender, newAllowance);
+
+        this.createApproveEvent(owner, spender, newAllowance);
+    }
+
+    protected _decreaseAllowance(owner: Address, spender: Address, amount: u256): void {
+        if (owner === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Invalid approver');
+        }
+        if (spender === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Invalid spender');
+        }
+
+        const senderMap = this.allowanceMap.get(owner);
+        const previousAllowance = senderMap.get(spender);
+        let newAllowance: u256;
+        // If it underflows, set to zero
+        if (amount > previousAllowance) {
+            newAllowance = u256.Zero;
+        } else {
+            newAllowance = SafeMath.sub(previousAllowance, amount);
+        }
+        senderMap.set(spender, newAllowance);
+
+        this.createApproveEvent(owner, spender, newAllowance);
+    }
+
+    protected _mint(to: Address, amount: u256): void {
+        if (to === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Invalid receiver');
+        }
+
+        const toBal: u256 = this.balanceOfMap.get(to);
+        this.balanceOfMap.set(to, SafeMath.add(toBal, amount));
+
+        // @ts-expect-error AssemblyScript valid
+        this._totalSupply += amount;
+
+        if (this._totalSupply.value > this.maxSupply) {
+            throw new Revert('Max supply reached');
+        }
+
+        this.createMintEvent(to, amount);
+    }
+
+    protected _burn(from: Address, amount: u256): void {
+        if (from === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Invalid sender');
+        }
+
+        const balance: u256 = this.balanceOfMap.get(from);
+        const newBalance: u256 = SafeMath.sub(balance, amount);
+        this.balanceOfMap.set(from, newBalance);
+
+        // @ts-expect-error AssemblyScript valid
+        this._totalSupply -= amount;
+
+        this.createBurnEvent(amount);
+    }
+
+    protected createBurnEvent(amount: u256): void {
+        this.emitEvent(new BurnEvent(amount));
+    }
+
+    protected createApproveEvent(owner: Address, spender: Address, amount: u256): void {
+        this.emitEvent(new ApproveEvent(owner, spender, amount));
+    }
+
+    protected createMintEvent(recipient: Address, amount: u256): void {
+        this.emitEvent(new MintEvent(recipient, amount));
+    }
+
+    protected createTransferEvent(from: Address, to: Address, amount: u256): void {
+        this.emitEvent(new TransferEvent(from, to, amount));
     }
 }
