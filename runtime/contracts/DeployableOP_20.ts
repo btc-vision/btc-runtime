@@ -235,9 +235,6 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         const spender: Address = calldata.readAddress();
         const amount: u256 = calldata.readU256();
 
-        if (owner === Blockchain.DEAD_ADDRESS) throw new Revert('Address can not be dead');
-        if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
-
         this._increaseAllowance(owner, spender, amount);
         return new BytesWriter(0);
     }
@@ -251,9 +248,6 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         const owner: Address = Blockchain.tx.sender;
         const spender: Address = calldata.readAddress();
         const amount: u256 = calldata.readU256();
-
-        if (owner === Blockchain.DEAD_ADDRESS) throw new Revert('Address can not be dead');
-        if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
 
         this._decreaseAllowance(owner, spender, amount);
         return new BytesWriter(0);
@@ -273,10 +267,6 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         const deadline: u64 = calldata.readU64();
         const signature = calldata.readBytesWithLength();
 
-        if (owner === Blockchain.DEAD_ADDRESS) throw new Revert('Address can not be dead');
-        if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
-        if (signature.length !== 64) throw new Revert('Invalid signature length');
-
         this._increaseAllowanceBySignature(owner, spender, amount, deadline, signature);
         return new BytesWriter(0);
     }
@@ -294,10 +284,6 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         const amount: u256 = calldata.readU256();
         const deadline: u64 = calldata.readU64();
         const signature = calldata.readBytesWithLength();
-
-        if (owner === Blockchain.DEAD_ADDRESS) throw new Revert('Address can not be dead');
-        if (spender === Blockchain.DEAD_ADDRESS) throw new Revert('Spender can not be dead');
-        if (signature.length !== 64) throw new Revert('Invalid signature length');
 
         this._decreaseAllowanceBySignature(owner, spender, amount, deadline, signature);
         return new BytesWriter(0);
@@ -405,6 +391,9 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _verifySignature(typeHash: u8[], owner: Address, spender: Address, amount: u256, deadline: u64, signature: Uint8Array) {
+        if (signature.length !== 64) {
+            throw new Revert('Invalid signature length');
+        }
         if (Blockchain.block.number > deadline) {
             throw new Revert('Signature expired');
         }
@@ -450,6 +439,13 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _increaseAllowance(owner: Address, spender: Address, amount: u256): void {
+        if (owner === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Invalid approver');
+        }
+        if (spender === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Invalid spender');
+        }
+
         const senderMap = this.allowanceMap.get(owner);
         const previousAllowance = senderMap.get(spender);
         let newAllowance: u256 = u256.add(previousAllowance, amount);
@@ -463,6 +459,13 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     }
 
     protected _decreaseAllowance(owner: Address, spender: Address, amount: u256): void {
+        if (owner === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Invalid approver');
+        }
+        if (spender === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Invalid spender');
+        }
+
         const senderMap = this.allowanceMap.get(owner);
         const previousAllowance = senderMap.get(spender);
         let newAllowance: u256;
