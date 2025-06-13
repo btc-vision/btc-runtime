@@ -292,7 +292,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     @method({ name: 'amount', type: ABIDataTypes.UINT256 })
     @emit('Burn')
     public burn(calldata: Calldata): BytesWriter {
-        this._burn(calldata.readU256());
+        this._burn(Blockchain.tx.sender, calldata.readU256());
         return new BytesWriter(0);
     }
 
@@ -480,35 +480,32 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         this.createApproveEvent(owner, spender, newAllowance);
     }
 
-    protected _mint(to: Address, amount: u256, onlyDeployer: boolean = true): void {
-        if (onlyDeployer) this.onlyDeployer(Blockchain.tx.sender);
-
-        if (!this.balanceOfMap.has(to)) {
-            this.balanceOfMap.set(to, amount);
-        } else {
-            const toBal: u256 = this.balanceOfMap.get(to);
-            this.balanceOfMap.set(to, SafeMath.add(toBal, amount));
+    protected _mint(to: Address, amount: u256): void {
+        if (to === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Invalid receiver');
         }
+
+        const toBal: u256 = this.balanceOfMap.get(to);
+        this.balanceOfMap.set(to, SafeMath.add(toBal, amount));
 
         // @ts-expect-error AssemblyScript valid
         this._totalSupply += amount;
 
-        if (this._totalSupply.value > this.maxSupply) throw new Revert('Max supply reached');
+        if (this._totalSupply.value > this.maxSupply) {
+            throw new Revert('Max supply reached');
+        }
+
         this.createMintEvent(to, amount);
     }
 
-    protected _burn(amount: u256, onlyDeployer: boolean = true): void {
-        if (u256.eq(amount, u256.Zero)) throw new Revert('No tokens');
+    protected _burn(from: Address, amount: u256): void {
+        if (from === Blockchain.DEAD_ADDRESS) {
+            throw new Revert('Invalid sender');
+        }
 
-        if (onlyDeployer) this.onlyDeployer(Blockchain.tx.sender);
-        if (this._totalSupply.value < amount) throw new Revert('Insufficient supply');
-        if (!this.balanceOfMap.has(Blockchain.tx.sender)) throw new Revert('No balance');
-
-        const balance: u256 = this.balanceOfMap.get(Blockchain.tx.sender);
-        if (balance < amount) throw new Revert('Insufficient balance');
-
+        const balance: u256 = this.balanceOfMap.get(from);
         const newBalance: u256 = SafeMath.sub(balance, amount);
-        this.balanceOfMap.set(Blockchain.tx.sender, newBalance);
+        this.balanceOfMap.set(from, newBalance);
 
         // @ts-expect-error AssemblyScript valid
         this._totalSupply -= amount;
