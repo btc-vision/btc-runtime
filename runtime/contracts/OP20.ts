@@ -14,7 +14,7 @@ import { AddressMemoryMap } from '../memory/AddressMemoryMap';
 import { MapOfMap } from '../memory/MapOfMap';
 import { Calldata } from '../types';
 import { ADDRESS_BYTE_LENGTH, SELECTOR_BYTE_LENGTH, U256_BYTE_LENGTH, U64_BYTE_LENGTH } from '../utils';
-import { IOP_20 } from './interfaces/IOP_20';
+import { IOP20 } from './interfaces/IOP20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
 
@@ -42,7 +42,7 @@ const allowanceMapPointer: u16 = Blockchain.nextPointer;
 
 const balanceOfMapPointer: u16 = Blockchain.nextPointer;
 
-export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
+export abstract class OP20 extends OP_NET implements IOP20 {
     protected readonly allowanceMap: MapOfMap<u256>;
     protected readonly balanceOfMap: AddressMemoryMap;
 
@@ -55,7 +55,7 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
     /** Intentionally public for inherited classes */
     public _totalSupply: StoredU256;
 
-    public constructor(params: OP20InitParameters | null = null) {
+    public constructor() {
         super();
 
         this.allowanceMap = new MapOfMap<u256>(allowanceMapPointer);
@@ -67,10 +67,6 @@ export abstract class DeployableOP_20 extends OP_NET implements IOP_20 {
         this._decimals = new StoredU256(decimalsPointer, EMPTY_POINTER);
         this._name = new StoredString(stringPointer, 0);
         this._symbol = new StoredString(stringPointer, 1);
-
-        if (params && this._maxSupply.value.isZero()) {
-            this.instantiate(params, true);
-        }
     }
 
     public get name(): string {

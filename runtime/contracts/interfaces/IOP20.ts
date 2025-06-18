@@ -2,7 +2,7 @@ import { BytesWriter } from '../../buffer/BytesWriter';
 import { StoredU256 } from '../../storage/StoredU256';
 import { Calldata } from '../../types';
 
-export interface IOP_20 {
+export interface IOP20 {
     readonly _totalSupply: StoredU256;
 
     balanceOf(callData: Calldata): BytesWriter;
