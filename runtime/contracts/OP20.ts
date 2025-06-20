@@ -2,7 +2,7 @@ import { u256 } from '@btc-vision/as-bignum/assembly';
 
 import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
-import { ApproveEvent, BurnEvent, MintEvent, TransferEvent } from '../events/predefined';
+import { ApprovalEvent, BurnEvent, MintEvent, TransferEvent } from '../events/predefined';
 import { StoredString } from '../storage/StoredString';
 import { StoredU256 } from '../storage/StoredU256';
 import { Address } from '../types/Address';
@@ -225,7 +225,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         { name: 'spender', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
     )
-    @emit('Approve')
+    @emit('Approval')
     public increaseAllowance(calldata: Calldata): BytesWriter {
         const owner: Address = Blockchain.tx.sender;
         const spender: Address = calldata.readAddress();
@@ -239,7 +239,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         { name: 'spender', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
     )
-    @emit('Approve')
+    @emit('Approval')
     public decreaseAllowance(calldata: Calldata): BytesWriter {
         const owner: Address = Blockchain.tx.sender;
         const spender: Address = calldata.readAddress();
@@ -256,7 +256,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         { name: 'deadline', type: ABIDataTypes.UINT64 },
         { name: 'signature', type: ABIDataTypes.BYTES },
     )
-    @emit('Approve')
+    @emit('Approval')
     public increaseAllowanceBySignature(calldata: Calldata): BytesWriter {
         const owner: Address = calldata.readAddress();
         const spender: Address = calldata.readAddress();
@@ -275,7 +275,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         { name: 'deadline', type: ABIDataTypes.UINT64 },
         { name: 'signature', type: ABIDataTypes.BYTES },
     )
-    @emit('Approve')
+    @emit('Approval')
     public decreaseAllowanceBySignature(calldata: Calldata): BytesWriter {
         const owner: Address = calldata.readAddress();
         const spender: Address = calldata.readAddress();
@@ -453,7 +453,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         }
         senderMap.set(spender, newAllowance);
 
-        this.createApproveEvent(owner, spender, newAllowance);
+        this.createApprovalEvent(owner, spender, newAllowance);
     }
 
     protected _decreaseAllowance(owner: Address, spender: Address, amount: u256): void {
@@ -475,7 +475,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         }
         senderMap.set(spender, newAllowance);
 
-        this.createApproveEvent(owner, spender, newAllowance);
+        this.createApprovalEvent(owner, spender, newAllowance);
     }
 
     protected _mint(to: Address, amount: u256): void {
@@ -515,8 +515,8 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         this.emitEvent(new BurnEvent(amount));
     }
 
-    protected createApproveEvent(owner: Address, spender: Address, amount: u256): void {
-        this.emitEvent(new ApproveEvent(owner, spender, amount));
+    protected createApprovalEvent(owner: Address, spender: Address, amount: u256): void {
+        this.emitEvent(new ApprovalEvent(owner, spender, amount));
     }
 
     protected createMintEvent(recipient: Address, amount: u256): void {
