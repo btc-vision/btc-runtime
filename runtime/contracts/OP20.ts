@@ -508,19 +508,19 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         // @ts-expect-error AssemblyScript valid
         this._totalSupply -= amount;
 
-        this.createBurnEvent(amount);
+        this.createBurnEvent(from, amount);
     }
 
-    protected createBurnEvent(amount: u256): void {
-        this.emitEvent(new BurnEvent(amount));
+    protected createBurnEvent(from: Address, amount: u256): void {
+        this.emitEvent(new BurnEvent(from, amount));
     }
 
     protected createApprovalEvent(owner: Address, spender: Address, amount: u256): void {
         this.emitEvent(new ApprovalEvent(owner, spender, amount));
     }
 
-    protected createMintEvent(recipient: Address, amount: u256): void {
-        this.emitEvent(new MintEvent(recipient, amount));
+    protected createMintEvent(to: Address, amount: u256): void {
+        this.emitEvent(new MintEvent(to, amount));
     }
 
     protected createTransferEvent(from: Address, to: Address, amount: u256): void {

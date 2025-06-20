@@ -6,10 +6,9 @@ import { NetEvent } from '../NetEvent';
 
 @final
 export class MintEvent extends NetEvent {
-    constructor(address: Address, amount: u256) {
+    constructor(to: Address, amount: u256) {
         const data: BytesWriter = new BytesWriter(ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH);
-
-        data.writeAddress(address);
+        data.writeAddress(to);
         data.writeU256(amount);
 
         super('Mint', data);
