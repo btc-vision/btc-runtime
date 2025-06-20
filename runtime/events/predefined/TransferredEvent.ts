@@ -5,12 +5,13 @@ import { ADDRESS_BYTE_LENGTH, U256_BYTE_LENGTH } from '../../utils';
 import { NetEvent } from '../NetEvent';
 
 @final
-export class MintEvent extends NetEvent {
-    constructor(to: Address, amount: u256) {
-        const data: BytesWriter = new BytesWriter(ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH);
+export class TransferredEvent extends NetEvent {
+    constructor(from: Address, to: Address, amount: u256) {
+        const data: BytesWriter = new BytesWriter(ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH);
+        data.writeAddress(from);
         data.writeAddress(to);
         data.writeU256(amount);
 
-        super('Mint', data);
+        super('Transferred', data);
     }
 }

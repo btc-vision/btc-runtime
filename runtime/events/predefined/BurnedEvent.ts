@@ -5,12 +5,12 @@ import { NetEvent } from '../NetEvent';
 import { Address } from '../../types/Address';
 
 @final
-export class BurnEvent extends NetEvent {
+export class BurnedEvent extends NetEvent {
     constructor(from: Address, amount: u256) {
         const data: BytesWriter = new BytesWriter(ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH);
         data.writeAddress(from);
         data.writeU256(amount);
 
-        super('Burn', data);
+        super('Burned', data);
     }
 }

@@ -2,7 +2,7 @@ import { u256 } from '@btc-vision/as-bignum/assembly';
 
 import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
-import { ApprovalEvent, BurnEvent, MintEvent, TransferEvent } from '../events/predefined';
+import { ApprovedEvent, BurnedEvent, MintedEvent, TransferredEvent } from '../events/predefined';
 import { StoredString } from '../storage/StoredString';
 import { StoredU256 } from '../storage/StoredU256';
 import { Address } from '../types/Address';
@@ -190,7 +190,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         { name: 'amount', type: ABIDataTypes.UINT256 },
         { name: 'data', type: ABIDataTypes.BYTES },
     )
-    @emit('Transfer')
+    @emit('Transferred')
     public safeTransfer(calldata: Calldata): BytesWriter {
         this._transfer(
             Blockchain.tx.sender,
@@ -207,7 +207,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         { name: 'amount', type: ABIDataTypes.UINT256 },
         { name: 'data', type: ABIDataTypes.BYTES },
     )
-    @emit('Transfer')
+    @emit('Transferred')
     public safeTransferFrom(calldata: Calldata): BytesWriter {
         const from = calldata.readAddress();
         const to = calldata.readAddress();
@@ -225,7 +225,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         { name: 'spender', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
     )
-    @emit('Approval')
+    @emit('Approved')
     public increaseAllowance(calldata: Calldata): BytesWriter {
         const owner: Address = Blockchain.tx.sender;
         const spender: Address = calldata.readAddress();
@@ -239,7 +239,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         { name: 'spender', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
     )
-    @emit('Approval')
+    @emit('Approved')
     public decreaseAllowance(calldata: Calldata): BytesWriter {
         const owner: Address = Blockchain.tx.sender;
         const spender: Address = calldata.readAddress();
@@ -256,7 +256,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         { name: 'deadline', type: ABIDataTypes.UINT64 },
         { name: 'signature', type: ABIDataTypes.BYTES },
     )
-    @emit('Approval')
+    @emit('Approved')
     public increaseAllowanceBySignature(calldata: Calldata): BytesWriter {
         const owner: Address = calldata.readAddress();
         const spender: Address = calldata.readAddress();
@@ -275,7 +275,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         { name: 'deadline', type: ABIDataTypes.UINT64 },
         { name: 'signature', type: ABIDataTypes.BYTES },
     )
-    @emit('Approval')
+    @emit('Approved')
     public decreaseAllowanceBySignature(calldata: Calldata): BytesWriter {
         const owner: Address = calldata.readAddress();
         const spender: Address = calldata.readAddress();
@@ -288,7 +288,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     }
 
     @method({ name: 'amount', type: ABIDataTypes.UINT256 })
-    @emit('Burn')
+    @emit('Burned')
     public burn(calldata: Calldata): BytesWriter {
         this._burn(Blockchain.tx.sender, calldata.readU256());
         return new BytesWriter(0);
@@ -327,7 +327,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
             this._callOnOP20Received(from, to, amount, data);
         }
 
-        this.createTransferEvent(from, to, amount);
+        this.createTransferredEvent(from, to, amount);
     }
 
     protected _spendAllowance(owner: Address, spender: Address, amount: u256): void {
@@ -453,7 +453,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         }
         senderMap.set(spender, newAllowance);
 
-        this.createApprovalEvent(owner, spender, newAllowance);
+        this.createApprovedEvent(owner, spender, newAllowance);
     }
 
     protected _decreaseAllowance(owner: Address, spender: Address, amount: u256): void {
@@ -475,7 +475,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         }
         senderMap.set(spender, newAllowance);
 
-        this.createApprovalEvent(owner, spender, newAllowance);
+        this.createApprovedEvent(owner, spender, newAllowance);
     }
 
     protected _mint(to: Address, amount: u256): void {
@@ -493,7 +493,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
             throw new Revert('Max supply reached');
         }
 
-        this.createMintEvent(to, amount);
+        this.createMintedEvent(to, amount);
     }
 
     protected _burn(from: Address, amount: u256): void {
@@ -508,22 +508,22 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         // @ts-expect-error AssemblyScript valid
         this._totalSupply -= amount;
 
-        this.createBurnEvent(from, amount);
+        this.createBurnedEvent(from, amount);
     }
 
-    protected createBurnEvent(from: Address, amount: u256): void {
-        this.emitEvent(new BurnEvent(from, amount));
+    protected createBurnedEvent(from: Address, amount: u256): void {
+        this.emitEvent(new BurnedEvent(from, amount));
     }
 
-    protected createApprovalEvent(owner: Address, spender: Address, amount: u256): void {
-        this.emitEvent(new ApprovalEvent(owner, spender, amount));
+    protected createApprovedEvent(owner: Address, spender: Address, amount: u256): void {
+        this.emitEvent(new ApprovedEvent(owner, spender, amount));
     }
 
-    protected createMintEvent(to: Address, amount: u256): void {
-        this.emitEvent(new MintEvent(to, amount));
+    protected createMintedEvent(to: Address, amount: u256): void {
+        this.emitEvent(new MintedEvent(to, amount));
     }
 
-    protected createTransferEvent(from: Address, to: Address, amount: u256): void {
-        this.emitEvent(new TransferEvent(from, to, amount));
+    protected createTransferredEvent(from: Address, to: Address, amount: u256): void {
+        this.emitEvent(new TransferredEvent(from, to, amount));
     }
 }
