@@ -250,6 +250,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     }
 
     @method(
+        { name: 'owner', type: ABIDataTypes.ADDRESS },
         { name: 'spender', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
         { name: 'deadline', type: ABIDataTypes.UINT64 },
@@ -257,7 +258,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     )
     @emit('Approve')
     public increaseAllowanceBySignature(calldata: Calldata): BytesWriter {
-        const owner: Address = Blockchain.tx.origin;
+        const owner: Address = calldata.readAddress();
         const spender: Address = calldata.readAddress();
         const amount: u256 = calldata.readU256();
         const deadline: u64 = calldata.readU64();
@@ -268,6 +269,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     }
 
     @method(
+        { name: 'owner', type: ABIDataTypes.ADDRESS },
         { name: 'spender', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
         { name: 'deadline', type: ABIDataTypes.UINT64 },
@@ -275,7 +277,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     )
     @emit('Approve')
     public decreaseAllowanceBySignature(calldata: Calldata): BytesWriter {
-        const owner: Address = Blockchain.tx.origin;
+        const owner: Address = calldata.readAddress();
         const spender: Address = calldata.readAddress();
         const amount: u256 = calldata.readU256();
         const deadline: u64 = calldata.readU64();
