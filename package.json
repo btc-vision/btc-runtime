@@ -1,6 +1,6 @@
 {
   "name": "@btc-vision/btc-runtime",
-  "version": "1.7.4",
+  "version": "1.8.0",
   "description": "Bitcoin Smart Contract Runtime",
   "main": "btc/index.ts",
   "scripts": {},
@@ -17,8 +17,8 @@
   "author": "BlobMaster41",
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^22.15.29",
-    "assemblyscript": "^0.28.1"
+    "@types/node": "^24.0.3",
+    "assemblyscript": "^0.28.2"
   },
   "repository": {
     "type": "git",
@@ -35,13 +35,13 @@
     "test/*.ts"
   ],
   "dependencies": {
-    "@assemblyscript/loader": "^0.28.1",
+    "@assemblyscript/loader": "^0.28.2",
     "@btc-vision/as-bignum": "^0.0.5",
     "@btc-vision/opnet-transform": "^0.1.5",
-    "@eslint/js": "^9.28.0",
+    "@eslint/js": "^9.29.0",
     "gulplog": "^2.2.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.33.0"
+    "typescript-eslint": "^8.34.1"
   }
 }
