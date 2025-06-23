@@ -327,7 +327,8 @@ export abstract class OP20 extends OP_NET implements IOP20 {
             this._callOnOP20Received(from, to, amount, data);
         }
 
-        this.createTransferredEvent(from, to, amount);
+        const operator: Address = Blockchain.tx.sender;
+        this.createTransferredEvent(operator, from, to, amount);
     }
 
     protected _spendAllowance(owner: Address, spender: Address, amount: u256): void {
@@ -525,7 +526,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         this.emitEvent(new MintedEvent(to, amount));
     }
 
-    protected createTransferredEvent(from: Address, to: Address, amount: u256): void {
-        this.emitEvent(new TransferredEvent(from, to, amount));
+    protected createTransferredEvent(operator: Address, from: Address, to: Address, amount: u256): void {
+        this.emitEvent(new TransferredEvent(operator, from, to, amount));
     }
 }

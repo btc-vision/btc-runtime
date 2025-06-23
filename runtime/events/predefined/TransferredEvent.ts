@@ -6,8 +6,9 @@ import { NetEvent } from '../NetEvent';
 
 @final
 export class TransferredEvent extends NetEvent {
-    constructor(from: Address, to: Address, amount: u256) {
-        const data: BytesWriter = new BytesWriter(ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH);
+    constructor(operator: Address, from: Address, to: Address, amount: u256) {
+        const data: BytesWriter = new BytesWriter(ADDRESS_BYTE_LENGTH * 3 + U256_BYTE_LENGTH);
+        data.writeAddress(operator);
         data.writeAddress(from);
         data.writeAddress(to);
         data.writeU256(amount);
