@@ -14,7 +14,8 @@ export class Transaction {
         public readonly origin: Address, // "leftmost thing in the call chain"
         public readonly txId: Uint8Array,
         public readonly hash: Uint8Array,
-    ) {}
+    ) {
+    }
 
     private _inputs: Potential<TransactionInput[]> = null;
 
@@ -44,7 +45,7 @@ export class Transaction {
 
     private loadInputs(): TransactionInput[] {
         const inputsSize = getInputsSize();
-        let resultBuffer = new ArrayBuffer(inputsSize);
+        const resultBuffer = new ArrayBuffer(inputsSize);
         inputs(resultBuffer);
 
         const reader = new BytesReader(Uint8Array.wrap(resultBuffer));
@@ -53,7 +54,7 @@ export class Transaction {
 
     private loadOutputs(): TransactionOutput[] {
         const outputsSize = getOutputsSize();
-        let resultBuffer = new ArrayBuffer(outputsSize);
+        const resultBuffer = new ArrayBuffer(outputsSize);
         outputs(resultBuffer);
 
         const reader = new BytesReader(Uint8Array.wrap(resultBuffer));
