@@ -331,17 +331,19 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     }
 
     protected _spendAllowance(owner: Address, spender: Address, amount: u256): void {
+        if (owner.equals(spender)) return;
+
         const ownerMap = this.allowanceMap.get(owner);
         const allowed: u256 = ownerMap.get(spender);
 
-        if (allowed < u256.Max) {
-            if (allowed < amount) {
-                throw new Revert('Insufficient allowance');
-            }
+        if (allowed === u256.Max) return;
 
-            ownerMap.set(spender, SafeMath.sub(allowed, amount));
-            this.allowanceMap.set(owner, ownerMap);
+        if (allowed < amount) {
+            throw new Revert('Insufficient allowance');
         }
+
+        ownerMap.set(spender, SafeMath.sub(allowed, amount));
+        this.allowanceMap.set(owner, ownerMap);
     }
 
     protected _callOnOP20Received(from: Address, to: Address, amount: u256, data: Uint8Array): void {
