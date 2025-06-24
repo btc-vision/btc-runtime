@@ -47,9 +47,19 @@ export declare function emit(data: ArrayBuffer, dataLength: u32): void;
 export declare function _sha256(data: ArrayBuffer, dataLength: u32, result: ArrayBuffer): void;
 
 export function sha256(data: Uint8Array): Uint8Array {
+
     const resultBuffer = new ArrayBuffer(32);
     _sha256(data.buffer, data.length, resultBuffer);
     return Uint8Array.wrap(resultBuffer);
+}
+
+export function sha256String(data: string): Uint8Array {
+    return sha256(stringToBytes(data));
+}
+
+function stringToBytes(str: string): Uint8Array {
+    const bytes = String.UTF8.encode(str);
+    return Uint8Array.wrap(bytes);
 }
 
 // @ts-ignore
