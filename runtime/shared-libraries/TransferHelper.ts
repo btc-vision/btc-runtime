@@ -3,7 +3,7 @@ import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
 import { encodeSelector, Selector } from '../math/abi';
 import { Address } from '../types/Address';
-import { ADDRESS_BYTE_LENGTH, SELECTOR_BYTE_LENGTH, U256_BYTE_LENGTH } from '../utils';
+import { ADDRESS_BYTE_LENGTH, SELECTOR_BYTE_LENGTH, U256_BYTE_LENGTH, U32_BYTE_LENGTH } from '../utils';
 
 export const SafeTransferSignature = 'safeTransfer(address,uint256,bytes)';
 export const SafeTransferFromSignature = 'safeTransferFrom(address,address,uint256,bytes)';
@@ -51,7 +51,7 @@ export class TransferHelper {
 
     public static safeTransfer(token: Address, to: Address, amount: u256, data: Uint8Array = new Uint8Array(0)): void {
         const calldata = new BytesWriter(
-            SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH,
+            SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH + U32_BYTE_LENGTH + data.length,
         );
         calldata.writeSelector(this.TRANSFER_SELECTOR);
         calldata.writeAddress(to);
@@ -63,7 +63,7 @@ export class TransferHelper {
 
     public static safeTransferFrom(token: Address, from: Address, to: Address, amount: u256, data: Uint8Array = new Uint8Array(0)): void {
         const calldata = new BytesWriter(
-            SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH,
+            SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH + U32_BYTE_LENGTH + data.length,
         );
         calldata.writeSelector(this.TRANSFER_FROM_SELECTOR);
         calldata.writeAddress(from);
