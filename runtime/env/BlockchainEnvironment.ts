@@ -301,6 +301,10 @@ export class BlockchainEnvironment {
         return result === 1;
     }
 
+    public isContract(address: Address): boolean {
+        return getAccountType(address.buffer) !== 0;
+    }
+
     public hasStorageAt(pointerHash: Uint8Array): bool {
         // We mark zero as the default value for the storage, if something is 0, the storage slot get deleted or is non-existent
         const val: Uint8Array = this.getStorageAt(pointerHash);

@@ -2,9 +2,8 @@
 export * from './env';
 
 /** Contracts */
-export * from './contracts/interfaces/IOP_20';
-export * from './contracts/OP_20';
-export * from './contracts/DeployableOP_20';
+export * from './contracts/interfaces/IOP20';
+export * from './contracts/OP20';
 export * from './contracts/OP_NET';
 export * from './contracts/interfaces/OP20InitParameters';
 
