@@ -1,20 +1,20 @@
-import {u256} from '@btc-vision/as-bignum/assembly';
-import {BytesReader} from '../buffer/BytesReader';
-import {BytesWriter} from '../buffer/BytesWriter';
-import {OP_NET} from '../contracts/OP_NET';
-import {NetEvent} from '../events/NetEvent';
-import {Potential} from '../lang/Definitions';
-import {Address} from '../types/Address';
-import {Block} from './classes/Block';
-import {Transaction} from './classes/Transaction';
-import {eqUint, MapUint8Array} from '../generic/MapUint8Array';
-import {EMPTY_BUFFER} from '../math/bytes';
-import {Plugin} from '../plugins/Plugin';
-import {Calldata} from '../types';
-import {TransactionOutput} from './classes/UTXO';
-import {Revert} from '../types/Revert';
-import {sha256} from './global';
-import {U16_BYTE_LENGTH, U32_BYTE_LENGTH, U64_BYTE_LENGTH, U8_BYTE_LENGTH} from "../utils";
+import { u256 } from '@btc-vision/as-bignum/assembly';
+import { BytesReader } from '../buffer/BytesReader';
+import { BytesWriter } from '../buffer/BytesWriter';
+import { OP_NET } from '../contracts/OP_NET';
+import { NetEvent } from '../events/NetEvent';
+import { Potential } from '../lang/Definitions';
+import { Address } from '../types/Address';
+import { Block } from './classes/Block';
+import { Transaction } from './classes/Transaction';
+import { eqUint, MapUint8Array } from '../generic/MapUint8Array';
+import { EMPTY_BUFFER } from '../math/bytes';
+import { Plugin } from '../plugins/Plugin';
+import { Calldata } from '../types';
+import { TransactionOutput } from './classes/UTXO';
+import { Revert } from '../types/Revert';
+import { sha256 } from './global';
+import { U16_BYTE_LENGTH, U32_BYTE_LENGTH, U64_BYTE_LENGTH, U8_BYTE_LENGTH } from '../utils';
 
 export * from '../env/global';
 
@@ -191,7 +191,11 @@ export class BlockchainEnvironment {
         }
 
         //const writer = new BytesWriter(this._mockedOutputs.length * (2 + 2 + 8 + 64 + 8) + 2);
-        const writer = new BytesWriter(this._mockedOutputs.length * (U8_BYTE_LENGTH + U16_BYTE_LENGTH + U32_BYTE_LENGTH + 64 + U64_BYTE_LENGTH) + U16_BYTE_LENGTH);
+        const writer = new BytesWriter(
+            this._mockedOutputs.length *
+                (U8_BYTE_LENGTH + U16_BYTE_LENGTH + U32_BYTE_LENGTH + 64 + U64_BYTE_LENGTH) +
+                U16_BYTE_LENGTH,
+        );
         writer.writeU16(u16(this._mockedOutputs.length));
 
         for (let i = 0; i < this._mockedOutputs.length; i++) {
@@ -315,7 +319,7 @@ export class BlockchainEnvironment {
     }
 
     public isContract(address: Address): boolean {
-        return getAccountType(address.buffer) !== 0;
+        return this.getAccountType(address) !== 0;
     }
 
     public hasStorageAt(pointerHash: Uint8Array): bool {
