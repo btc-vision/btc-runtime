@@ -6,6 +6,15 @@ export function sha256(data: Uint8Array): Uint8Array {
     return Sha256.hash(data);
 }
 
+export function sha256String(data: string): Uint8Array {
+    return sha256(stringToBytes(data));
+}
+
+function stringToBytes(str: string): Uint8Array {
+    const bytes = String.UTF8.encode(str);
+    return Uint8Array.wrap(bytes);
+}
+
 export function ripemd160(data: Uint8Array): Uint8Array {
     return ripemd160f(data);
 }
