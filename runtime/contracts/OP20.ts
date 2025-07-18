@@ -13,7 +13,13 @@ import { EMPTY_POINTER } from '../math/bytes';
 import { AddressMemoryMap } from '../memory/AddressMemoryMap';
 import { MapOfMap } from '../memory/MapOfMap';
 import { Calldata } from '../types';
-import { ADDRESS_BYTE_LENGTH, SELECTOR_BYTE_LENGTH, U256_BYTE_LENGTH, U64_BYTE_LENGTH } from '../utils';
+import {
+    ADDRESS_BYTE_LENGTH,
+    SELECTOR_BYTE_LENGTH,
+    U256_BYTE_LENGTH,
+    U32_BYTE_LENGTH,
+    U64_BYTE_LENGTH,
+} from '../utils';
 import { IOP20 } from './interfaces/IOP20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
@@ -349,12 +355,12 @@ export abstract class OP20 extends OP_NET implements IOP20 {
 
     protected _callOnOP20Received(from: Address, to: Address, amount: u256, data: Uint8Array): void {
         const operator = Blockchain.tx.sender;
-        const calldata = new BytesWriter(data.length);
+        const calldata = new BytesWriter(SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH + U32_BYTE_LENGTH + data.length);
         calldata.writeSelector(ON_OP_20_RECEIVED_SELECTOR);
         calldata.writeAddress(operator);
         calldata.writeAddress(from);
         calldata.writeU256(amount);
-        calldata.writeBytes(data);
+        calldata.writeBytesWithLength(data);
 
         const response = Blockchain.call(to, calldata);
 
