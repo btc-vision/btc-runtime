@@ -31,13 +31,13 @@ execution while integrating deeply with Bitcoin's decentralized architecture.
 
 ### Features
 
--   **AssemblyScript and WebAssembly:** Efficient and high-performance contract execution using WebAssembly.
--   **Bitcoin Integration:** Direct interaction with Bitcoin L1, enabling the creation of decentralized applications that
-    operate on the Bitcoin network.
--   **Comprehensive Storage Management:** Flexible and secure storage management using primary pointers and sub-pointers,
-    ensuring data integrity through cryptographic proofs.
--   **Event Handling:** Sophisticated event system for contract state changes, allowing easy tracking and logging of
-    contract activities.
+- **AssemblyScript and WebAssembly:** Efficient and high-performance contract execution using WebAssembly.
+- **Bitcoin Integration:** Direct interaction with Bitcoin L1, enabling the creation of decentralized applications that
+  operate on the Bitcoin network.
+- **Comprehensive Storage Management:** Flexible and secure storage management using primary pointers and sub-pointers,
+  ensuring data integrity through cryptographic proofs.
+- **Event Handling:** Sophisticated event system for contract state changes, allowing easy tracking and logging of
+  contract activities.
 
 ## Installation
 
@@ -100,7 +100,7 @@ import {
     Blockchain,
     BytesWriter,
     Calldata,
-    DeployableOP_20,
+    OP20,
     encodeSelector,
     Map,
     OP20InitParameters,
@@ -110,7 +110,7 @@ import {
 import { u128, u256 } from 'as-bignum/assembly';
 
 @final
-export class MyToken extends DeployableOP_20 {
+export class MyToken extends OP20 {
     public constructor() {
         super();
 
@@ -211,11 +211,11 @@ class ComplexData extends Serializable {
 
 For more detailed explanations on specific topics, refer to the individual documentation files:
 
--   [Blockchain.md](docs/Blockchain.md)
--   [Contract.md](docs/Contract.md)
--   [Events.md](docs/Events.md)
--   [Pointers.md](docs/Pointers.md)
--   [Storage.md](docs/Storage.md)
+- [Blockchain.md](docs/Blockchain.md)
+- [Contract.md](docs/Contract.md)
+- [Events.md](docs/Events.md)
+- [Pointers.md](docs/Pointers.md)
+- [Storage.md](docs/Storage.md)
 
 ## License
 

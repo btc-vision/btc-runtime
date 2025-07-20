@@ -2,17 +2,17 @@ import { u256 } from '@btc-vision/as-bignum/assembly';
 
 import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
-import { ApprovedEvent, BurnedEvent, MintedEvent, TransferredEvent } from '../events/predefined';
-import { StoredString } from '../storage/StoredString';
-import { StoredU256 } from '../storage/StoredU256';
-import { Address } from '../types/Address';
-import { Revert } from '../types/Revert';
-import { SafeMath } from '../types/SafeMath';
 import { sha256, sha256String } from '../env/global';
+import { ApprovedEvent, BurnedEvent, MintedEvent, TransferredEvent } from '../events/predefined';
 import { EMPTY_POINTER } from '../math/bytes';
 import { AddressMemoryMap } from '../memory/AddressMemoryMap';
 import { MapOfMap } from '../memory/MapOfMap';
+import { StoredString } from '../storage/StoredString';
+import { StoredU256 } from '../storage/StoredU256';
 import { Calldata } from '../types';
+import { Address } from '../types/Address';
+import { Revert } from '../types/Revert';
+import { SafeMath } from '../types/SafeMath';
 import {
     ADDRESS_BYTE_LENGTH,
     SELECTOR_BYTE_LENGTH,
@@ -25,19 +25,31 @@ import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { OP_NET } from './OP_NET';
 
 // onOP20Received(address,address,uint256,bytes)
-const ON_OP_20_RECEIVED_SELECTOR: u32 = 0xd83e7dbc;
+const ON_OP20_RECEIVED_SELECTOR: u32 = 0xd83e7dbc;
 
 // sha256("OP712Domain(string name,string version,bytes32 chainId,bytes32 protocolId,address verifyingContract)")
-const OP712_DOMAIN_TYPE_HASH: u8[] = [0xfe, 0xe8, 0x22, 0x92, 0x35, 0x1d, 0x1a, 0x8b, 0xab, 0x21, 0xc4, 0xef, 0xdd, 0x15, 0x7e, 0x31, 0x68, 0xe8, 0xf6, 0x32, 0x3a, 0xd0, 0x4c, 0xba, 0x12, 0xf7, 0x7c, 0x0b, 0xdc, 0x46, 0x22, 0x58];
+const OP712_DOMAIN_TYPE_HASH: u8[] = [
+    0xfe, 0xe8, 0x22, 0x92, 0x35, 0x1d, 0x1a, 0x8b, 0xab, 0x21, 0xc4, 0xef, 0xdd, 0x15, 0x7e, 0x31,
+    0x68, 0xe8, 0xf6, 0x32, 0x3a, 0xd0, 0x4c, 0xba, 0x12, 0xf7, 0x7c, 0x0b, 0xdc, 0x46, 0x22, 0x58,
+];
 
 // sha256("1")
-const OP712_VERSION_HASH: u8[] = [0x6b, 0x86, 0xb2, 0x73, 0xff, 0x34, 0xfc, 0xe1, 0x9d, 0x6b, 0x80, 0x4e, 0xff, 0x5a, 0x3f, 0x57, 0x47, 0xad, 0xa4, 0xea, 0xa2, 0x2f, 0x1d, 0x49, 0xc0, 0x1e, 0x52, 0xdd, 0xb7, 0x87, 0x5b, 0x4b];
+const OP712_VERSION_HASH: u8[] = [
+    0x6b, 0x86, 0xb2, 0x73, 0xff, 0x34, 0xfc, 0xe1, 0x9d, 0x6b, 0x80, 0x4e, 0xff, 0x5a, 0x3f, 0x57,
+    0x47, 0xad, 0xa4, 0xea, 0xa2, 0x2f, 0x1d, 0x49, 0xc0, 0x1e, 0x52, 0xdd, 0xb7, 0x87, 0x5b, 0x4b,
+];
 
 // sha256("OP20AllowanceIncrease(address owner,address spender,uint256 amount,uint256 nonce,uint64 deadline)")
-const ALLOWANCE_INCREASE_TYPE_HASH: u8[] = [0x7e, 0x88, 0x02, 0xf1, 0xfd, 0x23, 0xe1, 0x0e, 0x0d, 0xde, 0x3f, 0x00, 0xc0, 0xaa, 0x48, 0x15, 0xd8, 0x85, 0xec, 0xd9, 0xcd, 0xa0, 0xdf, 0x56, 0xff, 0xa2, 0x5e, 0xcc, 0x70, 0x2d, 0x45, 0x8e];
+const ALLOWANCE_INCREASE_TYPE_HASH: u8[] = [
+    0x7e, 0x88, 0x02, 0xf1, 0xfd, 0x23, 0xe1, 0x0e, 0x0d, 0xde, 0x3f, 0x00, 0xc0, 0xaa, 0x48, 0x15,
+    0xd8, 0x85, 0xec, 0xd9, 0xcd, 0xa0, 0xdf, 0x56, 0xff, 0xa2, 0x5e, 0xcc, 0x70, 0x2d, 0x45, 0x8e,
+];
 
 // sha256("OP20AllowanceDecrease(address owner,address spender,uint256 amount,uint256 nonce,uint64 deadline)")
-const ALLOWANCE_DECREASE_TYPE_HASH: u8[] = [0x70, 0x87, 0x99, 0x34, 0x92, 0x1c, 0x2f, 0x48, 0x17, 0x78, 0x87, 0x89, 0x77, 0xd5, 0xb4, 0x5e, 0x2a, 0x59, 0xda, 0x1d, 0x28, 0x22, 0x41, 0xc9, 0x3f, 0xf1, 0xba, 0x6a, 0xf0, 0x98, 0xfc, 0xd0];
+const ALLOWANCE_DECREASE_TYPE_HASH: u8[] = [
+    0x70, 0x87, 0x99, 0x34, 0x92, 0x1c, 0x2f, 0x48, 0x17, 0x78, 0x87, 0x89, 0x77, 0xd5, 0xb4, 0x5e,
+    0x2a, 0x59, 0xda, 0x1d, 0x28, 0x22, 0x41, 0xc9, 0x3f, 0xf1, 0xba, 0x6a, 0xf0, 0x98, 0xfc, 0xd0,
+];
 
 const nonceMapPointer: u16 = Blockchain.nextPointer;
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
@@ -353,10 +365,21 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         this.allowanceMap.set(owner, ownerMap);
     }
 
-    protected _callOnOP20Received(from: Address, to: Address, amount: u256, data: Uint8Array): void {
+    protected _callOnOP20Received(
+        from: Address,
+        to: Address,
+        amount: u256,
+        data: Uint8Array,
+    ): void {
         const operator = Blockchain.tx.sender;
-        const calldata = new BytesWriter(SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH + U32_BYTE_LENGTH + data.length);
-        calldata.writeSelector(ON_OP_20_RECEIVED_SELECTOR);
+        const calldata = new BytesWriter(
+            SELECTOR_BYTE_LENGTH +
+                ADDRESS_BYTE_LENGTH * 2 +
+                U256_BYTE_LENGTH +
+                U32_BYTE_LENGTH +
+                data.length,
+        );
+        calldata.writeSelector(ON_OP20_RECEIVED_SELECTOR);
         calldata.writeAddress(operator);
         calldata.writeAddress(from);
         calldata.writeU256(amount);
@@ -370,7 +393,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
 
         const retval = response.readSelector();
 
-        if (retval !== ON_OP_20_RECEIVED_SELECTOR) {
+        if (retval !== ON_OP20_RECEIVED_SELECTOR) {
             throw new Revert('Transfer rejected by recipient');
         }
     }
@@ -382,7 +405,14 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         deadline: u64,
         signature: Uint8Array,
     ): void {
-        this._verifySignature(ALLOWANCE_INCREASE_TYPE_HASH, owner, spender, amount, deadline, signature);
+        this._verifySignature(
+            ALLOWANCE_INCREASE_TYPE_HASH,
+            owner,
+            spender,
+            amount,
+            deadline,
+            signature,
+        );
         this._increaseAllowance(owner, spender, amount);
     }
 
@@ -393,11 +423,25 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         deadline: u64,
         signature: Uint8Array,
     ): void {
-        this._verifySignature(ALLOWANCE_DECREASE_TYPE_HASH, owner, spender, amount, deadline, signature);
+        this._verifySignature(
+            ALLOWANCE_DECREASE_TYPE_HASH,
+            owner,
+            spender,
+            amount,
+            deadline,
+            signature,
+        );
         this._decreaseAllowance(owner, spender, amount);
     }
 
-    protected _verifySignature(typeHash: u8[], owner: Address, spender: Address, amount: u256, deadline: u64, signature: Uint8Array): void {
+    protected _verifySignature(
+        typeHash: u8[],
+        owner: Address,
+        spender: Address,
+        amount: u256,
+        deadline: u64,
+        signature: Uint8Array,
+    ): void {
         if (signature.length !== 64) {
             throw new Revert('Invalid signature length');
         }
@@ -532,7 +576,12 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         this.emitEvent(new MintedEvent(to, amount));
     }
 
-    protected createTransferredEvent(operator: Address, from: Address, to: Address, amount: u256): void {
+    protected createTransferredEvent(
+        operator: Address,
+        from: Address,
+        to: Address,
+        amount: u256,
+    ): void {
         this.emitEvent(new TransferredEvent(operator, from, to, amount));
     }
 }

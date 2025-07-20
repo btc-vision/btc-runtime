@@ -17,9 +17,9 @@ Solidity.
 
 #### **Best Practices**
 
--   **Do not use the constructor for variable initialization or one-time setup tasks.**
--   **Use a method like `onDeployment` for logic that should only run once.** This method will check if the contract is
-    already instantiated and, if not, perform the necessary setup.
+- **Do not use the constructor for variable initialization or one-time setup tasks.**
+- **Use a method like `onDeployment` for logic that should only run once.** This method will check if the contract is
+  already instantiated and, if not, perform the necessary setup.
 
 #### **Example: Proper Use of Constructor and `onDeployment`**
 
@@ -29,7 +29,7 @@ import {
     Blockchain,
     BytesWriter,
     Calldata,
-    DeployableOP_20,
+    OP20,
     encodeSelector,
     Map,
     OP20InitParameters,
@@ -39,7 +39,7 @@ import {
 import { u128, u256 } from 'as-bignum/assembly';
 
 @final
-export class MyToken extends DeployableOP_20 {
+export class MyToken extends OP20 {
     public constructor() {
         super();
 
@@ -143,8 +143,8 @@ export * from '@btc-vision/btc-runtime/runtime/exports';
 
 #### **Important Notes**
 
--   **DO NOT Modify `Blockchain.contract`:** This function is responsible for instantiating the contract. You should only
-    change the class name to match your contract. Adding custom logic here can lead to unexpected behavior and errors.
+- **DO NOT Modify `Blockchain.contract`:** This function is responsible for instantiating the contract. You should only
+  change the class name to match your contract. Adding custom logic here can lead to unexpected behavior and errors.
 
 ### 3. **Understanding `defineSelectors`**
 
@@ -153,10 +153,10 @@ export * from '@btc-vision/btc-runtime/runtime/exports';
 The `defineSelectors` function is where you map contract methods and properties to specific selectors. These selectors
 allow external calls to interact with your contract's methods and retrieve its properties.
 
--   **Getter Selectors**: These are used for read-only methods that do not modify the contract state (
-    e.g., `name`, `symbol`, `totalSupply`).
--   **Method Selectors**: These are used for methods that may modify the contract state (
-    e.g., `mint`, `transfer`, `approve`).
+- **Getter Selectors**: These are used for read-only methods that do not modify the contract state (
+  e.g., `name`, `symbol`, `totalSupply`).
+- **Method Selectors**: These are used for methods that may modify the contract state (
+  e.g., `mint`, `transfer`, `approve`).
 
 #### **Adding New Methods**
 
