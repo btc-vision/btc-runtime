@@ -30,6 +30,7 @@ import { EMPTY_BUFFER } from '../math/bytes';
 import { Plugin } from '../plugins/Plugin';
 import { Calldata } from '../types';
 import { Revert } from '../types/Revert';
+import { Selector } from '../math/abi';
 
 export * from '../env/global';
 
@@ -142,24 +143,24 @@ export class BlockchainEnvironment {
         this.contract.onDeployment(calldata);
     }
 
-    public onExecutionStarted(): void {
+    public onExecutionStarted(selector: Selector, calldata: Calldata): void {
         for (let i: i32 = 0; i < this._plugins.length; i++) {
             const plugin = this._plugins[i];
 
-            plugin.onExecutionStarted();
+            plugin.onExecutionStarted(selector, calldata);
         }
 
-        this.contract.onExecutionStarted();
+        this.contract.onExecutionStarted(selector, calldata);
     }
 
-    public onExecutionCompleted(): void {
+    public onExecutionCompleted(selector: Selector, calldata: Calldata): void {
         for (let i: i32 = 0; i < this._plugins.length; i++) {
             const plugin = this._plugins[i];
 
-            plugin.onExecutionCompleted();
+            plugin.onExecutionCompleted(selector, calldata);
         }
 
-        this.contract.onExecutionCompleted();
+        this.contract.onExecutionCompleted(selector, calldata);
     }
 
     public setEnvironmentVariables(data: Uint8Array): void {
