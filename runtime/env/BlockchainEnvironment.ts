@@ -13,6 +13,7 @@ import { Plugin } from '../plugins/Plugin';
 import { Calldata } from '../types';
 import { TransactionOutput } from './classes/UTXO';
 import { Revert } from '../types/Revert';
+import { Selector } from '../math/abi';
 import { sha256 } from './global';
 import { U16_BYTE_LENGTH, U32_BYTE_LENGTH, U64_BYTE_LENGTH, U8_BYTE_LENGTH } from '../utils';
 
@@ -133,24 +134,24 @@ export class BlockchainEnvironment {
         this.contract.onDeployment(calldata);
     }
 
-    public onExecutionStarted(): void {
+    public onExecutionStarted(selector: Selector, calldata: Calldata): void {
         for (let i: i32 = 0; i < this._plugins.length; i++) {
             const plugin = this._plugins[i];
 
-            plugin.onExecutionStarted();
+            plugin.onExecutionStarted(selector, calldata);
         }
 
-        this.contract.onExecutionStarted();
+        this.contract.onExecutionStarted(selector, calldata);
     }
 
-    public onExecutionCompleted(): void {
+    public onExecutionCompleted(selector: Selector, calldata: Calldata): void {
         for (let i: i32 = 0; i < this._plugins.length; i++) {
             const plugin = this._plugins[i];
 
-            plugin.onExecutionCompleted();
+            plugin.onExecutionCompleted(selector, calldata);
         }
 
-        this.contract.onExecutionCompleted();
+        this.contract.onExecutionCompleted(selector, calldata);
     }
 
     public clearMockedResults(): void {
