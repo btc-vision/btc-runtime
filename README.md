@@ -219,4 +219,4 @@ For more detailed explanations on specific topics, refer to the individual docum
 
 ## License
 
-This project is licensed under the MIT License. View the full license [here](LICENSE.md).
+This project is licensed under the MIT License. View the full license [here](LICENSE).
