@@ -1,7 +1,7 @@
-import { u256 } from '@btc-vision/as-bignum/assembly';
-import { Blockchain } from '../env';
-import { encodePointer } from '../math/abi';
-import { SafeMath } from '../types/SafeMath';
+import {u256} from '@btc-vision/as-bignum/assembly';
+import {Blockchain} from '../env';
+import {encodePointer} from '../math/abi';
+import {SafeMath} from '../types/SafeMath';
 
 @final
 export class StoredU256 {
@@ -11,7 +11,7 @@ export class StoredU256 {
         public pointer: u16,
         public subPointer: Uint8Array,
     ) {
-        assert(subPointer.length <= 30, `You must pass a 30 bytes sub-pointer. (Address, got ${subPointer.length})`);
+        assert(subPointer.length === 30, `You must pass a 30 bytes sub-pointer. (Address, got ${subPointer.length})`);
 
         this.pointerBuffer = encodePointer(pointer, subPointer);
     }

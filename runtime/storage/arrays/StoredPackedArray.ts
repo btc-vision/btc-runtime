@@ -5,8 +5,8 @@ import {
     readLengthAndStartIndex,
     writeLengthAndStartIndex,
 } from '../../math/bytes';
-import { Blockchain } from '../../env';
-import { Revert } from '../../types/Revert';
+import {Blockchain} from '../../env';
+import {Revert} from '../../types/Revert';
 
 export const DEFAULT_MAX_LENGTH: u32 = u32.MAX_VALUE - 1;
 
@@ -56,7 +56,7 @@ export abstract class StoredPackedArray<T> {
         protected MAX_LENGTH: u32 = DEFAULT_MAX_LENGTH,
     ) {
         assert(
-            subPointer.length <= 30,
+            subPointer.length === 30,
             `You must pass a 30 bytes sub-pointer. (Array, got ${subPointer.length})`,
         );
 
@@ -75,7 +75,7 @@ export abstract class StoredPackedArray<T> {
     public get previousOffset(): u32 {
         return <u32>(
             ((this._startIndex +
-                <u64>(this.nextItemOffset === 0 ? this.nextItemOffset : this.nextItemOffset - 1)) %
+                    <u64>(this.nextItemOffset === 0 ? this.nextItemOffset : this.nextItemOffset - 1)) %
                 <u64>this.MAX_LENGTH)
         );
     }

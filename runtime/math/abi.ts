@@ -1,6 +1,6 @@
-import { bytesToU32 } from './bytes';
-import { sha256 } from '../env/global';
-import { u256 } from '@btc-vision/as-bignum/assembly';
+import {bytesToU32} from './bytes';
+import {sha256} from '../env/global';
+import {u256} from '@btc-vision/as-bignum/assembly';
 
 export type Selector = u32;
 
@@ -22,6 +22,7 @@ export function encodePointerUnknownLength(uniqueIdentifier: u16, typed: Uint8Ar
     return encodePointer(uniqueIdentifier, hash, false);
 }
 
+@inline
 export function ensureAtLeast30Bytes(typed: Uint8Array): Uint8Array {
     if (typed.length >= 30) {
         return typed;

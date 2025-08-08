@@ -1,8 +1,8 @@
-import { u256 } from '@btc-vision/as-bignum/assembly';
-import { BytesWriter } from '../buffer/BytesWriter';
-import { Blockchain } from '../env';
-import { encodePointer } from '../math/abi';
-import { BytesReader } from '../buffer/BytesReader';
+import {u256} from '@btc-vision/as-bignum/assembly';
+import {BytesWriter} from '../buffer/BytesWriter';
+import {Blockchain} from '../env';
+import {encodePointer} from '../math/abi';
+import {BytesReader} from '../buffer/BytesReader';
 
 /**
  * @class StoredU64
@@ -30,7 +30,7 @@ export class StoredU64 {
         public pointer: u16,
         public subPointer: Uint8Array,
     ) {
-        assert(subPointer.length <= 30, `You must pass a 30 bytes sub-pointer. (StoredU64, got ${subPointer.length})`);
+        assert(subPointer.length === 30, `You must pass a 30 bytes sub-pointer. (StoredU64, got ${subPointer.length})`);
 
         this.bufferPointer = encodePointer(pointer, subPointer);
     }

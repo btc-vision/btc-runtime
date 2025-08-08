@@ -1,6 +1,6 @@
-import { Blockchain } from '../env';
-import { GET_EMPTY_BUFFER } from '../math/bytes';
-import { Revert } from '../types/Revert';
+import {Blockchain} from '../env';
+import {GET_EMPTY_BUFFER} from '../math/bytes';
+import {Revert} from '../types/Revert';
 
 @final
 export class StoredBoolean {
@@ -12,7 +12,7 @@ export class StoredBoolean {
     ) {
         const pointerBuffer = GET_EMPTY_BUFFER();
         pointerBuffer[0] = pointer & 255;
-        pointerBuffer[1] = (pointer << 8) & 255;
+        pointerBuffer[1] = (pointer >> 8) & 255;
 
         this.pointerBuffer = pointerBuffer;
 

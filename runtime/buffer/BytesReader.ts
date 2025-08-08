@@ -1,8 +1,8 @@
-import { i128, u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { AddressMap } from '../generic/AddressMap';
-import { Selector } from '../math/abi';
-import { Address } from '../types/Address';
-import { Revert } from '../types/Revert';
+import {i128, u128, u256} from '@btc-vision/as-bignum/assembly';
+import {AddressMap} from '../generic/AddressMap';
+import {Selector} from '../math/abi';
+import {Address} from '../types/Address';
+import {Revert} from '../types/Revert';
 import {
     ADDRESS_BYTE_LENGTH,
     I128_BYTE_LENGTH,
@@ -14,7 +14,7 @@ import {
     U64_BYTE_LENGTH,
     U8_BYTE_LENGTH,
 } from '../utils';
-import { sizeof } from 'builtins';
+import {sizeof} from 'builtins';
 
 @final
 export class BytesReader {
@@ -211,10 +211,6 @@ export class BytesReader {
         return String.UTF8.decode(bytes.buffer);
     }
 
-    /**
-     * [u16 length][raw bytes].
-     * The AS writer calls `writeStringWithLength(value: string)` => writes length big-endian by default.
-     */
     public readStringWithLength(be: boolean = true): string {
         const length = this.readU32(be);
         return this.readString(length);
@@ -243,13 +239,8 @@ export class BytesReader {
 
     // ------------------- Arrays ------------------- //
 
-    /**
-     * The AS writer does `writeU32(length)` for U256 arrays, so we read a u32.
-     * If you changed it to a `u16`, then do readU16() here.
-     */
     public readU256Array(be: boolean = true): u256[] {
-        // The AS writer currently writes a u32 length for U256 arrays
-        const length = this.readU32();
+        const length = this.readU16();
         const result = new Array<u256>(length);
         for (let i: u32 = 0; i < length; i++) {
             result[i] = this.readU256(be);
@@ -257,9 +248,6 @@ export class BytesReader {
         return result;
     }
 
-    /**
-     * The AS writer uses a [u16 length] for U64 arrays.
-     */
     public readU64Array(be: boolean = true): u64[] {
         const length = this.readU16(be);
         const result = new Array<u64>(length);
@@ -296,10 +284,6 @@ export class BytesReader {
         return result;
     }
 
-    /**
-     * The AS writer uses a [u8 length] for transaction inputs/outputs in the example,
-     * but for an "AddressArray" we use [u16 length].
-     */
     public readAddressArray(be: boolean = true): Address[] {
         const length = this.readU16(be);
         const result = new Array<Address>(length);
@@ -309,9 +293,6 @@ export class BytesReader {
         return result;
     }
 
-    /**
-     * Map of [u16 length] entries, each entry = [Address, U256], consistent with the writer’s `writeAddressMapU256`.
-     */
     public readAddressMapU256(be: boolean = true): AddressMap<u256> {
         const length = this.readU16(be);
         const result = new AddressMap<u256>();
@@ -344,7 +325,7 @@ export class BytesReader {
         if (size > this.buffer.byteLength) {
             throw new Error(
                 `Attempt to read beyond buffer length. Requested up to offset ${size}, ` +
-                    `but buffer is only ${this.buffer.byteLength} bytes.`,
+                `but buffer is only ${this.buffer.byteLength} bytes.`,
             );
         }
     }
