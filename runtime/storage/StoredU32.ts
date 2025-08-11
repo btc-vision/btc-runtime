@@ -1,8 +1,8 @@
-import {u256} from '@btc-vision/as-bignum/assembly';
-import {BytesWriter} from '../buffer/BytesWriter';
-import {Blockchain} from '../env';
-import {encodePointer} from '../math/abi';
-import {BytesReader} from '../buffer/BytesReader';
+import { u256 } from '@btc-vision/as-bignum/assembly';
+import { BytesWriter } from '../buffer/BytesWriter';
+import { Blockchain } from '../env';
+import { encodePointer } from '../math/abi';
+import { BytesReader } from '../buffer/BytesReader';
 
 /**
  * @class StoredU32

@@ -1,7 +1,7 @@
 export enum Networks {
-    Mainnet,
-    Testnet,
-    Regtest,
+    Mainnet = 0,
+    Testnet = 1,
+    Regtest = 2,
 }
 
 @final

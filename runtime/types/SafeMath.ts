@@ -85,7 +85,7 @@ export class SafeMath {
             {
                 // old_r - (quotient * r)
                 const tmp = r;
-                r = u256.sub(old_r, u256.mul(quotient, r));  // unchecked subtract
+                r = u256.sub(old_r, u256.mul(quotient, r)); // unchecked subtract
                 old_r = tmp;
             }
 
@@ -93,7 +93,7 @@ export class SafeMath {
             {
                 // old_s - (quotient * s)
                 const tmp = s;
-                s = u256.sub(old_s, u256.mul(quotient, s));  // unchecked subtract
+                s = u256.sub(old_s, u256.mul(quotient, s)); // unchecked subtract
                 old_s = tmp;
             }
         }

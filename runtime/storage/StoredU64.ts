@@ -1,8 +1,8 @@
-import {u256} from '@btc-vision/as-bignum/assembly';
-import {BytesWriter} from '../buffer/BytesWriter';
-import {Blockchain} from '../env';
-import {encodePointer} from '../math/abi';
-import {BytesReader} from '../buffer/BytesReader';
+import { u256 } from '@btc-vision/as-bignum/assembly';
+import { BytesWriter } from '../buffer/BytesWriter';
+import { Blockchain } from '../env';
+import { encodePointer } from '../math/abi';
+import { BytesReader } from '../buffer/BytesReader';
 
 /**
  * @class StoredU64
@@ -115,7 +115,6 @@ export class StoredU64 {
         this.ensureValues();
         return `[${this._values[0].toString()}, ${this._values[1].toString()}, ${this._values[2].toString()}, ${this._values[3].toString()}]`;
     }
-
 
     /**
      * @method reset

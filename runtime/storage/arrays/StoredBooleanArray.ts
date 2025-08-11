@@ -1,6 +1,6 @@
-import {BytesWriter} from '../../buffer/BytesWriter';
-import {Blockchain} from '../../env';
-import {Revert} from '../../types/Revert';
+import { BytesWriter } from '../../buffer/BytesWriter';
+import { Blockchain } from '../../env';
+import { Revert } from '../../types/Revert';
 import {
     addUint8ArraysBE,
     bigEndianAdd,
@@ -10,8 +10,8 @@ import {
     setBit,
     u64ToBE32Bytes,
 } from '../../math/bytes';
-import {DEFAULT_MAX_LENGTH} from './StoredPackedArray';
-import {encodePointer} from "../../math/abi";
+import { DEFAULT_MAX_LENGTH } from './StoredPackedArray';
+import { encodePointer } from '../../math/abi';
 
 /**
  * @class StoredBooleanArray
@@ -67,7 +67,7 @@ export class StoredBooleanArray {
     public get previousOffset(): u32 {
         return <u32>(
             ((this._startIndex +
-                    <u64>(this.nextItemOffset === 0 ? this.nextItemOffset : this.nextItemOffset - 1)) %
+                <u64>(this.nextItemOffset === 0 ? this.nextItemOffset : this.nextItemOffset - 1)) %
                 this.MAX_LENGTH)
         );
     }

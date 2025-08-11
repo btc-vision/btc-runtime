@@ -1,8 +1,8 @@
-import {Blockchain} from '../env';
-import {encodePointer} from '../math/abi';
-import {Address} from '../types/Address';
-import {EMPTY_POINTER} from '../math/bytes';
-import {eqUint} from '../generic/MapUint8Array';
+import { Blockchain } from '../env';
+import { encodePointer } from '../math/abi';
+import { Address } from '../types/Address';
+import { EMPTY_POINTER } from '../math/bytes';
+import { eqUint } from '../generic/MapUint8Array';
 
 /**
  * Default is Address.dead();

@@ -14,8 +14,7 @@ export class Transaction {
         public readonly origin: Address, // "leftmost thing in the call chain"
         public readonly txId: Uint8Array,
         public readonly hash: Uint8Array,
-    ) {
-    }
+    ) {}
 
     private _inputs: Potential<TransactionInput[]> = null;
 

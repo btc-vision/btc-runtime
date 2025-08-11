@@ -1,3 +1,5 @@
+/* eslint-disable */
+
 // @ts-ignore
 @external('env', 'environment')
 export declare function getEnvironmentVariables(offset: u32, length: u32, result: ArrayBuffer): void;
@@ -55,6 +57,14 @@ export function sha256(data: Uint8Array): Uint8Array {
 
 export function sha256String(data: string): Uint8Array {
     return sha256(stringToBytes(data));
+}
+
+export function hash160(data: Uint8Array): Uint8Array {
+    return ripemd160(sha256(data));
+}
+
+export function hash256(data: Uint8Array): Uint8Array {
+    return sha256(sha256(data));
 }
 
 function stringToBytes(str: string): Uint8Array {

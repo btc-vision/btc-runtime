@@ -1,7 +1,7 @@
-import {Potential} from '../lang/Definitions';
-import {ADDRESS_BYTE_LENGTH, decodeHexArray, encodeHexFromBuffer} from '../utils';
-import {bech32m as _bech32m, toWords} from '../utils/b32';
-import {Revert} from './Revert';
+import { Potential } from '../lang/Definitions';
+import { ADDRESS_BYTE_LENGTH, decodeHexArray, encodeHexFromBuffer } from '../utils';
+import { bech32m as _bech32m, toWords } from '../utils/b32';
+import { Revert } from './Revert';
 
 @final
 export class Address extends Uint8Array {

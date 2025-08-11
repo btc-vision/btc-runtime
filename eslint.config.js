@@ -11,12 +11,16 @@ export default tseslint.config(
             parserOptions: {
                 projectService: true,
                 tsconfigDirName: import.meta.dirname,
+                ecmaFeatures: {
+                    experimentalDecorators: true,
+                },
             },
         },
         rules: {
             'no-undef': 'off',
             '@typescript-eslint/no-unused-vars': 'off',
             'no-empty': 'off',
+            '@typescript-eslint/ban-ts-comment': 'off',
             '@typescript-eslint/restrict-template-expressions': 'off',
             '@typescript-eslint/only-throw-error': 'off',
             '@typescript-eslint/no-unnecessary-condition': 'off',

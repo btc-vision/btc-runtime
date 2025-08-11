@@ -86,3 +86,14 @@ export * from './shared-libraries/OP20Utils';
 
 /** Utils */
 export * from './utils';
+
+/** Bitcoin */
+export * from './script/reader/ScriptReader';
+export * from './script/ScriptUtils';
+export * from './script/Script';
+export * from './script/Bech32';
+export * from './script/BitcoinCodec';
+export * from './script/BitcoinAddresses';
+export * from './script/Networks';
+export * from './script/Opcodes';
+export * from './script/Segwit';

@@ -1,16 +1,14 @@
-import {Blockchain} from '../env';
-import {encodePointer} from '../math/abi';
-import {Address} from '../types/Address';
-import {u256} from '@btc-vision/as-bignum/assembly';
-import {EMPTY_BUFFER} from '../math/bytes';
+import { Blockchain } from '../env';
+import { encodePointer } from '../math/abi';
+import { Address } from '../types/Address';
+import { u256 } from '@btc-vision/as-bignum/assembly';
+import { EMPTY_BUFFER } from '../math/bytes';
 
 @final
 export class AddressMemoryMap {
     public pointer: u16;
 
-    constructor(
-        pointer: u16,
-    ) {
+    constructor(pointer: u16) {
         this.pointer = pointer;
     }
 

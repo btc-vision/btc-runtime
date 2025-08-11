@@ -1,7 +1,7 @@
-import {u256} from '@btc-vision/as-bignum/assembly';
-import {Blockchain} from '../env';
-import {encodePointer} from '../math/abi';
-import {SafeMath} from '../types/SafeMath';
+import { u256 } from '@btc-vision/as-bignum/assembly';
+import { Blockchain } from '../env';
+import { encodePointer } from '../math/abi';
+import { SafeMath } from '../types/SafeMath';
 
 @final
 export class StoredU256 {

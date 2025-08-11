@@ -1,7 +1,12 @@
-import {bigEndianAdd, GET_EMPTY_BUFFER, readLengthAndStartIndex, writeLengthAndStartIndex,} from '../../math/bytes';
-import {Blockchain} from '../../env';
-import {Revert} from '../../types/Revert';
-import {encodePointer} from "../../math/abi";
+import {
+    bigEndianAdd,
+    GET_EMPTY_BUFFER,
+    readLengthAndStartIndex,
+    writeLengthAndStartIndex,
+} from '../../math/bytes';
+import { Blockchain } from '../../env';
+import { Revert } from '../../types/Revert';
+import { encodePointer } from '../../math/abi';
 
 export const DEFAULT_MAX_LENGTH: u32 = u32.MAX_VALUE - 1;
 
@@ -65,7 +70,7 @@ export abstract class StoredPackedArray<T> {
     public get previousOffset(): u32 {
         return <u32>(
             ((this._startIndex +
-                    <u64>(this.nextItemOffset === 0 ? this.nextItemOffset : this.nextItemOffset - 1)) %
+                <u64>(this.nextItemOffset === 0 ? this.nextItemOffset : this.nextItemOffset - 1)) %
                 <u64>this.MAX_LENGTH)
         );
     }

@@ -1,6 +1,6 @@
-import {Blockchain} from '../env';
-import {GET_EMPTY_BUFFER} from '../math/bytes';
-import {Revert} from '../types/Revert';
+import { Blockchain } from '../env';
+import { GET_EMPTY_BUFFER } from '../math/bytes';
+import { Revert } from '../types/Revert';
 
 @final
 export class StoredBoolean {
@@ -49,8 +49,6 @@ export class StoredBoolean {
     }
 
     private ensureValue(): void {
-        this._value = Blockchain.getStorageAt(
-            this.pointerBuffer,
-        );
+        this._value = Blockchain.getStorageAt(this.pointerBuffer);
     }
 }

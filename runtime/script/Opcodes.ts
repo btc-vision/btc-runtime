@@ -1,5 +1,3 @@
-import { Networks } from './Networks';
-
 @final
 export class BitcoinOpcodes {
     public static readonly OP_FALSE: u8 = 0;
@@ -126,5 +124,30 @@ export class BitcoinOpcodes {
         if (n == 0) return 0;
         if (n < 0 || n > 16) throw new Error('OP_N out of range');
         return <u8>(0x50 + n);
+    }
+
+    public static isPushdataOpcode(op: u8): bool {
+        // true for explicit data-push opcodes: 0x01..0x4b, OP_PUSHDATA1/2/4
+        if (op >= <u8>1 && op <= <u8>75) return true;
+        return (
+            op == BitcoinOpcodes.OP_PUSHDATA1 ||
+            op == BitcoinOpcodes.OP_PUSHDATA2 ||
+            op == BitcoinOpcodes.OP_PUSHDATA4
+        );
+    }
+
+    public static isOpSuccessTaproot(op: u8): bool {
+        // BIP342 OP_SUCCESSx set for Tapscript (witness v1)
+        if (op == BitcoinOpcodes.OP_RESERVED /* 0x50 */) return true;
+        if (op == BitcoinOpcodes.OP_VER /* 0x62 */) return true;
+
+        // Disabled legacy ops that become OP_SUCCESSx in Tapscript
+        if (op >= BitcoinOpcodes.OP_CAT && op <= BitcoinOpcodes.OP_RIGHT) return true;
+        if (op >= BitcoinOpcodes.OP_INVERT && op <= BitcoinOpcodes.OP_XOR) return true;
+        if (op >= BitcoinOpcodes.OP_2MUL && op <= BitcoinOpcodes.OP_2DIV) return true;
+        if (op >= <u8>149 && op <= <u8>153) return true;
+
+        // Unknown/reserved range that is OP_SUCCESSx in Tapscript
+        return op >= <u8>187 && op <= <u8>254;
     }
 }
