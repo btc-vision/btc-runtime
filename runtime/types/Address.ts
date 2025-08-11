@@ -72,16 +72,6 @@ export class Address extends Uint8Array {
         return encodeHexFromBuffer(this.buffer);
     }
 
-    public empty(): bool {
-        for (let i = 0; i < this.length; i++) {
-            if (this[i] != 0) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     public toBech32m(): string {
         return String.UTF8.decode(_bech32m(String.UTF8.encode('bc'), toWords(this.buffer)));
     }

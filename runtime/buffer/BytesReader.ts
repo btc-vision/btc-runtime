@@ -98,6 +98,13 @@ export class BytesReader {
         return value;
     }
 
+    public readI8(): i8 {
+        this.verifyEnd(this.currentOffset + U8_BYTE_LENGTH);
+        const value = this.buffer.getInt8(this.currentOffset);
+        this.currentOffset += U8_BYTE_LENGTH;
+        return value;
+    }
+
     public readU8(): u8 {
         this.verifyEnd(this.currentOffset + U8_BYTE_LENGTH);
         const value = this.buffer.getUint8(this.currentOffset);
