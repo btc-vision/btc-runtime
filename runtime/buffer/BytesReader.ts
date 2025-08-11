@@ -42,7 +42,7 @@ export class BytesReader {
 
                 switch (size) {
                     case 8:
-                        return this.readU8() as T;
+                        return this.readI8() as T;
                     case 16:
                         return this.readI16() as T;
                     case 32:

@@ -1,7 +1,7 @@
-import { Blockchain } from '../env';
-import { encodePointer } from '../math/abi';
-import { bigEndianAdd } from '../math/bytes';
-import { Revert } from '../types/Revert';
+import {Blockchain} from '../env';
+import {encodePointer} from '../math/abi';
+import {bigEndianAdd} from '../math/bytes';
+import {Revert} from '../types/Revert';
 
 const MAX_LENGTH: u32 = 256;
 
@@ -19,7 +19,8 @@ export class AdvancedStoredString {
     constructor(
         public pointer: u16,
         private readonly subPointer: Uint8Array,
-    ) {}
+    ) {
+    }
 
     private _value: string = '';
 

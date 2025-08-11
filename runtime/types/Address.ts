@@ -1,7 +1,7 @@
-import { Potential } from '../lang/Definitions';
-import { ADDRESS_BYTE_LENGTH, decodeHexArray, encodeHexFromBuffer } from '../utils';
-import { bech32m as _bech32m, toWords } from '../utils/b32';
-import { Revert } from './Revert';
+import {Potential} from '../lang/Definitions';
+import {ADDRESS_BYTE_LENGTH, decodeHexArray, encodeHexFromBuffer} from '../utils';
+import {bech32m as _bech32m, toWords} from '../utils/b32';
+import {Revert} from './Revert';
 
 @final
 export class Address extends Uint8Array {
@@ -35,6 +35,14 @@ export class Address extends Uint8Array {
         return new Address(decodeHexArray(pubKey));
     }
 
+    public static fromUint8Array(bytes: Uint8Array): Address {
+        const cloned = new Address();
+        // Copy the raw memory directly:
+        memory.copy(cloned.dataStart, bytes.dataStart, ADDRESS_BYTE_LENGTH);
+
+        return cloned;
+    }
+
     public isZero(): bool {
         for (let i = 0; i < this.length; i++) {
             if (this[i] != 0) {
@@ -60,14 +68,6 @@ export class Address extends Uint8Array {
         return cloned;
     }
 
-    public static fromUint8Array(bytes: Uint8Array): Address {
-        const cloned = new Address();
-        // Copy the raw memory directly:
-        memory.copy(cloned.dataStart, bytes.dataStart, ADDRESS_BYTE_LENGTH);
-
-        return cloned;
-    }
-
     public toHex(): string {
         return encodeHexFromBuffer(this.buffer);
     }
@@ -80,21 +80,6 @@ export class Address extends Uint8Array {
         }
 
         return true;
-    }
-
-    /**
-     * Set the public key
-     * @param {ArrayLike} publicKey The public key
-     * @returns {void}
-     */
-    public newSet(publicKey: u8[]): void {
-        if (publicKey.length !== 32) {
-            throw new Error('Invalid public key length');
-        }
-
-        super.set(publicKey);
-
-        this.isDefined = true;
     }
 
     public toBech32m(): string {
@@ -167,6 +152,21 @@ export class Address extends Uint8Array {
 
     public toString(): string {
         return this.toBech32m();
+    }
+
+    /**
+     * Set the public key
+     * @param {ArrayLike} publicKey The public key
+     * @returns {void}
+     */
+    private newSet(publicKey: u8[]): void {
+        if (publicKey.length !== 32) {
+            throw new Error('Invalid public key length');
+        }
+
+        super.set(publicKey);
+
+        this.isDefined = true;
     }
 
     @operator('[]')

@@ -4,7 +4,6 @@ import {Revert} from '../../types/Revert';
 import {
     addUint8ArraysBE,
     bigEndianAdd,
-    encodeBasePointer,
     GET_EMPTY_BUFFER,
     getBit,
     readLengthAndStartIndex,
@@ -12,6 +11,7 @@ import {
     u64ToBE32Bytes,
 } from '../../math/bytes';
 import {DEFAULT_MAX_LENGTH} from './StoredPackedArray';
+import {encodePointer} from "../../math/abi";
 
 /**
  * @class StoredBooleanArray
@@ -53,11 +53,11 @@ export class StoredBooleanArray {
         protected MAX_LENGTH: u32 = DEFAULT_MAX_LENGTH,
     ) {
         assert(
-            subPtr.length <= 30,
+            subPtr.length === 30,
             `You must pass a 30 bytes sub-pointer. (StoredBooleanArray, got ${subPtr.length})`,
         );
 
-        const basePointer = encodeBasePointer(pointer, subPtr);
+        const basePointer = encodePointer(pointer, subPtr);
         this.lengthPointer = Uint8Array.wrap(basePointer.buffer);
         this.basePointer = bigEndianAdd(basePointer, 1);
 
