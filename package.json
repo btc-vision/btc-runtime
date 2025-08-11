@@ -17,8 +17,8 @@
     "author": "BlobMaster41",
     "license": "MIT",
     "devDependencies": {
-        "@types/node": "^24.1.0",
-        "assemblyscript": "^0.28.3"
+        "@types/node": "^24.2.1",
+        "assemblyscript": "^0.28.4"
     },
     "repository": {
         "type": "git",
@@ -35,13 +35,13 @@
         "test/*.ts"
     ],
     "dependencies": {
-        "@assemblyscript/loader": "^0.28.3",
+        "@assemblyscript/loader": "^0.28.4",
         "@btc-vision/as-bignum": "^0.0.5",
         "@btc-vision/opnet-transform": "^0.1.10",
-        "@eslint/js": "^9.32.0",
+        "@eslint/js": "^9.33.0",
         "gulplog": "^2.2.0",
         "ts-node": "^10.9.2",
-        "typescript": "^5.8.3",
-        "typescript-eslint": "^8.38.0"
+        "typescript": "^5.9.2",
+        "typescript-eslint": "^8.39.0"
     }
 }

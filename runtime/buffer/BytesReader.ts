@@ -14,7 +14,6 @@ import {
     U64_BYTE_LENGTH,
     U8_BYTE_LENGTH,
 } from '../utils';
-import {sizeof} from 'builtins';
 
 @final
 export class BytesReader {
