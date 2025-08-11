@@ -71,12 +71,13 @@ export function u256To30Bytes(value: u256): Uint8Array {
  * @param uniqueIdentifier
  * @param typed
  * @param enforce30Bytes
+ * @param {string} context Optional debug context.
  */
-export function encodePointer(uniqueIdentifier: u16, typed: Uint8Array, enforce30Bytes: boolean = true): Uint8Array {
+export function encodePointer(uniqueIdentifier: u16, typed: Uint8Array, enforce30Bytes: boolean = true, context: string = ''): Uint8Array {
     const array = ensureAtLeast30Bytes(typed);
 
     if (enforce30Bytes) {
-        assert(array.length === 30, `Pointers must be exactly 30 bytes. Got ${array.length}.`);
+        assert(array.length === 30, `Pointers must be exactly 30 bytes. Got ${array.length}, context: ${context}.`);
     }
 
     const finalPointer = new Uint8Array(32);

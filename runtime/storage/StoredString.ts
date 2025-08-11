@@ -1,9 +1,9 @@
-import { Blockchain } from '../env';
-import { encodePointer } from '../math/abi';
-import { bigEndianAdd } from '../math/bytes';
-import { Revert } from '../types/Revert';
-import { u256 } from '@btc-vision/as-bignum/assembly';
-import { SafeMath } from '../types/SafeMath';
+import {Blockchain} from '../env';
+import {encodePointer} from '../math/abi';
+import {bigEndianAdd} from '../math/bytes';
+import {Revert} from '../types/Revert';
+import {u256} from '@btc-vision/as-bignum/assembly';
+import {SafeMath} from '../types/SafeMath';
 
 const MAX_LENGTH = <u32>u16.MAX_VALUE;
 const MAX_LENGTH_U256 = u256.fromU32(<u32>MAX_LENGTH);
@@ -49,7 +49,7 @@ export class StoredString {
      * chunkIndex=0 => header slot, 1 => second slot, etc.
      */
     private getPointer(chunkIndex: u64): Uint8Array {
-        const base = encodePointer(this.pointer, this.subPointer);
+        const base = encodePointer(this.pointer, this.subPointer, true, 'StoredString');
         return bigEndianAdd(base, chunkIndex);
     }
 

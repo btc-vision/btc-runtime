@@ -1,8 +1,8 @@
-import { Blockchain } from '../env';
-import { encodePointer } from '../math/abi';
-import { Address } from '../types/Address';
-import { EMPTY_POINTER } from '../math/bytes';
-import { eqUint } from '../generic/MapUint8Array';
+import {Blockchain} from '../env';
+import {encodePointer} from '../math/abi';
+import {Address} from '../types/Address';
+import {EMPTY_POINTER} from '../math/bytes';
+import {eqUint} from '../generic/MapUint8Array';
 
 /**
  * Default is Address.dead();
@@ -12,7 +12,7 @@ export class StoredAddress {
     private readonly addressPointer: Uint8Array;
 
     constructor(public pointer: u16) {
-        this.addressPointer = encodePointer(pointer, EMPTY_POINTER);
+        this.addressPointer = encodePointer(pointer, EMPTY_POINTER, true, 'StoredAddress');
     }
 
     private _value: Address = Address.dead();

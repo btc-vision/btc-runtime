@@ -52,12 +52,7 @@ export class StoredBooleanArray {
         public subPtr: Uint8Array,
         protected MAX_LENGTH: u32 = DEFAULT_MAX_LENGTH,
     ) {
-        assert(
-            subPtr.length === 30,
-            `You must pass a 30 bytes sub-pointer. (StoredBooleanArray, got ${subPtr.length})`,
-        );
-
-        const basePointer = encodePointer(pointer, subPtr);
+        const basePointer = encodePointer(pointer, subPtr, true, 'StoredBooleanArray');
         this.lengthPointer = Uint8Array.wrap(basePointer.buffer);
         this.basePointer = bigEndianAdd(basePointer, 1);
 

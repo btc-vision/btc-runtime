@@ -45,7 +45,7 @@ export class AdvancedStoredString {
      * chunkIndex=0 => header slot, 1 => second slot, etc.
      */
     private getPointer(chunkIndex: u64): Uint8Array {
-        const base = encodePointer(this.pointer, this.subPointer);
+        const base = encodePointer(this.pointer, this.subPointer, true, 'AdvancedStoredString');
         return bigEndianAdd(base, chunkIndex);
     }
 

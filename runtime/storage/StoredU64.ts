@@ -30,9 +30,7 @@ export class StoredU64 {
         public pointer: u16,
         public subPointer: Uint8Array,
     ) {
-        assert(subPointer.length === 30, `You must pass a 30 bytes sub-pointer. (StoredU64, got ${subPointer.length})`);
-
-        this.bufferPointer = encodePointer(pointer, subPointer);
+        this.bufferPointer = encodePointer(pointer, subPointer, true, 'StoredU64');
     }
 
     /**

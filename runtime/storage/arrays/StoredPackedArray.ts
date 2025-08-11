@@ -50,12 +50,7 @@ export abstract class StoredPackedArray<T> {
         protected defaultValue: T,
         protected MAX_LENGTH: u32 = DEFAULT_MAX_LENGTH,
     ) {
-        assert(
-            subPointer.length === 30,
-            `You must pass a 30 bytes sub-pointer. (Array, got ${subPointer.length})`,
-        );
-
-        const basePointer = encodePointer(pointer, subPointer);
+        const basePointer = encodePointer(pointer, subPointer, true, 'StoredPackedArray');
         this.lengthPointer = Uint8Array.wrap(basePointer.buffer);
         this.basePointer = bigEndianAdd(basePointer, 1);
 

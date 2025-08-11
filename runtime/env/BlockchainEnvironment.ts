@@ -1,13 +1,13 @@
-import { u256 } from '@btc-vision/as-bignum/assembly';
-import { BytesReader } from '../buffer/BytesReader';
-import { BytesWriter } from '../buffer/BytesWriter';
-import { OP_NET } from '../contracts/OP_NET';
-import { NetEvent } from '../events/NetEvent';
-import { Potential } from '../lang/Definitions';
-import { Address } from '../types/Address';
-import { ADDRESS_BYTE_LENGTH } from '../utils';
-import { Block } from './classes/Block';
-import { Transaction } from './classes/Transaction';
+import {u256} from '@btc-vision/as-bignum/assembly';
+import {BytesReader} from '../buffer/BytesReader';
+import {BytesWriter} from '../buffer/BytesWriter';
+import {OP_NET} from '../contracts/OP_NET';
+import {NetEvent} from '../events/NetEvent';
+import {Potential} from '../lang/Definitions';
+import {Address} from '../types/Address';
+import {ADDRESS_BYTE_LENGTH} from '../utils';
+import {Block} from './classes/Block';
+import {Transaction} from './classes/Transaction';
 import {
     callContract,
     deployFromAddress,
@@ -25,13 +25,12 @@ import {
     validateBitcoinAddress,
     verifySchnorrSignature,
 } from './global';
-import { eqUint, MapUint8Array } from '../generic/MapUint8Array';
-import { EMPTY_BUFFER } from '../math/bytes';
-import { Plugin } from '../plugins/Plugin';
-import { Calldata } from '../types';
-import { Revert } from '../types/Revert';
-import { Selector } from '../math/abi';
-import { Network, Networks } from '../script/Networks';
+import {eqUint, MapUint8Array} from '../generic/MapUint8Array';
+import {EMPTY_BUFFER} from '../math/bytes';
+import {Plugin} from '../plugins/Plugin';
+import {Calldata} from '../types';
+import {Revert} from '../types/Revert';
+import {Selector} from '../math/abi';
 
 export * from '../env/global';
 
@@ -44,15 +43,16 @@ export class BlockchainEnvironment {
     private _selfContract: Potential<OP_NET> = null;
     private _plugins: Plugin[] = [];
 
-    private _network: Potential<Networks> = null;
+    /*private _network: Potential<i32> = null;
 
-    @inline public get network(): Networks {
+    @inline
+    public get network(): Networks {
         if (!this._network) {
             throw new Revert('Network is required');
         }
 
         return this._network as Networks;
-    }
+    }*/
 
     private _block: Potential<Block> = null;
 
@@ -196,7 +196,7 @@ export class BlockchainEnvironment {
         this._chainId = chainId;
         this._protocolId = protocolId;
 
-        this._network = Network.fromChainId(this.chainId);
+        //this._network = Network.fromChainId(this.chainId);
 
         this._block = new Block(blockHash, blockNumber, blockMedianTime);
 
