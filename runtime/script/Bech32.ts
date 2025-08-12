@@ -61,7 +61,9 @@ export class Bech32 {
         const convertResult = Bech32.convertBitsSafe(program, 8, 5, true);
         if (!convertResult.success) return null;
 
-        wordsWB.writeBytes(convertResult.value!);
+        if(!convertResult.value) throw new Revert('Bech32 convertBits failed with unknown error');
+
+        wordsWB.writeBytes(convertResult.value);
 
         const data = wordsWB.getBuffer().subarray(0, <i32>wordsWB.getOffset());
         const chk = Bech32.createChecksum(hrp, data, /*bech32m*/ witver != 0);

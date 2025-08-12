@@ -5,6 +5,7 @@ import { CsvPairCrossCheck, MultisigPairCrossCheck } from './ScriptUtils';
 import { Segwit } from './Segwit';
 import { sha256 } from '../env/global';
 import { BitcoinScript } from './Script';
+import { Revert } from '../types/Revert';
 
 /**
  * Result type for codec operations that can fail
@@ -321,7 +322,9 @@ export class BitcoinCodec {
 
         // Check if public keys match expected values (if provided)
         if (expectedPubkeys !== null) {
-            if (!BitcoinCodec.comparePublicKeyArrays(rec.pubkeys!, expectedPubkeys)) {
+            if (!rec.pubkeys) throw new Revert('Public keys not found in multisig script');
+
+            if (!BitcoinCodec.comparePublicKeyArrays(rec.pubkeys, expectedPubkeys)) {
                 return new MultisigPairCrossCheck(false, rec.m, rec.n, address);
             }
         }
