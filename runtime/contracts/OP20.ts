@@ -322,10 +322,10 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     }
 
     protected _transfer(from: Address, to: Address, amount: u256, data: Uint8Array): void {
-        if (from === Blockchain.DEAD_ADDRESS) {
+        if (from === Address.zero() || from === Address.dead()) {
             throw new Revert('Invalid sender');
         }
-        if (to === Blockchain.DEAD_ADDRESS) {
+        if (to === Address.zero() || to === Address.dead()) {
             throw new Revert('Invalid receiver');
         }
 
@@ -488,10 +488,10 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     }
 
     protected _increaseAllowance(owner: Address, spender: Address, amount: u256): void {
-        if (owner === Blockchain.DEAD_ADDRESS) {
+        if (owner === Address.zero() || owner === Address.dead()) {
             throw new Revert('Invalid approver');
         }
-        if (spender === Blockchain.DEAD_ADDRESS) {
+        if (spender === Address.zero() || spender === Address.dead()) {
             throw new Revert('Invalid spender');
         }
 
@@ -508,10 +508,10 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     }
 
     protected _decreaseAllowance(owner: Address, spender: Address, amount: u256): void {
-        if (owner === Blockchain.DEAD_ADDRESS) {
+        if (owner === Address.zero() || owner === Address.dead()) {
             throw new Revert('Invalid approver');
         }
-        if (spender === Blockchain.DEAD_ADDRESS) {
+        if (spender === Address.zero() || spender === Address.dead()) {
             throw new Revert('Invalid spender');
         }
 
@@ -530,7 +530,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     }
 
     protected _mint(to: Address, amount: u256): void {
-        if (to === Blockchain.DEAD_ADDRESS) {
+        if (to === Address.zero() || to === Address.dead()) {
             throw new Revert('Invalid receiver');
         }
 
@@ -548,7 +548,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     }
 
     protected _burn(from: Address, amount: u256): void {
-        if (from === Blockchain.DEAD_ADDRESS) {
+        if (from === Address.zero() || from === Address.dead()) {
             throw new Revert('Invalid sender');
         }
 
