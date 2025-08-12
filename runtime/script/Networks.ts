@@ -1,3 +1,5 @@
+import { Revert } from '../types/Revert';
+
 export enum Networks {
     Unknown = -1,
     Mainnet = 0,
@@ -38,8 +40,17 @@ export class NetworkManager {
         this.regtest = regtest;
     }
 
-    public static hrp(n: Networks): string {
-        return n == Networks.Mainnet ? 'bc' : n == Networks.Testnet ? 'tb' : 'bcrt';
+    public hrp(n: Networks): string {
+        switch (n) {
+            case Networks.Mainnet:
+                return 'bc';
+            case Networks.Testnet:
+                return 'tb';
+            case Networks.Regtest:
+                return 'bcrt';
+            default:
+                throw new Revert('Unknown network');
+        }
     }
 
     public getChainId(network: Networks): Uint8Array {
@@ -55,18 +66,20 @@ export class NetworkManager {
                 out.set(this.regtest);
                 return out;
             default:
-                throw new Error('Unknown network');
+                throw new Revert('Unknown network');
         }
     }
 
     public fromChainId(chainId: Uint8Array): Networks {
         if (chainId.length !== 32) {
-            throw new Error('Invalid chain id length');
+            throw new Revert('Invalid chain id length');
         }
+
         if (this.equals(chainId, this.mainnet)) return Networks.Mainnet;
         if (this.equals(chainId, this.testnet)) return Networks.Testnet;
         if (this.equals(chainId, this.regtest)) return Networks.Regtest;
-        throw new Error('Unknown chain id');
+
+        throw new Revert('Unknown chain id');
     }
 
     private equals(a: Uint8Array, b: Uint8Array): boolean {
