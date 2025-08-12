@@ -2,6 +2,9 @@ import { Potential } from '../lang/Definitions';
 import { ADDRESS_BYTE_LENGTH, decodeHexArray, encodeHexFromBuffer } from '../utils';
 import { bech32m as _bech32m, toWords } from '../utils/b32';
 import { Revert } from './Revert';
+import { BitcoinAddresses } from '../script/BitcoinAddresses';
+import { Blockchain } from '../env';
+import { Network, Networks } from '../script/Networks';
 
 @final
 export class Address extends Uint8Array {
@@ -60,6 +63,15 @@ export class Address extends Uint8Array {
             }
         }
         return true;
+    }
+
+    public toCSV(blocks: u32): string {
+        return BitcoinAddresses.csvP2wshAddress(this, blocks, Network.hrp(Blockchain.network))
+            .address;
+    }
+
+    public p2tr(): string {
+        return BitcoinAddresses.p2trKeyPathAddress(this, Network.hrp(Blockchain.network));
     }
 
     /**
