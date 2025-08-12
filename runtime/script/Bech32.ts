@@ -42,7 +42,8 @@ export class Bech32 {
         if (!result) {
             throw new Revert('Bech32 encoding failed');
         }
-        return result!;
+
+        return result as string;
     }
 
     /**
@@ -61,9 +62,11 @@ export class Bech32 {
         const convertResult = Bech32.convertBitsSafe(program, 8, 5, true);
         if (!convertResult.success) return null;
 
-        if(!convertResult.value) throw new Revert('Bech32 convertBits failed with unknown error');
+        if (convertResult.value === null) {
+            throw new Revert('Bech32 convertBits failed with unknown error');
+        }
 
-        wordsWB.writeBytes(convertResult.value);
+        wordsWB.writeBytes(convertResult.value as Uint8Array);
 
         const data = wordsWB.getBuffer().subarray(0, <i32>wordsWB.getOffset());
         const chk = Bech32.createChecksum(hrp, data, /*bech32m*/ witver != 0);
@@ -97,7 +100,8 @@ export class Bech32 {
         if (!result) {
             throw new Revert('Bech32 decode failed');
         }
-        return result!;
+
+        return result as SegwitDecoded;
     }
 
     /**

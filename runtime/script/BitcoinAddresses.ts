@@ -177,6 +177,16 @@ export class BitcoinAddresses {
     }
 
     /**
+     * Create a Pay-to-Witness-Public-Key-Hash (P2WPKH) address
+     * @param pubkey - The public key (33 bytes compressed or 65 bytes uncompressed)
+     * @param hrp - Human-readable part (e.g., "bc" for mainnet)
+     * @returns The Bech32-encoded address
+     */
+    public static p2wpkh(pubkey: Uint8Array, hrp: string): string {
+        return Segwit.p2wpkh(hrp, pubkey);
+    }
+
+    /**
      * Verify that a given address corresponds to a specific Taproot output key
      *
      * @param outputKeyX32 - The expected 32-byte X coordinate
