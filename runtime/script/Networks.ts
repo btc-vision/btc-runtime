@@ -1,4 +1,5 @@
 export enum Networks {
+    Unknown = -1,
     Mainnet = 0,
     Testnet = 1,
     Regtest = 2,

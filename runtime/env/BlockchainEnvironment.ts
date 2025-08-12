@@ -44,11 +44,11 @@ export class BlockchainEnvironment {
     private _selfContract: Potential<OP_NET> = null;
     private _plugins: Plugin[] = [];
 
-    private _network: Potential<Networks> = null;
+    private _network: Networks = Networks.Unknown;
 
     @inline
     public get network(): Networks {
-        if (!this._network) {
+        if (this._network === Networks.Unknown) {
             throw new Revert('Network is required');
         }
 
