@@ -10,10 +10,7 @@ export class Nested<T> {
 
     public pointer: u16;
 
-    constructor(
-        parent: Uint8Array,
-        pointer: u16,
-    ) {
+    constructor(parent: Uint8Array, pointer: u16) {
         this.pointer = pointer;
 
         this.parentKey = parent;

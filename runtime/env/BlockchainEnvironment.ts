@@ -16,6 +16,7 @@ import { Revert } from '../types/Revert';
 import { Selector } from '../math/abi';
 import { sha256 } from './global';
 import { U16_BYTE_LENGTH, U32_BYTE_LENGTH, U64_BYTE_LENGTH, U8_BYTE_LENGTH } from '../utils';
+import { Network, Networks } from '../script/Networks';
 
 export * from '../env/global';
 
@@ -33,6 +34,17 @@ export class BlockchainEnvironment {
     private _mockedDeployContractResponse: Address = new Address();
     private _mockedVerifySchnorrSignature: boolean = false;
     private _mockedOutputs: TransactionOutput[] = [];
+
+    private _network: Networks = Networks.Unknown;
+
+    @inline
+    public get network(): Networks {
+        if (this._network === Networks.Unknown) {
+            throw new Revert('Network is required');
+        }
+
+        return this._network as Networks;
+    }
 
     private _block: Potential<Block> = null;
 
@@ -249,6 +261,8 @@ export class BlockchainEnvironment {
         this._chainId = chainId;
         this._protocolId = protocolId;
 
+        this._network = Network.fromChainId(this.chainId);
+
         this._block = new Block(blockHash, blockNumber, blockMedianTime);
     }
 
@@ -264,15 +278,7 @@ export class BlockchainEnvironment {
         console.log(data);
     }
 
-    public emit(event: NetEvent): void {
-        /*const data = event.getEventData();
-        const writer = new BytesWriter(event.eventType.length + 8 + data.byteLength);
-
-        writer.writeStringWithLength(event.eventType);
-        writer.writeBytesWithLength(data);
-
-        emit(writer.getBuffer().buffer, writer.bufferLength());*/
-    }
+    public emit(_event: NetEvent): void {}
 
     public validateBitcoinAddress(_address: string): bool {
         return this._mockedValidateBitcoinAddressResult;

@@ -1,6 +1,6 @@
-import { Revert } from '../types/Revert';
-import { BytesWriter } from '../buffer/BytesWriter';
-import { BytesReader } from '../buffer/BytesReader';
+import {Revert} from '../types/Revert';
+import {BytesWriter} from '../buffer/BytesWriter';
+import {BytesReader} from '../buffer/BytesReader';
 
 /**
  * Convert a 4-byte big-endian array into a u32.
@@ -153,18 +153,6 @@ export function writeLengthAndStartIndex(length: u32, startIndex: u32): Uint8Arr
     const writer = new BytesWriter(32);
     writer.writeU32(length);
     writer.writeU32(startIndex);
-
-    return writer.getBuffer();
-}
-
-/**
- * Encode a 2-byte pointer + subPointer into a 32-byte buffer in big-endian order.
- */
-@inline
-export function encodeBasePointer(pointer: u16, subPointer: Uint8Array): Uint8Array {
-    const writer = new BytesWriter(32);
-    writer.writeU16(pointer);
-    writer.writeBytes(subPointer);
 
     return writer.getBuffer();
 }

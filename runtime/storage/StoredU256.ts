@@ -11,9 +11,7 @@ export class StoredU256 {
         public pointer: u16,
         public subPointer: Uint8Array,
     ) {
-        assert(subPointer.length <= 30, `You must pass a 30 bytes sub-pointer. (Address, got ${subPointer.length})`);
-
-        this.pointerBuffer = encodePointer(pointer, subPointer);
+        this.pointerBuffer = encodePointer(pointer, subPointer, true, 'StoredU256');
     }
 
     private _value: u256 = u256.Zero;

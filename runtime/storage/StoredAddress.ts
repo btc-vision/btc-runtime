@@ -12,7 +12,7 @@ export class StoredAddress {
     private readonly addressPointer: Uint8Array;
 
     constructor(public pointer: u16) {
-        this.addressPointer = encodePointer(pointer, EMPTY_POINTER);
+        this.addressPointer = encodePointer(pointer, EMPTY_POINTER, true, 'StoredAddress');
     }
 
     private _value: Address = Address.dead();

@@ -4,7 +4,14 @@ import { BytesReader } from '../../buffer/BytesReader';
 import { encodePointerUnknownLength } from '../../math/abi';
 
 import { i128, u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { idOfAddress, idOfI128, idOfString, idOfU128, idOfU256, idOfUint8Array } from '../codecs/Ids';
+import {
+    idOfAddress,
+    idOfI128,
+    idOfString,
+    idOfU128,
+    idOfU256,
+    idOfUint8Array,
+} from '../codecs/Ids';
 
 import { AddressCodec } from '../codecs/AddressCodec';
 import { BooleanCodec } from '../codecs/BooleanCodec';

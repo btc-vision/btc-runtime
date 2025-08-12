@@ -1,12 +1,12 @@
 import {
     bigEndianAdd,
-    encodeBasePointer,
     GET_EMPTY_BUFFER,
     readLengthAndStartIndex,
     writeLengthAndStartIndex,
 } from '../../math/bytes';
 import { Blockchain } from '../../env';
 import { Revert } from '../../types/Revert';
+import { encodePointer } from '../../math/abi';
 
 export const DEFAULT_MAX_LENGTH: u32 = u32.MAX_VALUE - 1;
 
@@ -55,12 +55,7 @@ export abstract class StoredPackedArray<T> {
         protected defaultValue: T,
         protected MAX_LENGTH: u32 = DEFAULT_MAX_LENGTH,
     ) {
-        assert(
-            subPointer.length <= 30,
-            `You must pass a 30 bytes sub-pointer. (Array, got ${subPointer.length})`,
-        );
-
-        const basePointer = encodeBasePointer(pointer, subPointer);
+        const basePointer = encodePointer(pointer, subPointer, true, 'StoredPackedArray');
         this.lengthPointer = Uint8Array.wrap(basePointer.buffer);
         this.basePointer = bigEndianAdd(basePointer, 1);
 

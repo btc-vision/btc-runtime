@@ -21,7 +21,10 @@ const MAX_LENGTH_U256 = u256.fromU32(<u32>MAX_LENGTH);
 export class StoredString {
     private readonly subPointer: Uint8Array;
 
-    constructor(public pointer: u16, index: u64 = 0) {
+    constructor(
+        public pointer: u16,
+        index: u64 = 0,
+    ) {
         const indexed = SafeMath.mul(u256.fromU64(index), MAX_LENGTH_U256);
         this.subPointer = indexed.toUint8Array(true).slice(0, 30);
     }
@@ -49,7 +52,7 @@ export class StoredString {
      * chunkIndex=0 => header slot, 1 => second slot, etc.
      */
     private getPointer(chunkIndex: u64): Uint8Array {
-        const base = encodePointer(this.pointer, this.subPointer);
+        const base = encodePointer(this.pointer, this.subPointer, true, 'StoredString');
         return bigEndianAdd(base, chunkIndex);
     }
 

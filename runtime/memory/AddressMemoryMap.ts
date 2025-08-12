@@ -8,9 +8,7 @@ import { EMPTY_BUFFER } from '../math/bytes';
 export class AddressMemoryMap {
     public pointer: u16;
 
-    constructor(
-        pointer: u16,
-    ) {
+    constructor(pointer: u16) {
         this.pointer = pointer;
     }
 
@@ -55,6 +53,6 @@ export class AddressMemoryMap {
     }
 
     private encodePointer(key: Address): Uint8Array {
-        return encodePointer(this.pointer, key.slice(0, 30), true);
+        return encodePointer(this.pointer, key.slice(0, 30), true, 'AddressMemoryMap');
     }
 }

@@ -1,8 +1,8 @@
-import {u256} from '@btc-vision/as-bignum/assembly';
-import {Blockchain} from '../../env';
-import {EMPTY_BUFFER} from "../../math/bytes";
-import {BytesWriter} from "../../buffer/BytesWriter";
-import {encodePointerUnknownLength} from "../../math/abi";
+import { u256 } from '@btc-vision/as-bignum/assembly';
+import { Blockchain } from '../../env';
+import { EMPTY_BUFFER } from '../../math/bytes';
+import { BytesWriter } from '../../buffer/BytesWriter';
+import { encodePointerUnknownLength } from '../../math/abi';
 
 /**
  * StoredMap<K, V> implementation using u256 as keys.

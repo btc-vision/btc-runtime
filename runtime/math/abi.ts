@@ -1,6 +1,6 @@
-import { bytesToU32 } from './bytes';
-import { sha256 } from '../env/global';
-import { u256 } from '@btc-vision/as-bignum/assembly';
+import {bytesToU32} from './bytes';
+import {sha256} from '../env/global';
+import {u256} from '@btc-vision/as-bignum/assembly';
 
 export type Selector = u32;
 
@@ -22,6 +22,7 @@ export function encodePointerUnknownLength(uniqueIdentifier: u16, typed: Uint8Ar
     return encodePointer(uniqueIdentifier, hash, false);
 }
 
+@inline
 export function ensureAtLeast30Bytes(typed: Uint8Array): Uint8Array {
     if (typed.length >= 30) {
         return typed;
@@ -69,12 +70,15 @@ export function u256To30Bytes(value: u256): Uint8Array {
  * Optimized pointer encoding, see encodePointerUnknownLength for a more generic version.
  * @param uniqueIdentifier
  * @param typed
- * @param safe
+ * @param enforce30Bytes
+ * @param {string} context Optional debug context.
  */
-export function encodePointer(uniqueIdentifier: u16, typed: Uint8Array, safe: boolean = true): Uint8Array {
+export function encodePointer(uniqueIdentifier: u16, typed: Uint8Array, enforce30Bytes: boolean = true, context: string = ''): Uint8Array {
     const array = ensureAtLeast30Bytes(typed);
 
-    if (safe) assert(array.length === 30, `Pointers must be 30 bytes. Got ${array.length}.`);
+    if (enforce30Bytes) {
+        assert(array.length === 30, `Pointers must be exactly 30 bytes. Got ${array.length}, context: ${context}.`);
+    }
 
     const finalPointer = new Uint8Array(32);
     finalPointer[0] = uniqueIdentifier & 0xff;

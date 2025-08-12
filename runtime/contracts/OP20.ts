@@ -70,9 +70,6 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     protected readonly _symbol: StoredString;
     protected readonly _nonceMap: AddressMemoryMap;
 
-    /** Intentionally public for inherited classes */
-    public _totalSupply: StoredU256;
-
     public constructor() {
         super();
 
@@ -85,6 +82,13 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         this._decimals = new StoredU256(decimalsPointer, EMPTY_POINTER);
         this._name = new StoredString(stringPointer, 0);
         this._symbol = new StoredString(stringPointer, 1);
+    }
+
+    /** Intentionally public for inherited classes */
+    public _totalSupply: StoredU256;
+
+    public get totalSupply(): u256 {
+        return this._totalSupply.value;
     }
 
     public get name(): string {
@@ -100,10 +104,6 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     public get decimals(): u8 {
         if (!this._decimals) throw new Revert('Decimals not set');
         return u8(this._decimals.value.toU32());
-    }
-
-    public get totalSupply(): u256 {
-        return this._totalSupply.value;
     }
 
     public get maxSupply(): u256 {
@@ -231,9 +231,8 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         const to = calldata.readAddress();
         const amount = calldata.readU256();
         const data = calldata.readBytesWithLength();
-        const spender = Blockchain.tx.sender;
 
-        this._spendAllowance(from, spender, amount);
+        this._spendAllowance(from, Blockchain.tx.sender, amount);
         this._transfer(from, to, amount, data);
 
         return new BytesWriter(0);
@@ -323,10 +322,10 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     }
 
     protected _transfer(from: Address, to: Address, amount: u256, data: Uint8Array): void {
-        if (from === Blockchain.DEAD_ADDRESS) {
+        if (from === Address.zero() || from === Address.dead()) {
             throw new Revert('Invalid sender');
         }
-        if (to === Blockchain.DEAD_ADDRESS) {
+        if (to === Address.zero() || to === Address.dead()) {
             throw new Revert('Invalid receiver');
         }
 
@@ -345,8 +344,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
             this._callOnOP20Received(from, to, amount, data);
         }
 
-        const operator: Address = Blockchain.tx.sender;
-        this.createTransferredEvent(operator, from, to, amount);
+        this.createTransferredEvent(Blockchain.tx.sender, from, to, amount);
     }
 
     protected _spendAllowance(owner: Address, spender: Address, amount: u256): void {
@@ -490,10 +488,10 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     }
 
     protected _increaseAllowance(owner: Address, spender: Address, amount: u256): void {
-        if (owner === Blockchain.DEAD_ADDRESS) {
+        if (owner === Address.zero() || owner === Address.dead()) {
             throw new Revert('Invalid approver');
         }
-        if (spender === Blockchain.DEAD_ADDRESS) {
+        if (spender === Address.zero() || spender === Address.dead()) {
             throw new Revert('Invalid spender');
         }
 
@@ -510,10 +508,10 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     }
 
     protected _decreaseAllowance(owner: Address, spender: Address, amount: u256): void {
-        if (owner === Blockchain.DEAD_ADDRESS) {
+        if (owner === Address.zero() || owner === Address.dead()) {
             throw new Revert('Invalid approver');
         }
-        if (spender === Blockchain.DEAD_ADDRESS) {
+        if (spender === Address.zero() || spender === Address.dead()) {
             throw new Revert('Invalid spender');
         }
 
@@ -532,7 +530,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     }
 
     protected _mint(to: Address, amount: u256): void {
-        if (to === Blockchain.DEAD_ADDRESS) {
+        if (to === Address.zero() || to === Address.dead()) {
             throw new Revert('Invalid receiver');
         }
 
@@ -550,7 +548,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     }
 
     protected _burn(from: Address, amount: u256): void {
-        if (from === Blockchain.DEAD_ADDRESS) {
+        if (from === Address.zero() || from === Address.dead()) {
             throw new Revert('Invalid sender');
         }
 
