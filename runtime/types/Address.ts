@@ -53,6 +53,15 @@ export class Address extends Uint8Array {
         return true;
     }
 
+    public isDead(): bool {
+        for (let i = 0; i < this.length; i++) {
+            if (this[i] != DEAD_ADDRESS[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /**
      * Create a new Address that is a copy of the current Address.
      * @returns {Address}
