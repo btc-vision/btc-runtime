@@ -1,3 +1,41 @@
+function hexCharToValue(char: u8): u8 {
+    if (char >= 48 && char <= 57) {
+        // '0' to '9'
+        return char - 48;
+    } else if (char >= 97 && char <= 102) {
+        // 'a' to 'f'
+        return char - 97 + 10;
+    } else if (char >= 65 && char <= 70) {
+        // 'A' to 'F'
+        return char - 65 + 10;
+    } else {
+        throw new Error('Invalid hex character: ' + String.fromCharCode(char));
+    }
+}
+
+export function decodeHexArray(hex: string): u8[] {
+    // Remove 0x prefix if present
+    if (hex.startsWith('0x') || hex.startsWith('0X')) {
+        hex = hex.substring(2);
+    }
+
+    // Validate length is even
+    if (hex.length % 2 !== 0) {
+        throw new Error('Hex string must have even length');
+    }
+
+    const result = new Array<u8>(hex.length / 2);
+    const hexBytes = String.UTF8.encode(hex);
+
+    for (let i = 0; i < hex.length; i += 2) {
+        const high = hexCharToValue(load<u8>(changetype<usize>(hexBytes) + i));
+        const low = hexCharToValue(load<u8>(changetype<usize>(hexBytes) + i + 1));
+        result[i / 2] = (high << 4) | low;
+    }
+
+    return result;
+}
+
 const hexLookupTable: StaticArray<u8> = [
     48, 48, 48, 49, 48, 50, 48, 51, 48, 52, 48, 53, 48, 54, 48, 55, 48, 56, 48, 57, 48, 97, 48, 98,
     48, 99, 48, 100, 48, 101, 48, 102, 49, 48, 49, 49, 49, 50, 49, 51, 49, 52, 49, 53, 49, 54, 49,
@@ -26,7 +64,7 @@ const hexLookupTable: StaticArray<u8> = [
 
 export function encodeHexUTF8(start: usize, len: usize): ArrayBuffer {
     const result = new ArrayBuffer(2 + <i32>len * 2);
-    store<u16>(changetype<usize>(result), <u16>0x7830);
+    store<u16>(changetype<usize>(result), <u16>0x7830); // Stores "0x" prefix
     for (let i: usize = 0; i < len; i++) {
         store<u16>(
             2 + changetype<usize>(result) + i * 2,
@@ -42,22 +80,4 @@ export function encodeHex(start: usize, len: usize): string {
 
 export function encodeHexFromBuffer(data: ArrayBuffer): string {
     return encodeHex(changetype<usize>(data), data.byteLength);
-}
-
-export function decodeHex(hex: string): ArrayBuffer {
-    const result = new ArrayBuffer(hex.length / 2);
-    for (let i = 0; i < hex.length; i += 2) {
-        store<u8>(changetype<usize>(result) + i / 2, <u8>parseInt(hex.substring(i, i + 2), 16));
-    }
-    return result;
-}
-
-export function decodeHexArray(hex: string): u8[] {
-    const result = new Array<u8>(hex.length / 2);
-
-    for (let i = 0; i < hex.length; i += 2) {
-        result[i / 2] = <u8>parseInt(hex.substring(i, i + 2), 16);
-    }
-
-    return result;
 }

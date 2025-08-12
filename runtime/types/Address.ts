@@ -1,7 +1,9 @@
 import { Potential } from '../lang/Definitions';
 import { ADDRESS_BYTE_LENGTH, decodeHexArray, encodeHexFromBuffer } from '../utils';
-import { bech32m as _bech32m, toWords } from '../utils/b32';
 import { Revert } from './Revert';
+import { BitcoinAddresses } from '../script/BitcoinAddresses';
+import { Blockchain } from '../env';
+import { Network, Networks } from '../script/Networks';
 
 @final
 export class Address extends Uint8Array {
@@ -43,6 +45,15 @@ export class Address extends Uint8Array {
         return cloned;
     }
 
+    public static toCSV(address: Uint8Array, blocks: u32): string {
+        return BitcoinAddresses.csvP2wshAddress(address, blocks, Network.hrp(Blockchain.network))
+            .address;
+    }
+
+    public static p2wpkh(address: Uint8Array): string {
+        return BitcoinAddresses.p2wpkh(address, Network.hrp(Blockchain.network));
+    }
+
     public isZero(): bool {
         for (let i = 0; i < this.length; i++) {
             if (this[i] != 0) {
@@ -62,6 +73,10 @@ export class Address extends Uint8Array {
         return true;
     }
 
+    public p2tr(): string {
+        return BitcoinAddresses.p2trKeyPathAddress(this, Network.hrp(Blockchain.network));
+    }
+
     /**
      * Create a new Address that is a copy of the current Address.
      * @returns {Address}
@@ -79,10 +94,6 @@ export class Address extends Uint8Array {
 
     public toHex(): string {
         return encodeHexFromBuffer(this.buffer);
-    }
-
-    public toBech32m(): string {
-        return String.UTF8.decode(_bech32m(String.UTF8.encode('bc'), toWords(this.buffer)));
     }
 
     @operator('==')
@@ -150,7 +161,7 @@ export class Address extends Uint8Array {
     }
 
     public toString(): string {
-        return this.toBech32m();
+        return this.p2tr();
     }
 
     /**
@@ -160,7 +171,7 @@ export class Address extends Uint8Array {
      */
     private newSet(publicKey: u8[]): void {
         if (publicKey.length !== 32) {
-            throw new Error('Invalid public key length');
+            throw new Error(`Invalid public key length (${publicKey.length})`);
         }
 
         super.set(publicKey);
