@@ -46,6 +46,16 @@ export class BlockchainEnvironment {
         return this._network as Networks;
     }
 
+    @inline
+    public set network(network: Networks) {
+        if (this._network !== Networks.Unknown) {
+            throw new Revert('Network is already set');
+        }
+
+        this._network = network;
+        this._chainId = Network.getChainId(network);
+    }
+
     private _block: Potential<Block> = null;
 
     @inline
