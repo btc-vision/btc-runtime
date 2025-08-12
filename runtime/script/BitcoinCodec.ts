@@ -1,7 +1,12 @@
 import { BitcoinAddresses, Ct } from './BitcoinAddresses';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { BytesReader } from '../buffer/BytesReader';
-import { CsvPairCrossCheck, MultisigPairCrossCheck, SegwitDecoded, VerifyResult, } from './ScriptUtils';
+import {
+    CsvPairCrossCheck,
+    MultisigPairCrossCheck,
+    SegwitDecoded,
+    VerifyResult,
+} from './ScriptUtils';
 import { Segwit } from './Segwit';
 import { sha256 } from '../env/global';
 import { BitcoinScript } from './Script';
