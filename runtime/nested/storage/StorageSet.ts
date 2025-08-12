@@ -3,7 +3,6 @@ import { BytesWriter } from '../../buffer/BytesWriter';
 import { encodePointerUnknownLength } from '../../math/abi';
 import { Blockchain } from '../../env';
 
-
 export class StorageSet<T> {
     private readonly pointer: u16;
     private readonly parentKey: Uint8Array;

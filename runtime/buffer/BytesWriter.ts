@@ -289,6 +289,38 @@ export class BytesWriter {
         this.writeBytes(bytes);
     }
 
+    // zero-copy bulk writer
+    public writeRaw(data: Uint8Array): void {
+        const n = data.length;
+        this.allocSafe(n);
+
+        const off = this.currentOffset;
+        const dst = this.typedArray;
+
+        memory.copy(changetype<usize>(dst.buffer) + <usize>off, changetype<usize>(data.buffer), n);
+
+        this.currentOffset = off + n;
+    }
+
+    public writeRawSlice(data: Uint8Array, offset: i32, length: i32): void {
+        if (offset < 0 || length < 0 || offset + length > data.length) {
+            throw new Revert('writeRawSlice bounds');
+        }
+
+        this.allocSafe(length);
+
+        const off = this.currentOffset;
+        const dst = this.typedArray;
+
+        memory.copy(
+            changetype<usize>(dst.buffer) + <usize>off,
+            changetype<usize>(data.buffer) + <usize>offset,
+            length,
+        );
+
+        this.currentOffset = off + length;
+    }
+
     /**
      * Equivalent to TS’s writeAddressValueTuple, except specialized for u256 values.
      */

@@ -35,6 +35,14 @@ export class Address extends Uint8Array {
         return new Address(decodeHexArray(pubKey));
     }
 
+    public static fromUint8Array(bytes: Uint8Array): Address {
+        const cloned = new Address();
+        // Copy the raw memory directly:
+        memory.copy(cloned.dataStart, bytes.dataStart, ADDRESS_BYTE_LENGTH);
+
+        return cloned;
+    }
+
     public isZero(): bool {
         for (let i = 0; i < this.length; i++) {
             if (this[i] != 0) {
@@ -60,41 +68,8 @@ export class Address extends Uint8Array {
         return cloned;
     }
 
-    public static fromUint8Array(bytes: Uint8Array): Address {
-        const cloned = new Address();
-        // Copy the raw memory directly:
-        memory.copy(cloned.dataStart, bytes.dataStart, ADDRESS_BYTE_LENGTH);
-
-        return cloned;
-    }
-
     public toHex(): string {
         return encodeHexFromBuffer(this.buffer);
-    }
-
-    public empty(): bool {
-        for (let i = 0; i < this.length; i++) {
-            if (this[i] != 0) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Set the public key
-     * @param {ArrayLike} publicKey The public key
-     * @returns {void}
-     */
-    public newSet(publicKey: u8[]): void {
-        if (publicKey.length !== 32) {
-            throw new Error('Invalid public key length');
-        }
-
-        super.set(publicKey);
-
-        this.isDefined = true;
     }
 
     public toBech32m(): string {
@@ -167,6 +142,21 @@ export class Address extends Uint8Array {
 
     public toString(): string {
         return this.toBech32m();
+    }
+
+    /**
+     * Set the public key
+     * @param {ArrayLike} publicKey The public key
+     * @returns {void}
+     */
+    private newSet(publicKey: u8[]): void {
+        if (publicKey.length !== 32) {
+            throw new Error('Invalid public key length');
+        }
+
+        super.set(publicKey);
+
+        this.isDefined = true;
     }
 
     @operator('[]')

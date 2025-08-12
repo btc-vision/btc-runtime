@@ -4,6 +4,8 @@
         "./**/*.ts"
     ],
     "compilerOptions": {
-        "preserveConstEnums": true
+        "preserveConstEnums": true,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true
     }
 }

@@ -2,15 +2,10 @@ import { Address } from '../types/Address';
 import { Nested } from './Nested';
 
 @final
-export class MapOfMap<T> extends Map<
-    Address,
-    Nested<T>
-> {
+export class MapOfMap<T> extends Map<Address, Nested<T>> {
     public pointer: u16;
 
-    constructor(
-        pointer: u16,
-    ) {
+    constructor(pointer: u16) {
         super();
 
         this.pointer = pointer;

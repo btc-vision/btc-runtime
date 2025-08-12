@@ -95,19 +95,17 @@ Here is a real-world example of how to create a basic token contract using the O
 contract follows the OP20 standard.
 
 ```typescript
+import { u256 } from '@btc-vision/as-bignum/assembly';
 import {
     Address,
+    AddressMap,
     Blockchain,
     BytesWriter,
     Calldata,
     OP20,
-    encodeSelector,
-    Map,
     OP20InitParameters,
-    Selector,
-    AddressMap,
+    SafeMath,
 } from '@btc-vision/btc-runtime/runtime';
-import { u128, u256 } from 'as-bignum/assembly';
 
 @final
 export class MyToken extends OP20 {
@@ -119,71 +117,72 @@ export class MyToken extends OP20 {
 
     // "solidityLikeConstructor" This is a solidity-like constructor. This method will only run once when the contract is deployed.
     public override onDeployment(_calldata: Calldata): void {
-        const maxSupply: u256 = u128.fromString('100000000000000000000000000').toU256(); // Your max supply.
+        const maxSupply: u256 = u256.fromString('1000000000000000000000000000'); // Your max supply. (Here, 1 billion tokens)
         const decimals: u8 = 18; // Your decimals.
-        const name: string = 'MyToken'; // Your token name.
-        const symbol: string = 'TOKEN'; // Your token symbol.
+        const name: string = 'Test'; // Your token name.
+        const symbol: string = 'TEST'; // Your token symbol.
 
         this.instantiate(new OP20InitParameters(maxSupply, decimals, name, symbol));
 
         // Add your logic here. Eg, minting the initial supply:
-        this._mint(Blockchain.tx.origin, maxSupply);
+        // this._mint(Blockchain.tx.origin, maxSupply);
     }
 
-    public override execute(method: Selector, calldata: Calldata): BytesWriter {
-        switch (method) {
-            case encodeSelector('airdrop()'):
-                return this.airdrop(calldata);
-            case encodeSelector('airdropWithAmount()'):
-                return this.airdropWithAmount(calldata);
-            default:
-                return super.execute(method, calldata);
-        }
+    @method(
+        {
+            name: 'address',
+            type: ABIDataTypes.ADDRESS,
+        },
+        {
+            name: 'amount',
+            type: ABIDataTypes.UINT256,
+        },
+    )
+    @emit('Minted')
+    public mint(calldata: Calldata): BytesWriter {
+        this.onlyDeployer(Blockchain.tx.sender);
+        this._mint(calldata.readAddress(), calldata.readU256());
+        return new BytesWriter(0);
     }
 
-    private airdrop(calldata: Calldata): BytesWriter {
+    /**
+     * Mints tokens to the specified addresses.
+     *
+     * @param calldata Calldata containing an `AddressMap<Address, u256>` to mint to.
+     */
+    @method({
+        name: 'addressAndAmount',
+        type: ABIDataTypes.ADDRESS_UINT256_TUPLE,
+    })
+    @emit('Minted')
+    public airdrop(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
 
-        const drops: AddressMap<u256> = calldata.readAddressValueTuple();
+        const addressAndAmount: AddressMap<u256> = calldata.readAddressMapU256();
+        const addresses: Address[] = addressAndAmount.keys();
 
-        const addresses: Address[] = drops.keys();
+        let totalAirdropped: u256 = u256.Zero;
+
         for (let i: i32 = 0; i < addresses.length; i++) {
             const address = addresses[i];
-            const amount = drops.get(address);
+            const amount = addressAndAmount.get(address);
 
-            this._mint(address, amount, false);
+            const currentBalance: u256 = this.balanceOfMap.get(address);
+
+            if (currentBalance) {
+                this.balanceOfMap.set(address, SafeMath.add(currentBalance, amount));
+            } else {
+                this.balanceOfMap.set(address, amount);
+            }
+
+            totalAirdropped = SafeMath.add(totalAirdropped, amount);
+
+            this.createMintedEvent(address, amount);
         }
 
-        const writer: BytesWriter = new BytesWriter(1);
-        writer.writeBoolean(true);
+        this._totalSupply.set(SafeMath.add(this._totalSupply.value, totalAirdropped));
 
-        return writer;
-    }
-
-    private _optimizedMint(address: Address, amount: u256): void {
-        this.balanceOfMap.set(address, amount);
-
-        this._totalSupply.addNoCommit(amount);
-
-        this.createMintEvent(address, amount);
-    }
-
-    private airdropWithAmount(calldata: Calldata): BytesWriter {
-        this.onlyDeployer(Blockchain.tx.sender);
-
-        const amount: u256 = calldata.readU256();
-        const addresses: Address[] = calldata.readAddressArray();
-
-        for (let i: i32 = 0; i < addresses.length; i++) {
-            this._optimizedMint(addresses[i], amount);
-        }
-
-        this._totalSupply.commit();
-
-        const writer: BytesWriter = new BytesWriter(1);
-        writer.writeBoolean(true);
-
-        return writer;
+        return new BytesWriter(0);
     }
 }
 ```
@@ -195,27 +194,6 @@ export class MyToken extends OP20 {
 Storage pointers and sub-pointers are encoded and hashed to create unique and secure storage locations. These storage
 locations are managed using the `Blockchain` class's `setStorageAt` and `getStorageAt` methods, ensuring data integrity
 and preventing tampering.
-
-### Using Serializable Data Structures
-
-For complex data types, the `Serializable` class allows you to manage and persist data structures across multiple
-storage slots.
-
-```typescript
-class ComplexData extends Serializable {
-    // Implementation
-}
-```
-
-## Additional Documentation
-
-For more detailed explanations on specific topics, refer to the individual documentation files:
-
-- [Blockchain.md](docs/Blockchain.md)
-- [Contract.md](docs/Contract.md)
-- [Events.md](docs/Events.md)
-- [Pointers.md](docs/Pointers.md)
-- [Storage.md](docs/Storage.md)
 
 ## License
 

@@ -12,7 +12,7 @@ export class StoredBoolean {
     ) {
         const pointerBuffer = GET_EMPTY_BUFFER();
         pointerBuffer[0] = pointer & 255;
-        pointerBuffer[1] = (pointer << 8) & 255;
+        pointerBuffer[1] = (pointer >> 8) & 255;
 
         this.pointerBuffer = pointerBuffer;
 
@@ -49,8 +49,6 @@ export class StoredBoolean {
     }
 
     private ensureValue(): void {
-        this._value = Blockchain.getStorageAt(
-            this.pointerBuffer,
-        );
+        this._value = Blockchain.getStorageAt(this.pointerBuffer);
     }
 }

@@ -2,7 +2,6 @@ import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
 import { encodePointerUnknownLength } from '../math/abi';
 
-
 @final
 export class KeyMerger<K extends string, K2 extends string, V extends Uint8Array> {
     public parentKey: K;

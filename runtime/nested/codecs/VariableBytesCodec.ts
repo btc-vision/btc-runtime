@@ -21,7 +21,7 @@ export class IVariableBytesCodec implements ICodec<Uint8Array> {
 
         // If remaining > 0, each chunk is 32 bytes.
         // So total chunks needed = 1 (for first chunk) + ceil(remaining / 32).
-        const additionalChunks: u32 = remaining == 0 ? 0 : ((remaining + 32 - 1) / 32);
+        const additionalChunks: u32 = remaining == 0 ? 0 : (remaining + 32 - 1) / 32;
         const totalChunks: u32 = 1 + additionalChunks;
 
         // 1) Allocate `totalChunks` from PointerManager
@@ -52,7 +52,7 @@ export class IVariableBytesCodec implements ICodec<Uint8Array> {
             for (let j: u32 = 0; j < chunkSize; j++) {
                 chunk[j] = value[offset + j];
             }
-            
+
             offset += chunkSize;
             remaining -= chunkSize;
 

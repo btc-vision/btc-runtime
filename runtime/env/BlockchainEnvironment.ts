@@ -31,6 +31,7 @@ import { Plugin } from '../plugins/Plugin';
 import { Calldata } from '../types';
 import { Revert } from '../types/Revert';
 import { Selector } from '../math/abi';
+import { Network, Networks } from '../script/Networks';
 
 export * from '../env/global';
 
@@ -42,6 +43,17 @@ export class BlockchainEnvironment {
     private transientStorage: MapUint8Array = new MapUint8Array();
     private _selfContract: Potential<OP_NET> = null;
     private _plugins: Plugin[] = [];
+
+    private _network: Potential<Networks> = null;
+
+    @inline
+    public get network(): Networks {
+        if (!this._network) {
+            throw new Revert('Network is required');
+        }
+
+        return this._network as Networks;
+    }
 
     private _block: Potential<Block> = null;
 
@@ -185,6 +197,8 @@ export class BlockchainEnvironment {
         this._chainId = chainId;
         this._protocolId = protocolId;
 
+        this._network = Network.fromChainId(this.chainId);
+
         this._block = new Block(blockHash, blockNumber, blockMedianTime);
 
         this.createContractIfNotExists();
@@ -225,7 +239,9 @@ export class BlockchainEnvironment {
 
     public emit(event: NetEvent): void {
         const data = event.getEventData();
-        const writer = new BytesWriter(String.UTF8.byteLength(event.eventType) + 8 + data.byteLength);
+        const writer = new BytesWriter(
+            String.UTF8.byteLength(event.eventType) + 8 + data.byteLength,
+        );
 
         writer.writeStringWithLength(event.eventType);
         writer.writeBytesWithLength(data);
