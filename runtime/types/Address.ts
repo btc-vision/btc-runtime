@@ -1,9 +1,9 @@
-import { Potential } from '../lang/Definitions';
-import { ADDRESS_BYTE_LENGTH, decodeHexArray, encodeHexFromBuffer } from '../utils';
-import { Revert } from './Revert';
-import { BitcoinAddresses } from '../script/BitcoinAddresses';
-import { Blockchain } from '../env';
-import { Network, Networks } from '../script/Networks';
+import {Potential} from '../lang/Definitions';
+import {ADDRESS_BYTE_LENGTH, decodeHexArray, encodeHexFromBuffer} from '../utils';
+import {Revert} from './Revert';
+import {BitcoinAddresses} from '../script/BitcoinAddresses';
+import {Blockchain} from '../env';
+import {Network} from '../script/Networks';
 
 @final
 export class Address extends Uint8Array {
@@ -171,7 +171,7 @@ export class Address extends Uint8Array {
      */
     private newSet(publicKey: u8[]): void {
         if (publicKey.length !== 32) {
-            throw new Error(`Invalid public key length (${publicKey.length})`);
+            throw new Revert(`Invalid public key length (${publicKey.length})`);
         }
 
         super.set(publicKey);

@@ -1,6 +1,7 @@
-import { BytesWriter } from '../buffer/BytesWriter';
-import { Blockchain } from '../env';
-import { encodePointerUnknownLength } from '../math/abi';
+import {BytesWriter} from '../buffer/BytesWriter';
+import {Blockchain} from '../env';
+import {encodePointerUnknownLength} from '../math/abi';
+import {Revert} from "../types/Revert";
 
 @final
 export class KeyMerger<K extends string, K2 extends string, V extends Uint8Array> {
@@ -21,24 +22,24 @@ export class KeyMerger<K extends string, K2 extends string, V extends Uint8Array
         return this;
     }
 
-    public get(key: K): Uint8Array {
+    public get(key: K2): Uint8Array {
         const mergedKey: string = this.mergeKey(key);
         return Blockchain.getStorageAt(this.encodePointer(mergedKey));
     }
 
-    public has(key: K): bool {
+    public has(key: K2): bool {
         const mergedKey: string = this.mergeKey(key);
         return Blockchain.hasStorageAt(this.encodePointer(mergedKey));
     }
 
     @unsafe
-    public delete(_key: K): bool {
-        throw new Error('Method not implemented.');
+    public delete(_key: K2): bool {
+        throw new Revert('Method not implemented.');
     }
 
     @unsafe
     public clear(): void {
-        throw new Error('Clear method not implemented.');
+        throw new Revert('Clear method not implemented.');
     }
 
     /**
@@ -48,7 +49,7 @@ export class KeyMerger<K extends string, K2 extends string, V extends Uint8Array
      *   parentKey = "ab",  key = "cdef" => "2:ab4:cdef"
      */
     @inline
-    private mergeKey(key: string): string {
+    private mergeKey(key: K2): string {
         return `${this.parentKey.length}:${this.parentKey}${key.length}:${key}`;
     }
 

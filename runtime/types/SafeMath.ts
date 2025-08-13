@@ -1,4 +1,5 @@
-import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import {u128, u256} from '@btc-vision/as-bignum/assembly';
+import {Revert} from "./Revert";
 
 export class SafeMath {
     public static ZERO: u256 = u256.fromU32(0);
@@ -6,7 +7,7 @@ export class SafeMath {
     public static add(a: u256, b: u256): u256 {
         const c: u256 = u256.add(a, b);
         if (c < a) {
-            throw new Error('SafeMath: addition overflow');
+            throw new Revert('SafeMath: addition overflow');
         }
         return c;
     }
@@ -14,7 +15,7 @@ export class SafeMath {
     public static add128(a: u128, b: u128): u128 {
         const c: u128 = u128.add(a, b);
         if (c < a) {
-            throw new Error('SafeMath: addition overflow');
+            throw new Revert('SafeMath: addition overflow');
         }
         return c;
     }
@@ -23,14 +24,14 @@ export class SafeMath {
         const c: u64 = a + b;
 
         if (c < a) {
-            throw new Error('SafeMath: addition overflow');
+            throw new Revert('SafeMath: addition overflow');
         }
         return c;
     }
 
     public static sub(a: u256, b: u256): u256 {
         if (a < b) {
-            throw new Error('SafeMath: subtraction overflow');
+            throw new Revert('SafeMath: subtraction overflow');
         }
 
         return u256.sub(a, b);
@@ -38,7 +39,7 @@ export class SafeMath {
 
     public static sub128(a: u128, b: u128): u128 {
         if (a < b) {
-            throw new Error('SafeMath: subtraction overflow');
+            throw new Revert('SafeMath: subtraction overflow');
         }
 
         return u128.sub(a, b);
@@ -46,7 +47,7 @@ export class SafeMath {
 
     public static sub64(a: u64, b: u64): u64 {
         if (a < b) {
-            throw new Error('SafeMath: subtraction overflow');
+            throw new Revert('SafeMath: subtraction overflow');
         }
 
         return a - b;
@@ -54,7 +55,7 @@ export class SafeMath {
 
     // Computes (a * b) % modulus with full precision
     public static mulmod(a: u256, b: u256, modulus: u256): u256 {
-        if (u256.eq(modulus, u256.Zero)) throw new Error('SafeMath: modulo by zero');
+        if (u256.eq(modulus, u256.Zero)) throw new Revert('SafeMath: modulo by zero');
 
         const mul = SafeMath.mul(a, b);
         return SafeMath.mod(mul, modulus);
@@ -64,7 +65,7 @@ export class SafeMath {
     @operator('%')
     public static mod(a: u256, b: u256): u256 {
         if (u256.eq(b, u256.Zero)) {
-            throw new Error('SafeMath: modulo by zero');
+            throw new Revert('SafeMath: modulo by zero');
         }
 
         const divResult = SafeMath.div(a, b);
@@ -133,7 +134,7 @@ export class SafeMath {
         const d: u256 = SafeMath.div(c, a);
 
         if (u256.ne(d, b)) {
-            throw new Error('SafeMath: multiplication overflow');
+            throw new Revert('SafeMath: multiplication overflow');
         }
 
         return c;
@@ -148,7 +149,7 @@ export class SafeMath {
         const d: u128 = SafeMath.div128(c, a);
 
         if (u128.ne(d, b)) {
-            throw new Error('SafeMath: multiplication overflow');
+            throw new Revert('SafeMath: multiplication overflow');
         }
 
         return c;
@@ -162,7 +163,7 @@ export class SafeMath {
         const c: u64 = a * b;
 
         if (c / a !== b) {
-            throw new Error('SafeMath: multiplication overflow');
+            throw new Revert('SafeMath: multiplication overflow');
         }
 
         return c;
@@ -170,7 +171,7 @@ export class SafeMath {
 
     public static div64(a: u64, b: u64): u64 {
         if (b === 0) {
-            throw new Error('Division by zero');
+            throw new Revert('Division by zero');
         }
 
         if (a === 0) {
@@ -190,7 +191,7 @@ export class SafeMath {
 
     public static div128(a: u128, b: u128): u128 {
         if (b.isZero()) {
-            throw new Error('Division by zero');
+            throw new Revert('Division by zero');
         }
 
         if (a.isZero()) {
@@ -227,7 +228,7 @@ export class SafeMath {
     @operator('/')
     public static div(a: u256, b: u256): u256 {
         if (b.isZero()) {
-            throw new Error('Division by zero');
+            throw new Revert('Division by zero');
         }
 
         if (a.isZero()) {
@@ -431,7 +432,7 @@ export class SafeMath {
      */
     static inc(value: u256): u256 {
         if (u256.eq(value, u256.Max)) {
-            throw new Error('SafeMath: increment overflow');
+            throw new Revert('SafeMath: increment overflow');
         }
 
         return value.preInc();
@@ -444,7 +445,7 @@ export class SafeMath {
      */
     public static dec(value: u256): u256 {
         if (u256.eq(value, u256.Zero)) {
-            throw new Error('SafeMath: decrement overflow');
+            throw new Revert('SafeMath: decrement overflow');
         }
 
         return value.preDec();
