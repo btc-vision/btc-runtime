@@ -67,6 +67,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     protected readonly _maxSupply: StoredU256;
     protected readonly _decimals: StoredU256;
     protected readonly _name: StoredString;
+    protected readonly _icon: StoredString;
     protected readonly _symbol: StoredString;
     protected readonly _nonceMap: AddressMemoryMap;
 
@@ -82,6 +83,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         this._decimals = new StoredU256(decimalsPointer, EMPTY_POINTER);
         this._name = new StoredString(stringPointer, 0);
         this._symbol = new StoredString(stringPointer, 1);
+        this._icon = new StoredString(stringPointer, 2);
     }
 
     /** Intentionally public for inherited classes */
@@ -99,6 +101,11 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     public get symbol(): string {
         if (!this._symbol) throw new Revert('Symbol not set');
         return this._symbol.value;
+    }
+
+    public get icon(): string {
+        if (!this._icon) throw new Revert('Icon not set');
+        return this._icon.value;
     }
 
     public get decimals(): u8 {
@@ -123,6 +130,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         this._decimals.value = u256.fromU32(u32(params.decimals));
         this._name.value = params.name;
         this._symbol.value = params.symbol;
+        this._icon.value = params.icon;
     }
 
     @method('name')
@@ -138,6 +146,14 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     public fn_symbol(_: Calldata): BytesWriter {
         const w = new BytesWriter(String.UTF8.byteLength(this.symbol) + 4);
         w.writeStringWithLength(this.symbol);
+        return w;
+    }
+
+    @method('icon')
+    @returns({ name: 'icon', type: ABIDataTypes.STRING })
+    public fn_icon(_: Calldata): BytesWriter {
+        const w = new BytesWriter(String.UTF8.byteLength(this.icon) + 4);
+        w.writeStringWithLength(this.icon);
         return w;
     }
 
@@ -309,6 +325,41 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     public burn(calldata: Calldata): BytesWriter {
         this._burn(Blockchain.tx.sender, calldata.readU256());
         return new BytesWriter(0);
+    }
+
+    @method()
+    @returns(
+        { name: 'name', type: ABIDataTypes.STRING },
+        { name: 'symbol', type: ABIDataTypes.STRING },
+        { name: 'decimals', type: ABIDataTypes.UINT8 },
+        { name: 'totalSupply', type: ABIDataTypes.UINT256 },
+        { name: 'maximumSupply', type: ABIDataTypes.UINT256 },
+        { name: 'icon', type: ABIDataTypes.STRING },
+        { name: 'domainSeparator', type: ABIDataTypes.BYTES32 },
+    )
+    public metadata(_: Calldata): BytesWriter {
+        const name = this.name;
+        const symbol = this.symbol;
+        const icon = this.icon;
+        const domainSeparator = this._buildDomainSeparator();
+
+        const nameLength = String.UTF8.byteLength(name);
+        const symbolLength = String.UTF8.byteLength(symbol);
+        const iconLength = String.UTF8.byteLength(icon);
+
+        const totalSize =
+            4 + nameLength + 4 + symbolLength + 1 + U256_BYTE_LENGTH + 4 + iconLength + 32;
+
+        const w = new BytesWriter(totalSize);
+        w.writeStringWithLength(name);
+        w.writeStringWithLength(symbol);
+        w.writeU8(this.decimals);
+        w.writeU256(this.totalSupply);
+        w.writeU256(this.maxSupply);
+        w.writeStringWithLength(icon);
+        w.writeBytesWithLength(domainSeparator);
+
+        return w;
     }
 
     protected _balanceOf(owner: Address): u256 {
