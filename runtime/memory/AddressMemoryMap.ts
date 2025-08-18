@@ -1,8 +1,9 @@
-import { Blockchain } from '../env';
-import { encodePointer } from '../math/abi';
-import { Address } from '../types/Address';
-import { u256 } from '@btc-vision/as-bignum/assembly';
-import { EMPTY_BUFFER } from '../math/bytes';
+import {Blockchain} from '../env';
+import {encodePointer} from '../math/abi';
+import {Address} from '../types/Address';
+import {u256} from '@btc-vision/as-bignum/assembly';
+import {EMPTY_BUFFER} from '../math/bytes';
+import {Revert} from "../types/Revert";
 
 @final
 export class AddressMemoryMap {
@@ -49,7 +50,7 @@ export class AddressMemoryMap {
 
     @unsafe
     public clear(): void {
-        throw new Error('Method not implemented.');
+        throw new Revert('Method not implemented.');
     }
 
     private encodePointer(key: Address): Uint8Array {

@@ -1,11 +1,15 @@
-import { i128, u128, u256 } from '@btc-vision/as-bignum/assembly';
-import { AddressMap } from '../generic/AddressMap';
-import { Selector } from '../math/abi';
-import { Address } from '../types/Address';
-import { Revert } from '../types/Revert';
+import {i128, u128, u256} from '@btc-vision/as-bignum/assembly';
+import {AddressMap} from '../generic/AddressMap';
+import {Selector} from '../math/abi';
+import {Address} from '../types/Address';
+import {Revert} from '../types/Revert';
 import {
     ADDRESS_BYTE_LENGTH,
     I128_BYTE_LENGTH,
+    I16_BYTE_LENGTH,
+    I32_BYTE_LENGTH,
+    I64_BYTE_LENGTH,
+    I8_BYTE_LENGTH,
     U128_BYTE_LENGTH,
     U16_BYTE_LENGTH,
     U256_BYTE_LENGTH,
@@ -13,7 +17,7 @@ import {
     U64_BYTE_LENGTH,
     U8_BYTE_LENGTH,
 } from '../utils';
-import { BytesReader } from './BytesReader';
+import {BytesReader} from './BytesReader';
 
 @final
 export class BytesWriter {
@@ -33,20 +37,19 @@ export class BytesWriter {
     public write<T>(value: T): void {
         if (isInteger<T>()) {
             const size = sizeof<T>();
-            if (size === 1) {
-                this.writeU8(<u8>value);
-                return;
-            }
 
             if (isSigned<T>()) {
                 switch (size) {
-                    case 2:
+                    case I8_BYTE_LENGTH:
+                        this.writeI8(<i8>value);
+                        break;
+                    case I16_BYTE_LENGTH:
                         this.writeI16(<i16>value);
                         break;
-                    case 4:
+                    case I32_BYTE_LENGTH:
                         this.writeI32(<i32>value);
                         break;
-                    case 8:
+                    case I64_BYTE_LENGTH:
                         this.writeI64(<i64>value);
                         break;
                     default:
@@ -54,13 +57,16 @@ export class BytesWriter {
                 }
             } else {
                 switch (size) {
-                    case 2:
+                    case U8_BYTE_LENGTH:
+                        this.writeU8(<u8>value);
+                        break;
+                    case U16_BYTE_LENGTH:
                         this.writeU16(<u16>value);
                         break;
-                    case 4:
+                    case U32_BYTE_LENGTH:
                         this.writeU32(<u32>value);
                         break;
-                    case 8:
+                    case U64_BYTE_LENGTH:
                         this.writeU64(<u64>value);
                         break;
                     default:
@@ -121,21 +127,27 @@ export class BytesWriter {
     }
 
     public writeI64(value: i64, be: boolean = true): void {
-        this.allocSafe(U64_BYTE_LENGTH);
+        this.allocSafe(I64_BYTE_LENGTH);
         this.buffer.setInt64(this.currentOffset, value, !be);
-        this.currentOffset += U64_BYTE_LENGTH;
+        this.currentOffset += I64_BYTE_LENGTH;
     }
 
     public writeI32(value: i32, be: boolean = true): void {
-        this.allocSafe(U32_BYTE_LENGTH);
+        this.allocSafe(I32_BYTE_LENGTH);
         this.buffer.setInt32(this.currentOffset, value, !be);
-        this.currentOffset += U32_BYTE_LENGTH;
+        this.currentOffset += I32_BYTE_LENGTH;
     }
 
     public writeI16(value: i16, be: boolean = true): void {
-        this.allocSafe(U16_BYTE_LENGTH);
+        this.allocSafe(I16_BYTE_LENGTH);
         this.buffer.setInt16(this.currentOffset, value, !be);
-        this.currentOffset += U16_BYTE_LENGTH;
+        this.currentOffset += I16_BYTE_LENGTH;
+    }
+
+    public writeI8(value: u8): void {
+        this.allocSafe(I8_BYTE_LENGTH);
+        this.buffer.setInt8(this.currentOffset, value);
+        this.currentOffset += I8_BYTE_LENGTH;
     }
 
     /**
@@ -350,10 +362,6 @@ export class BytesWriter {
         return this.currentOffset;
     }
 
-    public setOffset(offset: u32): void {
-        this.currentOffset = offset;
-    }
-
     /**
      * Ensures we have space for `size` more bytes without going past the current buffer.
      * If not, calls `resize()` which by default throws a Revert.
@@ -383,8 +391,8 @@ export class BytesWriter {
     private resize(size: u32): void {
         throw new Revert(
             `Buffer is getting resized. This is bad for performance. ` +
-                `Expected size: ${this.buffer.byteLength + size} - ` +
-                `Current size: ${this.buffer.byteLength}`,
+            `Expected size: ${this.buffer.byteLength + size} - ` +
+            `Current size: ${this.buffer.byteLength}`,
         );
     }
 }
