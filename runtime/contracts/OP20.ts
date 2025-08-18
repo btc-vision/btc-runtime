@@ -19,6 +19,7 @@ import {
     U256_BYTE_LENGTH,
     U32_BYTE_LENGTH,
     U64_BYTE_LENGTH,
+    U8_BYTE_LENGTH,
 } from '../utils';
 import { IOP20 } from './interfaces/IOP20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
@@ -348,7 +349,13 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         const iconLength = String.UTF8.byteLength(icon);
 
         const totalSize =
-            4 + nameLength + 4 + symbolLength + 1 + U256_BYTE_LENGTH + 4 + iconLength + 32;
+            U32_BYTE_LENGTH * 4 +
+            U256_BYTE_LENGTH * 2 +
+            nameLength +
+            symbolLength +
+            iconLength +
+            domainSeparator.length +
+            U8_BYTE_LENGTH;
 
         const w = new BytesWriter(totalSize);
         w.writeStringWithLength(name);

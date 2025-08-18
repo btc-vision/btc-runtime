@@ -1,4 +1,9 @@
-import { bigEndianAdd, GET_EMPTY_BUFFER, readLengthAndStartIndex, writeLengthAndStartIndex, } from '../../math/bytes';
+import {
+    bigEndianAdd,
+    GET_EMPTY_BUFFER,
+    readLengthAndStartIndex,
+    writeLengthAndStartIndex,
+} from '../../math/bytes';
 import { Blockchain } from '../../env';
 import { Revert } from '../../types/Revert';
 import { encodePointer } from '../../math/abi';
