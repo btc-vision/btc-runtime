@@ -1,9 +1,9 @@
-import {Blockchain} from '../env';
-import {encodePointer} from '../math/abi';
-import {Address} from '../types/Address';
-import {u256} from '@btc-vision/as-bignum/assembly';
-import {EMPTY_BUFFER} from '../math/bytes';
-import {Revert} from "../types/Revert";
+import { Blockchain } from '../env';
+import { encodePointer } from '../math/abi';
+import { Address } from '../types/Address';
+import { u256 } from '@btc-vision/as-bignum/assembly';
+import { EMPTY_BUFFER } from '../math/bytes';
+import { Revert } from '../types/Revert';
 
 @final
 export class AddressMemoryMap {

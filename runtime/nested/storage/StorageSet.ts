@@ -1,8 +1,8 @@
-import {ICodec} from '../interfaces/ICodec';
-import {BytesWriter} from '../../buffer/BytesWriter';
-import {encodePointerUnknownLength} from '../../math/abi';
-import {Blockchain} from '../../env';
-import {Revert} from "../../types/Revert";
+import { ICodec } from '../interfaces/ICodec';
+import { BytesWriter } from '../../buffer/BytesWriter';
+import { encodePointerUnknownLength } from '../../math/abi';
+import { Blockchain } from '../../env';
+import { Revert } from '../../types/Revert';
 
 export class StorageSet<T> {
     private readonly pointer: u16;

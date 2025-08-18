@@ -1,7 +1,7 @@
-import {BytesWriter} from '../buffer/BytesWriter';
-import {Blockchain} from '../env';
-import {encodePointerUnknownLength} from '../math/abi';
-import {Revert} from "../types/Revert";
+import { BytesWriter } from '../buffer/BytesWriter';
+import { Blockchain } from '../env';
+import { encodePointerUnknownLength } from '../math/abi';
+import { Revert } from '../types/Revert';
 
 @final
 export class KeyMerger<K extends string, K2 extends string, V extends Uint8Array> {

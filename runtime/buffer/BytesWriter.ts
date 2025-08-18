@@ -1,8 +1,8 @@
-import {i128, u128, u256} from '@btc-vision/as-bignum/assembly';
-import {AddressMap} from '../generic/AddressMap';
-import {Selector} from '../math/abi';
-import {Address} from '../types/Address';
-import {Revert} from '../types/Revert';
+import { i128, u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { AddressMap } from '../generic/AddressMap';
+import { Selector } from '../math/abi';
+import { Address } from '../types/Address';
+import { Revert } from '../types/Revert';
 import {
     ADDRESS_BYTE_LENGTH,
     I128_BYTE_LENGTH,
@@ -17,7 +17,7 @@ import {
     U64_BYTE_LENGTH,
     U8_BYTE_LENGTH,
 } from '../utils';
-import {BytesReader} from './BytesReader';
+import { BytesReader } from './BytesReader';
 
 @final
 export class BytesWriter {
@@ -391,8 +391,8 @@ export class BytesWriter {
     private resize(size: u32): void {
         throw new Revert(
             `Buffer is getting resized. This is bad for performance. ` +
-            `Expected size: ${this.buffer.byteLength + size} - ` +
-            `Current size: ${this.buffer.byteLength}`,
+                `Expected size: ${this.buffer.byteLength + size} - ` +
+                `Current size: ${this.buffer.byteLength}`,
         );
     }
 }

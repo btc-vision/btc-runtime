@@ -1,4 +1,4 @@
-import {Revert} from "../types/Revert";
+import { Revert } from '../types/Revert';
 
 function hexCharToValue(char: u8): u8 {
     if (char >= 48 && char <= 57) {

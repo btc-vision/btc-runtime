@@ -1,19 +1,19 @@
-import {Blockchain} from '../../env';
-import {BytesWriter} from '../../buffer/BytesWriter';
-import {BytesReader} from '../../buffer/BytesReader';
-import {encodePointerUnknownLength} from '../../math/abi';
+import { Blockchain } from '../../env';
+import { BytesWriter } from '../../buffer/BytesWriter';
+import { BytesReader } from '../../buffer/BytesReader';
+import { encodePointerUnknownLength } from '../../math/abi';
 
-import {i128, u128, u256} from '@btc-vision/as-bignum/assembly';
-import {idOfAddress, idOfI128, idOfString, idOfU128, idOfU256, idOfUint8Array,} from '../codecs/Ids';
+import { i128, u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { idOfAddress, idOfI128, idOfString, idOfU128, idOfU256, idOfUint8Array, } from '../codecs/Ids';
 
-import {AddressCodec} from '../codecs/AddressCodec';
-import {BooleanCodec} from '../codecs/BooleanCodec';
-import {StringCodec} from '../codecs/StringCodec';
-import {VariableBytesCodec} from '../codecs/VariableBytesCodec';
-import {U256Codec} from '../codecs/U256Codec';
+import { AddressCodec } from '../codecs/AddressCodec';
+import { BooleanCodec } from '../codecs/BooleanCodec';
+import { StringCodec } from '../codecs/StringCodec';
+import { VariableBytesCodec } from '../codecs/VariableBytesCodec';
+import { U256Codec } from '../codecs/U256Codec';
 
-import {Address} from '../../types/Address';
-import {Revert} from '../../types/Revert';
+import { Address } from '../../types/Address';
+import { Revert } from '../../types/Revert';
 
 /**
  * A reflection-based StorageMap<K, V>.

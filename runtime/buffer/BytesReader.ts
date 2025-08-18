@@ -1,8 +1,8 @@
-import {i128, u128, u256} from '@btc-vision/as-bignum/assembly';
-import {AddressMap} from '../generic/AddressMap';
-import {Selector} from '../math/abi';
-import {Address} from '../types/Address';
-import {Revert} from '../types/Revert';
+import { i128, u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { AddressMap } from '../generic/AddressMap';
+import { Selector } from '../math/abi';
+import { Address } from '../types/Address';
+import { Revert } from '../types/Revert';
 import {
     ADDRESS_BYTE_LENGTH,
     I128_BYTE_LENGTH,
@@ -161,7 +161,6 @@ export class BytesReader {
         const raw: u8[] = this.readBytesArray(U256_BYTE_LENGTH);
         return be ? u256.fromBytesBE(raw) : u256.fromBytesLE(raw);
     }
-
 
     public readU128(be: boolean = true): u128 {
         this.verifyEnd(this.currentOffset + U128_BYTE_LENGTH);
@@ -336,7 +335,7 @@ export class BytesReader {
         if (size > this.buffer.byteLength) {
             throw new Revert(
                 `Attempt to read beyond buffer length. Requested up to offset ${size}, ` +
-                `but buffer is only ${this.buffer.byteLength} bytes.`,
+                    `but buffer is only ${this.buffer.byteLength} bytes.`,
             );
         }
     }

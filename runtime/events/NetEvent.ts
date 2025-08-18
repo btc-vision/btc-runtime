@@ -1,5 +1,5 @@
-import {BytesWriter} from '../buffer/BytesWriter';
-import {Revert} from '../types/Revert';
+import { BytesWriter } from '../buffer/BytesWriter';
+import { Revert } from '../types/Revert';
 
 export const MAX_EVENT_DATA_SIZE: u32 = 352; // 352 bytes max per event.
 

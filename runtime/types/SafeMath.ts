@@ -1,5 +1,5 @@
-import {u128, u256} from '@btc-vision/as-bignum/assembly';
-import {Revert} from "./Revert";
+import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { Revert } from './Revert';
 
 export class SafeMath {
     public static ZERO: u256 = u256.fromU32(0);

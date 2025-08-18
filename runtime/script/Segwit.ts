@@ -1,7 +1,7 @@
-import {SegwitDecoded} from './ScriptUtils';
-import {hash160, sha256} from '../env/global';
-import {Bech32} from './Bech32';
-import {Revert} from "../types/Revert";
+import { SegwitDecoded } from './ScriptUtils';
+import { hash160, sha256 } from '../env/global';
+import { Bech32 } from './Bech32';
+import { Revert } from '../types/Revert';
 
 /**
  * Segwit provides high-level functions for creating and decoding

@@ -1,9 +1,9 @@
-import {Blockchain} from '../env';
-import {encodePointerUnknownLength} from '../math/abi';
-import {BytesWriter} from '../buffer/BytesWriter';
-import {u256} from '@btc-vision/as-bignum/assembly';
-import {Address} from '../types/Address';
-import {Revert} from "../types/Revert";
+import { Blockchain } from '../env';
+import { encodePointerUnknownLength } from '../math/abi';
+import { BytesWriter } from '../buffer/BytesWriter';
+import { u256 } from '@btc-vision/as-bignum/assembly';
+import { Address } from '../types/Address';
+import { Revert } from '../types/Revert';
 
 @final
 export class Nested<T> {

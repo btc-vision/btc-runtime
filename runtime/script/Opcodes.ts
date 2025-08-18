@@ -1,4 +1,4 @@
-import {Revert} from "../types/Revert";
+import { Revert } from '../types/Revert';
 
 @final
 export class BitcoinOpcodes {

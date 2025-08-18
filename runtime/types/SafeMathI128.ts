@@ -1,5 +1,5 @@
-import {i128} from '@btc-vision/as-bignum/assembly';
-import {Revert} from "./Revert";
+import { i128 } from '@btc-vision/as-bignum/assembly';
+import { Revert } from './Revert';
 
 export class SafeMathI128 {
     public static readonly ZERO: i128 = i128.fromI32(0);
