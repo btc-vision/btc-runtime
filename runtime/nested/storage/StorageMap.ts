@@ -14,6 +14,7 @@ import { U256Codec } from '../codecs/U256Codec';
 
 import { Address } from '../../types/Address';
 import { Revert } from '../../types/Revert';
+import { EMPTY_BUFFER } from '../../math/bytes';
 
 /**
  * A reflection-based StorageMap<K, V>.
@@ -31,10 +32,6 @@ export class StorageMap<K, V> {
     constructor(pointer: u16) {
         this.pointer = pointer;
     }
-
-    // ----------------------------------------------------------
-    // PUBLIC API
-    // ----------------------------------------------------------
 
     public set(key: K, value: V): this {
         const storageKey = this.getStorageKey(key);
@@ -59,7 +56,7 @@ export class StorageMap<K, V> {
             return false;
         }
 
-        Blockchain.setStorageAt(storageKey, new Uint8Array(0));
+        Blockchain.setStorageAt(storageKey, EMPTY_BUFFER);
         return true;
     }
 
@@ -69,21 +66,11 @@ export class StorageMap<K, V> {
         throw new Revert('clear() not implemented; no key-tracking logic here.');
     }
 
-    // ----------------------------------------------------------
-    // INTERNAL: Derive the final storage key
-    // ----------------------------------------------------------
-
     private getStorageKey(k: K): Uint8Array {
-        // 1) encode the key
         const keyBytes = this.encodeValue<K>(k);
 
-        // 2) transform with pointer
         return encodePointerUnknownLength(this.pointer, keyBytes);
     }
-
-    // ----------------------------------------------------------
-    // ENCODE / DECODE
-    // ----------------------------------------------------------
 
     /**
      * Retrieve the value of type P from the given storage pointer (32 bytes).
@@ -122,10 +109,6 @@ export class StorageMap<K, V> {
         const raw = this.encodeValue<P>(value);
         Blockchain.setStorageAt(storageKey, raw);
     }
-
-    // ----------------------------------------------------------
-    // decodeBytesAsType: interpret raw bytes as type P
-    // ----------------------------------------------------------
 
     private decodeBytesAsType<P>(raw: Uint8Array): P {
         // isInteger => built-in numeric types (i32, u32, etc.)
@@ -173,10 +156,6 @@ export class StorageMap<K, V> {
         throw new Revert(`Unsupported type ${typeId}`);
     }
 
-    // ----------------------------------------------------------
-    // encodeValue<P>: convert a value of type P into raw bytes
-    // ----------------------------------------------------------
-
     private encodeValue<P>(value: P): Uint8Array {
         // built-in integer => write with BytesWriter
         if (isInteger<P>()) {
@@ -221,6 +200,7 @@ export class StorageMap<K, V> {
 
         // If nested map => handle in a custom branch (not shown here):
         // if (value instanceof StorageMap<...>) { ... }
+        // TODO
 
         throw new Revert('encodeValue: Unsupported type');
     }

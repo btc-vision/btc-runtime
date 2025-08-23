@@ -92,7 +92,8 @@ export abstract class StoredPackedArray<T> {
     @operator('[]')
     public get(index: u32): T {
         // max length used on purpose to prevent unbounded usage
-        if (index > this.MAX_LENGTH) {
+        // we allow index to be equal to MAX_LENGTH because, we allow it on the set as well.
+        if (index >= this.MAX_LENGTH) {
             throw new Revert('get: out of range');
         }
 
@@ -109,7 +110,7 @@ export abstract class StoredPackedArray<T> {
 
     @inline
     public get_physical(index: u32): T {
-        if (index > this.MAX_LENGTH) {
+        if (index >= this.MAX_LENGTH) {
             throw new Revert('get: index exceeds MAX_LENGTH (packed array)');
         }
 
@@ -126,7 +127,7 @@ export abstract class StoredPackedArray<T> {
     @inline
     @operator('[]=')
     public set(index: u32, value: T): void {
-        if (index > this.MAX_LENGTH) {
+        if (index >= this.MAX_LENGTH) {
             throw new Revert('set: index exceeds MAX_LENGTH (packed array)');
         }
 
@@ -148,7 +149,7 @@ export abstract class StoredPackedArray<T> {
 
     @inline
     public set_physical(index: u32, value: T): void {
-        if (index > this.MAX_LENGTH) {
+        if (index >= this.MAX_LENGTH) {
             throw new Revert('set: index exceeds MAX_LENGTH (packed array)');
         }
 
@@ -303,6 +304,10 @@ export abstract class StoredPackedArray<T> {
      */
     @inline
     public delete_physical(index: u32): void {
+        if (index >= this.MAX_LENGTH) {
+            throw new Revert('delete: index exceeds MAX_LENGTH (packed array)');
+        }
+
         const cap = this.getSlotCapacity();
         const slotIndex = index / cap;
         const subIndex = <u32>(index % cap);
@@ -373,6 +378,10 @@ export abstract class StoredPackedArray<T> {
 
     @inline
     public setStartingIndex(index: u32): void {
+        if (index >= this.MAX_LENGTH) {
+            throw new Revert('setStartingIndex: out of range');
+        }
+
         this._startIndex = index;
         this._isChangedStartIndex = true;
     }

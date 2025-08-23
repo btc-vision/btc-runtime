@@ -64,7 +64,7 @@ export class ScriptNumber {
     /**
      * Decode result type for safe error handling
      */
-    static decodeResult(data: Uint8Array, minimal: bool = true): DecodeNumberResult {
+    public static decodeResult(data: Uint8Array, minimal: bool = true): DecodeNumberResult {
         const L = data.length;
         if (L == 0) return DecodeNumberResult.ok(0);
 

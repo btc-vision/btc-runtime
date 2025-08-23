@@ -159,6 +159,10 @@ export function writeLengthAndStartIndex(length: u32, startIndex: u32): Uint8Arr
 
 @inline
 export function bigEndianAdd(base: Uint8Array, increment: u64): Uint8Array {
+    if(base.length !== 32) {
+        throw new Revert('bigEndianAdd: base must be 32 bytes');
+    }
+
     const add = u64ToBE32Bytes(increment);
 
     return addUint8ArraysBE(base, add);

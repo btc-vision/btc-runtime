@@ -3,7 +3,10 @@
     "version": "1.9.1",
     "description": "Bitcoin Smart Contract Runtime",
     "main": "btc/index.ts",
-    "scripts": {},
+    "scripts": {
+        "test": "asp --config as-pect.config.js --verbose --no-logo",
+        "test:ci": "asp --config as-pect.config.js --summary --no-logo"
+    },
     "types": "btc/index.ts",
     "keywords": [
         "bitcoin",
@@ -17,6 +20,11 @@
     "author": "BlobMaster41",
     "license": "MIT",
     "devDependencies": {
+        "@btc-vision/as-covers-assembly": "^0.4.4",
+        "@btc-vision/as-covers-transform": "^0.4.4",
+        "@btc-vision/as-pect-assembly": "^8.2.0",
+        "@btc-vision/as-pect-cli": "^8.2.0",
+        "@btc-vision/as-pect-transform": "^8.2.0",
         "@types/node": "^24.2.1",
         "assemblyscript": "^0.28.4"
     },
@@ -37,11 +45,12 @@
     "dependencies": {
         "@assemblyscript/loader": "^0.28.4",
         "@btc-vision/as-bignum": "^0.0.5",
-        "@btc-vision/opnet-transform": "^0.1.10",
+        "@btc-vision/opnet-transform": "^0.1.11",
         "@eslint/js": "^9.33.0",
         "gulplog": "^2.2.0",
         "ts-node": "^10.9.2",
         "typescript": "^5.9.2",
-        "typescript-eslint": "^8.39.0"
+        "typescript-eslint": "^8.39.0",
+        "yaml": "^2.8.1"
     }
 }

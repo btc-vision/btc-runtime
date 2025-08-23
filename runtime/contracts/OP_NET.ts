@@ -50,6 +50,11 @@ export class OP_NET implements IBTC {
         return this.address === address;
     }
 
+    protected _buildDomainSeparator(): Uint8Array {
+        // This method should be overridden in derived classes to provide the domain separator
+        throw new Error('Method not implemented.');
+    }
+
     protected onlyDeployer(caller: Address): void {
         if (this.contractDeployer !== caller) {
             throw new Revert('Only deployer can call this method');
