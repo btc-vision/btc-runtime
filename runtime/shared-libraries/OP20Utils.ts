@@ -16,7 +16,6 @@ export class OP20Utils {
         calldata.writeAddress(owner);
 
         const response = Blockchain.call(token, calldata);
-
-        return response.readU256();
+        return response.data.readU256();
     }
 }

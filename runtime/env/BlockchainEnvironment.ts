@@ -36,6 +36,14 @@ import { Network, Networks } from '../script/Networks';
 export * from '../env/global';
 
 @final
+export class CallResult {
+    constructor(
+        public readonly success: boolean,
+        public readonly data: BytesReader,
+    ) {}
+}
+
+@final
 export class BlockchainEnvironment {
     public readonly DEAD_ADDRESS: Address = Address.dead();
 
@@ -204,7 +212,11 @@ export class BlockchainEnvironment {
         this.createContractIfNotExists();
     }
 
-    public call(destinationContract: Address, calldata: BytesWriter): BytesReader {
+    public call(
+        destinationContract: Address,
+        calldata: BytesWriter,
+        stopExecutionOnFailure: boolean = true,
+    ): CallResult {
         if (!destinationContract) {
             throw new Revert('Destination contract is required');
         }
@@ -222,11 +234,11 @@ export class BlockchainEnvironment {
         const resultBuffer = new ArrayBuffer(resultLength);
         getCallResult(0, resultLength, resultBuffer);
 
-        if (status !== 0) {
+        if (status !== 0 && stopExecutionOnFailure) {
             env_exit(status, resultBuffer, resultLength);
         }
 
-        return new BytesReader(Uint8Array.wrap(resultBuffer));
+        return new CallResult(status === 0, new BytesReader(Uint8Array.wrap(resultBuffer)));
     }
 
     public log(data: string): void {
@@ -285,6 +297,7 @@ export class BlockchainEnvironment {
 
     public getStorageAt(pointerHash: Uint8Array): Uint8Array {
         this.hasPointerStorageHash(pointerHash);
+
         if (this.storage.has(pointerHash)) {
             return this.storage.get(pointerHash);
         }
@@ -367,11 +380,19 @@ export class BlockchainEnvironment {
     private _internalSetStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {
         this.storage.set(pointerHash, value);
 
+        if (pointerHash.buffer.byteLength !== 32 || value.buffer.byteLength !== 32) {
+            throw new Revert('Pointer and value must be 32 bytes long');
+        }
+
         storePointer(pointerHash.buffer, value.buffer);
     }
 
     private _internalSetTransientStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {
         this.transientStorage.set(pointerHash, value);
+
+        if (pointerHash.buffer.byteLength !== 32 || value.buffer.byteLength !== 32) {
+            throw new Revert('Transient pointer and value must be 32 bytes long');
+        }
 
         tStorePointer(pointerHash.buffer, value.buffer);
     }
@@ -379,6 +400,10 @@ export class BlockchainEnvironment {
     private hasPointerStorageHash(pointer: Uint8Array): bool {
         if (this.storage.has(pointer)) {
             return true;
+        }
+
+        if (pointer.buffer.byteLength !== 32) {
+            throw new Revert('Pointer must be 32 bytes long');
         }
 
         // we attempt to load the requested pointer.
@@ -394,6 +419,10 @@ export class BlockchainEnvironment {
     private hasPointerTransientStorageHash(pointer: Uint8Array): bool {
         if (this.transientStorage.has(pointer)) {
             return true;
+        }
+
+        if (pointer.buffer.byteLength !== 32) {
+            throw new Revert('Transient pointer must be 32 bytes long');
         }
 
         // we attempt to load the requested pointer.
