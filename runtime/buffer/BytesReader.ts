@@ -6,7 +6,10 @@ import { Revert } from '../types/Revert';
 import {
     ADDRESS_BYTE_LENGTH,
     I128_BYTE_LENGTH,
+    I16_BYTE_LENGTH,
+    I32_BYTE_LENGTH,
     I64_BYTE_LENGTH,
+    I8_BYTE_LENGTH,
     U128_BYTE_LENGTH,
     U16_BYTE_LENGTH,
     U256_BYTE_LENGTH,
@@ -40,31 +43,31 @@ export class BytesReader {
                 const size = sizeof<T>();
 
                 switch (size) {
-                    case 8:
+                    case I8_BYTE_LENGTH:
                         return this.readI8() as T;
-                    case 16:
+                    case I16_BYTE_LENGTH:
                         return this.readI16() as T;
-                    case 32:
+                    case I32_BYTE_LENGTH:
                         return this.readI32() as T;
-                    case 64:
+                    case I64_BYTE_LENGTH:
                         return this.readI64() as T;
                     default:
-                        throw new Error(`Invalid size ${size}`);
+                        throw new Revert(`Invalid size ${size}`);
                 }
             } else {
                 const size = sizeof<T>();
 
                 switch (size) {
-                    case 8:
+                    case U8_BYTE_LENGTH:
                         return this.readU8() as T;
-                    case 16:
+                    case U16_BYTE_LENGTH:
                         return this.readU16() as T;
-                    case 32:
+                    case U32_BYTE_LENGTH:
                         return this.readU32() as T;
-                    case 64:
+                    case U64_BYTE_LENGTH:
                         return this.readU64() as T;
                     default:
-                        throw new Error(`Invalid size ${size}`);
+                        throw new Revert(`Invalid size ${size}`);
                 }
             }
         } else if (id === idof<u256>()) {
@@ -80,28 +83,35 @@ export class BytesReader {
         } else if (id === idof<string>()) {
             return this.readStringWithLength() as T;
         } else {
-            throw new Error(`Unsupported type ${id}`);
+            throw new Revert(`Unsupported type ${id}`);
         }
     }
 
+    public readI8(): i8 {
+        this.verifyEnd(this.currentOffset + I8_BYTE_LENGTH);
+        const value = this.buffer.getInt8(this.currentOffset);
+        this.currentOffset += I8_BYTE_LENGTH;
+        return value;
+    }
+
     public readI16(): i16 {
-        this.verifyEnd(this.currentOffset + 2);
+        this.verifyEnd(this.currentOffset + I16_BYTE_LENGTH);
         const value = this.buffer.getInt16(this.currentOffset, true);
-        this.currentOffset += 2;
+        this.currentOffset += I16_BYTE_LENGTH;
         return value;
     }
 
     public readI32(): i32 {
-        this.verifyEnd(this.currentOffset + 4);
+        this.verifyEnd(this.currentOffset + I32_BYTE_LENGTH);
         const value = this.buffer.getInt32(this.currentOffset, true);
-        this.currentOffset += 4;
+        this.currentOffset += I32_BYTE_LENGTH;
         return value;
     }
 
-    public readI8(): i8 {
-        this.verifyEnd(this.currentOffset + U8_BYTE_LENGTH);
-        const value = this.buffer.getInt8(this.currentOffset);
-        this.currentOffset += U8_BYTE_LENGTH;
+    public readI64(be: boolean = true): i64 {
+        this.verifyEnd(this.currentOffset + I64_BYTE_LENGTH);
+        const value = this.buffer.getInt64(this.currentOffset, !be);
+        this.currentOffset += I64_BYTE_LENGTH;
         return value;
     }
 
@@ -150,13 +160,6 @@ export class BytesReader {
         this.verifyEnd(this.currentOffset + U256_BYTE_LENGTH);
         const raw: u8[] = this.readBytesArray(U256_BYTE_LENGTH);
         return be ? u256.fromBytesBE(raw) : u256.fromBytesLE(raw);
-    }
-
-    public readI64(be: boolean = true): i64 {
-        this.verifyEnd(this.currentOffset + I64_BYTE_LENGTH);
-        const value = this.buffer.getInt64(this.currentOffset, !be);
-        this.currentOffset += I64_BYTE_LENGTH;
-        return value;
     }
 
     public readU128(be: boolean = true): u128 {
@@ -321,6 +324,7 @@ export class BytesReader {
     }
 
     public setOffset(offset: i32): void {
+        this.verifyEnd(offset);
         this.currentOffset = offset;
     }
 
@@ -329,7 +333,7 @@ export class BytesReader {
      */
     public verifyEnd(size: i32): void {
         if (size > this.buffer.byteLength) {
-            throw new Error(
+            throw new Revert(
                 `Attempt to read beyond buffer length. Requested up to offset ${size}, ` +
                     `but buffer is only ${this.buffer.byteLength} bytes.`,
             );

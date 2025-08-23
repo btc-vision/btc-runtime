@@ -19,37 +19,30 @@ import {
     U256_BYTE_LENGTH,
     U32_BYTE_LENGTH,
     U64_BYTE_LENGTH,
+    U8_BYTE_LENGTH,
 } from '../utils';
 import { IOP20 } from './interfaces/IOP20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
-import { OP_NET } from './OP_NET';
-
-// onOP20Received(address,address,uint256,bytes)
-const ON_OP20_RECEIVED_SELECTOR: u32 = 0xd83e7dbc;
-
-// sha256("OP712Domain(string name,string version,bytes32 chainId,bytes32 protocolId,address verifyingContract)")
-const OP712_DOMAIN_TYPE_HASH: u8[] = [
-    0xfe, 0xe8, 0x22, 0x92, 0x35, 0x1d, 0x1a, 0x8b, 0xab, 0x21, 0xc4, 0xef, 0xdd, 0x15, 0x7e, 0x31,
-    0x68, 0xe8, 0xf6, 0x32, 0x3a, 0xd0, 0x4c, 0xba, 0x12, 0xf7, 0x7c, 0x0b, 0xdc, 0x46, 0x22, 0x58,
-];
-
-// sha256("1")
-const OP712_VERSION_HASH: u8[] = [
-    0x6b, 0x86, 0xb2, 0x73, 0xff, 0x34, 0xfc, 0xe1, 0x9d, 0x6b, 0x80, 0x4e, 0xff, 0x5a, 0x3f, 0x57,
-    0x47, 0xad, 0xa4, 0xea, 0xa2, 0x2f, 0x1d, 0x49, 0xc0, 0x1e, 0x52, 0xdd, 0xb7, 0x87, 0x5b, 0x4b,
-];
-
-// sha256("OP20AllowanceIncrease(address owner,address spender,uint256 amount,uint256 nonce,uint64 deadline)")
-const ALLOWANCE_INCREASE_TYPE_HASH: u8[] = [
-    0x7e, 0x88, 0x02, 0xf1, 0xfd, 0x23, 0xe1, 0x0e, 0x0d, 0xde, 0x3f, 0x00, 0xc0, 0xaa, 0x48, 0x15,
-    0xd8, 0x85, 0xec, 0xd9, 0xcd, 0xa0, 0xdf, 0x56, 0xff, 0xa2, 0x5e, 0xcc, 0x70, 0x2d, 0x45, 0x8e,
-];
-
-// sha256("OP20AllowanceDecrease(address owner,address spender,uint256 amount,uint256 nonce,uint64 deadline)")
-const ALLOWANCE_DECREASE_TYPE_HASH: u8[] = [
-    0x70, 0x87, 0x99, 0x34, 0x92, 0x1c, 0x2f, 0x48, 0x17, 0x78, 0x87, 0x89, 0x77, 0xd5, 0xb4, 0x5e,
-    0x2a, 0x59, 0xda, 0x1d, 0x28, 0x22, 0x41, 0xc9, 0x3f, 0xf1, 0xba, 0x6a, 0xf0, 0x98, 0xfc, 0xd0,
-];
+import {
+    ALLOWANCE_DECREASE_TYPE_HASH,
+    ALLOWANCE_INCREASE_TYPE_HASH,
+    ALLOWANCE_SELECTOR,
+    BALANCE_OF_SELECTOR,
+    DECIMALS_SELECTOR,
+    DOMAIN_SEPARATOR_SELECTOR,
+    ICON_SELECTOR,
+    MAXIMUM_SUPPLY_SELECTOR,
+    METADATA_SELECTOR,
+    NAME_SELECTOR,
+    NONCE_OF_SELECTOR,
+    ON_OP20_RECEIVED_SELECTOR,
+    OP712_DOMAIN_TYPE_HASH,
+    OP712_VERSION_HASH,
+    SYMBOL_SELECTOR,
+    TOTAL_SUPPLY_SELECTOR,
+} from '../constants/Exports';
+import { ReentrancyGuard, ReentrancyLevel } from './ReentrancyGuard';
+import { Selector } from '../math/abi';
 
 const nonceMapPointer: u16 = Blockchain.nextPointer;
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
@@ -60,13 +53,16 @@ const allowanceMapPointer: u16 = Blockchain.nextPointer;
 
 const balanceOfMapPointer: u16 = Blockchain.nextPointer;
 
-export abstract class OP20 extends OP_NET implements IOP20 {
+export abstract class OP20 extends ReentrancyGuard implements IOP20 {
+    protected readonly reentrancyLevel: ReentrancyLevel = ReentrancyLevel.CALLBACK;
+
     protected readonly allowanceMap: MapOfMap<u256>;
     protected readonly balanceOfMap: AddressMemoryMap;
 
     protected readonly _maxSupply: StoredU256;
     protected readonly _decimals: StoredU256;
     protected readonly _name: StoredString;
+    protected readonly _icon: StoredString;
     protected readonly _symbol: StoredString;
     protected readonly _nonceMap: AddressMemoryMap;
 
@@ -82,6 +78,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         this._decimals = new StoredU256(decimalsPointer, EMPTY_POINTER);
         this._name = new StoredString(stringPointer, 0);
         this._symbol = new StoredString(stringPointer, 1);
+        this._icon = new StoredString(stringPointer, 2);
     }
 
     /** Intentionally public for inherited classes */
@@ -99,6 +96,11 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     public get symbol(): string {
         if (!this._symbol) throw new Revert('Symbol not set');
         return this._symbol.value;
+    }
+
+    public get icon(): string {
+        if (!this._icon) throw new Revert('Icon not set');
+        return this._icon.value;
     }
 
     public get decimals(): u8 {
@@ -123,6 +125,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         this._decimals.value = u256.fromU32(u32(params.decimals));
         this._name.value = params.name;
         this._symbol.value = params.symbol;
+        this._icon.value = params.icon;
     }
 
     @method('name')
@@ -138,6 +141,14 @@ export abstract class OP20 extends OP_NET implements IOP20 {
     public fn_symbol(_: Calldata): BytesWriter {
         const w = new BytesWriter(String.UTF8.byteLength(this.symbol) + 4);
         w.writeStringWithLength(this.symbol);
+        return w;
+    }
+
+    @method('icon')
+    @returns({ name: 'icon', type: ABIDataTypes.STRING })
+    public fn_icon(_: Calldata): BytesWriter {
+        const w = new BytesWriter(String.UTF8.byteLength(this.icon) + 4);
+        w.writeStringWithLength(this.icon);
         return w;
     }
 
@@ -311,6 +322,47 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         return new BytesWriter(0);
     }
 
+    @method()
+    @returns(
+        { name: 'name', type: ABIDataTypes.STRING },
+        { name: 'symbol', type: ABIDataTypes.STRING },
+        { name: 'decimals', type: ABIDataTypes.UINT8 },
+        { name: 'totalSupply', type: ABIDataTypes.UINT256 },
+        { name: 'maximumSupply', type: ABIDataTypes.UINT256 },
+        { name: 'icon', type: ABIDataTypes.STRING },
+        { name: 'domainSeparator', type: ABIDataTypes.BYTES32 },
+    )
+    public metadata(_: Calldata): BytesWriter {
+        const name = this.name;
+        const symbol = this.symbol;
+        const icon = this.icon;
+        const domainSeparator = this._buildDomainSeparator();
+
+        const nameLength = String.UTF8.byteLength(name);
+        const symbolLength = String.UTF8.byteLength(symbol);
+        const iconLength = String.UTF8.byteLength(icon);
+
+        const totalSize =
+            U32_BYTE_LENGTH * 4 +
+            U256_BYTE_LENGTH * 2 +
+            nameLength +
+            symbolLength +
+            iconLength +
+            domainSeparator.length +
+            U8_BYTE_LENGTH;
+
+        const w = new BytesWriter(totalSize);
+        w.writeStringWithLength(name);
+        w.writeStringWithLength(symbol);
+        w.writeU8(this.decimals);
+        w.writeU256(this.totalSupply);
+        w.writeU256(this.maxSupply);
+        w.writeStringWithLength(icon);
+        w.writeBytesWithLength(domainSeparator);
+
+        return w;
+    }
+
     protected _balanceOf(owner: Address): u256 {
         if (!this.balanceOfMap.has(owner)) return u256.Zero;
         return this.balanceOfMap.get(owner);
@@ -325,12 +377,16 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         if (from === Address.zero() || from === Address.dead()) {
             throw new Revert('Invalid sender');
         }
+
         if (to === Address.zero() || to === Address.dead()) {
             throw new Revert('Invalid receiver');
         }
 
-        const balance: u256 = this.balanceOfMap.get(from);
+        if (amount.isZero()) {
+            throw new Revert('Amount must be greater than zero');
+        }
 
+        const balance: u256 = this.balanceOfMap.get(from);
         if (balance < amount) {
             throw new Revert('Insufficient balance');
         }
@@ -340,11 +396,13 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         const toBal: u256 = this.balanceOfMap.get(to);
         this.balanceOfMap.set(to, SafeMath.add(toBal, amount));
 
+        this.createTransferredEvent(Blockchain.tx.sender, from, to, amount);
+
         if (Blockchain.isContract(to)) {
+            // In CALLBACK mode, the guard allows depth up to 1
+            // In STANDARD mode, the guard blocks all reentrancy
             this._callOnOP20Received(from, to, amount, data);
         }
-
-        this.createTransferredEvent(Blockchain.tx.sender, from, to, amount);
     }
 
     protected _spendAllowance(owner: Address, spender: Address, amount: u256): void {
@@ -384,14 +442,12 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         calldata.writeBytesWithLength(data);
 
         const response = Blockchain.call(to, calldata);
-
-        if (response.byteLength < SELECTOR_BYTE_LENGTH) {
+        if (response.data.byteLength < SELECTOR_BYTE_LENGTH) {
             throw new Revert('Transfer rejected by recipient');
         }
 
-        const retval = response.readSelector();
-
-        if (retval !== ON_OP20_RECEIVED_SELECTOR) {
+        const retVal = response.data.readSelector();
+        if (retVal !== ON_OP20_RECEIVED_SELECTOR) {
             throw new Revert('Transfer rejected by recipient');
         }
     }
@@ -412,6 +468,26 @@ export abstract class OP20 extends OP_NET implements IOP20 {
             signature,
         );
         this._increaseAllowance(owner, spender, amount);
+    }
+
+    protected isSelectorExcluded(selector: Selector): boolean {
+        if (
+            selector === BALANCE_OF_SELECTOR ||
+            selector === ALLOWANCE_SELECTOR ||
+            selector === TOTAL_SUPPLY_SELECTOR ||
+            selector === NAME_SELECTOR ||
+            selector === SYMBOL_SELECTOR ||
+            selector === DECIMALS_SELECTOR ||
+            selector === NONCE_OF_SELECTOR ||
+            selector === DOMAIN_SEPARATOR_SELECTOR ||
+            selector === METADATA_SELECTOR ||
+            selector === MAXIMUM_SUPPLY_SELECTOR ||
+            selector === ICON_SELECTOR
+        ) {
+            return true;
+        }
+
+        return super.isSelectorExcluded(selector);
     }
 
     protected _decreaseAllowanceBySignature(
@@ -498,6 +574,7 @@ export abstract class OP20 extends OP_NET implements IOP20 {
         const senderMap = this.allowanceMap.get(owner);
         const previousAllowance = senderMap.get(spender);
         let newAllowance: u256 = u256.add(previousAllowance, amount);
+
         // If it overflows, set to max
         if (newAllowance < previousAllowance) {
             newAllowance = u256.Max;

@@ -1,6 +1,7 @@
 import { SegwitDecoded } from './ScriptUtils';
 import { hash160, sha256 } from '../env/global';
 import { Bech32 } from './Bech32';
+import { Revert } from '../types/Revert';
 
 /**
  * Segwit provides high-level functions for creating and decoding
@@ -49,7 +50,7 @@ export class Segwit {
      */
     public static p2wpkh(hrp: string, pubkey: Uint8Array): string {
         if (pubkey.length !== 33 && pubkey.length !== 65) {
-            throw new Error('Public key must be 33 bytes (compressed) or 65 bytes (uncompressed)');
+            throw new Revert('Public key must be 33 bytes (compressed) or 65 bytes (uncompressed)');
         }
 
         // P2WPKH uses HASH160 of the public key as the witness program
@@ -79,7 +80,7 @@ export class Segwit {
     public static p2tr(hrp: string, outputKeyX32: Uint8Array): string {
         // Validate the key length
         if (outputKeyX32.length != 32) {
-            throw new Error('taproot key must be 32 bytes');
+            throw new Revert('taproot key must be 32 bytes');
         }
 
         // P2TR uses witness version 1 with the x-only public key

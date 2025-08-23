@@ -1,4 +1,5 @@
 import { u128, u256 } from '@btc-vision/as-bignum/assembly';
+import { Revert } from './Revert';
 
 export class SafeMath {
     public static ZERO: u256 = u256.fromU32(0);
@@ -6,7 +7,7 @@ export class SafeMath {
     public static add(a: u256, b: u256): u256 {
         const c: u256 = u256.add(a, b);
         if (c < a) {
-            throw new Error('SafeMath: addition overflow');
+            throw new Revert('SafeMath: addition overflow');
         }
         return c;
     }
@@ -14,7 +15,7 @@ export class SafeMath {
     public static add128(a: u128, b: u128): u128 {
         const c: u128 = u128.add(a, b);
         if (c < a) {
-            throw new Error('SafeMath: addition overflow');
+            throw new Revert('SafeMath: addition overflow');
         }
         return c;
     }
@@ -23,14 +24,14 @@ export class SafeMath {
         const c: u64 = a + b;
 
         if (c < a) {
-            throw new Error('SafeMath: addition overflow');
+            throw new Revert('SafeMath: addition overflow');
         }
         return c;
     }
 
     public static sub(a: u256, b: u256): u256 {
         if (a < b) {
-            throw new Error('SafeMath: subtraction overflow');
+            throw new Revert('SafeMath: subtraction overflow');
         }
 
         return u256.sub(a, b);
@@ -38,7 +39,7 @@ export class SafeMath {
 
     public static sub128(a: u128, b: u128): u128 {
         if (a < b) {
-            throw new Error('SafeMath: subtraction overflow');
+            throw new Revert('SafeMath: subtraction overflow');
         }
 
         return u128.sub(a, b);
@@ -46,25 +47,50 @@ export class SafeMath {
 
     public static sub64(a: u64, b: u64): u64 {
         if (a < b) {
-            throw new Error('SafeMath: subtraction overflow');
+            throw new Revert('SafeMath: subtraction overflow');
         }
 
         return a - b;
     }
 
     // Computes (a * b) % modulus with full precision
-    public static mulmod(a: u256, b: u256, modulus: u256): u256 {
-        if (u256.eq(modulus, u256.Zero)) throw new Error('SafeMath: modulo by zero');
+    /*public static mulmod(a: u256, b: u256, modulus: u256): u256 {
+        if (u256.eq(modulus, u256.Zero)) throw new Revert('SafeMath: modulo by zero');
 
         const mul = SafeMath.mul(a, b);
         return SafeMath.mod(mul, modulus);
+    }*/ // CAN OVERFLOW!
+
+    public static mulmod(a: u256, b: u256, modulus: u256): u256 {
+        if (u256.eq(modulus, u256.Zero)) throw new Revert('SafeMath: modulo by zero');
+
+        // Keep invariants: 0 <= a,b < modulus
+        a = SafeMath.mod(a, modulus);
+        b = SafeMath.mod(b, modulus);
+        if (a.isZero() || b.isZero()) return u256.Zero;
+
+        let res = u256.Zero;
+
+        // LSB-first ladder: at most 256 iterations; all steps keep values < modulus.
+        while (!b.isZero()) {
+            if (u256.ne(u256.and(b, u256.One), u256.Zero)) {
+                res = SafeMath.addModNoCarry(res, a, modulus); // res = (res + a) % m, no overflow
+            }
+            b = u256.shr(b, 1);
+            if (!b.isZero()) {
+                a = SafeMath.doubleModNoCarry(a, modulus); // a = (2a) % m, no overflow
+            }
+        }
+        return res;
     }
+
+    // (x + y) % m without ever computing a potentially-overflowing x + y.
 
     @unsafe
     @operator('%')
     public static mod(a: u256, b: u256): u256 {
         if (u256.eq(b, u256.Zero)) {
-            throw new Error('SafeMath: modulo by zero');
+            throw new Revert('SafeMath: modulo by zero');
         }
 
         const divResult = SafeMath.div(a, b);
@@ -72,38 +98,89 @@ export class SafeMath {
         return SafeMath.sub(a, product);
     }
 
+    // (2x) % m without overflow.
+
     public static modInverse(k: u256, p: u256): u256 {
-        let s = u256.Zero;
-        let old_s = u256.One;
-        let r = p;
-        let old_r = k;
+        // Input validation
+        if (p.isZero() || u256.eq(p, u256.One)) {
+            throw new Revert('SafeMath: modulus must be > 1');
+        }
+
+        if (k.isZero()) {
+            throw new Revert('SafeMath: no inverse for zero');
+        }
+
+        let s: u256 = u256.Zero;
+        let old_s: u256 = u256.One;
+        let s_negative: boolean = false;
+        let old_s_negative: boolean = false;
+        let r: u256 = p.clone();
+        let old_r: u256 = k.clone();
 
         while (!r.isZero()) {
             const quotient = SafeMath.div(old_r, r);
 
-            // --- Update r ---
-            {
-                // old_r - (quotient * r)
-                const tmp = r;
-                r = u256.sub(old_r, u256.mul(quotient, r)); // unchecked subtract
-                old_r = tmp;
+            // Update r (always remains positive)
+            const tmp_r = r.clone();
+            r = SafeMath.sub(old_r, SafeMath.mul(quotient, r));
+            old_r = tmp_r;
+
+            // Update s with correct sign tracking
+            const tmp_s = s.clone();
+            const tmp_s_negative = s_negative;
+            const product = SafeMath.mul(quotient, s);
+
+            // Compute: old_s - (quotient * s)
+            // Taking into account the signs of old_s and s
+
+            if (!old_s_negative && !s_negative) {
+                // (+old_s) - (+product)
+                if (u256.ge(old_s, product)) {
+                    s = SafeMath.sub(old_s, product);
+                    s_negative = false;
+                } else {
+                    s = SafeMath.sub(product, old_s);
+                    s_negative = true;
+                }
+            } else if (old_s_negative && s_negative) {
+                // (-old_s) - (-product) = -old_s + product
+                if (u256.ge(product, old_s)) {
+                    s = SafeMath.sub(product, old_s);
+                    s_negative = false;
+                } else {
+                    s = SafeMath.sub(old_s, product);
+                    s_negative = true;
+                }
+            } else if (!old_s_negative && s_negative) {
+                // (+old_s) - (-product) = old_s + product
+                s = SafeMath.add(old_s, product);
+                s_negative = false;
+            } else {
+                // old_s_negative && !s_negative
+                // (-old_s) - (+product) = -(old_s + product)
+                s = SafeMath.add(old_s, product);
+                s_negative = true;
             }
 
-            // --- Update s ---
-            {
-                // old_s - (quotient * s)
-                const tmp = s;
-                s = u256.sub(old_s, u256.mul(quotient, s)); // unchecked subtract
-                old_s = tmp;
-            }
+            old_s = tmp_s;
+            old_s_negative = tmp_s_negative;
         }
 
-        // At this point, `old_r` is the gcd(k, p). If gcd != 1 => no inverse
-        // (in a prime field p, gcd=1 if k != 0).
-        // We could enforce this by checking `old_r == 1` but we'll leave it to the caller.
+        // Check if inverse exists (gcd must be 1)
+        if (!u256.eq(old_r, u256.One)) {
+            throw new Revert('SafeMath: no modular inverse exists');
+        }
 
-        // The extended Euclidean algorithm says `old_s` is the inverse (possibly negative),
-        // so we reduce mod p
+        // Reduce modulo p, handling negative values
+        if (old_s_negative) {
+            // For negative values: result = p - (|old_s| mod p)
+            const mod_result = SafeMath.mod(old_s, p);
+            if (mod_result.isZero()) {
+                return u256.Zero;
+            }
+            return SafeMath.sub(p, mod_result);
+        }
+
         return SafeMath.mod(old_s, p);
     }
 
@@ -125,31 +202,23 @@ export class SafeMath {
     }
 
     public static mul(a: u256, b: u256): u256 {
-        if (a === SafeMath.ZERO || b === SafeMath.ZERO) {
-            return SafeMath.ZERO;
-        }
+        if (a.isZero() || b.isZero()) return u256.Zero;
 
-        const c: u256 = u256.mul(a, b);
-        const d: u256 = SafeMath.div(c, a);
+        const c = u256.mul(a, b);
+        const d = SafeMath.div(c, a);
 
-        if (u256.ne(d, b)) {
-            throw new Error('SafeMath: multiplication overflow');
-        }
+        if (u256.ne(d, b)) throw new Revert('SafeMath: multiplication overflow');
 
         return c;
     }
 
     public static mul128(a: u128, b: u128): u128 {
-        if (a === u128.Zero || b === u128.Zero) {
-            return u128.Zero;
-        }
+        if (a.isZero() || b.isZero()) return u128.Zero;
 
-        const c: u128 = u128.mul(a, b);
-        const d: u128 = SafeMath.div128(c, a);
+        const c = u128.mul(a, b);
+        const d = SafeMath.div128(c, a);
 
-        if (u128.ne(d, b)) {
-            throw new Error('SafeMath: multiplication overflow');
-        }
+        if (u128.ne(d, b)) throw new Revert('SafeMath: multiplication overflow');
 
         return c;
     }
@@ -162,7 +231,7 @@ export class SafeMath {
         const c: u64 = a * b;
 
         if (c / a !== b) {
-            throw new Error('SafeMath: multiplication overflow');
+            throw new Revert('SafeMath: multiplication overflow');
         }
 
         return c;
@@ -170,7 +239,7 @@ export class SafeMath {
 
     public static div64(a: u64, b: u64): u64 {
         if (b === 0) {
-            throw new Error('Division by zero');
+            throw new Revert('Division by zero');
         }
 
         if (a === 0) {
@@ -190,7 +259,7 @@ export class SafeMath {
 
     public static div128(a: u128, b: u128): u128 {
         if (b.isZero()) {
-            throw new Error('Division by zero');
+            throw new Revert('Division by zero');
         }
 
         if (a.isZero()) {
@@ -227,7 +296,7 @@ export class SafeMath {
     @operator('/')
     public static div(a: u256, b: u256): u256 {
         if (b.isZero()) {
-            throw new Error('Division by zero');
+            throw new Revert('Division by zero');
         }
 
         if (a.isZero()) {
@@ -370,68 +439,14 @@ export class SafeMath {
         return u256.xor(a, b);
     }
 
-    public static shr(a: u256, shift: i32): u256 {
-        shift &= 255;
-        if (shift == 0) return a;
-
-        const w = shift >>> 6; // how many full 64-bit words to drop
-        const b = shift & 63; // how many bits to shift within a word
-
-        // Extract the words
-        let lo1 = a.lo1;
-        let lo2 = a.lo2;
-        let hi1 = a.hi1;
-        let hi2 = a.hi2;
-
-        // Shift words down by w words
-        // For w = 1, move lo2->lo1, hi1->lo2, hi2->hi1, and hi2 = 0
-        // For w = 2, move hi1->lo1, hi2->lo2, and zeros in hi1, hi2
-        // For w = 3, move hi2->lo1 and zeros in others
-        // For w >= 4, everything is zero.
-        if (w >= 4) {
-            // Shifting by >= 256 bits zeros out everything
-            return u256.Zero;
-        } else if (w == 3) {
-            lo1 = hi2;
-            lo2 = 0;
-            hi1 = 0;
-            hi2 = 0;
-        } else if (w == 2) {
-            lo1 = hi1;
-            lo2 = hi2;
-            hi1 = 0;
-            hi2 = 0;
-        } else if (w == 1) {
-            lo1 = lo2;
-            lo2 = hi1;
-            hi1 = hi2;
-            hi2 = 0;
-        }
-
-        // Now apply the bit shift b
-        if (b > 0) {
-            // Bring down bits from the higher word
-            const carryLo2 = hi1 << (64 - b);
-            const carryLo1 = lo2 << (64 - b);
-            const carryHi1 = hi2 << (64 - b);
-
-            lo1 = (lo1 >>> b) | carryLo1;
-            lo2 = (lo2 >>> b) | carryLo2;
-            hi1 = (hi1 >>> b) | carryHi1;
-            hi2 = hi2 >>> b;
-        }
-
-        return new u256(lo1, lo2, hi1, hi2);
-    }
-
     /**
      * Increment a u256 value by 1
      * @param value The value to increment
      * @returns The incremented value
      */
-    static inc(value: u256): u256 {
+    public static inc(value: u256): u256 {
         if (u256.eq(value, u256.Max)) {
-            throw new Error('SafeMath: increment overflow');
+            throw new Revert('SafeMath: increment overflow');
         }
 
         return value.preInc();
@@ -444,10 +459,15 @@ export class SafeMath {
      */
     public static dec(value: u256): u256 {
         if (u256.eq(value, u256.Zero)) {
-            throw new Error('SafeMath: decrement overflow');
+            throw new Revert('SafeMath: decrement overflow');
         }
 
         return value.preDec();
+    }
+
+    @inline
+    public static shr(value: u256, shift: i32): u256 {
+        return u256.shr(value, shift);
     }
 
     /**
@@ -588,6 +608,18 @@ export class SafeMath {
 
         // ln(1+z) ~ z - z^2/2 + z^3/3
         return term1 - z2Div + z3Div;
+    }
+
+    // Pre: 0 <= x,y < m, m > 0.
+    private static addModNoCarry(x: u256, y: u256, m: u256): u256 {
+        const mMinusY = SafeMath.sub(m, y); // safe since y < m
+        return u256.ge(x, mMinusY) ? SafeMath.sub(x, mMinusY) : SafeMath.add(x, y);
+    }
+
+    // Pre: 0 <= x < m, m > 0.
+    private static doubleModNoCarry(x: u256, m: u256): u256 {
+        const mMinusX = SafeMath.sub(m, x); // safe since x < m
+        return u256.ge(x, mMinusX) ? SafeMath.sub(x, mMinusX) : SafeMath.add(x, x);
     }
 
     private static bitLength64(value: u64): u32 {

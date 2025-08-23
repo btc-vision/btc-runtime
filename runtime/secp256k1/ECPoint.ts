@@ -41,7 +41,7 @@ export class ECPoint {
     // x3 = λ^2 - 2x mod P
     // y3 = λ*(x - x3) - y mod P
     // ----------------------------
-    static double(p: ECPoint): ECPoint {
+    public static double(p: ECPoint): ECPoint {
         // If y=0, return infinity
         if (p.y == u256.Zero) {
             return new ECPoint(u256.Zero, u256.Zero); // "Point at infinity" convention
@@ -80,7 +80,7 @@ export class ECPoint {
     // x3 = λ^2 - x1 - x2 mod P
     // y3 = λ*(x1 - x3) - y1 mod P
     // ----------------------------
-    static add(p: ECPoint, q: ECPoint): ECPoint {
+    public static add(p: ECPoint, q: ECPoint): ECPoint {
         // 1) Check for infinity cases
         const isPInfinity = p.x.isZero() && p.y.isZero();
         const isQInfinity = q.x.isZero() && q.y.isZero();
@@ -122,7 +122,7 @@ export class ECPoint {
     // Scalar Multiplication: k*P
     // Double-and-add approach
     // ----------------------------
-    static scalarMultiply(p: ECPoint, k: u256): ECPoint {
+    public static scalarMultiply(p: ECPoint, k: u256): ECPoint {
         let result = new ECPoint(u256.Zero, u256.Zero); // ∞
         let addend = p;
         const two = u256.fromU64(2);

@@ -21,6 +21,14 @@ import { Network, Networks } from '../script/Networks';
 export * from '../env/global';
 
 @final
+export class CallResult {
+    constructor(
+        public readonly success: boolean,
+        public readonly data: BytesReader,
+    ) {}
+}
+
+@final
 export class BlockchainEnvironment {
     public readonly DEAD_ADDRESS: Address = Address.dead();
 
@@ -276,7 +284,7 @@ export class BlockchainEnvironment {
         this._block = new Block(blockHash, blockNumber, blockMedianTime);
     }
 
-    public call(destinationContract: Address, _calldata: BytesWriter): BytesReader {
+    public call(destinationContract: Address, _calldata: BytesWriter, stopExecutionOnFailure: boolean = true,): BytesReader {
         if (!destinationContract) {
             throw new Revert('Destination contract is required');
         }
@@ -304,6 +312,7 @@ export class BlockchainEnvironment {
 
     public getStorageAt(pointerHash: Uint8Array): Uint8Array {
         this.hasPointerStorageHash(pointerHash);
+
         if (this.storage.has(pointerHash)) {
             return this.storage.get(pointerHash);
         }
@@ -380,18 +389,44 @@ export class BlockchainEnvironment {
     }
 
     private _internalSetStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {
-        this.storage.set(pointerHash, value);
+        if (pointerHash.buffer.byteLength !== 32) {
+            throw new Revert('Pointer must be 32 bytes long');
+        }
+
+        let finalValue: Uint8Array = value;
+        if (value.buffer.byteLength !== 32) {
+            // TODO: Probably force this?
+            finalValue = new Uint8Array(32);
+
+            for (let i = 0; i < value.buffer.byteLength && i < 32; i++) {
+                finalValue[i] = value[i];
+            }
+        }
+
+        this.storage.set(pointerHash, finalValue);
     }
 
     private _internalSetTransientStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {
+        if (pointerHash.buffer.byteLength !== 32 || value.buffer.byteLength !== 32) {
+            throw new Revert('Transient pointer and value must be 32 bytes long');
+        }
+
         this.transientStorage.set(pointerHash, value);
     }
 
     private hasPointerStorageHash(pointer: Uint8Array): bool {
+        if (pointer.buffer.byteLength !== 32) {
+            throw new Revert('Pointer must be 32 bytes long');
+        }
+
         return this.storage.has(pointer);
     }
 
     private hasPointerTransientStorageHash(pointer: Uint8Array): bool {
+        if (pointer.buffer.byteLength !== 32) {
+            throw new Revert('Transient pointer must be 32 bytes long');
+        }
+
         return this.transientStorage.has(pointer);
     }
 }

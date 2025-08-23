@@ -1,3 +1,5 @@
+import { Revert } from '../types/Revert';
+
 @final
 export class BitcoinOpcodes {
     public static readonly OP_FALSE: u8 = 0;
@@ -122,7 +124,7 @@ export class BitcoinOpcodes {
 
     public static opN(n: i32): u8 {
         if (n == 0) return 0;
-        if (n < 0 || n > 16) throw new Error('OP_N out of range');
+        if (n < 0 || n > 16) throw new Revert('OP_N out of range');
         return <u8>(0x50 + n);
     }
 

@@ -40,7 +40,7 @@ export class OP_NET implements IBTC {
 
     protected emitEvent(event: NetEvent): void {
         if (event.length > MAX_EVENT_DATA_SIZE) {
-            throw new Error('Event data length exceeds maximum length.');
+            throw new Revert('Event data length exceeds maximum length.');
         }
 
         Blockchain.emit(event);
@@ -48,6 +48,11 @@ export class OP_NET implements IBTC {
 
     protected isSelf(address: Address): boolean {
         return this.address === address;
+    }
+
+    protected _buildDomainSeparator(): Uint8Array {
+        // This method should be overridden in derived classes to provide the domain separator
+        throw new Error('Method not implemented.');
     }
 
     protected onlyDeployer(caller: Address): void {

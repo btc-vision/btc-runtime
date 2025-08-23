@@ -9,7 +9,7 @@ import {BytesReader} from '../buffer/BytesReader';
 @inline
 export function bytesToU32(number: Uint8Array): u32 {
     if (number.length < 4) {
-        throw new Error('bytesToU32: input must be at least 4 bytes');
+        throw new Revert('bytesToU32: input must be at least 4 bytes');
     }
     return (u32(number[0]) << 24) |
         (u32(number[1]) << 16) |
@@ -45,7 +45,7 @@ export function GET_EMPTY_BUFFER(): Uint8Array {
 @inline
 export function addUint8ArraysBE(a: Uint8Array, b: Uint8Array): Uint8Array {
     if (a.length !== 32 || b.length !== 32) {
-        throw new Error('addUint8ArraysBE expects 32-byte inputs');
+        throw new Revert('addUint8ArraysBE expects 32-byte inputs');
     }
 
     const result = new Uint8Array(32);
@@ -159,6 +159,10 @@ export function writeLengthAndStartIndex(length: u32, startIndex: u32): Uint8Arr
 
 @inline
 export function bigEndianAdd(base: Uint8Array, increment: u64): Uint8Array {
+    if(base.length !== 32) {
+        throw new Revert('bigEndianAdd: base must be 32 bytes');
+    }
+
     const add = u64ToBE32Bytes(increment);
 
     return addUint8ArraysBE(base, add);

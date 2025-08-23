@@ -68,11 +68,34 @@ export function u256To30Bytes(value: u256): Uint8Array {
 
 /**
  * Optimized pointer encoding, see encodePointerUnknownLength for a more generic version.
+ *
+ * ⚠️ CRITICAL SECURITY NOTICE ⚠️
+ * ================================================================================================
+ * THIS FUNCTION WILL OVERWRITE THE FIRST 2 BYTES OF YOUR DATA!
+ *
+ * If you pass a 32-byte buffer, the first 2 bytes WILL BE DESTROYED and replaced with the
+ * uniqueIdentifier. This is BY DESIGN for pointer encoding.
+ *
+ * CORRECT USAGE:
+ * - For incremental pointers: You MUST provide exactly 30 bytes of data, NOT 32 bytes
+ * - The function will create a new 32-byte buffer with:
+ *   - Bytes 0-1: uniqueIdentifier (split into two bytes)
+ *   - Bytes 2-31: Your 30 bytes of data
+ *
+ * INCORRECT USAGE (DATA LOSS):
+ * - DO NOT pass 32 bytes expecting them to be preserved
+ * - DO NOT assume this function appends the identifier - it PREPENDS and shifts your data
+ *
+ * Example:
+ * - Input: uniqueIdentifier=0x1234, data=[30 bytes]
+ * - Output: [0x34, 0x12, ...your 30 bytes...] = 32 bytes total
+ *
  * @param uniqueIdentifier
  * @param typed
  * @param enforce30Bytes
  * @param {string} context Optional debug context.
  */
+@unsafe
 export function encodePointer(uniqueIdentifier: u16, typed: Uint8Array, enforce30Bytes: boolean = true, context: string = ''): Uint8Array {
     const array = ensureAtLeast30Bytes(typed);
 

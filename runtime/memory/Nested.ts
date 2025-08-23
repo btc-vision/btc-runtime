@@ -3,6 +3,7 @@ import { encodePointerUnknownLength } from '../math/abi';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { Address } from '../types/Address';
+import { Revert } from '../types/Revert';
 
 @final
 export class Nested<T> {
@@ -37,12 +38,12 @@ export class Nested<T> {
 
     @unsafe
     public delete(_key: Uint8Array): bool {
-        throw new Error('Method not implemented.');
+        throw new Revert('Method not implemented.');
     }
 
     @unsafe
     public clear(): void {
-        throw new Error('Clear method not implemented.');
+        throw new Revert('Clear method not implemented.');
     }
 
     /**
@@ -67,7 +68,7 @@ export class Nested<T> {
             return changetype<T>(String.UTF8.decode(value.buffer));
         }
 
-        throw new Error('Unsupported type');
+        throw new Revert('Unsupported type');
     }
 
     /**
@@ -92,7 +93,7 @@ export class Nested<T> {
             return Uint8Array.wrap(String.UTF8.encode(str));
         }
 
-        throw new Error('Unsupported type');
+        throw new Revert('Unsupported type');
     }
 
     private getKeyHash(key: Uint8Array): Uint8Array {

@@ -1,3 +1,5 @@
+import { Revert } from '../types/Revert';
+
 function hexCharToValue(char: u8): u8 {
     if (char >= 48 && char <= 57) {
         // '0' to '9'
@@ -9,7 +11,7 @@ function hexCharToValue(char: u8): u8 {
         // 'A' to 'F'
         return char - 65 + 10;
     } else {
-        throw new Error('Invalid hex character: ' + String.fromCharCode(char));
+        throw new Revert('Invalid hex character: ' + String.fromCharCode(char));
     }
 }
 
@@ -21,7 +23,7 @@ export function decodeHexArray(hex: string): u8[] {
 
     // Validate length is even
     if (hex.length % 2 !== 0) {
-        throw new Error('Hex string must have even length');
+        throw new Revert('Hex string must have even length');
     }
 
     const result = new Array<u8>(hex.length / 2);

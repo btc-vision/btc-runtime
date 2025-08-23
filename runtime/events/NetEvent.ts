@@ -11,7 +11,7 @@ export abstract class NetEvent {
         protected data: BytesWriter,
     ) {
         if (data.bufferLength() > MAX_EVENT_DATA_SIZE) {
-            throw new Error('Event data length exceeds maximum length.');
+            throw new Revert('Event data length exceeds maximum length.');
         }
 
         this.buffer = data.getBuffer();

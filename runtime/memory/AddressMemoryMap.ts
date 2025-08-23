@@ -3,7 +3,28 @@ import { encodePointer } from '../math/abi';
 import { Address } from '../types/Address';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { EMPTY_BUFFER } from '../math/bytes';
+import { Revert } from '../types/Revert';
 
+/**
+ * SECURITY NOTICE:
+ *
+ * This class uses a 30-byte truncation of addresses for storage pointer generation.
+ * While this may appear to introduce collision risks, it is secure within the OP_NET
+ * protocol context because:
+ *
+ * 1. All addresses in OP_NET are tweaked public keys (32-byte elliptic curve points)
+ *
+ * 2. Tweaked public keys are uniformly distributed across the secp256k1 curve space
+ *
+ * 3. Finding two public keys with identical 30-byte prefixes (240 bits) requires
+ *    approximately 2^120 operations due to the birthday paradox
+ *
+ * 4. The probability of accidentally generating colliding addresses through normal
+ *    key generation is cryptographically negligible
+ *
+ * The truncation from 32 to 30 bytes is a space optimization that does not
+ * meaningfully impact security given the uniform distribution of elliptic curve points.
+ */
 @final
 export class AddressMemoryMap {
     public pointer: u16;
@@ -49,7 +70,7 @@ export class AddressMemoryMap {
 
     @unsafe
     public clear(): void {
-        throw new Error('Method not implemented.');
+        throw new Revert('Method not implemented.');
     }
 
     private encodePointer(key: Address): Uint8Array {
