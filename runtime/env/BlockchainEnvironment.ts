@@ -386,6 +386,7 @@ export class BlockchainEnvironment {
 
         let finalValue: Uint8Array = value;
         if (value.buffer.byteLength !== 32) {
+            // TODO: Probably force this?
             finalValue = new Uint8Array(32);
 
             for (let i = 0; i < value.buffer.byteLength && i < 32; i++) {
