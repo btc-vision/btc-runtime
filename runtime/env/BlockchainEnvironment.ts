@@ -380,8 +380,17 @@ export class BlockchainEnvironment {
     private _internalSetStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {
         this.storage.set(pointerHash, value);
 
-        if (pointerHash.buffer.byteLength !== 32 || value.buffer.byteLength !== 32) {
-            throw new Revert('Pointer and value must be 32 bytes long');
+        if (pointerHash.buffer.byteLength !== 32) {
+            throw new Revert('Pointer must be 32 bytes long');
+        }
+
+        let finalValue: Uint8Array = value;
+        if (value.buffer.byteLength !== 32) {
+            finalValue = new Uint8Array(32);
+
+            for (let i = 0; i < value.buffer.byteLength && i < 32; i++) {
+                finalValue[i] = value[i];
+            }
         }
 
         storePointer(pointerHash.buffer, value.buffer);
