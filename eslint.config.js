@@ -32,6 +32,7 @@ export default tseslint.config(
             '@typescript-eslint/no-unnecessary-type-parameters': 'off',
             '@typescript-eslint/related-getter-setter-pairs': 'off',
             '@typescript-eslint/no-non-null-assertion': 'off',
+            'no-loss-of-precision': 'off'
         },
     },
     {
