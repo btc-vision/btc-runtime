@@ -1,6 +1,45 @@
 import { SafeMath } from '../runtime';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 
+/**
+ * Test Suite Documentation: SafeMath.modInverse
+ *
+ * This test suite validates the modular multiplicative inverse operation.
+ * For given k and p, it finds x such that (k * x) ≡ 1 (mod p).
+ * This operation is fundamental to RSA encryption, elliptic curve cryptography,
+ * and other public-key cryptographic systems.
+ *
+ * Expected Behaviors:
+ * - Returns the multiplicative inverse x where (k * x) % p = 1
+ * - Handles large u256 values without overflow
+ * - Works correctly when k > p (automatically reduces k mod p)
+ * - Throws an error when k = 0 (zero has no inverse)
+ * - Throws an error when p = 0 (modulus cannot be zero)
+ * - Throws an error when gcd(k, p) ≠ 1 (no inverse exists for non-coprime numbers)
+ * - Returns 1 when k = 1 (1 is its own inverse in any modulus)
+ * - Produces consistent results for the same inputs
+ *
+ * Critical Invariants:
+ * - modInverse(k, p) * k ≡ 1 (mod p) for all coprime k, p
+ * - modInverse(1, p) = 1 for any p > 1
+ * - modInverse(modInverse(k, p), p) = k (inverse of inverse returns original)
+ * - modInverse(a*b, p) = modInverse(a, p) * modInverse(b, p) mod p (multiplicative property)
+ * - The result is always in range [1, p-1]
+ * - No inverse exists when gcd(k, p) > 1
+ *
+ * Mathematical Foundation:
+ * - Uses Extended Euclidean Algorithm or Fermat's Little Theorem
+ * - For prime p: k^(p-2) ≡ k^(-1) (mod p) by Fermat's Little Theorem
+ * - For composite p: Extended GCD finds Bézout coefficients where k*x + p*y = gcd(k,p)
+ *
+ * Cryptographic Applications:
+ * - RSA: Finding private key d where e*d ≡ 1 (mod φ(n))
+ * - ECDSA: Computing signature verification s^(-1) mod n
+ * - Diffie-Hellman: Division operations in finite fields
+ * - Zero-knowledge proofs: Field arithmetic operations
+ * - ElGamal encryption: Decryption key calculations
+ */
+
 class TestCase {
     k: u32;
     p: u32;
