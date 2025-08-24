@@ -69,9 +69,7 @@ export function u256To30Bytes(value: u256): Uint8Array {
 /**
  * Optimized pointer encoding, see encodePointerUnknownLength for a more generic version.
  *
- * ⚠️ CRITICAL SECURITY NOTICE ⚠️
- * ================================================================================================
- * THIS FUNCTION WILL OVERWRITE THE FIRST 2 BYTES OF YOUR DATA!
+ * @security THIS FUNCTION WILL OVERWRITE THE FIRST 2 BYTES OF YOUR DATA!
  *
  * If you pass a 32-byte buffer, the first 2 bytes WILL BE DESTROYED and replaced with the
  * uniqueIdentifier. This is BY DESIGN for pointer encoding.
