@@ -78,7 +78,6 @@ export class BlockchainEnvironment {
         return this._network as Networks;
     }
 
-    @inline
     public set network(network: Networks) {
         if (this._network !== Networks.Unknown) {
             throw new Revert('Network is already set');
