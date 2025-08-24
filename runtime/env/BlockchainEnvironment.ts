@@ -362,8 +362,8 @@ export class BlockchainEnvironment {
         //const writer = new BytesWriter(this._mockedOutputs.length * (2 + 2 + 8 + 64 + 8) + 2);
         const writer = new BytesWriter(
             this._mockedOutputs.length *
-            (U8_BYTE_LENGTH + U16_BYTE_LENGTH + U32_BYTE_LENGTH + 64 + U64_BYTE_LENGTH) +
-            U16_BYTE_LENGTH,
+                (U8_BYTE_LENGTH + U16_BYTE_LENGTH + U32_BYTE_LENGTH + 64 + U64_BYTE_LENGTH) +
+                U16_BYTE_LENGTH,
         );
         writer.writeU16(u16(this._mockedOutputs.length));
 
@@ -467,13 +467,13 @@ export class BlockchainEnvironment {
         destinationContract: Address,
         calldata: BytesWriter,
         stopExecutionOnFailure: boolean = true,
-        failOnPurpose: boolean = false
+        failOnPurpose: boolean = false,
     ): CallResult {
         if (!destinationContract) {
             throw new Revert('Destination contract is required');
         }
 
-        return new BytesReader(this._mockedCallResult);
+        return new CallResult(failOnPurpose, new BytesReader(this._mockedCallResult));
     }
 
     /**
