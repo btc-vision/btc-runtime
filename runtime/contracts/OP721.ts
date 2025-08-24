@@ -24,7 +24,13 @@ import { IOP721 } from './interfaces/IOP721';
 import { OP721InitParameters } from './interfaces/OP721InitParameters';
 import { ReentrancyGuard } from './ReentrancyGuard';
 import { StoredMapU256 } from '../storage/maps/StoredMapU256';
-import { ApprovedEvent, ApprovedForAllEvent, MAX_URI_LENGTH, TransferredEvent, URIEvent } from '../events/predefined';
+import {
+    ApprovedEvent,
+    ApprovedForAllEvent,
+    MAX_URI_LENGTH,
+    TransferredEvent,
+    URIEvent,
+} from '../events/predefined';
 import {
     ON_OP721_RECEIVED_SELECTOR,
     OP712_DOMAIN_TYPE_HASH,
@@ -642,10 +648,10 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     ): void {
         const calldata = new BytesWriter(
             SELECTOR_BYTE_LENGTH +
-            ADDRESS_BYTE_LENGTH * 2 +
-            U256_BYTE_LENGTH +
-            U32_BYTE_LENGTH +
-            data.length,
+                ADDRESS_BYTE_LENGTH * 2 +
+                U256_BYTE_LENGTH +
+                U32_BYTE_LENGTH +
+                data.length,
         );
         calldata.writeSelector(ON_OP721_RECEIVED_SELECTOR);
         calldata.writeAddress(Blockchain.tx.sender);
@@ -850,17 +856,6 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
             addr[i] = bytes[i];
         }
         return addr;
-    }
-
-    protected _addressToString(addr: Address): string {
-        let result = '0x';
-        // Convert all 32 bytes to hex string
-        for (let i: i32 = 0; i < 32; i++) {
-            const byte = addr[i];
-            const hex = byte.toString(16);
-            result += hex.length == 1 ? '0' + hex : hex;
-        }
-        return result;
     }
 
     // Event creation helpers
