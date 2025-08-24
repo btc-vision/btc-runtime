@@ -612,9 +612,9 @@ export class BlockchainEnvironment {
      * @example
      * ```typescript
      * const hash = Blockchain.sha256(data);
-     * const storageKey = Blockchain.sha256(concat("user:", address));
      * ```
      */
+    @inline
     public sha256(buffer: Uint8Array): Uint8Array {
         return sha256(buffer);
     }
@@ -633,6 +633,7 @@ export class BlockchainEnvironment {
      * const txHash = Blockchain.hash256(transactionData);
      * ```
      */
+    @inline
     public hash256(buffer: Uint8Array): Uint8Array {
         return sha256(sha256(buffer));
     }
@@ -684,6 +685,7 @@ export class BlockchainEnvironment {
      * }
      * ```
      */
+    @inline
     public isContract(address: Address): boolean {
         return getAccountType(address.buffer) !== 0;
     }
@@ -742,6 +744,7 @@ export class BlockchainEnvironment {
      * Blockchain.setStorageAt(key, balance.toBytes());
      * ```
      */
+    @inline
     public setStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {
         this._internalSetStorageAt(pointerHash, value);
     }
@@ -766,6 +769,7 @@ export class BlockchainEnvironment {
      * // Lock automatically clears after transaction
      * ```
      */
+    @inline
     public setTransientStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {
         this._internalSetTransientStorageAt(pointerHash, value);
     }
