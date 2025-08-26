@@ -24,13 +24,7 @@ import { IOP721 } from './interfaces/IOP721';
 import { OP721InitParameters } from './interfaces/OP721InitParameters';
 import { ReentrancyGuard } from './ReentrancyGuard';
 import { StoredMapU256 } from '../storage/maps/StoredMapU256';
-import {
-    ApprovedEvent,
-    ApprovedForAllEvent,
-    MAX_URI_LENGTH,
-    TransferredEvent,
-    URIEvent,
-} from '../events/predefined';
+import { ApprovedEvent, ApprovedForAllEvent, MAX_URI_LENGTH, TransferredEvent, URIEvent, } from '../events/predefined';
 import {
     ON_OP721_RECEIVED_SELECTOR,
     OP712_DOMAIN_TYPE_HASH,
@@ -780,6 +774,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         const newIndex = tokenArray.getLength();
         tokenArray.push(tokenId);
         this.tokenIndexMap.set(tokenId, u256.fromU32(newIndex));
+        tokenArray.save();
     }
 
     protected _removeTokenFromOwnerEnumeration(from: Address, tokenId: u256): void {
@@ -804,6 +799,8 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         // Remove last element
         tokenArray.deleteLast();
         this.tokenIndexMap.delete(tokenId);
+
+        tokenArray.save();
     }
 
     /**
