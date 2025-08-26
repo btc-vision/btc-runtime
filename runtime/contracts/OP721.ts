@@ -170,7 +170,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         return w;
     }
 
-    @method()
+    @method('maxSupply')
     @returns({ name: 'maxSupply', type: ABIDataTypes.UINT256 })
     public fn_maxSupply(_: Calldata): BytesWriter {
         const w = new BytesWriter(U256_BYTE_LENGTH);
@@ -207,7 +207,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         return w;
     }
 
-    @method()
+    @method('totalSupply')
     @returns({ name: 'totalSupply', type: ABIDataTypes.UINT256 })
     public fn_totalSupply(_: Calldata): BytesWriter {
         const w = new BytesWriter(U256_BYTE_LENGTH);
