@@ -24,7 +24,13 @@ import { IOP721 } from './interfaces/IOP721';
 import { OP721InitParameters } from './interfaces/OP721InitParameters';
 import { ReentrancyGuard } from './ReentrancyGuard';
 import { StoredMapU256 } from '../storage/maps/StoredMapU256';
-import { ApprovedEvent, ApprovedForAllEvent, MAX_URI_LENGTH, TransferredEvent, URIEvent, } from '../events/predefined';
+import {
+    ApprovedEvent,
+    ApprovedForAllEvent,
+    MAX_URI_LENGTH,
+    TransferredEvent,
+    URIEvent,
+} from '../events/predefined';
 import {
     ON_OP721_RECEIVED_SELECTOR,
     OP712_DOMAIN_TYPE_HASH,
@@ -613,7 +619,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     protected _setTokenURI(tokenId: u256, uri: string): void {
         if (!this._exists(tokenId)) throw new Revert('Token does not exist');
 
-        if (uri.length > MAX_URI_LENGTH) {
+        if (<u32>uri.length > MAX_URI_LENGTH) {
             throw new Revert('URI exceeds maximum length');
         }
 

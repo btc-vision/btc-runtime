@@ -9,7 +9,7 @@ export const MAX_URI_LENGTH: u32 = 200;
 @final
 export class URIEvent extends NetEvent {
     constructor(value: string, id: u256) {
-        const valueBytes: i32 = String.UTF8.byteLength(value);
+        const valueBytes: u32 = u32(String.UTF8.byteLength(value));
 
         if (valueBytes > MAX_URI_LENGTH) {
             throw new Revert('URI event exceeds max data size');
