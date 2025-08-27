@@ -251,6 +251,28 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         return w;
     }
 
+    @method('changeMetadata')
+    public changeMetadata(calldata: Calldata): BytesWriter {
+        this.onlyDeployer(Blockchain.tx.sender);
+
+        const icon: string = calldata.readStringWithLength();
+        const banner: string = calldata.readStringWithLength();
+        const description: string = calldata.readStringWithLength();
+        const website: string = calldata.readStringWithLength();
+
+        if (icon.length == 0) throw new Revert('Icon cannot be empty');
+        if (banner.length == 0) throw new Revert('Banner cannot be empty');
+        if (description.length == 0) throw new Revert('Description cannot be empty');
+        if (website.length == 0) throw new Revert('Website cannot be empty');
+
+        this._collectionIcon.value = icon;
+        this._collectionBanner.value = banner;
+        this._collectionDescription.value = description;
+        this._collectionWebsite.value = website;
+
+        return new BytesWriter(0);
+    }
+
     @method('totalSupply')
     @returns({ name: 'totalSupply', type: ABIDataTypes.UINT256 })
     public fn_totalSupply(_: Calldata): BytesWriter {
