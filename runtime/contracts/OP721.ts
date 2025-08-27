@@ -24,13 +24,7 @@ import { IOP721 } from './interfaces/IOP721';
 import { OP721InitParameters } from './interfaces/OP721InitParameters';
 import { ReentrancyGuard } from './ReentrancyGuard';
 import { StoredMapU256 } from '../storage/maps/StoredMapU256';
-import {
-    ApprovedEvent,
-    ApprovedForAllEvent,
-    MAX_URI_LENGTH,
-    TransferredEvent,
-    URIEvent,
-} from '../events/predefined';
+import { ApprovedEvent, ApprovedForAllEvent, MAX_URI_LENGTH, TransferredEvent, URIEvent, } from '../events/predefined';
 import {
     ON_OP721_RECEIVED_SELECTOR,
     OP712_DOMAIN_TYPE_HASH,
@@ -39,10 +33,7 @@ import {
     OP721_TRANSFER_TYPE_HASH,
 } from '../constants/Exports';
 
-// Storage pointers
-const namePointer: u16 = Blockchain.nextPointer;
-const symbolPointer: u16 = Blockchain.nextPointer;
-const baseURIPointer: u16 = Blockchain.nextPointer;
+const stringPointer: u16 = Blockchain.nextPointer;
 const totalSupplyPointer: u16 = Blockchain.nextPointer;
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
 const ownerOfMapPointer: u16 = Blockchain.nextPointer;
@@ -62,6 +53,11 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     protected readonly _name: StoredString;
     protected readonly _symbol: StoredString;
     protected readonly _baseURI: StoredString;
+    protected readonly _collectionBanner: StoredString;
+    protected readonly _collectionIcon: StoredString;
+    protected readonly _collectionDescription: StoredString;
+    protected readonly _collectionWebsite: StoredString;
+
     protected readonly _totalSupply: StoredU256;
     protected readonly _maxSupply: StoredU256;
     protected readonly _nextTokenId: StoredU256;
@@ -90,9 +86,14 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     public constructor() {
         super();
 
-        this._name = new StoredString(namePointer, 0);
-        this._symbol = new StoredString(symbolPointer, 0);
-        this._baseURI = new StoredString(baseURIPointer, 0);
+        this._name = new StoredString(stringPointer, 0);
+        this._symbol = new StoredString(stringPointer, 2);
+        this._baseURI = new StoredString(stringPointer, 3);
+        this._collectionBanner = new StoredString(stringPointer, 4);
+        this._collectionIcon = new StoredString(stringPointer, 5);
+        this._collectionDescription = new StoredString(stringPointer, 6);
+        this._collectionWebsite = new StoredString(stringPointer, 7);
+
         this._totalSupply = new StoredU256(totalSupplyPointer, EMPTY_POINTER);
         this._maxSupply = new StoredU256(maxSupplyPointer, EMPTY_POINTER);
         this._nextTokenId = new StoredU256(nextTokenIdPointer, EMPTY_POINTER);
@@ -132,6 +133,22 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         return this._maxSupply.value;
     }
 
+    public get collectionBanner(): string {
+        return this._collectionBanner.value;
+    }
+
+    public get collectionIcon(): string {
+        return this._collectionIcon.value;
+    }
+
+    public get collectionDescription(): string {
+        return this._collectionDescription.value;
+    }
+
+    public get collectionWebsite(): string {
+        return this._collectionWebsite.value;
+    }
+
     public instantiate(
         params: OP721InitParameters,
         skipDeployerVerification: boolean = false,
@@ -150,6 +167,11 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         this._nextTokenId.value = u256.One;
         this._initialized.value = u256.One;
         this._tokenURICounter.value = u256.Zero;
+
+        this._collectionBanner.value = params.collectionBanner;
+        this._collectionIcon.value = params.collectionIcon;
+        this._collectionDescription.value = params.collectionDescription;
+        this._collectionWebsite.value = params.collectionWebsite;
     }
 
     @method('name')
@@ -175,6 +197,28 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     public fn_maxSupply(_: Calldata): BytesWriter {
         const w = new BytesWriter(U256_BYTE_LENGTH);
         w.writeU256(this.maxSupply);
+        return w;
+    }
+
+    @method('collectionInfo')
+    @returns(
+        { name: 'icon', type: ABIDataTypes.STRING },
+        { name: 'banner', type: ABIDataTypes.STRING },
+        { name: 'description', type: ABIDataTypes.STRING },
+        { name: 'website', type: ABIDataTypes.STRING },
+    )
+    public collectionInfo(_: Calldata): BytesWriter {
+        const length =
+            String.UTF8.byteLength(this.collectionIcon) +
+            String.UTF8.byteLength(this.collectionDescription) +
+            String.UTF8.byteLength(this.collectionWebsite) +
+            String.UTF8.byteLength(this.collectionBanner);
+
+        const w = new BytesWriter(U32_BYTE_LENGTH * 4 + length);
+        w.writeStringWithLength(this.collectionIcon);
+        w.writeStringWithLength(this.collectionBanner);
+        w.writeStringWithLength(this.collectionDescription);
+        w.writeStringWithLength(this.collectionWebsite);
         return w;
     }
 
@@ -463,6 +507,60 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         this._setBaseURI(baseURI);
 
         return new BytesWriter(0);
+    }
+
+    @method()
+    @returns(
+        { name: 'name', type: ABIDataTypes.STRING },
+        { name: 'symbol', type: ABIDataTypes.STRING },
+        { name: 'icon', type: ABIDataTypes.STRING },
+        { name: 'banner', type: ABIDataTypes.STRING },
+        { name: 'description', type: ABIDataTypes.STRING },
+        { name: 'website', type: ABIDataTypes.STRING },
+        { name: 'totalSupply', type: ABIDataTypes.UINT256 },
+        { name: 'maximumSupply', type: ABIDataTypes.UINT256 },
+        { name: 'domainSeparator', type: ABIDataTypes.BYTES32 },
+    )
+    public metadata(_: Calldata): BytesWriter {
+        const name = this.name;
+        const symbol = this.symbol;
+        const icon = this.collectionIcon;
+        const banner = this.collectionBanner;
+        const description = this.collectionDescription;
+        const website = this.collectionWebsite;
+        const domainSeparator = this._buildDomainSeparator();
+
+        const nameLength = String.UTF8.byteLength(name);
+        const symbolLength = String.UTF8.byteLength(symbol);
+        const iconLength = String.UTF8.byteLength(icon);
+        const bannerLength = String.UTF8.byteLength(banner);
+        const descriptionLength = String.UTF8.byteLength(description);
+        const websiteLength = String.UTF8.byteLength(website);
+
+        const totalSize =
+            U32_BYTE_LENGTH * 6 +
+            nameLength +
+            symbolLength +
+            iconLength +
+            bannerLength +
+            descriptionLength +
+            websiteLength +
+            U256_BYTE_LENGTH * 2 +
+            U32_BYTE_LENGTH +
+            domainSeparator.length;
+
+        const w = new BytesWriter(totalSize);
+        w.writeStringWithLength(name);
+        w.writeStringWithLength(symbol);
+        w.writeStringWithLength(icon);
+        w.writeStringWithLength(banner);
+        w.writeStringWithLength(description);
+        w.writeStringWithLength(website);
+        w.writeU256(this.totalSupply);
+        w.writeU256(this.maxSupply);
+        w.writeBytesWithLength(domainSeparator);
+
+        return w;
     }
 
     protected _mint(to: Address, tokenId: u256): void {
