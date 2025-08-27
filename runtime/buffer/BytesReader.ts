@@ -284,6 +284,15 @@ export class BytesReader {
         return result;
     }
 
+    public readU8Array(be: boolean = true): u8[] {
+        const length = this.readU16(be);
+        const result = new Array<u8>(length);
+        for (let i: u16 = 0; i < length; i++) {
+            result[i] = this.readU8();
+        }
+        return result;
+    }
+
     public readU128Array(be: boolean = true): u128[] {
         const length = this.readU16(be);
         const result = new Array<u128>(length);
