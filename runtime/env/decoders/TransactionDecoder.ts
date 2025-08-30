@@ -35,7 +35,14 @@ export class TransactionDecoder {
             ? buffer.readBytesWithLength()
             : null;
 
-        return new TransactionInput(flags, txId, outputIndex, scriptSig, coinbase);
+        const witnesses: Uint8Array[] | null = this.hasFlag(
+            flags,
+            TransactionInputFlags.hasWitnesses,
+        )
+            ? buffer.readArrayOfBuffer()
+            : null;
+
+        return new TransactionInput(flags, txId, outputIndex, scriptSig, witnesses, coinbase);
     }
 
     private decodeOutput(buffer: BytesReader): TransactionOutput {
