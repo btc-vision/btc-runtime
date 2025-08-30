@@ -19,6 +19,8 @@ import {
 } from '../utils';
 import { BytesReader } from './BytesReader';
 
+const arrayTooLargeError: string = 'Array is too large';
+
 @final
 export class BytesWriter {
     private currentOffset: u32 = 0;
@@ -28,6 +30,17 @@ export class BytesWriter {
     constructor(length: i32) {
         const typedArray = (this.typedArray = new Uint8Array(length));
         this.buffer = new DataView(typedArray.buffer);
+    }
+
+    public static estimateArrayOfBufferLength(values: Uint8Array[]): u32 {
+        if (values.length > 65535) throw new Revert(arrayTooLargeError);
+        let totalLength: u32 = U16_BYTE_LENGTH;
+
+        for (let i = 0; i < values.length; i++) {
+            totalLength += U32_BYTE_LENGTH + u32(values[i].length); // each entry has a u32 length prefix
+        }
+
+        return totalLength;
     }
 
     public bufferLength(): u32 {
@@ -197,8 +210,30 @@ export class BytesWriter {
 
     // ------------------ Array Writers ------------------ //
 
+    public writeArrayOfBuffer(values: Uint8Array[], be: boolean = true): void {
+        const totalLength = BytesWriter.estimateArrayOfBufferLength(values);
+
+        this.allocSafe(totalLength);
+        this.writeU16(u16(values.length), be);
+
+        for (let i = 0; i < values.length; i++) {
+            this.writeU32(u32(values[i].length), be);
+            this.writeBytes(values[i]);
+        }
+    }
+
+    public writeU8Array(value: u8[], be: boolean = true): void {
+        if (value.length > 65535) throw new Revert(arrayTooLargeError);
+        this.allocSafe(U16_BYTE_LENGTH + value.length);
+        this.writeU16(u16(value.length), be);
+
+        for (let i = 0; i < value.length; i++) {
+            this.writeU8(value[i]);
+        }
+    }
+
     public writeU16Array(value: u16[], be: boolean = true): void {
-        if (value.length > 65535) throw new Revert('Array size is too large');
+        if (value.length > 65535) throw new Revert(arrayTooLargeError);
         this.allocSafe(U16_BYTE_LENGTH + value.length * U16_BYTE_LENGTH);
         this.writeU16(u16(value.length), be);
 
@@ -208,7 +243,7 @@ export class BytesWriter {
     }
 
     public writeU32Array(value: u32[], be: boolean = true): void {
-        if (value.length > 65535) throw new Revert('Array size is too large');
+        if (value.length > 65535) throw new Revert(arrayTooLargeError);
         this.allocSafe(U16_BYTE_LENGTH + value.length * U32_BYTE_LENGTH);
         this.writeU16(u16(value.length), be);
 
@@ -218,7 +253,7 @@ export class BytesWriter {
     }
 
     public writeU64Array(value: u64[], be: boolean = true): void {
-        if (value.length > 65535) throw new Revert('Array size is too large');
+        if (value.length > 65535) throw new Revert(arrayTooLargeError);
         this.allocSafe(U16_BYTE_LENGTH + value.length * U64_BYTE_LENGTH);
         this.writeU16(u16(value.length), be);
 
@@ -228,7 +263,7 @@ export class BytesWriter {
     }
 
     public writeU128Array(value: u128[], be: boolean = true): void {
-        if (value.length > 65535) throw new Revert('Array size is too large');
+        if (value.length > 65535) throw new Revert(arrayTooLargeError);
         this.allocSafe(U16_BYTE_LENGTH + value.length * U128_BYTE_LENGTH);
         this.writeU16(u16(value.length), be);
 
@@ -238,7 +273,7 @@ export class BytesWriter {
     }
 
     public writeU256Array(value: u256[], be: boolean = true): void {
-        if (value.length > 65535) throw new Revert('Array size is too large');
+        if (value.length > 65535) throw new Revert(arrayTooLargeError);
         this.allocSafe(U16_BYTE_LENGTH + value.length * U256_BYTE_LENGTH);
         this.writeU16(u16(value.length), be);
 
@@ -248,7 +283,7 @@ export class BytesWriter {
     }
 
     public writeAddressArray(value: Address[]): void {
-        if (value.length > 65535) throw new Revert('Array size is too large');
+        if (value.length > 65535) throw new Revert(arrayTooLargeError);
         this.writeU16(u16(value.length));
 
         for (let i: i32 = 0; i < value.length; i++) {

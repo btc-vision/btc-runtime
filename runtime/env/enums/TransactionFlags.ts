@@ -1,5 +1,6 @@
 export enum TransactionInputFlags {
     hasCoinbase = 0b00000001,
+    hasWitnesses = 0b00000010,
 }
 
 export enum TransactionOutputFlags {

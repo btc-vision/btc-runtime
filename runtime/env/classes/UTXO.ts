@@ -7,11 +7,16 @@ export class TransactionInput {
         public readonly txId: Uint8Array,
         public readonly outputIndex: u16,
         public readonly scriptSig: Uint8Array,
+        public readonly witnesses: Uint8Array[] | null,
         public readonly coinbase: Uint8Array | null,
     ) {}
 
     public get isCoinbase(): boolean {
         return (this.flags & TransactionInputFlags.hasCoinbase) !== 0;
+    }
+
+    public get hasWitnesses(): boolean {
+        return (this.flags & TransactionInputFlags.hasWitnesses) !== 0;
     }
 }
 

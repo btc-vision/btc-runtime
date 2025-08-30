@@ -203,8 +203,7 @@ export class BytesReader {
     }
 
     /**
-     * [u32 length][raw bytes]. By default big-endian for the length,
-     * to match AS BytesWriter's `writeBytesWithLength`.
+     * [u32 length][raw bytes]. By default big-endian for the length
      */
     public readBytesWithLength(be: boolean = true): Uint8Array {
         const length = this.readU32(be);
@@ -248,8 +247,17 @@ export class BytesReader {
 
     // ------------------- Arrays ------------------- //
 
+    public readArrayOfBuffer(be: boolean = true): Uint8Array[] {
+        const length = this.readU16(be);
+        const result: Uint8Array[] = new Array<Uint8Array>(length);
+        for (let i: u32 = 0; i < length; i++) {
+            result[i] = this.readBytesWithLength();
+        }
+        return result;
+    }
+
     public readU256Array(be: boolean = true): u256[] {
-        const length = this.readU16();
+        const length = this.readU16(be);
         const result = new Array<u256>(length);
         for (let i: u32 = 0; i < length; i++) {
             result[i] = this.readU256(be);
@@ -280,6 +288,15 @@ export class BytesReader {
         const result = new Array<u16>(length);
         for (let i: u16 = 0; i < length; i++) {
             result[i] = this.readU16(be);
+        }
+        return result;
+    }
+
+    public readU8Array(be: boolean = true): u8[] {
+        const length = this.readU16(be);
+        const result = new Array<u8>(length);
+        for (let i: u16 = 0; i < length; i++) {
+            result[i] = this.readU8();
         }
         return result;
     }
