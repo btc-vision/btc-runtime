@@ -396,6 +396,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
             this._callOnOP20Received(from, to, amount, data);
         }
 
+        // Fire event at the end if everything succeeded indicating a successful transfer
         this.createTransferredEvent(Blockchain.tx.sender, from, to, amount);
     }
 
