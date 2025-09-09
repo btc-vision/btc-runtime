@@ -14,7 +14,7 @@ export const ALLOWANCE_DECREASE_TYPE_HASH: u8[] = [
 ];
 
 // onOP721Received(address,address,uint256,bytes)
-export const ON_OP721_RECEIVED_SELECTOR: u32 = 0xd83e7dbc;
+export const ON_OP721_RECEIVED_SELECTOR: u32 = 0x5349f6de;
 
 // onOP1155Received(address,address,uint256,uint256,bytes)
 export const ON_OP1155_RECEIVED_MAGIC: u32 = 0xcedc9fdf;
