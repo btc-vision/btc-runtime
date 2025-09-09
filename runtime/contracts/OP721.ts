@@ -308,6 +308,23 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     }
 
     @method(
+        { name: 'to', type: ABIDataTypes.ADDRESS },
+        { name: 'tokenId', type: ABIDataTypes.UINT256 },
+        { name: 'data', type: ABIDataTypes.BYTES },
+    )
+    @emit('Transferred')
+    public safeTransfer(calldata: Calldata): BytesWriter {
+        const from = this.address;
+        const to = calldata.readAddress();
+        const tokenId = calldata.readU256();
+        const data = calldata.readBytesWithLength();
+
+        this._transfer(from, to, tokenId, data);
+
+        return new BytesWriter(0);
+    }
+
+    @method(
         { name: 'from', type: ABIDataTypes.ADDRESS },
         { name: 'to', type: ABIDataTypes.ADDRESS },
         { name: 'tokenId', type: ABIDataTypes.UINT256 },
@@ -320,29 +337,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         const tokenId = calldata.readU256();
         const data = calldata.readBytesWithLength();
 
-        // All state changes happen before external call
-        this._transfer(from, to, tokenId);
-
-        // External call happens after all state changes
-        if (Blockchain.isContract(to)) {
-            this._checkOnOP721Received(from, to, tokenId, data);
-        }
-
-        return new BytesWriter(0);
-    }
-
-    @method(
-        { name: 'from', type: ABIDataTypes.ADDRESS },
-        { name: 'to', type: ABIDataTypes.ADDRESS },
-        { name: 'tokenId', type: ABIDataTypes.UINT256 },
-    )
-    @emit('Transferred')
-    public transferFrom(calldata: Calldata): BytesWriter {
-        const from = calldata.readAddress();
-        const to = calldata.readAddress();
-        const tokenId = calldata.readU256();
-
-        this._transfer(from, to, tokenId);
+        this._transfer(from, to, tokenId, data);
 
         return new BytesWriter(0);
     }
@@ -433,7 +428,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         const signature = calldata.readBytesWithLength();
 
         this._verifyTransferSignature(owner, to, tokenId, deadline, signature);
-        this._transfer(owner, to, tokenId);
+        this._transfer(owner, to, tokenId, new Uint8Array(0));
 
         return new BytesWriter(0);
     }
@@ -657,7 +652,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         this.createTransferEvent(owner, Address.zero(), tokenId);
     }
 
-    protected _transfer(from: Address, to: Address, tokenId: u256): void {
+    protected _transfer(from: Address, to: Address, tokenId: u256, data: Uint8Array): void {
         // Skip self-transfers
         if (from === to) return;
 
@@ -698,6 +693,11 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
 
         // Transfer ownership
         this.ownerOfMap.set(tokenId, this._u256FromAddress(to));
+
+        // External call happens after all state changes
+        if (Blockchain.isContract(to)) {
+            this._checkOnOP721Received(from, to, tokenId, data);
+        }
 
         this.createTransferEvent(from, to, tokenId);
     }

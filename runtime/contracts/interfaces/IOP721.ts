@@ -13,7 +13,7 @@ export interface IOP721 {
     ownerOf(calldata: Calldata): BytesWriter;
 
     // Transfer functions
-    transferFrom(calldata: Calldata): BytesWriter;
+    safeTransfer(calldata: Calldata): BytesWriter;
     safeTransferFrom(calldata: Calldata): BytesWriter;
 
     // Approval functions
