@@ -326,10 +326,9 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
     @returns(
         { name: 'name', type: ABIDataTypes.STRING },
         { name: 'symbol', type: ABIDataTypes.STRING },
+        { name: 'icon', type: ABIDataTypes.STRING },
         { name: 'decimals', type: ABIDataTypes.UINT8 },
         { name: 'totalSupply', type: ABIDataTypes.UINT256 },
-        { name: 'maximumSupply', type: ABIDataTypes.UINT256 },
-        { name: 'icon', type: ABIDataTypes.STRING },
         { name: 'domainSeparator', type: ABIDataTypes.BYTES32 },
     )
     public metadata(_: Calldata): BytesWriter {
@@ -354,10 +353,9 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         const w = new BytesWriter(totalSize);
         w.writeStringWithLength(name);
         w.writeStringWithLength(symbol);
+        w.writeStringWithLength(icon);
         w.writeU8(this.decimals);
         w.writeU256(this.totalSupply);
-        w.writeU256(this.maxSupply);
-        w.writeStringWithLength(icon);
         w.writeBytesWithLength(domainSeparator);
 
         return w;
@@ -382,10 +380,6 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
             throw new Revert('Invalid receiver');
         }
 
-        if (amount.isZero()) {
-            throw new Revert('Amount must be greater than zero');
-        }
-
         const balance: u256 = this.balanceOfMap.get(from);
         if (balance < amount) {
             throw new Revert('Insufficient balance');
@@ -396,13 +390,13 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         const toBal: u256 = this.balanceOfMap.get(to);
         this.balanceOfMap.set(to, SafeMath.add(toBal, amount));
 
-        this.createTransferredEvent(Blockchain.tx.sender, from, to, amount);
-
         if (Blockchain.isContract(to)) {
             // In CALLBACK mode, the guard allows depth up to 1
             // In STANDARD mode, the guard blocks all reentrancy
             this._callOnOP20Received(from, to, amount, data);
         }
+
+        this.createTransferredEvent(Blockchain.tx.sender, from, to, amount);
     }
 
     protected _spendAllowance(owner: Address, spender: Address, amount: u256): void {
