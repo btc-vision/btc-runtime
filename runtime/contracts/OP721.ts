@@ -35,7 +35,7 @@ import {
     ON_OP721_RECEIVED_SELECTOR,
     OP712_DOMAIN_TYPE_HASH,
     OP712_VERSION_HASH,
-    OP721_APPROVE_TYPE_HASH,
+    OP721_APPROVAL_TYPE_HASH,
     OP721_TRANSFER_TYPE_HASH,
 } from '../constants/Exports';
 
@@ -857,7 +857,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         const structWriter = new BytesWriter(
             32 + ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH * 2 + U64_BYTE_LENGTH,
         );
-        structWriter.writeBytesU8Array(OP721_APPROVE_TYPE_HASH);
+        structWriter.writeBytesU8Array(OP721_APPROVAL_TYPE_HASH);
         structWriter.writeAddress(owner);
         structWriter.writeAddress(spender);
         structWriter.writeU256(tokenId);
