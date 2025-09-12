@@ -21,9 +21,10 @@ export interface IOP721 {
     getApproved(calldata: Calldata): BytesWriter;
     setApprovalForAll(calldata: Calldata): BytesWriter;
     isApprovedForAll(calldata: Calldata): BytesWriter;
+    approveBySignature(calldata: Calldata): BytesWriter;
+    setApprovalForAllBySignature(calldata: Calldata): BytesWriter;
 
     // Advanced functions
     burn(calldata: Calldata): BytesWriter;
-    transferBySignature(calldata: Calldata): BytesWriter;
     domainSeparator(calldata: Calldata): BytesWriter;
 }

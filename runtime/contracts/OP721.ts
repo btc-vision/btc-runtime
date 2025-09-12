@@ -24,19 +24,12 @@ import { IOP721 } from './interfaces/IOP721';
 import { OP721InitParameters } from './interfaces/OP721InitParameters';
 import { ReentrancyGuard } from './ReentrancyGuard';
 import { StoredMapU256 } from '../storage/maps/StoredMapU256';
-import {
-    ApprovedEvent,
-    ApprovedForAllEvent,
-    MAX_URI_LENGTH,
-    TransferredEvent,
-    URIEvent,
-} from '../events/predefined';
+import { ApprovedEvent, ApprovedForAllEvent, MAX_URI_LENGTH, TransferredEvent, URIEvent } from '../events/predefined';
 import {
     ON_OP721_RECEIVED_SELECTOR,
     OP712_DOMAIN_TYPE_HASH,
     OP712_VERSION_HASH,
     OP721_APPROVAL_TYPE_HASH,
-    OP721_TRANSFER_TYPE_HASH,
 } from '../constants/Exports';
 
 const stringPointer: u16 = Blockchain.nextPointer;
@@ -52,7 +45,6 @@ const ownerTokensMapPointer: u16 = Blockchain.nextPointer;
 const tokenIndexMapPointer: u16 = Blockchain.nextPointer;
 const initializedPointer: u16 = Blockchain.nextPointer;
 const tokenURICounterPointer: u16 = Blockchain.nextPointer;
-const transferNonceMapPointer: u16 = Blockchain.nextPointer;
 const approveNonceMapPointer: u16 = Blockchain.nextPointer;
 
 export abstract class OP721 extends ReentrancyGuard implements IOP721 {
@@ -75,8 +67,6 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     protected readonly balanceOfMap: AddressMemoryMap;
     protected readonly operatorApprovalMap: MapOfMap<u256>;
 
-    // Separate nonces for different operations
-    protected readonly _transferNonceMap: AddressMemoryMap;
     protected readonly _approveNonceMap: AddressMemoryMap;
 
     // Token URI storage - stores index to StoredString array
@@ -112,7 +102,6 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         this.operatorApprovalMap = new MapOfMap<u256>(operatorApprovalMapPointer);
 
         // Initialize separate nonce maps
-        this._transferNonceMap = new AddressMemoryMap(transferNonceMapPointer);
         this._approveNonceMap = new AddressMemoryMap(approveNonceMapPointer);
 
         this.tokenURIIndices = new StoredMapU256(tokenURIMapPointer);
@@ -343,19 +332,19 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     }
 
     @method(
-        { name: 'to', type: ABIDataTypes.ADDRESS },
+        { name: 'operator', type: ABIDataTypes.ADDRESS },
         { name: 'tokenId', type: ABIDataTypes.UINT256 },
     )
     @emit('Approved')
     public approve(calldata: Calldata): BytesWriter {
-        const to = calldata.readAddress();
+        const operator = calldata.readAddress();
         const tokenId = calldata.readU256();
 
         // Validate to address
-        if (to === Address.zero()) throw new Revert('Cannot approve to zero address');
+        if (operator === Address.zero()) throw new Revert('Cannot approve zero address');
 
         const owner = this._ownerOf(tokenId);
-        if (to === owner) throw new Revert('Approval to current owner');
+        if (operator === owner) throw new Revert('Approval to current owner');
 
         if (
             owner !== Blockchain.tx.sender &&
@@ -364,13 +353,12 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
             throw new Revert('Not authorized to approve');
         }
 
-        this._approve(to, tokenId);
+        this._approve(operator, tokenId);
 
         return new BytesWriter(0);
     }
 
     @method({ name: 'tokenId', type: ABIDataTypes.UINT256 })
-    @returns({ name: 'approved', type: ABIDataTypes.ADDRESS })
     public getApproved(calldata: Calldata): BytesWriter {
         const tokenId = calldata.readU256();
         if (!this._exists(tokenId)) throw new Revert('Token does not exist');
@@ -414,28 +402,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
 
     @method(
         { name: 'owner', type: ABIDataTypes.ADDRESS },
-        { name: 'to', type: ABIDataTypes.ADDRESS },
-        { name: 'tokenId', type: ABIDataTypes.UINT256 },
-        { name: 'deadline', type: ABIDataTypes.UINT64 },
-        { name: 'signature', type: ABIDataTypes.BYTES },
-    )
-    @emit('Transferred')
-    public transferBySignature(calldata: Calldata): BytesWriter {
-        const owner = calldata.readAddress();
-        const to = calldata.readAddress();
-        const tokenId = calldata.readU256();
-        const deadline = calldata.readU64();
-        const signature = calldata.readBytesWithLength();
-
-        this._verifyTransferSignature(owner, to, tokenId, deadline, signature);
-        this._transfer(owner, to, tokenId, new Uint8Array(0));
-
-        return new BytesWriter(0);
-    }
-
-    @method(
-        { name: 'owner', type: ABIDataTypes.ADDRESS },
-        { name: 'spender', type: ABIDataTypes.ADDRESS },
+        { name: 'operator', type: ABIDataTypes.ADDRESS },
         { name: 'tokenId', type: ABIDataTypes.UINT256 },
         { name: 'deadline', type: ABIDataTypes.UINT64 },
         { name: 'signature', type: ABIDataTypes.BYTES },
@@ -443,7 +410,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     @emit('Approved')
     public approveBySignature(calldata: Calldata): BytesWriter {
         const owner = calldata.readAddress();
-        const spender = calldata.readAddress();
+        const operator = calldata.readAddress();
         const tokenId = calldata.readU256();
         const deadline = calldata.readU64();
         const signature = calldata.readBytesWithLength();
@@ -452,9 +419,33 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         const tokenOwner = this._ownerOf(tokenId);
         if (tokenOwner !== owner) throw new Revert('Not token owner');
 
-        this._verifyApproveSignature(owner, spender, tokenId, deadline, signature);
+        this._verifyApproveSignature(owner, operator, tokenId, deadline, signature);
 
-        this._approve(spender, tokenId);
+        this._approve(operator, tokenId);
+
+        return new BytesWriter(0);
+    }
+
+    @method(
+        { name: 'owner', type: ABIDataTypes.ADDRESS },
+        { name: 'operator', type: ABIDataTypes.ADDRESS },
+        { name: 'approved', type: ABIDataTypes.BOOL },
+        { name: 'deadline', type: ABIDataTypes.UINT64 },
+        { name: 'signature', type: ABIDataTypes.BYTES },
+    )
+    @emit('Approved')
+    public setApprovalForAllBySignature(calldata: Calldata): BytesWriter {
+        const owner = calldata.readAddress();
+        const operator = calldata.readAddress();
+        const approved = calldata.readBoolean();
+        const deadline = calldata.readU64();
+        const signature = calldata.readBytesWithLength();
+
+        if (owner === operator) throw new Revert('Cannot approve self');
+
+        this._verifySetApprovalForAllSignature(owner, operator, approved, deadline, signature);
+
+        this._setApprovalForAll(owner, operator, approved);
 
         return new BytesWriter(0);
     }
@@ -497,16 +488,6 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
 
     @method({ name: 'owner', type: ABIDataTypes.ADDRESS })
     @returns({ name: 'nonce', type: ABIDataTypes.UINT256 })
-    public getTransferNonce(calldata: Calldata): BytesWriter {
-        const owner = calldata.readAddress();
-        const nonce = this._transferNonceMap.get(owner);
-        const w = new BytesWriter(U256_BYTE_LENGTH);
-        w.writeU256(nonce);
-        return w;
-    }
-
-    @method({ name: 'owner', type: ABIDataTypes.ADDRESS })
-    @returns({ name: 'nonce', type: ABIDataTypes.UINT256 })
     public getApproveNonce(calldata: Calldata): BytesWriter {
         const owner = calldata.readAddress();
         const nonce = this._approveNonceMap.get(owner);
@@ -541,7 +522,6 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         { name: 'description', type: ABIDataTypes.STRING },
         { name: 'website', type: ABIDataTypes.STRING },
         { name: 'totalSupply', type: ABIDataTypes.UINT256 },
-        { name: 'maximumSupply', type: ABIDataTypes.UINT256 },
         { name: 'domainSeparator', type: ABIDataTypes.BYTES32 },
     )
     public metadata(_: Calldata): BytesWriter {
@@ -774,10 +754,10 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     ): void {
         const calldata = new BytesWriter(
             SELECTOR_BYTE_LENGTH +
-                ADDRESS_BYTE_LENGTH * 2 +
-                U256_BYTE_LENGTH +
-                U32_BYTE_LENGTH +
-                data.length,
+            ADDRESS_BYTE_LENGTH * 2 +
+            U256_BYTE_LENGTH +
+            U32_BYTE_LENGTH +
+            data.length,
         );
         calldata.writeSelector(ON_OP721_RECEIVED_SELECTOR);
         calldata.writeAddress(Blockchain.tx.sender);
@@ -794,48 +774,6 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         if (retVal !== ON_OP721_RECEIVED_SELECTOR) {
             throw new Revert('Transfer rejected by recipient');
         }
-    }
-
-    protected _verifyTransferSignature(
-        owner: Address,
-        to: Address,
-        tokenId: u256,
-        deadline: u64,
-        signature: Uint8Array,
-    ): void {
-        if (signature.length !== 64) {
-            throw new Revert('Invalid signature length');
-        }
-        if (Blockchain.block.number > deadline) {
-            throw new Revert('Signature expired');
-        }
-
-        const nonce = this._transferNonceMap.get(owner);
-
-        const structWriter = new BytesWriter(
-            32 + ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH * 2 + U64_BYTE_LENGTH,
-        );
-        structWriter.writeBytesU8Array(OP721_TRANSFER_TYPE_HASH);
-        structWriter.writeAddress(owner);
-        structWriter.writeAddress(to);
-        structWriter.writeU256(tokenId);
-        structWriter.writeU256(nonce);
-        structWriter.writeU64(deadline);
-
-        const structHash = sha256(structWriter.getBuffer());
-
-        const messageWriter = new BytesWriter(2 + 32 + 32);
-        messageWriter.writeU16(0x1901);
-        messageWriter.writeBytes(this._buildDomainSeparator());
-        messageWriter.writeBytes(structHash);
-
-        const hash = sha256(messageWriter.getBuffer());
-
-        if (!Blockchain.verifySchnorrSignature(owner, signature, hash)) {
-            throw new Revert('Invalid signature');
-        }
-
-        this._transferNonceMap.set(owner, SafeMath.add(nonce, u256.One));
     }
 
     protected _verifyApproveSignature(
@@ -865,7 +803,45 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         structWriter.writeU64(deadline);
 
         const structHash = sha256(structWriter.getBuffer());
+        this._verifySignature(structHash, owner, signature, nonce);
+    }
 
+    protected _verifySetApprovalForAllSignature(
+        owner: Address,
+        spender: Address,
+        approved: boolean,
+        deadline: u64,
+        signature: Uint8Array,
+    ): void {
+        if (signature.length !== 64) {
+            throw new Revert('Invalid signature length');
+        }
+        if (Blockchain.block.number > deadline) {
+            throw new Revert('Signature expired');
+        }
+
+        const nonce = this._approveNonceMap.get(owner);
+
+        const structWriter = new BytesWriter(
+            32 + ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH * 2 + U64_BYTE_LENGTH,
+        );
+        structWriter.writeBytesU8Array(OP721_APPROVAL_TYPE_HASH);
+        structWriter.writeAddress(owner);
+        structWriter.writeAddress(spender);
+        structWriter.writeBoolean(approved);
+        structWriter.writeU256(nonce);
+        structWriter.writeU64(deadline);
+
+        const structHash = sha256(structWriter.getBuffer());
+        this._verifySignature(structHash, owner, signature, nonce);
+    }
+
+    protected _verifySignature(
+        structHash: Uint8Array,
+        owner: Address,
+        signature: Uint8Array,
+        nonce: u256,
+    ): void {
         const messageWriter = new BytesWriter(2 + 32 + 32);
         messageWriter.writeU16(0x1901);
         messageWriter.writeBytes(this._buildDomainSeparator());
