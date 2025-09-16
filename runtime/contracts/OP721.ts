@@ -303,12 +303,11 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     )
     @emit('Transferred')
     public safeTransfer(calldata: Calldata): BytesWriter {
-        const from = this.address;
         const to = calldata.readAddress();
         const tokenId = calldata.readU256();
         const data = calldata.readBytesWithLength();
 
-        this._transfer(from, to, tokenId, data);
+        this._transfer(Blockchain.tx.sender, to, tokenId, data);
 
         return new BytesWriter(0);
     }
