@@ -217,11 +217,42 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
     @method(
         { name: 'to', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
+    )
+    @emit('Transferred')
+    public transfer(calldata: Calldata): BytesWriter {
+        this._transfer(
+            Blockchain.tx.sender,
+            calldata.readAddress(),
+            calldata.readU256(),
+        );
+        return new BytesWriter(0);
+    }
+
+    @method(
+        { name: 'from', type: ABIDataTypes.ADDRESS },
+        { name: 'to', type: ABIDataTypes.ADDRESS },
+        { name: 'amount', type: ABIDataTypes.UINT256 },
+    )
+    @emit('Transferred')
+    public transferFrom(calldata: Calldata): BytesWriter {
+        const from = calldata.readAddress();
+        const to = calldata.readAddress();
+        const amount = calldata.readU256();
+
+        this._spendAllowance(from, Blockchain.tx.sender, amount);
+        this._transfer(from, to, amount);
+
+        return new BytesWriter(0);
+    }
+
+    @method(
+        { name: 'to', type: ABIDataTypes.ADDRESS },
+        { name: 'amount', type: ABIDataTypes.UINT256 },
         { name: 'data', type: ABIDataTypes.BYTES },
     )
     @emit('Transferred')
     public safeTransfer(calldata: Calldata): BytesWriter {
-        this._transfer(
+        this._safeTransfer(
             Blockchain.tx.sender,
             calldata.readAddress(),
             calldata.readU256(),
@@ -244,7 +275,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         const data = calldata.readBytesWithLength();
 
         this._spendAllowance(from, Blockchain.tx.sender, amount);
-        this._transfer(from, to, amount, data);
+        this._safeTransfer(from, to, amount, data);
 
         return new BytesWriter(0);
     }
@@ -371,7 +402,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         return senderMap.get(spender);
     }
 
-    protected _transfer(from: Address, to: Address, amount: u256, data: Uint8Array): void {
+    protected _transfer(from: Address, to: Address, amount: u256, emitEvent: boolean = true): void {
         if (from === Address.zero() || from === Address.dead()) {
             throw new Revert('Invalid sender');
         }
@@ -389,6 +420,14 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
 
         const toBal: u256 = this.balanceOfMap.get(to);
         this.balanceOfMap.set(to, SafeMath.add(toBal, amount));
+
+        if (emitEvent) {
+            this.createTransferredEvent(Blockchain.tx.sender, from, to, amount);
+        }
+    }
+
+    protected _safeTransfer(from: Address, to: Address, amount: u256, data: Uint8Array): void {
+        this._transfer(from,  to, amount, false);
 
         if (Blockchain.isContract(to)) {
             // In CALLBACK mode, the guard allows depth up to 1
