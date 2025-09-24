@@ -402,7 +402,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         return senderMap.get(spender);
     }
 
-    protected _transfer(from: Address, to: Address, amount: u256, emitEvent: boolean = true): void {
+    protected _transfer(from: Address, to: Address, amount: u256): void {
         if (from === Address.zero() || from === Address.dead()) {
             throw new Revert('Invalid sender');
         }
@@ -421,22 +421,17 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         const toBal: u256 = this.balanceOfMap.get(to);
         this.balanceOfMap.set(to, SafeMath.add(toBal, amount));
 
-        if (emitEvent) {
-            this.createTransferredEvent(Blockchain.tx.sender, from, to, amount);
-        }
+        this.createTransferredEvent(Blockchain.tx.sender, from, to, amount);
     }
 
     protected _safeTransfer(from: Address, to: Address, amount: u256, data: Uint8Array): void {
-        this._transfer(from,  to, amount, false);
+        this._transfer(from,  to, amount);
 
         if (Blockchain.isContract(to)) {
             // In CALLBACK mode, the guard allows depth up to 1
             // In STANDARD mode, the guard blocks all reentrancy
             this._callOnOP20Received(from, to, amount, data);
         }
-
-        // Fire event at the end if everything succeeded indicating a successful transfer
-        this.createTransferredEvent(Blockchain.tx.sender, from, to, amount);
     }
 
     protected _spendAllowance(owner: Address, spender: Address, amount: u256): void {
