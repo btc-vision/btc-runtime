@@ -10,6 +10,8 @@ import {
     U32_BYTE_LENGTH,
 } from '../utils';
 
+export const transferSignature = 'transfer(address,uint256)';
+export const transferFromSignature = 'transferFrom(address,address,uint256)';
 export const SafeTransferSignature = 'safeTransfer(address,uint256,bytes)';
 export const SafeTransferFromSignature = 'safeTransferFrom(address,address,uint256,bytes)';
 export const IncreaseAllowanceSignature = 'increaseAllowance(address,uint256)';
@@ -26,14 +28,22 @@ export class TransferHelper {
     }
 
     public static get TRANSFER_SELECTOR(): Selector {
-        return encodeSelector(SafeTransferSignature);
+        return encodeSelector(transferSignature);
     }
 
     public static get TRANSFER_FROM_SELECTOR(): Selector {
+        return encodeSelector(transferFromSignature);
+    }
+
+    public static get SAFE_TRANSFER_SELECTOR(): Selector {
+        return encodeSelector(SafeTransferSignature);
+    }
+
+    public static get SAFE_TRANSFER_FROM_SELECTOR(): Selector {
         return encodeSelector(SafeTransferFromSignature);
     }
 
-    public static safeIncreaseAllowance(token: Address, spender: Address, amount: u256): void {
+    public static increaseAllowance(token: Address, spender: Address, amount: u256): void {
         const calldata = new BytesWriter(
             SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH,
         );
@@ -44,12 +54,48 @@ export class TransferHelper {
         Blockchain.call(token, calldata);
     }
 
-    public static safeDecreaseAllowance(token: Address, spender: Address, amount: u256): void {
+    public static decreaseAllowance(token: Address, spender: Address, amount: u256): void {
         const calldata = new BytesWriter(
             SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH,
         );
         calldata.writeSelector(this.DECREASE_ALLOWANCE_SELECTOR);
         calldata.writeAddress(spender);
+        calldata.writeU256(amount);
+
+        Blockchain.call(token, calldata);
+    }
+
+    public static transfer(
+        token: Address,
+        to: Address,
+        amount: u256
+    ): void {
+        const calldata = new BytesWriter(
+            SELECTOR_BYTE_LENGTH +
+            ADDRESS_BYTE_LENGTH +
+            U256_BYTE_LENGTH
+        );
+        calldata.writeSelector(this.TRANSFER_SELECTOR);
+        calldata.writeAddress(to);
+        calldata.writeU256(amount);
+
+        Blockchain.call(token, calldata);
+    }
+
+    public static transferFrom(
+        token: Address,
+        from: Address,
+        to: Address,
+        amount: u256
+    ): void {
+        const calldata = new BytesWriter(
+            SELECTOR_BYTE_LENGTH +
+            ADDRESS_BYTE_LENGTH * 2 +
+            U256_BYTE_LENGTH
+        );
+        calldata.writeSelector(this.TRANSFER_FROM_SELECTOR);
+        calldata.writeAddress(from);
+        calldata.writeAddress(to);
         calldata.writeU256(amount);
 
         Blockchain.call(token, calldata);
@@ -68,7 +114,7 @@ export class TransferHelper {
                 U32_BYTE_LENGTH +
                 data.length,
         );
-        calldata.writeSelector(this.TRANSFER_SELECTOR);
+        calldata.writeSelector(this.SAFE_TRANSFER_SELECTOR);
         calldata.writeAddress(to);
         calldata.writeU256(amount);
         calldata.writeBytesWithLength(data);
@@ -104,7 +150,7 @@ export class TransferHelper {
                 U32_BYTE_LENGTH +
                 data.length,
         );
-        calldata.writeSelector(this.TRANSFER_FROM_SELECTOR);
+        calldata.writeSelector(this.SAFE_TRANSFER_FROM_SELECTOR);
         calldata.writeAddress(from);
         calldata.writeAddress(to);
         calldata.writeU256(amount);
