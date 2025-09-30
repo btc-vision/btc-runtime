@@ -339,19 +339,6 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         const operator = calldata.readAddress();
         const tokenId = calldata.readU256();
 
-        // Validate to address
-        if (operator === Address.zero()) throw new Revert('Cannot approve zero address');
-
-        const owner = this._ownerOf(tokenId);
-        if (operator === owner) throw new Revert('Approval to current owner');
-
-        if (
-            owner !== Blockchain.tx.sender &&
-            !this._isApprovedForAll(owner, Blockchain.tx.sender)
-        ) {
-            throw new Revert('Not authorized to approve');
-        }
-
         this._approve(operator, tokenId);
 
         return new BytesWriter(0);
@@ -681,10 +668,23 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         this.createTransferEvent(from, to, tokenId);
     }
 
-    protected _approve(to: Address, tokenId: u256): void {
-        this.tokenApprovalMap.set(tokenId, this._u256FromAddress(to));
+    protected _approve(operator: Address, tokenId: u256): void {
+        // Validate to address
+        if (operator === Address.zero()) throw new Revert('Cannot approve zero address');
+
         const owner = this._ownerOf(tokenId);
-        this.createApprovedEvent(owner, to, tokenId);
+        if (operator === owner) throw new Revert('Approval to current owner');
+
+        if (
+            owner !== Blockchain.tx.sender &&
+            !this._isApprovedForAll(owner, Blockchain.tx.sender)
+        ) {
+            throw new Revert('Not authorized to approve');
+        }
+
+        this.tokenApprovalMap.set(tokenId, this._u256FromAddress(operator));
+
+        this.createApprovedEvent(owner, operator, tokenId);
     }
 
     protected _setApprovalForAll(owner: Address, operator: Address, approved: boolean): void {
