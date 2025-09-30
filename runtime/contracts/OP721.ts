@@ -660,12 +660,12 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         // Transfer ownership
         this.ownerOfMap.set(tokenId, this._u256FromAddress(to));
 
+        this.createTransferEvent(from, to, tokenId);
+
         // External call happens after all state changes
         if (Blockchain.isContract(to)) {
             this._checkOnOP721Received(from, to, tokenId, data);
         }
-
-        this.createTransferEvent(from, to, tokenId);
     }
 
     protected _approve(operator: Address, tokenId: u256): void {
