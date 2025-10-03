@@ -14,6 +14,7 @@ import { Revert } from '../types/Revert';
 import { SafeMath } from '../types/SafeMath';
 import {
     ADDRESS_BYTE_LENGTH,
+    BOOLEAN_BYTE_LENGTH,
     SELECTOR_BYTE_LENGTH,
     U256_BYTE_LENGTH,
     U32_BYTE_LENGTH,
@@ -29,6 +30,7 @@ import {
     ON_OP721_RECEIVED_SELECTOR,
     OP712_DOMAIN_TYPE_HASH,
     OP712_VERSION_HASH,
+    OP721_APPROVAL_FOR_ALL_TYPE_HASH,
     OP721_APPROVAL_TYPE_HASH,
 } from '../constants/Exports';
 
@@ -822,9 +824,9 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         const nonce = this._approveNonceMap.get(owner);
 
         const structWriter = new BytesWriter(
-            32 + ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH * 2 + U64_BYTE_LENGTH,
+            32 + ADDRESS_BYTE_LENGTH * 2 + BOOLEAN_BYTE_LENGTH + U256_BYTE_LENGTH + U64_BYTE_LENGTH,
         );
-        structWriter.writeBytesU8Array(OP721_APPROVAL_TYPE_HASH);
+        structWriter.writeBytesU8Array(OP721_APPROVAL_FOR_ALL_TYPE_HASH);
         structWriter.writeAddress(owner);
         structWriter.writeAddress(spender);
         structWriter.writeBoolean(approved);
