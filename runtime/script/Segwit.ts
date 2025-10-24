@@ -2,6 +2,7 @@ import { SegwitDecoded } from './ScriptUtils';
 import { hash160, sha256 } from '../env/global';
 import { Bech32 } from './Bech32';
 import { Revert } from '../types/Revert';
+import { BitcoinCodec } from './BitcoinCodec';
 
 /**
  * Segwit provides high-level functions for creating and decoding
@@ -23,6 +24,10 @@ export class Segwit {
      * @returns The Bech32-encoded address
      */
     public static p2wsh(hrp: string, witnessScript: Uint8Array): string {
+        if (BitcoinCodec.isValidWitnessScriptSize(witnessScript)) {
+            throw new Revert('Witness script size is invalid');
+        }
+
         // P2WSH uses SHA256 of the script as the witness program
         const program = sha256(witnessScript);
         return Bech32.encode(hrp, 0, program);
@@ -33,6 +38,10 @@ export class Segwit {
      * This is useful when you need to handle encoding failures gracefully
      */
     public static p2wshOrNull(hrp: string, witnessScript: Uint8Array): string | null {
+        if (BitcoinCodec.isValidWitnessScriptSize(witnessScript)) {
+            throw new Revert('Witness script size is invalid');
+        }
+
         const program = sha256(witnessScript);
         return Bech32.encodeOrNull(hrp, 0, program);
     }
@@ -49,8 +58,8 @@ export class Segwit {
      * @returns The Bech32-encoded address
      */
     public static p2wpkh(hrp: string, pubkey: Uint8Array): string {
-        if (pubkey.length !== 33 && pubkey.length !== 65) {
-            throw new Revert('Public key must be 33 bytes (compressed) or 65 bytes (uncompressed)');
+        if (pubkey.length !== 33) {
+            throw new Revert('Public key must be 33 bytes');
         }
 
         // P2WPKH uses HASH160 of the public key as the witness program
