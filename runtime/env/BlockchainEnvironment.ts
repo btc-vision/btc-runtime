@@ -394,6 +394,14 @@ export class BlockchainEnvironment {
         this.storage.clear();
     }
 
+    private _storageBackup:MapUint8Array = new MapUint8Array();
+    public backupStorage():void{
+        this._storageBackup = this.storage.copy();
+    }
+
+    public restoreStorage():void{
+        this.storage = this._storageBackup;
+    }
     /**
      * Initializes the blockchain environment with runtime parameters.
      *
