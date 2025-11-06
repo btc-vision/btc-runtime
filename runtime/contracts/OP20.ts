@@ -66,6 +66,9 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
     protected readonly _symbol: StoredString;
     protected readonly _nonceMap: AddressMemoryMap;
 
+    /** Intentionally public for inherited classes */
+    public _totalSupply: StoredU256;
+
     public constructor() {
         super();
 
@@ -79,38 +82,6 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         this._name = new StoredString(stringPointer, 0);
         this._symbol = new StoredString(stringPointer, 1);
         this._icon = new StoredString(stringPointer, 2);
-    }
-
-    /** Intentionally public for inherited classes */
-    public _totalSupply: StoredU256;
-
-    public get totalSupply(): u256 {
-        return this._totalSupply.value;
-    }
-
-    public get name(): string {
-        if (!this._name) throw new Revert('Name not set');
-        return this._name.value;
-    }
-
-    public get symbol(): string {
-        if (!this._symbol) throw new Revert('Symbol not set');
-        return this._symbol.value;
-    }
-
-    public get icon(): string {
-        if (!this._icon) throw new Revert('Icon not set');
-        return this._icon.value;
-    }
-
-    public get decimals(): u8 {
-        if (!this._decimals) throw new Revert('Decimals not set');
-        return u8(this._decimals.value.toU32());
-    }
-
-    public get maxSupply(): u256 {
-        if (!this._maxSupply) throw new Revert('Max supply not set');
-        return this._maxSupply.value;
     }
 
     public instantiate(
@@ -128,51 +99,51 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         this._icon.value = params.icon;
     }
 
-    @method('name')
+    @method()
     @returns({ name: 'name', type: ABIDataTypes.STRING })
-    public fn_name(_: Calldata): BytesWriter {
-        const w = new BytesWriter(String.UTF8.byteLength(this.name) + 4);
-        w.writeStringWithLength(this.name);
+    public name(_: Calldata): BytesWriter {
+        const w = new BytesWriter(String.UTF8.byteLength(this._name.value) + 4);
+        w.writeStringWithLength(this._name.value);
         return w;
     }
 
-    @method('symbol')
+    @method()
     @returns({ name: 'symbol', type: ABIDataTypes.STRING })
-    public fn_symbol(_: Calldata): BytesWriter {
-        const w = new BytesWriter(String.UTF8.byteLength(this.symbol) + 4);
-        w.writeStringWithLength(this.symbol);
+    public symbol(_: Calldata): BytesWriter {
+        const w = new BytesWriter(String.UTF8.byteLength(this._symbol.value) + 4);
+        w.writeStringWithLength(this._symbol.value);
         return w;
     }
 
-    @method('icon')
+    @method()
     @returns({ name: 'icon', type: ABIDataTypes.STRING })
-    public fn_icon(_: Calldata): BytesWriter {
-        const w = new BytesWriter(String.UTF8.byteLength(this.icon) + 4);
-        w.writeStringWithLength(this.icon);
+    public icon(_: Calldata): BytesWriter {
+        const w = new BytesWriter(String.UTF8.byteLength(this._icon.value) + 4);
+        w.writeStringWithLength(this._icon.value);
         return w;
     }
 
-    @method('decimals')
+    @method()
     @returns({ name: 'decimals', type: ABIDataTypes.UINT8 })
-    public fn_decimals(_: Calldata): BytesWriter {
+    public decimals(_: Calldata): BytesWriter {
         const w = new BytesWriter(1);
-        w.writeU8(this.decimals);
+        w.writeU8(this._decimals.value.toU32());
         return w;
     }
 
-    @method('totalSupply')
+    @method()
     @returns({ name: 'totalSupply', type: ABIDataTypes.UINT256 })
-    public fn_totalSupply(_: Calldata): BytesWriter {
+    public totalSupply(_: Calldata): BytesWriter {
         const w = new BytesWriter(U256_BYTE_LENGTH);
-        w.writeU256(this.totalSupply);
+        w.writeU256(this._totalSupply.value);
         return w;
     }
 
-    @method('maximumSupply')
+    @method()
     @returns({ name: 'maximumSupply', type: ABIDataTypes.UINT256 })
-    public fn_maximumSupply(_: Calldata): BytesWriter {
+    public maximumSupply(_: Calldata): BytesWriter {
         const w = new BytesWriter(U256_BYTE_LENGTH);
-        w.writeU256(this.maxSupply);
+        w.writeU256(this._maxSupply.value);
         return w;
     }
 
@@ -363,9 +334,9 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         { name: 'domainSeparator', type: ABIDataTypes.BYTES32 },
     )
     public metadata(_: Calldata): BytesWriter {
-        const name = this.name;
-        const symbol = this.symbol;
-        const icon = this.icon;
+        const name = this._name.value;
+        const symbol = this._symbol.value;
+        const icon = this._icon.value;
         const domainSeparator = this._buildDomainSeparator();
 
         const nameLength = String.UTF8.byteLength(name);
@@ -385,8 +356,8 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         w.writeStringWithLength(name);
         w.writeStringWithLength(symbol);
         w.writeStringWithLength(icon);
-        w.writeU8(this.decimals);
-        w.writeU256(this.totalSupply);
+        w.writeU8(this._decimals.value.toU32());
+        w.writeU256(this._totalSupply.value);
         w.writeBytesWithLength(domainSeparator);
 
         return w;
@@ -583,7 +554,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
     protected _buildDomainSeparator(): Uint8Array {
         const writer = new BytesWriter(32 * 5 + ADDRESS_BYTE_LENGTH);
         writer.writeBytesU8Array(OP712_DOMAIN_TYPE_HASH);
-        writer.writeBytes(sha256String(this.name));
+        writer.writeBytes(sha256String(this._name.value));
         writer.writeBytesU8Array(OP712_VERSION_HASH);
         writer.writeBytes(Blockchain.chainId);
         writer.writeBytes(Blockchain.protocolId);
@@ -646,7 +617,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         // @ts-expect-error AssemblyScript valid
         this._totalSupply += amount;
 
-        if (this._totalSupply.value > this.maxSupply) {
+        if (this._totalSupply.value > this._maxSupply.value) {
             throw new Revert('Max supply reached');
         }
 
