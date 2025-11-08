@@ -1,9 +1,28 @@
 import { u256 } from '@btc-vision/as-bignum/assembly';
 
 import { BytesWriter } from '../buffer/BytesWriter';
+import {
+    ALLOWANCE_DECREASE_TYPE_HASH,
+    ALLOWANCE_INCREASE_TYPE_HASH,
+    ALLOWANCE_SELECTOR,
+    BALANCE_OF_SELECTOR,
+    DECIMALS_SELECTOR,
+    DOMAIN_SEPARATOR_SELECTOR,
+    ICON_SELECTOR,
+    MAXIMUM_SUPPLY_SELECTOR,
+    METADATA_SELECTOR,
+    NAME_SELECTOR,
+    NONCE_OF_SELECTOR,
+    ON_OP20_RECEIVED_SELECTOR,
+    OP712_DOMAIN_TYPE_HASH,
+    OP712_VERSION_HASH,
+    SYMBOL_SELECTOR,
+    TOTAL_SUPPLY_SELECTOR,
+} from '../constants/Exports';
 import { Blockchain } from '../env';
 import { sha256, sha256String } from '../env/global';
 import { ApprovedEvent, BurnedEvent, MintedEvent, TransferredEvent } from '../events/predefined';
+import { Selector } from '../math/abi';
 import { EMPTY_POINTER } from '../math/bytes';
 import { AddressMemoryMap } from '../memory/AddressMemoryMap';
 import { MapOfMap } from '../memory/MapOfMap';
@@ -23,26 +42,7 @@ import {
 } from '../utils';
 import { IOP20 } from './interfaces/IOP20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
-import {
-    ALLOWANCE_DECREASE_TYPE_HASH,
-    ALLOWANCE_INCREASE_TYPE_HASH,
-    ALLOWANCE_SELECTOR,
-    BALANCE_OF_SELECTOR,
-    DECIMALS_SELECTOR,
-    DOMAIN_SEPARATOR_SELECTOR,
-    ICON_SELECTOR,
-    MAXIMUM_SUPPLY_SELECTOR,
-    METADATA_SELECTOR,
-    NAME_SELECTOR,
-    NONCE_OF_SELECTOR,
-    ON_OP20_RECEIVED_SELECTOR,
-    OP712_DOMAIN_TYPE_HASH,
-    OP712_VERSION_HASH,
-    SYMBOL_SELECTOR,
-    TOTAL_SUPPLY_SELECTOR,
-} from '../constants/Exports';
 import { ReentrancyGuard, ReentrancyLevel } from './ReentrancyGuard';
-import { Selector } from '../math/abi';
 
 const nonceMapPointer: u16 = Blockchain.nextPointer;
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
@@ -127,7 +127,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
     @returns({ name: 'decimals', type: ABIDataTypes.UINT8 })
     public decimals(_: Calldata): BytesWriter {
         const w = new BytesWriter(1);
-        w.writeU8(this._decimals.value.toU32());
+        w.writeU8(<u8>this._decimals.value.toU32());
         return w;
     }
 
@@ -191,11 +191,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
     )
     @emit('Transferred')
     public transfer(calldata: Calldata): BytesWriter {
-        this._transfer(
-            Blockchain.tx.sender,
-            calldata.readAddress(),
-            calldata.readU256(),
-        );
+        this._transfer(Blockchain.tx.sender, calldata.readAddress(), calldata.readU256());
         return new BytesWriter(0);
     }
 
@@ -356,7 +352,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         w.writeStringWithLength(name);
         w.writeStringWithLength(symbol);
         w.writeStringWithLength(icon);
-        w.writeU8(this._decimals.value.toU32());
+        w.writeU8(<u8>this._decimals.value.toU32());
         w.writeU256(this._totalSupply.value);
         w.writeBytesWithLength(domainSeparator);
 
@@ -396,7 +392,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
     }
 
     protected _safeTransfer(from: Address, to: Address, amount: u256, data: Uint8Array): void {
-        this._transfer(from,  to, amount);
+        this._transfer(from, to, amount);
 
         if (Blockchain.isContract(to)) {
             // In CALLBACK mode, the guard allows depth up to 1
