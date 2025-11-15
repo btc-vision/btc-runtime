@@ -119,9 +119,9 @@ export class ExtendedAddress extends Address {
      *
      * @deprecated Use {@link fromStringPair} instead
      */
-    public static override fromString(_: string): Address {
+    public static override fromString(_: string): ExtendedAddress {
         ERROR(
-            `Use ExtendedAddress.fromStringPair instead. This method is disabled. You must provide both the tweaked public key and the MLDSA public key.`,
+            `Use ExtendedAddress.fromStringPair instead. This method is disabled. You must provide both the tweaked public key and the ML-DSA public key.`,
         );
     }
 
@@ -338,7 +338,10 @@ export class ExtendedAddress extends Address {
      * The ML-DSA key hash is not used in P2TR address generation.
      */
     public p2tr(): string {
-        return BitcoinAddresses.p2trKeyPathAddress(this, Network.hrp(Blockchain.network));
+        return BitcoinAddresses.p2trKeyPathAddress(
+            this.tweakedPublicKey,
+            Network.hrp(Blockchain.network),
+        );
     }
 
     /**

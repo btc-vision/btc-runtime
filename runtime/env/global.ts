@@ -233,9 +233,9 @@ export declare function getOutputsSize(): u32;
  *
  * For ML-DSA signatures (quantum-resistant):
  * - Public key format: [0x01] + [level byte] + [public key data]
- *   - Level 0x00: ML-DSA-44 (1314 bytes total - 2 header bytes + 1312 key bytes)
- *   - Level 0x01: ML-DSA-65 (1954 bytes total - 2 header bytes + 1952 key bytes)
- *   - Level 0x02: ML-DSA-87 (2594 bytes total - 2 header bytes + 2592 key bytes)
+ *   - Level 0x00: ML-DSA-44 (1313 bytes total - 1 header byte + 1312 key bytes)
+ *   - Level 0x01: ML-DSA-65 (1955 bytes total - 1 header byte + 1952 key bytes)
+ *   - Level 0x02: ML-DSA-87 (2593 bytes total - 1 header byte + 2592 key bytes)
  * - Signature lengths:
  *   - ML-DSA-44: 2420 bytes
  *   - ML-DSA-65: 3309 bytes

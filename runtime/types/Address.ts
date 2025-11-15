@@ -144,6 +144,7 @@ export class Address extends Uint8Array {
      */
     public static fromUint8Array(bytes: Uint8Array): Address {
         const cloned = new Address([]);
+
         // Copy the raw memory directly:
         memory.copy(cloned.dataStart, bytes.dataStart, ADDRESS_BYTE_LENGTH);
 

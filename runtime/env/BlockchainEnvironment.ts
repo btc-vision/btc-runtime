@@ -64,7 +64,7 @@ export class BlockchainEnvironment {
      * Standard dead address for burn operations.
      * Assets sent here are permanently unrecoverable.
      */
-    public readonly DEAD_ADDRESS: ExtendedAddress = ExtendedAddress.zero();
+    public readonly DEAD_ADDRESS: ExtendedAddress = ExtendedAddress.dead();
 
     private storage: MapUint8Array = new MapUint8Array();
     private transientStorage: MapUint8Array = new MapUint8Array();
@@ -677,7 +677,7 @@ export class BlockchainEnvironment {
         hash: Uint8Array,
     ): boolean {
         WARNING(
-            'verifySchnorrSignature is deprecated. It is mandatory to use verifySignature() for automatic consensus migration and quantum resistance support. If you do not comply, your contract will break when the network transitions to quantum-resistant signatures only.',
+            'verifySchnorrSignature is deprecated. Use verifySignature() for consensus-aware signature verification and quantum resistance support.',
         );
 
         return this.internalVerifySchnorr(publicKey, signature, hash);
@@ -733,14 +733,14 @@ export class BlockchainEnvironment {
         const publicKeyLength = MLDSAMetadata.fromLevel(level);
         if (publicKey.length !== (publicKeyLength as i32)) {
             throw new Revert(
-                `Invalid MLDSA public key length. Expected ${publicKeyLength}, got ${publicKey.length}`,
+                `Invalid ML-DSA public key length. Expected ${publicKeyLength}, got ${publicKey.length}`,
             );
         }
 
         const signatureLength = MLDSAMetadata.signatureLen(publicKeyLength);
         if (signature.length !== signatureLength) {
             throw new Revert(
-                `Invalid MLDSA signature length. Expected ${signatureLength}, got ${signature.length}`,
+                `Invalid ML-DSA signature length. Expected ${signatureLength}, got ${signature.length}`,
             );
         }
 
@@ -766,19 +766,25 @@ export class BlockchainEnvironment {
      * Verifies a signature based on current consensus rules.
      *
      * This method automatically selects the appropriate signature verification algorithm
-     * based on the current consensus state. Schnorr signatures will be allowed and defaulted to until
-     * the consensus transitions to quantum-resistant signatures. We recommend using the post-quantum
-     * ML-DSA signatures for new applications to future-proof against quantum attacks.
+     * based on the current consensus state:
      *
-     * Once the network enforces quantum-resistant signatures, only ML-DSA signatures will be accepted,
-     * ensuring all transactions are protected against both current and future quantum computing threats.
+     * - When `unsafeSignaturesAllowed()` returns `true`: Uses Schnorr signatures (quantum-vulnerable)
+     * - When `unsafeSignaturesAllowed()` returns `false`: Uses ML-DSA signatures (quantum-resistant)
+     *
+     * The `unsafeSignaturesAllowed()` flag indicates whether the network is still accepting
+     * legacy Schnorr signatures. This flag will be `true` during the transition period to
+     * maintain backwards compatibility with existing infrastructure. Once the network completes
+     * its quantum-resistant upgrade, this flag will permanently become `false`, enforcing
+     * ML-DSA signatures exclusively.
      *
      * @param address - The address containing the public key(s) to verify against.
      *                  For Schnorr, uses the taproot tweaked public key.
      *                  For ML-DSA, uses the ML-DSA public key component.
      * @param signature - The signature bytes to verify. Format depends on algorithm:
      *                    - Schnorr: 64-byte signature
-     *                    - ML-DSA Level 2: Variable length (typically ~2420 bytes)
+     *                    - ML-DSA-44 (Level 2): 2420 bytes
+     *                    - ML-DSA-65 (Level 3): 3309 bytes
+     *                    - ML-DSA-87 (Level 5): 4627 bytes
      * @param hash - The 32-byte message hash that was signed. Usually a SHA256 hash
      *               of the transaction data or message being verified.
      *
@@ -795,9 +801,10 @@ export class BlockchainEnvironment {
      * - Pre-quantum era: Schnorr signatures (Bitcoin taproot compatible)
      * - Post-quantum era: ML-DSA Level 2 (NIST standardized, 128-bit quantum security)
      *
-     * ML-DSA Level 2 provides approximately 128 bits of security against quantum attacks
-     * using Grover's algorithm and is considered safe against currently known quantum
-     * computing capabilities.
+     *  ML-DSA Level 2 (ML-DSA-44) corresponds to NIST security category 2, providing security
+     *  equivalent to AES-128 against both classical and quantum attacks. Its security is based on
+     *  the hardness of underlying lattice problems and is designed to resist attacks from quantum
+     *  computers (such as those using Shor's algorithm), not specifically Grover's algorithm.
      *
      * @example
      * ```typescript

@@ -65,15 +65,9 @@ export class TransferHelper {
         Blockchain.call(token, calldata);
     }
 
-    public static transfer(
-        token: Address,
-        to: Address,
-        amount: u256
-    ): void {
+    public static transfer(token: Address, to: Address, amount: u256): void {
         const calldata = new BytesWriter(
-            SELECTOR_BYTE_LENGTH +
-            ADDRESS_BYTE_LENGTH +
-            U256_BYTE_LENGTH
+            SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH,
         );
         calldata.writeSelector(this.TRANSFER_SELECTOR);
         calldata.writeAddress(to);
@@ -82,16 +76,9 @@ export class TransferHelper {
         Blockchain.call(token, calldata);
     }
 
-    public static transferFrom(
-        token: Address,
-        from: Address,
-        to: Address,
-        amount: u256
-    ): void {
+    public static transferFrom(token: Address, from: Address, to: Address, amount: u256): void {
         const calldata = new BytesWriter(
-            SELECTOR_BYTE_LENGTH +
-            ADDRESS_BYTE_LENGTH * 2 +
-            U256_BYTE_LENGTH
+            SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH,
         );
         calldata.writeSelector(this.TRANSFER_FROM_SELECTOR);
         calldata.writeAddress(from);
