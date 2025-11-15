@@ -54,20 +54,17 @@ const allowanceMapPointer: u16 = Blockchain.nextPointer;
 const balanceOfMapPointer: u16 = Blockchain.nextPointer;
 
 export abstract class OP20 extends ReentrancyGuard implements IOP20 {
+    /** Intentionally public for inherited classes */
+    public _totalSupply: StoredU256;
     protected readonly reentrancyLevel: ReentrancyLevel = ReentrancyLevel.CALLBACK;
-
     protected readonly allowanceMap: MapOfMap<u256>;
     protected readonly balanceOfMap: AddressMemoryMap;
-
     protected readonly _maxSupply: StoredU256;
     protected readonly _decimals: StoredU256;
     protected readonly _name: StoredString;
     protected readonly _icon: StoredString;
     protected readonly _symbol: StoredString;
     protected readonly _nonceMap: AddressMemoryMap;
-
-    /** Intentionally public for inherited classes */
-    public _totalSupply: StoredU256;
 
     public constructor() {
         super();
@@ -370,11 +367,11 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
     }
 
     protected _transfer(from: Address, to: Address, amount: u256): void {
-        if (from === Address.zero() || from === Address.dead()) {
+        if (from === Address.zero()) {
             throw new Revert('Invalid sender');
         }
 
-        if (to === Address.zero() || to === Address.dead()) {
+        if (to === Address.zero()) {
             throw new Revert('Invalid receiver');
         }
 
@@ -560,10 +557,10 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
     }
 
     protected _increaseAllowance(owner: Address, spender: Address, amount: u256): void {
-        if (owner === Address.zero() || owner === Address.dead()) {
+        if (owner === Address.zero()) {
             throw new Revert('Invalid approver');
         }
-        if (spender === Address.zero() || spender === Address.dead()) {
+        if (spender === Address.zero()) {
             throw new Revert('Invalid spender');
         }
 
@@ -581,10 +578,10 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
     }
 
     protected _decreaseAllowance(owner: Address, spender: Address, amount: u256): void {
-        if (owner === Address.zero() || owner === Address.dead()) {
+        if (owner === Address.zero()) {
             throw new Revert('Invalid approver');
         }
-        if (spender === Address.zero() || spender === Address.dead()) {
+        if (spender === Address.zero()) {
             throw new Revert('Invalid spender');
         }
 
@@ -603,7 +600,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
     }
 
     protected _mint(to: Address, amount: u256): void {
-        if (to === Address.zero() || to === Address.dead()) {
+        if (to === Address.zero()) {
             throw new Revert('Invalid receiver');
         }
 
@@ -621,7 +618,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
     }
 
     protected _burn(from: Address, amount: u256): void {
-        if (from === Address.zero() || from === Address.dead()) {
+        if (from === Address.zero()) {
             throw new Revert('Invalid sender');
         }
 

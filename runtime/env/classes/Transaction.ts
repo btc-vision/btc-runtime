@@ -4,17 +4,24 @@ import { Potential } from '../../lang/Definitions';
 import { BytesReader } from '../../buffer/BytesReader';
 import { getInputsSize, getOutputsSize, inputs, outputs } from '../global';
 import { TransactionDecoder } from '../decoders/TransactionDecoder';
+import { ConsensusRules } from '../consensus/ConsensusRules';
+import { ExtendedAddress } from '../../types/ExtendedAddress';
 
 @final
 export class Transaction {
+    public readonly consensus: ConsensusRules;
+
     private readonly transactionDecoder: TransactionDecoder = new TransactionDecoder();
 
     public constructor(
         public readonly sender: Address, // "immediate caller"
-        public readonly origin: Address, // "leftmost thing in the call chain"
+        public readonly origin: ExtendedAddress, // "leftmost thing in the call chain"
         public readonly txId: Uint8Array,
         public readonly hash: Uint8Array,
-    ) {}
+        consensusFlags: u64,
+    ) {
+        this.consensus = new ConsensusRules(consensusFlags);
+    }
 
     private _inputs: Potential<TransactionInput[]> = null;
 

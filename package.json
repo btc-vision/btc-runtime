@@ -1,6 +1,6 @@
 {
     "name": "@btc-vision/btc-runtime",
-    "version": "1.9.16",
+    "version": "1.10.0",
     "description": "Bitcoin Smart Contract Runtime",
     "main": "btc/index.ts",
     "scripts": {
@@ -25,7 +25,7 @@
         "@btc-vision/as-pect-assembly": "^8.2.0",
         "@btc-vision/as-pect-cli": "^8.2.0",
         "@btc-vision/as-pect-transform": "^8.2.0",
-        "@types/node": "^24.10.0",
+        "@types/node": "^24.10.1",
         "assemblyscript": "^0.28.9"
     },
     "repository": {

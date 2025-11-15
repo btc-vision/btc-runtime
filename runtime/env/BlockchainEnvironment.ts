@@ -23,7 +23,7 @@ import {
     tLoadPointer,
     tStorePointer,
     validateBitcoinAddress,
-    verifySchnorrSignature,
+    verifySignature,
 } from './global';
 import { eqUint, MapUint8Array } from '../generic/MapUint8Array';
 import { EMPTY_BUFFER } from '../math/bytes';
@@ -32,6 +32,9 @@ import { Calldata } from '../types';
 import { Revert } from '../types/Revert';
 import { Selector } from '../math/abi';
 import { Network, Networks } from '../script/Networks';
+import { ExtendedAddress } from '../types/ExtendedAddress';
+import { SignaturesMethods } from './consensus/Signatures';
+import { MLDSAMetadata, MLDSASecurityLevel } from './consensus/MLDSAMetadata';
 
 export * from '../env/global';
 
@@ -61,7 +64,7 @@ export class BlockchainEnvironment {
      * Standard dead address for burn operations.
      * Assets sent here are permanently unrecoverable.
      */
-    public readonly DEAD_ADDRESS: Address = Address.dead();
+    public readonly DEAD_ADDRESS: ExtendedAddress = ExtendedAddress.zero();
 
     private storage: MapUint8Array = new MapUint8Array();
     private transientStorage: MapUint8Array = new MapUint8Array();
@@ -339,11 +342,15 @@ export class BlockchainEnvironment {
         const contractAddress = reader.readAddress();
         const contractDeployer = reader.readAddress();
         const caller = reader.readAddress();
-        const origin = reader.readAddress();
+        const origin = reader.readBytesArray(32);
         const chainId = reader.readBytes(32);
         const protocolId = reader.readBytes(32);
+        const tweakedPublicKey = reader.readBytesArray(ADDRESS_BYTE_LENGTH);
+        const consensusFlags = reader.readU64();
 
-        this._tx = new Transaction(caller, origin, txId, txHash);
+        const originAddress = new ExtendedAddress(tweakedPublicKey, origin);
+
+        this._tx = new Transaction(caller, originAddress, txId, txHash, consensusFlags);
         this._contractDeployer = contractDeployer;
         this._contractAddress = contractAddress;
         this._chainId = chainId;
@@ -650,6 +657,10 @@ export class BlockchainEnvironment {
      *          - Linear aggregation properties
      *          - Used in Taproot (post-2021)
      *
+     * @deprecated Use Blockchain.verifySignature() instead for automatic consensus migration.
+     *            verifySignature() supports both Schnorr and ML-DSA signatures with proper
+     *            consensus flag handling for quantum resistance transitions.
+     *
      * @example
      * ```typescript
      * const isValid = Blockchain.verifySchnorrSignature(
@@ -665,7 +676,107 @@ export class BlockchainEnvironment {
         signature: Uint8Array,
         hash: Uint8Array,
     ): boolean {
-        const result: u32 = verifySchnorrSignature(publicKey.buffer, signature.buffer, hash.buffer);
+        WARNING(
+            'verifySchnorrSignature is deprecated. Use verifySignature() for automatic consensus migration and quantum resistance support when UNSAFE_QUANTUM_SIGNATURES_ALLOWED flag changes.',
+        );
+
+        if (signature.byteLength !== 64) {
+            throw new Revert(`Invalid signature length. Expected 64, got ${signature.length}`);
+        }
+
+        if (hash.byteLength !== 32) {
+            throw new Revert(`Invalid hash length. Expected 32, got ${hash.length}`);
+        }
+
+        const writer = new BytesWriter(1 + ADDRESS_BYTE_LENGTH);
+        writer.writeU8(SignaturesMethods.Schnorr);
+        writer.writeAddress(publicKey);
+
+        const result: u32 = verifySignature(
+            writer.getBuffer().buffer,
+            signature.buffer,
+            hash.buffer,
+        );
+
+        return result === 1;
+    }
+
+    /**
+     * Verifies an ML-DSA signature (quantum-resistant).
+     *
+     * @param level - Security level (MLDSASecurityLevel.Level2: ML-DSA-44, MLDSASecurityLevel.Level3: ML-DSA-65, MLDSASecurityLevel.Level5: ML-DSA-87)
+     * @param publicKey - ML-DSA public key (1312/1952/2592 bytes based on level)
+     * @param signature - ML-DSA signature (2420/3309/4627 bytes based on level)
+     * @param hash - 32-byte message hash
+     * @returns true if signature is valid
+     *
+     * @warning ML-DSA provides quantum resistance:
+     *          - NIST standardized lattice-based signatures
+     *          - Larger keys/signatures than classical algorithms
+     *          - Security levels: 2 (ML-DSA-44), 3 (ML-DSA-65), 5 (ML-DSA-87)
+     *
+     * @throws {Revert} If public key length doesn't match level
+     * @throws {Revert} If signature length doesn't match level
+     * @throws {Revert} If hash is not 32 bytes
+     *
+     * @example
+     * ```typescript
+     * // ML-DSA-44 (security level 2)
+     * const isValid = Blockchain.verifyMLDSASignature(
+     *     MLDSASecurityLevel.Level2, // level 0 = ML-DSA-44
+     *     mldsaPublicKey, // 1312 bytes
+     *     mldsaSignature, // 2420 bytes
+     *     messageHash // 32 bytes
+     * );
+     * if (!isValid) throw new Revert("Invalid ML-DSA signature");
+     * ```
+     *
+     * @example
+     * ```typescript
+     * // ML-DSA-87 (highest security level 5)
+     * const isValid = Blockchain.verifyMLDSASignature(
+     *     MLDSASecurityLevel.Level5, // level 2 = ML-DSA-87
+     *     mldsaPublicKey, // 2592 bytes
+     *     mldsaSignature, // 4627 bytes
+     *     messageHash // 32 bytes
+     * );
+     * ```
+     */
+    public verifyMLDSASignature(
+        level: MLDSASecurityLevel,
+        publicKey: Uint8Array,
+        signature: Uint8Array,
+        hash: Uint8Array,
+    ): boolean {
+        const publicKeyLength = MLDSAMetadata.fromLevel(level);
+        if (publicKey.length !== (publicKeyLength as i32)) {
+            throw new Revert(
+                `Invalid MLDSA public key length. Expected ${publicKeyLength}, got ${publicKey.length}`,
+            );
+        }
+
+        const signatureLength = MLDSAMetadata.signatureLen(publicKeyLength);
+        if (signature.length !== signatureLength) {
+            throw new Revert(
+                `Invalid MLDSA signature length. Expected ${signatureLength}, got ${signature.length}`,
+            );
+        }
+
+        if (hash.length !== 32) {
+            throw new Revert(`Invalid hash length. Expected 32, got ${hash.length}`);
+        }
+
+        const writer = new BytesWriter(2 + publicKey.length);
+        writer.writeU8(SignaturesMethods.MLDSA);
+        writer.writeU8(level);
+        writer.writeBytes(publicKey);
+
+        const result: u32 = verifySignature(
+            writer.getBuffer().buffer,
+            signature.buffer,
+            hash.buffer,
+        );
+
         return result === 1;
     }
 

@@ -1,15 +1,14 @@
 import { Potential } from '../lang/Definitions';
 import { ADDRESS_BYTE_LENGTH, decodeHexArray, encodeHexFromBuffer } from '../utils';
 import { Revert } from './Revert';
-import { BitcoinAddresses } from '../script/BitcoinAddresses';
-import { Blockchain } from '../env';
-import { Network } from '../script/Networks';
+import { loadMLDSAPublicKey } from '../env/global';
+import { MLDSASecurityLevel } from '../env/consensus/MLDSAMetadata';
+import { ArrayLike } from '../interfaces/as';
 
-@final
 export class Address extends Uint8Array {
-    private isDefined: boolean = false;
+    protected isDefined: boolean = false;
 
-    public constructor(bytes: u8[] = []) {
+    public constructor(bytes: u8[]) {
         super(ADDRESS_BYTE_LENGTH);
 
         if (!(!bytes || bytes.length === 0)) {
@@ -17,12 +16,18 @@ export class Address extends Uint8Array {
         }
     }
 
+    protected _mldsaPublicKey: Potential<Uint8Array> = null;
+
     /**
-     * Dead address (284ae4acdb32a99ba3ebfa66a91ddb41a7b7a1d2fef415399922cd8a04485c02)
-     * generated from 04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f
+     * Get the MLDSA public key for this address
+     * @returns {Uint8Array} The MLDSA public key
      */
-    public static dead(): Address {
-        return DEAD_ADDRESS.clone();
+    public get mldsaPublicKey(): Uint8Array {
+        if (!this._mldsaPublicKey) {
+            this._mldsaPublicKey = loadMLDSAPublicKey(this, MLDSASecurityLevel.Level2);
+        }
+
+        return this._mldsaPublicKey as Uint8Array;
     }
 
     public static zero(): Address {
@@ -38,20 +43,11 @@ export class Address extends Uint8Array {
     }
 
     public static fromUint8Array(bytes: Uint8Array): Address {
-        const cloned = new Address();
+        const cloned = new Address([]);
         // Copy the raw memory directly:
         memory.copy(cloned.dataStart, bytes.dataStart, ADDRESS_BYTE_LENGTH);
 
         return cloned;
-    }
-
-    public static toCSV(address: Uint8Array, blocks: u32): string {
-        return BitcoinAddresses.csvP2wshAddress(address, blocks, Network.hrp(Blockchain.network))
-            .address;
-    }
-
-    public static p2wpkh(address: Uint8Array): string {
-        return BitcoinAddresses.p2wpkh(address, Network.hrp(Blockchain.network));
     }
 
     public isZero(): bool {
@@ -64,25 +60,13 @@ export class Address extends Uint8Array {
         return true;
     }
 
-    public isDead(): bool {
-        for (let i = 0; i < this.length; i++) {
-            if (this[i] != DEAD_ADDRESS[i]) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    public p2tr(): string {
-        return BitcoinAddresses.p2trKeyPathAddress(this, Network.hrp(Blockchain.network));
-    }
-
     /**
      * Create a new Address that is a copy of the current Address.
      * @returns {Address}
      */
     public clone(): Address {
-        const cloned = new Address();
+        const cloned = new Address([]);
+
         // Copy the raw memory directly:
         memory.copy(cloned.dataStart, this.dataStart, ADDRESS_BYTE_LENGTH);
 
@@ -161,7 +145,7 @@ export class Address extends Uint8Array {
     }
 
     public toString(): string {
-        return this.p2tr();
+        return this.toHex();
     }
 
     /**
@@ -169,7 +153,7 @@ export class Address extends Uint8Array {
      * @param {ArrayLike} publicKey The public key
      * @returns {void}
      */
-    private newSet(publicKey: u8[]): void {
+    private newSet<U extends ArrayLike<number>>(publicKey: U): void {
         if (publicKey.length !== 32) {
             throw new Revert(`Invalid public key length (${publicKey.length})`);
         }
@@ -202,10 +186,6 @@ export class Address extends Uint8Array {
     }
 }
 
-export const ZERO_ADDRESS: Address = new Address();
-export const DEAD_ADDRESS: Address = new Address([
-    40, 74, 228, 172, 219, 50, 169, 155, 163, 235, 250, 102, 169, 29, 219, 65, 167, 183, 161, 210,
-    254, 244, 21, 57, 153, 34, 205, 138, 4, 72, 92, 2,
-]);
+export const ZERO_ADDRESS: Address = new Address([]);
 
 export declare type PotentialAddress = Potential<Address>;

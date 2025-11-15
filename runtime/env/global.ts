@@ -1,5 +1,10 @@
 /* eslint-disable */
 
+import { MLDSAMetadata, MLDSASecurityLevel } from './consensus/MLDSAMetadata';
+import { BytesReader } from '../buffer/BytesReader';
+import { BytesWriter } from '../buffer/BytesWriter';
+import { ADDRESS_BYTE_LENGTH } from '../utils';
+
 /**
  * Retrieves environment variables.
  * @param {u32} offset - The offset in memory where the environment variables start.
@@ -213,14 +218,73 @@ export declare function outputs(result: ArrayBuffer): void;
 export declare function getOutputsSize(): u32;
 
 /**
- * Verifies a Schnorr signature.
- * @param {ArrayBuffer} publicKey - The public key used for verification.
- * @param {ArrayBuffer} signature - The signature to verify.
- * @param {ArrayBuffer} message - The message that was signed.
- * @returns {u32} - 1 if valid, 0 otherwise.
+ * Verifies a cryptographic signature using either Schnorr or ML-DSA algorithms.
+ *
+ * The signature algorithm is determined by the public key format:
+ * - First byte indicates the signature type:
+ *   - 0x00: Schnorr signature (33 bytes total - type byte + 32-byte x-only public key)
+ *   - 0x01: ML-DSA signature (variable length based on security level)
+ *
+ * For Schnorr signatures:
+ * - Public key format: [0x00] + [32-byte x-only public key] (33 bytes total)
+ * - Signature: 64 bytes
+ * - Message: 32 bytes (typically a hash)
+ * - Note: Schnorr signatures are only allowed when UNSAFE_QUANTUM_SIGNATURES_ALLOWED consensus flag is set
+ *
+ * For ML-DSA signatures (quantum-resistant):
+ * - Public key format: [0x01] + [level byte] + [public key data]
+ *   - Level 0x00: ML-DSA-44 (1314 bytes total - 2 header bytes + 1312 key bytes)
+ *   - Level 0x01: ML-DSA-65 (1954 bytes total - 2 header bytes + 1952 key bytes)
+ *   - Level 0x02: ML-DSA-87 (2594 bytes total - 2 header bytes + 2592 key bytes)
+ * - Signature lengths:
+ *   - ML-DSA-44: 2420 bytes
+ *   - ML-DSA-65: 3309 bytes
+ *   - ML-DSA-87: 4627 bytes
+ * - Message: 32 bytes (typically a hash)
+ *
+ * @example
+ * ```typescript
+ * // Schnorr signature verification
+ * const writer = new BytesWriter(33);
+ * writer.writeU8(0x00); // Schnorr type
+ * writer.writeBytes(xOnlyPublicKey); // 32-byte x-only public key
+ *
+ * const publicKey = writer.getBuffer().buffer;
+ * const signature = schnorrSig.buffer; // 64-byte signature
+ * const message = messageHash.buffer; // 32-byte hash
+ *
+ * const isValid = verifySignature(publicKey, signature, message);
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // ML-DSA-44 signature verification
+ * const writer = new BytesWriter(1314);
+ * writer.writeU8(0x01); // ML-DSA type
+ * writer.writeU8(0x00); // ML-DSA-44 level
+ * writer.writeBytes(mldsaPublicKey); // 1312-byte public key
+ *
+ * const publicKey = writer.getBuffer().buffer;
+ * const signature = mldsaSig.buffer; // 2420-byte signature
+ * const message = messageHash.buffer; // 32-byte hash
+ *
+ * const isValid = verifySignature(publicKey, signature, message);
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Reading signature verification result
+ * const reader = new BytesReader(resultBytes);
+ * const isValid = reader.readU32() === 1;
+ * ```
+ *
+ * @param publicKey - The public key with type prefix (see format above)
+ * @param signature - The signature to verify (size depends on algorithm)
+ * @param message - The 32-byte message hash that was signed
+ * @returns 1 if signature is valid, 0 if invalid or verification fails
  */
-@external('env', 'verifySchnorrSignature')
-export declare function verifySchnorrSignature(publicKey: ArrayBuffer, signature: ArrayBuffer, message: ArrayBuffer): u32;
+@external('env', 'verifySignature')
+export declare function verifySignature(publicKey: ArrayBuffer, signature: ArrayBuffer, message: ArrayBuffer): u32;
 
 /**
  * Retrieves the hash of a specific block.
@@ -246,5 +310,45 @@ export declare function getAccountType(address: ArrayBuffer): u32;
  */
 @external('env', 'exit')
 export declare function env_exit(status: u32, data: ArrayBuffer, dataLength: u32): void;
+
+@external('env', 'loadMLDSAPublicKey')
+declare function loadMLDSA(key: ArrayBuffer, result: ArrayBuffer): void;
+
+/**
+ * Loads an ML-DSA public key by its identifier.
+ *
+ * @param address - ML-DSA public key identifier
+ * @param level - ML-DSA security level
+ *
+ * @warning Cannot be called during contract initialization (start function)
+ * @warning Consumes LOAD_MLDSA_PUBLIC_KEY_GAS_COST gas units
+ *
+ * @example
+ * ```typescript
+ * const keyId = new ArrayBuffer(32);
+ * const publicKey = new ArrayBuffer(1314); // For ML-DSA-44
+ * loadMLDSAPublicKey(keyId, publicKey);
+ * ```
+ */
+export function loadMLDSAPublicKey(address: Uint8Array, level: MLDSASecurityLevel): Uint8Array {
+    const length = MLDSAMetadata.fromLevel(level);
+    const resultBuffer = new Uint8Array(
+        1 + length,
+    );
+
+    const writer = new BytesWriter(1 + ADDRESS_BYTE_LENGTH);
+    writer.writeU8(level as u8);
+    writer.writeBytes(address);
+
+    loadMLDSA(writer.getBuffer().buffer, resultBuffer.buffer);
+
+    const result = new BytesReader(resultBuffer);
+    const exist = result.readBoolean();
+    if(!exist) {
+        throw new Error('ML-DSA public key not found');
+    }
+
+    return result.readBytes(length);
+}
 
 export * from './Atomic';
