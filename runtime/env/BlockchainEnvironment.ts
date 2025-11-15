@@ -804,7 +804,10 @@ export class BlockchainEnvironment {
      *  ML-DSA Level 2 (ML-DSA-44) corresponds to NIST security category 2, providing security
      *  equivalent to AES-128 against both classical and quantum attacks. Its security is based on
      *  the hardness of underlying lattice problems and is designed to resist attacks from quantum
-     *  computers (such as those using Shor's algorithm), not specifically Grover's algorithm.
+     *  computers, including both Shor's algorithm (which breaks RSA/ECC) and Grover's algorithm
+     *  (which reduces symmetric key security). The security levels (2, 3, 5) correspond to the
+     *  number of quantum gates required for Grover's algorithm to break them, equivalent to
+     *  AES-128, AES-192, and AES-256 respectively.
      *
      * @example
      * ```typescript
