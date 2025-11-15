@@ -311,7 +311,7 @@ export declare function getAccountType(address: ArrayBuffer): u32;
 @external('env', 'exit')
 export declare function env_exit(status: u32, data: ArrayBuffer, dataLength: u32): void;
 
-@external('env', 'loadMLDSAPublicKey')
+@external('env', 'loadMLDSA')
 declare function loadMLDSA(key: ArrayBuffer, result: ArrayBuffer): void;
 
 /**

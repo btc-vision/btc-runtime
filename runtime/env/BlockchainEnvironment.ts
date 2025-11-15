@@ -767,8 +767,8 @@ export class BlockchainEnvironment {
         }
 
         const writer = new BytesWriter(2 + publicKey.length);
-        writer.writeU8(SignaturesMethods.MLDSA);
-        writer.writeU8(level);
+        writer.writeU8(<u8>SignaturesMethods.MLDSA);
+        writer.writeU8(<u8>level);
         writer.writeBytes(publicKey);
 
         const result: u32 = verifySignature(
