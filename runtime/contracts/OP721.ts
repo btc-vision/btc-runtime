@@ -25,7 +25,13 @@ import { IOP721 } from './interfaces/IOP721';
 import { OP721InitParameters } from './interfaces/OP721InitParameters';
 import { ReentrancyGuard } from './ReentrancyGuard';
 import { StoredMapU256 } from '../storage/maps/StoredMapU256';
-import { ApprovedEvent, ApprovedForAllEvent, MAX_URI_LENGTH, TransferredEvent, URIEvent, } from '../events/predefined';
+import {
+    ApprovedEvent,
+    ApprovedForAllEvent,
+    MAX_URI_LENGTH,
+    TransferredEvent,
+    URIEvent,
+} from '../events/predefined';
 import {
     ON_OP721_RECEIVED_SELECTOR,
     OP712_DOMAIN_TYPE_HASH,
