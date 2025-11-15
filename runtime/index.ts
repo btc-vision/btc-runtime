@@ -23,6 +23,11 @@ export * from './env/classes/UTXO';
 export * from './env/classes/Transaction';
 export * from './env/classes/Block';
 
+/** Consensus */
+export * from './env/consensus/ConsensusRules';
+export * from './env/consensus/Signatures';
+export * from './env/consensus/MLDSAMetadata';
+
 /** Maps */
 export * from './generic/Map';
 export * from './generic/MapU256';
@@ -34,9 +39,11 @@ export * from './types';
 /** Definitions */
 export * from './lang/Definitions';
 export * from './types/Address';
+export * from './types/ExtendedAddress';
 export * from './types/Revert';
 export * from './types/SafeMath';
 export * from './types/SafeMathI128';
+export * from './interfaces/as';
 
 /** Math */
 export * from './math/abi';
@@ -45,17 +52,6 @@ export * from './secp256k1/ECPoint';
 
 /** Memory */
 export * from './memory/Nested';
-export * from './nested/PointerManager';
-export * from './nested/storage/StorageMap';
-export * from './nested/storage/StorageSet';
-
-/** Codecs */
-export * from './nested/codecs/U256Codec';
-export * from './nested/codecs/AddressCodec';
-export * from './nested/codecs/NumericCodec';
-export * from './nested/codecs/BooleanCodec';
-export * from './nested/codecs/StringCodec';
-export * from './nested/codecs/VariableBytesCodec';
 
 /** Storage */
 export * from './storage/StoredU256';

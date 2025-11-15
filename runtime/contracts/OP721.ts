@@ -25,7 +25,13 @@ import { IOP721 } from './interfaces/IOP721';
 import { OP721InitParameters } from './interfaces/OP721InitParameters';
 import { ReentrancyGuard } from './ReentrancyGuard';
 import { StoredMapU256 } from '../storage/maps/StoredMapU256';
-import { ApprovedEvent, ApprovedForAllEvent, MAX_URI_LENGTH, TransferredEvent, URIEvent } from '../events/predefined';
+import {
+    ApprovedEvent,
+    ApprovedForAllEvent,
+    MAX_URI_LENGTH,
+    TransferredEvent,
+    URIEvent,
+} from '../events/predefined';
 import {
     ON_OP721_RECEIVED_SELECTOR,
     OP712_DOMAIN_TYPE_HASH,
@@ -555,7 +561,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     }
 
     protected _mint(to: Address, tokenId: u256): void {
-        if (to === Address.zero() || to === Address.dead()) {
+        if (to === Address.zero()) {
             throw new Revert('Cannot mint to zero address');
         }
         if (this._exists(tokenId)) {
@@ -630,7 +636,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
             throw new Revert('Transfer from incorrect owner');
         }
 
-        if (to === Address.zero() || to === Address.dead()) {
+        if (to === Address.zero()) {
             throw new Revert('Transfer to zero address');
         }
 
@@ -717,7 +723,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     }
 
     protected _balanceOf(owner: Address): u256 {
-        if (owner === Address.zero() || owner === Address.dead()) {
+        if (owner === Address.zero()) {
             throw new Revert('Invalid address');
         }
         return this.balanceOfMap.get(owner);
@@ -755,10 +761,10 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     ): void {
         const calldata = new BytesWriter(
             SELECTOR_BYTE_LENGTH +
-            ADDRESS_BYTE_LENGTH * 2 +
-            U256_BYTE_LENGTH +
-            U32_BYTE_LENGTH +
-            data.length,
+                ADDRESS_BYTE_LENGTH * 2 +
+                U256_BYTE_LENGTH +
+                U32_BYTE_LENGTH +
+                data.length,
         );
         calldata.writeSelector(ON_OP721_RECEIVED_SELECTOR);
         calldata.writeAddress(Blockchain.tx.sender);
@@ -955,7 +961,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     protected _addressFromU256(value: u256): Address {
         // Convert u256 back to 32-byte address
         const bytes = value.toUint8Array(true); // Returns 32 bytes in BE
-        const addr = new Address();
+        const addr = new Address([]);
 
         // Direct copy since both are 32 bytes
         for (let i: i32 = 0; i < 32; i++) {

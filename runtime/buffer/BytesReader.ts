@@ -238,7 +238,7 @@ export class BytesReader {
     public readAddress(): Address {
         this.verifyEnd(this.currentOffset + ADDRESS_BYTE_LENGTH);
 
-        const addr = new Address();
+        const addr = new Address([]);
         for (let i: i32 = 0; i < ADDRESS_BYTE_LENGTH; i++) {
             addr[i] = this.readU8();
         }

@@ -5,7 +5,8 @@ import { Selector } from '../math/abi';
 import { Calldata } from '../types';
 import { env_exit, getCalldata, getEnvironmentVariables } from '../env/global';
 
-const ENVIRONMENT_VARIABLES_BYTE_LENGTH: u32 = 304;
+// Set to 512 to allow future expansion of environment variables, currently use 344 bytes
+const ENVIRONMENT_VARIABLES_BYTE_LENGTH: u32 = 512;
 
 export function execute(calldataLength: u32): u32 {
     const environmentVariablesBuffer = new ArrayBuffer(ENVIRONMENT_VARIABLES_BYTE_LENGTH);
