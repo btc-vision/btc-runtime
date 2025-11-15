@@ -8,7 +8,7 @@ import { ArrayLike } from '../interfaces/as';
 export class Address extends Uint8Array {
     protected isDefined: boolean = false;
 
-    public constructor(bytes: u8[]) {
+    public constructor(bytes: u8[] = []) {
         super(ADDRESS_BYTE_LENGTH);
 
         if (!(!bytes || bytes.length === 0)) {

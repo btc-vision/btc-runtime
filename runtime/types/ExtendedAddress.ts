@@ -1,5 +1,5 @@
 import { Potential } from '../lang/Definitions';
-import { ADDRESS_BYTE_LENGTH, decodeHexArray } from '../utils';
+import { decodeHexArray } from '../utils';
 import { Blockchain } from '../env';
 import { Network } from '../script/Networks';
 import { Address } from './Address';
@@ -37,20 +37,46 @@ export class ExtendedAddress extends Address {
         return ZERO_BITCOIN_ADDRESS.clone();
     }
 
-    public static fromString(pubKey: string): Address {
-        if (pubKey.startsWith('0x')) {
-            pubKey = pubKey.slice(2);
-        }
-
-        return new Address(decodeHexArray(pubKey));
+    /**
+     * Disabled: Use fromStringPair instead
+     * @deprecated
+     */
+    public static override fromString(_: string): Address {
+        ERROR(
+            `Use ExtendedAddress.fromStringPair instead. This method is disabled. You must provide both the tweaked public key and the MLDSA public key.`,
+        );
     }
 
-    public static fromUint8Array(bytes: Uint8Array): Address {
-        const cloned = new Address([]);
-        // Copy the raw memory directly:
-        memory.copy(cloned.dataStart, bytes.dataStart, ADDRESS_BYTE_LENGTH);
+    /**
+     * Create ExtendedAddress from both tweaked public key and MLDSA public key
+     * This is the preferred method for ExtendedAddress creation
+     */
+    public static fromStringPair(tweakedPubKey: string, mldsaPubKey: string): ExtendedAddress {
+        if (tweakedPubKey.startsWith('0x')) {
+            tweakedPubKey = tweakedPubKey.slice(2);
+        }
 
-        return cloned;
+        if (mldsaPubKey.startsWith('0x')) {
+            mldsaPubKey = mldsaPubKey.slice(2);
+        }
+
+        return new ExtendedAddress(decodeHexArray(tweakedPubKey), decodeHexArray(mldsaPubKey));
+    }
+
+    public static fromUint8Array(bytes: Uint8Array): ExtendedAddress {
+        if (bytes.length !== 64) {
+            throw new Error('Expected 64 bytes: 32 for tweakedPublicKey, 32 for publicKey');
+        }
+
+        const tweakedPublicKey: u8[] = new Array<u8>(32);
+        const publicKey: u8[] = new Array<u8>(32);
+
+        for (let i = 0; i < 32; i++) {
+            tweakedPublicKey[i] = bytes[i];
+            publicKey[i] = bytes[32 + i];
+        }
+
+        return new ExtendedAddress(tweakedPublicKey, publicKey);
     }
 
     public static toCSV(address: Uint8Array, blocks: u32): string {

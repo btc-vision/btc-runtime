@@ -344,7 +344,7 @@ export function loadMLDSAPublicKey(address: Uint8Array, level: MLDSASecurityLeve
 
     const result = new BytesReader(resultBuffer);
     const exist = result.readBoolean();
-    if(!exist) {
+    if (!exist) {
         throw new Error('ML-DSA public key not found');
     }
 
