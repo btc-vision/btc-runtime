@@ -44,7 +44,7 @@ export class ExtendedAddress extends Address {
      * The 32-byte tweaked Schnorr public key for taproot compatibility.
      * This key is used for P2TR address generation and Schnorr signature verification.
      */
-    private readonly tweakedPublicKey: Uint8Array;
+    public readonly tweakedPublicKey: Uint8Array;
 
     /**
      * Creates a new ExtendedAddress instance.
