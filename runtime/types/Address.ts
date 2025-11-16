@@ -1,8 +1,6 @@
 import { Potential } from '../lang/Definitions';
 import { ADDRESS_BYTE_LENGTH, decodeHexArray, encodeHexFromBuffer } from '../utils';
 import { Revert } from './Revert';
-import { loadMLDSAPublicKey } from '../env/global';
-import { MLDSASecurityLevel } from '../env/consensus/MLDSAMetadata';
 import { ArrayLike } from '../interfaces/as';
 
 /**
@@ -81,10 +79,18 @@ export class Address extends Uint8Array {
      */
     public get mldsaPublicKey(): Uint8Array {
         if (!this._mldsaPublicKey) {
-            this._mldsaPublicKey = loadMLDSAPublicKey(this, MLDSASecurityLevel.Level2);
+            throw new Revert(`ML-DSA public key not set for this address.`);
         }
 
         return this._mldsaPublicKey as Uint8Array;
+    }
+
+    public set mldsaPublicKey(value: Uint8Array) {
+        if (this._mldsaPublicKey) {
+            throw new Revert(`ML-DSA public key is already set for this address.`);
+        }
+
+        this._mldsaPublicKey = value;
     }
 
     /**
