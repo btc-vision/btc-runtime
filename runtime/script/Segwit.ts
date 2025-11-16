@@ -24,8 +24,8 @@ export class Segwit {
      * @returns The Bech32-encoded address
      */
     public static p2wsh(hrp: string, witnessScript: Uint8Array): string {
-        if (BitcoinCodec.isValidWitnessScriptSize(witnessScript)) {
-            throw new Revert('Witness script size is invalid');
+        if (!BitcoinCodec.isValidWitnessScriptSize(witnessScript)) {
+            throw new Revert(`Witness script size is invalid`);
         }
 
         // P2WSH uses SHA256 of the script as the witness program
@@ -38,7 +38,7 @@ export class Segwit {
      * This is useful when you need to handle encoding failures gracefully
      */
     public static p2wshOrNull(hrp: string, witnessScript: Uint8Array): string | null {
-        if (BitcoinCodec.isValidWitnessScriptSize(witnessScript)) {
+        if (!BitcoinCodec.isValidWitnessScriptSize(witnessScript)) {
             throw new Revert('Witness script size is invalid');
         }
 
