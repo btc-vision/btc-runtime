@@ -1,13 +1,9 @@
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { encodeSelector, Selector } from '../math/abi';
 import { Address } from '../types/Address';
-import {
-    ADDRESS_BYTE_LENGTH,
-    SELECTOR_BYTE_LENGTH,
-    U256_BYTE_LENGTH,
-    U32_BYTE_LENGTH,
-} from '../utils';
 
+export const transferSignature = 'transfer(address,uint256)';
+export const transferFromSignature = 'transferFrom(address,address,uint256)';
 export const SafeTransferSignature = 'safeTransfer(address,uint256,bytes)';
 export const SafeTransferFromSignature = 'safeTransferFrom(address,address,uint256,bytes)';
 export const IncreaseAllowanceSignature = 'increaseAllowance(address,uint256)';
@@ -18,6 +14,11 @@ export class TransferHelper {
     public static safeTransferCalled: boolean = false;
     public static calledBurn: boolean = false;
     public static safeTransferFromCalled: boolean = false;
+    public static increaseAllowanceCalled: boolean = false;
+    public static decreaseAllowanceCalled: boolean = false;
+    public static transferCalled: boolean = false;
+    public static transferFromCalled: boolean = false;
+
 
     public static get INCREASE_ALLOWANCE_SELECTOR(): Selector {
         return encodeSelector(IncreaseAllowanceSignature);
@@ -28,19 +29,52 @@ export class TransferHelper {
     }
 
     public static get TRANSFER_SELECTOR(): Selector {
-        return encodeSelector(SafeTransferSignature);
+        return encodeSelector(transferSignature);
     }
 
     public static get TRANSFER_FROM_SELECTOR(): Selector {
+        return encodeSelector(transferFromSignature);
+    }
+
+    public static get SAFE_TRANSFER_SELECTOR(): Selector {
+        return encodeSelector(SafeTransferSignature);
+    }
+
+    public static get SAFE_TRANSFER_FROM_SELECTOR(): Selector {
         return encodeSelector(SafeTransferFromSignature);
     }
 
     public static clearMockedResults(): void {
         this.safeTransferCalled = false;
         this.safeTransferFromCalled = false;
+        this.increaseAllowanceCalled = false;
+        this.decreaseAllowanceCalled = false;
+        this.transferCalled = false;
+        this.transferFromCalled = false;
     }
 
-    public static safeTransfer(token: Address, to: Address, amount: u256, data: Uint8Array = new Uint8Array(0)): void {
+    public static increaseAllowance(token: Address, spender: Address, amount: u256): void {
+        this.increaseAllowanceCalled = true;
+    }
+
+    public static decreaseAllowance(token: Address, spender: Address, amount: u256): void {
+        this.decreaseAllowanceCalled = true;
+    }
+
+    public static transfer(token: Address, to: Address, amount: u256): void {
+        this.transferCalled = true;
+    }
+
+    public static transferFrom(token: Address, from: Address, to: Address, amount: u256): void {
+        this.transferFromCalled = true;
+    }
+
+    public static safeTransfer(
+        token: Address,
+        to: Address,
+        amount: u256,
+        data: Uint8Array = new Uint8Array(0),
+    ): void {
         this.safeTransferCalled = true;
     }
 
@@ -54,7 +88,13 @@ export class TransferHelper {
         this.calledBurn = true;
     }
 
-    public static safeTransferFrom(token: Address, from: Address, to: Address, amount: u256, data: Uint8Array = new Uint8Array(0)): void {
+    public static safeTransferFrom(
+        token: Address,
+        from: Address,
+        to: Address,
+        amount: u256,
+        data: Uint8Array = new Uint8Array(0),
+    ): void {
         this.safeTransferFromCalled = true;
     }
 }

@@ -6,11 +6,11 @@ import { NetEvent } from '../NetEvent';
 
 @final
 export class ApprovedEvent extends NetEvent {
-    constructor(owner: Address, spender: Address, value: u256) {
+    constructor(owner: Address, spender: Address, amount: u256) {
         const data: BytesWriter = new BytesWriter(ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH);
         data.writeAddress(owner);
         data.writeAddress(spender);
-        data.writeU256(value);
+        data.writeU256(amount);
 
         super('Approved', data);
     }

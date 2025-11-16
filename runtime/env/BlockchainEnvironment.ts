@@ -15,8 +15,17 @@ import { TransactionOutput } from './classes/UTXO';
 import { Revert } from '../types/Revert';
 import { Selector } from '../math/abi';
 import { sha256 } from './global';
-import { U16_BYTE_LENGTH, U32_BYTE_LENGTH, U64_BYTE_LENGTH, U8_BYTE_LENGTH } from '../utils';
+import {
+    ADDRESS_BYTE_LENGTH,
+    U16_BYTE_LENGTH,
+    U32_BYTE_LENGTH,
+    U64_BYTE_LENGTH,
+    U8_BYTE_LENGTH,
+} from '../utils';
 import { Network, Networks } from '../script/Networks';
+import { ExtendedAddress } from '../types/ExtendedAddress';
+import { SignaturesMethods } from './consensus/Signatures';
+import { MLDSAMetadata, MLDSASecurityLevel } from './consensus/MLDSAMetadata';
 
 export * from '../env/global';
 
@@ -46,7 +55,7 @@ export class BlockchainEnvironment {
      * Standard dead address for burn operations.
      * Assets sent here are permanently unrecoverable.
      */
-    public readonly DEAD_ADDRESS: Address = Address.dead();
+    public readonly DEAD_ADDRESS: ExtendedAddress = ExtendedAddress.dead();
 
     private storage: MapUint8Array = new MapUint8Array();
     private transientStorage: MapUint8Array = new MapUint8Array();
@@ -421,12 +430,15 @@ export class BlockchainEnvironment {
         const contractAddress = reader.readAddress();
         const contractDeployer = reader.readAddress();
         const caller = reader.readAddress();
-        const origin = reader.readAddress();
+        const origin = reader.readBytesArray(32);
         const chainId = reader.readBytes(32);
         const protocolId = reader.readBytes(32);
+        const tweakedPublicKey = reader.readBytesArray(ADDRESS_BYTE_LENGTH);
+        const consensusFlags = reader.readU64();
 
-        this._tx = new Transaction(caller, origin, txId, txHash, true);
+        const originAddress = new ExtendedAddress(tweakedPublicKey, origin);
 
+        this._tx = new Transaction(caller, originAddress, txId, txHash, consensusFlags, true);
         this._contractDeployer = contractDeployer;
         this._contractAddress = contractAddress;
         this._chainId = chainId;
@@ -682,6 +694,10 @@ export class BlockchainEnvironment {
      *          - Linear aggregation properties
      *          - Used in Taproot (post-2021)
      *
+     * @deprecated Use Blockchain.verifySignature() instead for automatic consensus migration.
+     *            verifySignature() supports both Schnorr and ML-DSA signatures with proper
+     *            consensus flag handling for quantum resistance transitions.
+     *
      * @example
      * ```typescript
      * const isValid = Blockchain.verifySchnorrSignature(
@@ -697,7 +713,157 @@ export class BlockchainEnvironment {
         signature: Uint8Array,
         hash: Uint8Array,
     ): boolean {
+        WARNING(
+            'verifySchnorrSignature is deprecated. Use verifySignature() for consensus-aware signature verification and quantum resistance support.',
+        );
+
+        return this.internalVerifySchnorr(publicKey, signature, hash);
+    }
+
+    /**
+     * Verifies an ML-DSA signature (quantum-resistant).
+     *
+     * @param level - Security level (MLDSASecurityLevel.Level2: ML-DSA-44, MLDSASecurityLevel.Level3: ML-DSA-65, MLDSASecurityLevel.Level5: ML-DSA-87)
+     * @param publicKey - ML-DSA public key (1312/1952/2592 bytes based on level)
+     * @param signature - ML-DSA signature (2420/3309/4627 bytes based on level)
+     * @param hash - 32-byte message hash
+     * @returns true if signature is valid
+     *
+     * @warning ML-DSA provides quantum resistance:
+     *          - NIST standardized lattice-based signatures
+     *          - Larger keys/signatures than classical algorithms
+     *          - Security levels: 2 (ML-DSA-44), 3 (ML-DSA-65), 5 (ML-DSA-87)
+     *
+     * @throws {Revert} If public key length doesn't match level
+     * @throws {Revert} If signature length doesn't match level
+     * @throws {Revert} If hash is not 32 bytes
+     *
+     * @example
+     * ```typescript
+     * // ML-DSA-44 (security level 2)
+     * const isValid = Blockchain.verifyMLDSASignature(
+     *     MLDSASecurityLevel.Level2, // level 0 = ML-DSA-44
+     *     mldsaPublicKey, // 1312 bytes
+     *     mldsaSignature, // 2420 bytes
+     *     messageHash // 32 bytes
+     * );
+     * if (!isValid) throw new Revert("Invalid ML-DSA signature");
+     * ```
+     *
+     * @example
+     * ```typescript
+     * // ML-DSA-87 (highest security level 5)
+     * const isValid = Blockchain.verifyMLDSASignature(
+     *     MLDSASecurityLevel.Level5, // level 2 = ML-DSA-87
+     *     mldsaPublicKey, // 2592 bytes
+     *     mldsaSignature, // 4627 bytes
+     *     messageHash // 32 bytes
+     * );
+     * ```
+     */
+    public verifyMLDSASignature(
+        level: MLDSASecurityLevel,
+        publicKey: Uint8Array,
+        signature: Uint8Array,
+        hash: Uint8Array,
+    ): boolean {
+        const publicKeyLength = MLDSAMetadata.fromLevel(level);
+        if (publicKey.length !== (publicKeyLength as i32)) {
+            throw new Revert(
+                `Invalid ML-DSA public key length. Expected ${publicKeyLength}, got ${publicKey.length}`,
+            );
+        }
+
+        const signatureLength = MLDSAMetadata.signatureLen(publicKeyLength);
+        if (signature.length !== signatureLength) {
+            throw new Revert(
+                `Invalid ML-DSA signature length. Expected ${signatureLength}, got ${signature.length}`,
+            );
+        }
+
+        if (hash.length !== 32) {
+            throw new Revert(`Invalid hash length. Expected 32, got ${hash.length}`);
+        }
+
         return this._mockedVerifySchnorrSignature;
+    }
+
+    /**
+     * Verifies a signature based on current consensus rules.
+     *
+     * This method automatically selects the appropriate signature verification algorithm
+     * based on the current consensus state:
+     *
+     * - When `unsafeSignaturesAllowed()` returns `true`: Uses Schnorr signatures (quantum-vulnerable)
+     * - When `unsafeSignaturesAllowed()` returns `false`: Uses ML-DSA signatures (quantum-resistant)
+     *
+     * The `unsafeSignaturesAllowed()` flag indicates whether the network is still accepting
+     * legacy Schnorr signatures. This flag will be `true` during the transition period to
+     * maintain backwards compatibility with existing infrastructure. Once the network completes
+     * its quantum-resistant upgrade, this flag will permanently become `false`, enforcing
+     * ML-DSA signatures exclusively.
+     *
+     * @param address - The address containing the public key(s) to verify against.
+     *                  For Schnorr, uses the taproot tweaked public key.
+     *                  For ML-DSA, uses the ML-DSA public key component.
+     * @param signature - The signature bytes to verify. Format depends on algorithm:
+     *                    - Schnorr: 64-byte signature
+     *                    - ML-DSA-44 (Level 2): 2420 bytes
+     *                    - ML-DSA-65 (Level 3): 3309 bytes
+     *                    - ML-DSA-87 (Level 5): 4627 bytes
+     * @param hash - The 32-byte message hash that was signed. Usually a SHA256 hash
+     *               of the transaction data or message being verified.
+     *
+     * @param forceMLDSA - Optional flag to force ML-DSA verification even if Schnorr is allowed.
+     *
+     * @returns `true` if the signature is valid for the given address and hash,
+     *          `false` if verification fails or if the signature format is invalid
+     *
+     * @throws May throw if the signature or hash have invalid lengths for the selected
+     *         algorithm, though implementations should generally return false instead
+     *
+     * @remarks
+     * The consensus rules determine which signature scheme is active:
+     * - Pre-quantum era: Schnorr signatures (Bitcoin taproot compatible)
+     * - Post-quantum era: ML-DSA Level 2 (NIST standardized, 128-bit quantum security)
+     *
+     *  ML-DSA Level 2 (ML-DSA-44) corresponds to NIST security category 2, providing security
+     *  equivalent to AES-128 against both classical and quantum attacks. Its security is based on
+     *  the hardness of underlying lattice problems and is designed to resist attacks from quantum
+     *  computers, including both Shor's algorithm (which breaks RSA/ECC) and Grover's algorithm
+     *  (which reduces symmetric key security). The security levels (2, 3, 5) correspond to the
+     *  number of quantum gates required for Grover's algorithm to break them, equivalent to
+     *  AES-128, AES-192, and AES-256 respectively.
+     *
+     * @example
+     * ```typescript
+     * const isValid = contract.verifySignature(
+     *     senderAddress,
+     *     signatureBytes,
+     *     transactionHash
+     * );
+     * if (!isValid) {
+     *     throw new Error("Invalid signature");
+     * }
+     * ```
+     */
+    public verifySignature(
+        address: Address,
+        signature: Uint8Array,
+        hash: Uint8Array,
+        forceMLDSA: boolean = false,
+    ): boolean {
+        if (this.tx.consensus.unsafeSignaturesAllowed() && !forceMLDSA) {
+            return this.internalVerifySchnorr(address, signature, hash);
+        } else {
+            // Default to ML-DSA Level 2 (ML-DSA-44) for quantum resistance
+            return this.verifyMLDSASignature(
+                MLDSASecurityLevel.Level2,
+                address.mldsaPublicKey,
+                signature,
+                hash,
+            );
+        }
     }
 
     /**
@@ -836,6 +1002,22 @@ export class BlockchainEnvironment {
      */
     public getBlockHash(blockNumber: u64): Uint8Array {
         return new Uint8Array(32);
+    }
+
+    private internalVerifySchnorr(
+        publicKey: Address,
+        signature: Uint8Array,
+        hash: Uint8Array,
+    ): boolean {
+        if (signature.byteLength !== 64) {
+            throw new Revert(`Invalid signature length. Expected 64, got ${signature.length}`);
+        }
+
+        if (hash.byteLength !== 32) {
+            throw new Revert(`Invalid hash length. Expected 32, got ${hash.length}`);
+        }
+
+        return this._mockedVerifySchnorrSignature;
     }
 
     private createContractIfNotExists(): void {

@@ -1,9 +1,28 @@
 import { u256 } from '@btc-vision/as-bignum/assembly';
 
 import { BytesWriter } from '../buffer/BytesWriter';
+import {
+    ALLOWANCE_DECREASE_TYPE_HASH,
+    ALLOWANCE_INCREASE_TYPE_HASH,
+    ALLOWANCE_SELECTOR,
+    BALANCE_OF_SELECTOR,
+    DECIMALS_SELECTOR,
+    DOMAIN_SEPARATOR_SELECTOR,
+    ICON_SELECTOR,
+    MAXIMUM_SUPPLY_SELECTOR,
+    METADATA_SELECTOR,
+    NAME_SELECTOR,
+    NONCE_OF_SELECTOR,
+    ON_OP20_RECEIVED_SELECTOR,
+    OP712_DOMAIN_TYPE_HASH,
+    OP712_VERSION_HASH,
+    SYMBOL_SELECTOR,
+    TOTAL_SUPPLY_SELECTOR,
+} from '../constants/Exports';
 import { Blockchain } from '../env';
 import { sha256, sha256String } from '../env/global';
 import { ApprovedEvent, BurnedEvent, MintedEvent, TransferredEvent } from '../events/predefined';
+import { Selector } from '../math/abi';
 import { EMPTY_POINTER } from '../math/bytes';
 import { AddressMemoryMap } from '../memory/AddressMemoryMap';
 import { MapOfMap } from '../memory/MapOfMap';
@@ -23,26 +42,7 @@ import {
 } from '../utils';
 import { IOP20 } from './interfaces/IOP20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
-import {
-    ALLOWANCE_DECREASE_TYPE_HASH,
-    ALLOWANCE_INCREASE_TYPE_HASH,
-    ALLOWANCE_SELECTOR,
-    BALANCE_OF_SELECTOR,
-    DECIMALS_SELECTOR,
-    DOMAIN_SEPARATOR_SELECTOR,
-    ICON_SELECTOR,
-    MAXIMUM_SUPPLY_SELECTOR,
-    METADATA_SELECTOR,
-    NAME_SELECTOR,
-    NONCE_OF_SELECTOR,
-    ON_OP20_RECEIVED_SELECTOR,
-    OP712_DOMAIN_TYPE_HASH,
-    OP712_VERSION_HASH,
-    SYMBOL_SELECTOR,
-    TOTAL_SUPPLY_SELECTOR,
-} from '../constants/Exports';
 import { ReentrancyGuard, ReentrancyLevel } from './ReentrancyGuard';
-import { Selector } from '../math/abi';
 
 const nonceMapPointer: u16 = Blockchain.nextPointer;
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
@@ -50,22 +50,95 @@ const decimalsPointer: u16 = Blockchain.nextPointer;
 const stringPointer: u16 = Blockchain.nextPointer;
 const totalSupplyPointer: u16 = Blockchain.nextPointer;
 const allowanceMapPointer: u16 = Blockchain.nextPointer;
-
 const balanceOfMapPointer: u16 = Blockchain.nextPointer;
 
+/**
+ * OP20 Token Standard Implementation for OPNet.
+ *
+ * This abstract class implements the OP20 token standard, providing a complete
+ * fungible token implementation with advanced features including:
+ * - EIP-712 style typed data signatures for gasless approvals
+ * - Safe transfer callbacks for receiver contracts
+ * - Reentrancy protection for security
+ * - Quantum-resistant signature support (Schnorr now, ML-DSA future)
+ * - Unlimited approval optimization (u256.Max)
+ *
+ * @remarks
+ * OP20 is OPNet's equivalent of ERC20, adapted for Bitcoin's UTXO model with
+ * additional security features. All storage uses persistent pointers for
+ * cross-transaction state management. The contract includes built-in protection
+ * against common attack vectors including reentrancy and integer overflow.
+ *
+ * Inheriting contracts must implement deployment verification logic and can
+ * extend with additional features like minting permissions, pausability, etc.
+ *
+ * @example
+ * ```typescript
+ * class MyToken extends OP20 {
+ *   constructor() {
+ *     super();
+ *     const params: OP20InitParameters = {
+ *       name: "My Token",
+ *       symbol: "MTK",
+ *       decimals: 18,
+ *       maxSupply: u256.fromU64(1000000000000000000000000), // 1M tokens
+ *       icon: "https://example.com/icon.png"
+ *     };
+ *     this.instantiate(params);
+ *   }
+ * }
+ * ```
+ */
 export abstract class OP20 extends ReentrancyGuard implements IOP20 {
+    /**
+     * Total supply of tokens currently in circulation.
+     * Intentionally public for inherited classes to implement custom minting/burning logic.
+     */
+    public _totalSupply: StoredU256;
+
+    /**
+     * Reentrancy protection level for this contract.
+     * Set to CALLBACK to allow single-depth callbacks for safeTransfer operations.
+     */
     protected readonly reentrancyLevel: ReentrancyLevel = ReentrancyLevel.CALLBACK;
 
+    /**
+     * Nested mapping of owner -> spender -> allowance amount.
+     * Tracks approval amounts for transferFrom operations.
+     */
     protected readonly allowanceMap: MapOfMap<u256>;
+
+    /**
+     * Mapping of address -> balance.
+     * Stores token balances for all holders.
+     */
     protected readonly balanceOfMap: AddressMemoryMap;
 
+    /** Maximum supply that can ever be minted. */
     protected readonly _maxSupply: StoredU256;
+
+    /** Number of decimal places for token display. */
     protected readonly _decimals: StoredU256;
+
+    /** Human-readable token name. */
     protected readonly _name: StoredString;
+
+    /** Token icon URL for display in wallets/explorers. */
     protected readonly _icon: StoredString;
+
+    /** Token ticker symbol. */
     protected readonly _symbol: StoredString;
+
+    /**
+     * Mapping of address -> nonce for EIP-712 signatures.
+     * Prevents signature replay attacks.
+     */
     protected readonly _nonceMap: AddressMemoryMap;
 
+    /**
+     * Initializes the OP20 token with storage pointers.
+     * Sets up all persistent storage mappings and variables.
+     */
     public constructor() {
         super();
 
@@ -81,38 +154,21 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         this._icon = new StoredString(stringPointer, 2);
     }
 
-    /** Intentionally public for inherited classes */
-    public _totalSupply: StoredU256;
-
-    public get totalSupply(): u256 {
-        return this._totalSupply.value;
-    }
-
-    public get name(): string {
-        if (!this._name) throw new Revert('Name not set');
-        return this._name.value;
-    }
-
-    public get symbol(): string {
-        if (!this._symbol) throw new Revert('Symbol not set');
-        return this._symbol.value;
-    }
-
-    public get icon(): string {
-        if (!this._icon) throw new Revert('Icon not set');
-        return this._icon.value;
-    }
-
-    public get decimals(): u8 {
-        if (!this._decimals) throw new Revert('Decimals not set');
-        return u8(this._decimals.value.toU32());
-    }
-
-    public get maxSupply(): u256 {
-        if (!this._maxSupply) throw new Revert('Max supply not set');
-        return this._maxSupply.value;
-    }
-
+    /**
+     * Initializes token parameters. Can only be called once.
+     *
+     * @param params - Token initialization parameters
+     * @param skipDeployerVerification - If true, skips deployer check (use with caution)
+     *
+     * @throws {Revert} If already initialized
+     * @throws {Revert} If decimals > 32
+     * @throws {Revert} If caller is not deployer (unless skipped)
+     *
+     * @remarks
+     * This method sets immutable token parameters and should be called in the
+     * constructor of inheriting contracts. The maximum of 32 decimals is enforced
+     * to prevent precision issues with u256 arithmetic.
+     */
     public instantiate(
         params: OP20InitParameters,
         skipDeployerVerification: boolean = false,
@@ -128,54 +184,93 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         this._icon.value = params.icon;
     }
 
-    @method('name')
+    /**
+     * Returns the token name.
+     *
+     * @returns Token name as string
+     */
+    @method()
     @returns({ name: 'name', type: ABIDataTypes.STRING })
-    public fn_name(_: Calldata): BytesWriter {
-        const w = new BytesWriter(String.UTF8.byteLength(this.name) + 4);
-        w.writeStringWithLength(this.name);
+    public name(_: Calldata): BytesWriter {
+        const w = new BytesWriter(String.UTF8.byteLength(this._name.value) + 4);
+        w.writeStringWithLength(this._name.value);
         return w;
     }
 
-    @method('symbol')
+    /**
+     * Returns the token symbol.
+     *
+     * @returns Token symbol as string
+     */
+    @method()
     @returns({ name: 'symbol', type: ABIDataTypes.STRING })
-    public fn_symbol(_: Calldata): BytesWriter {
-        const w = new BytesWriter(String.UTF8.byteLength(this.symbol) + 4);
-        w.writeStringWithLength(this.symbol);
+    public symbol(_: Calldata): BytesWriter {
+        const w = new BytesWriter(String.UTF8.byteLength(this._symbol.value) + 4);
+        w.writeStringWithLength(this._symbol.value);
         return w;
     }
 
-    @method('icon')
+    /**
+     * Returns the token icon URL.
+     *
+     * @returns Icon URL as string
+     */
+    @method()
     @returns({ name: 'icon', type: ABIDataTypes.STRING })
-    public fn_icon(_: Calldata): BytesWriter {
-        const w = new BytesWriter(String.UTF8.byteLength(this.icon) + 4);
-        w.writeStringWithLength(this.icon);
+    public icon(_: Calldata): BytesWriter {
+        const w = new BytesWriter(String.UTF8.byteLength(this._icon.value) + 4);
+        w.writeStringWithLength(this._icon.value);
         return w;
     }
 
-    @method('decimals')
+    /**
+     * Returns the number of decimals used for display.
+     *
+     * @returns Number of decimals (0-32)
+     */
+    @method()
     @returns({ name: 'decimals', type: ABIDataTypes.UINT8 })
-    public fn_decimals(_: Calldata): BytesWriter {
+    public decimals(_: Calldata): BytesWriter {
         const w = new BytesWriter(1);
-        w.writeU8(this.decimals);
+        w.writeU8(<u8>this._decimals.value.toU32());
         return w;
     }
 
-    @method('totalSupply')
+    /**
+     * Returns the total supply of tokens in circulation.
+     *
+     * @returns Current total supply as u256
+     */
+    @method()
     @returns({ name: 'totalSupply', type: ABIDataTypes.UINT256 })
-    public fn_totalSupply(_: Calldata): BytesWriter {
+    public totalSupply(_: Calldata): BytesWriter {
         const w = new BytesWriter(U256_BYTE_LENGTH);
-        w.writeU256(this.totalSupply);
+        w.writeU256(this._totalSupply.value);
         return w;
     }
 
-    @method('maximumSupply')
+    /**
+     * Returns the maximum supply that can ever exist.
+     *
+     * @returns Maximum supply cap as u256
+     */
+    @method()
     @returns({ name: 'maximumSupply', type: ABIDataTypes.UINT256 })
-    public fn_maximumSupply(_: Calldata): BytesWriter {
+    public maximumSupply(_: Calldata): BytesWriter {
         const w = new BytesWriter(U256_BYTE_LENGTH);
-        w.writeU256(this.maxSupply);
+        w.writeU256(this._maxSupply.value);
         return w;
     }
 
+    /**
+     * Returns the EIP-712 domain separator for signature verification.
+     *
+     * @returns 32-byte domain separator hash
+     *
+     * @remarks
+     * The domain separator includes chain ID, protocol ID, and contract address
+     * to prevent cross-chain and cross-contract signature replay attacks.
+     */
     @method()
     @returns({ name: 'domainSeparator', type: ABIDataTypes.BYTES32 })
     public domainSeparator(_: Calldata): BytesWriter {
@@ -184,6 +279,12 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         return w;
     }
 
+    /**
+     * Returns the token balance of an address.
+     *
+     * @param calldata - Contains the address to query
+     * @returns Balance as u256
+     */
     @method({ name: 'owner', type: ABIDataTypes.ADDRESS })
     @returns({ name: 'balance', type: ABIDataTypes.UINT256 })
     public balanceOf(calldata: Calldata): BytesWriter {
@@ -193,6 +294,12 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         return w;
     }
 
+    /**
+     * Returns the current nonce for an address (for signature verification).
+     *
+     * @param calldata - Contains the address to query
+     * @returns Current nonce as u256
+     */
     @method({ name: 'owner', type: ABIDataTypes.ADDRESS })
     @returns({ name: 'nonce', type: ABIDataTypes.UINT256 })
     public nonceOf(calldata: Calldata): BytesWriter {
@@ -202,6 +309,12 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         return w;
     }
 
+    /**
+     * Returns the amount an address is allowed to spend on behalf of another.
+     *
+     * @param calldata - Contains owner and spender addresses
+     * @returns Remaining allowance as u256
+     */
     @method(
         { name: 'owner', type: ABIDataTypes.ADDRESS },
         { name: 'spender', type: ABIDataTypes.ADDRESS },
@@ -214,6 +327,61 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         return w;
     }
 
+    /**
+     * Transfers tokens from sender to recipient.
+     *
+     * @param calldata - Contains recipient address and amount
+     * @emits Transferred event
+     *
+     * @throws {Revert} If sender has insufficient balance
+     * @throws {Revert} If recipient is zero address
+     */
+    @method(
+        { name: 'to', type: ABIDataTypes.ADDRESS },
+        { name: 'amount', type: ABIDataTypes.UINT256 },
+    )
+    @emit('Transferred')
+    public transfer(calldata: Calldata): BytesWriter {
+        this._transfer(Blockchain.tx.sender, calldata.readAddress(), calldata.readU256());
+        return new BytesWriter(0);
+    }
+
+    /**
+     * Transfers tokens on behalf of another address using allowance.
+     *
+     * @param calldata - Contains from address, to address, and amount
+     * @emits Transferred event
+     *
+     * @throws {Revert} If insufficient allowance
+     * @throws {Revert} If from has insufficient balance
+     */
+    @method(
+        { name: 'from', type: ABIDataTypes.ADDRESS },
+        { name: 'to', type: ABIDataTypes.ADDRESS },
+        { name: 'amount', type: ABIDataTypes.UINT256 },
+    )
+    @emit('Transferred')
+    public transferFrom(calldata: Calldata): BytesWriter {
+        const from = calldata.readAddress();
+        const to = calldata.readAddress();
+        const amount = calldata.readU256();
+
+        this._spendAllowance(from, Blockchain.tx.sender, amount);
+        this._transfer(from, to, amount);
+
+        return new BytesWriter(0);
+    }
+
+    /**
+     * Safely transfers tokens and calls onOP20Received on recipient if it's a contract.
+     *
+     * @param calldata - Contains recipient, amount, and optional data
+     * @emits Transferred event
+     *
+     * @throws {Revert} If recipient contract rejects the transfer
+     * @remarks
+     * Prevents tokens from being permanently locked in contracts that can't handle them.
+     */
     @method(
         { name: 'to', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
@@ -221,7 +389,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
     )
     @emit('Transferred')
     public safeTransfer(calldata: Calldata): BytesWriter {
-        this._transfer(
+        this._safeTransfer(
             Blockchain.tx.sender,
             calldata.readAddress(),
             calldata.readU256(),
@@ -230,6 +398,15 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         return new BytesWriter(0);
     }
 
+    /**
+     * Safely transfers tokens on behalf of another address with callback.
+     *
+     * @param calldata - Contains from, to, amount, and optional data
+     * @emits Transferred event
+     *
+     * @throws {Revert} If insufficient allowance or balance
+     * @throws {Revert} If recipient contract rejects
+     */
     @method(
         { name: 'from', type: ABIDataTypes.ADDRESS },
         { name: 'to', type: ABIDataTypes.ADDRESS },
@@ -244,11 +421,21 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         const data = calldata.readBytesWithLength();
 
         this._spendAllowance(from, Blockchain.tx.sender, amount);
-        this._transfer(from, to, amount, data);
+        this._safeTransfer(from, to, amount, data);
 
         return new BytesWriter(0);
     }
 
+    /**
+     * Increases the allowance granted to a spender.
+     *
+     * @param calldata - Contains spender address and amount to increase
+     * @emits Approved event
+     *
+     * @remarks
+     * Preferred over setting allowance directly to avoid race conditions.
+     * If overflow would occur, sets to u256.Max (unlimited).
+     */
     @method(
         { name: 'spender', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
@@ -263,6 +450,15 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         return new BytesWriter(0);
     }
 
+    /**
+     * Decreases the allowance granted to a spender.
+     *
+     * @param calldata - Contains spender address and amount to decrease
+     * @emits Approved event
+     *
+     * @remarks
+     * If decrease would cause underflow, sets allowance to zero.
+     */
     @method(
         { name: 'spender', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
@@ -277,6 +473,18 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         return new BytesWriter(0);
     }
 
+    /**
+     * Increases allowance using an EIP-712 typed signature (gasless approval).
+     *
+     * @param calldata - Contains owner, spender, amount, deadline, and signature
+     * @emits Approved event
+     *
+     * @throws {Revert} If signature is invalid or expired
+     *
+     * @remarks
+     * Enables gasless approvals where a third party can submit the transaction.
+     * Uses Schnorr signatures now, will support ML-DSA after quantum transition.
+     */
     @method(
         { name: 'owner', type: ABIDataTypes.ADDRESS },
         { name: 'spender', type: ABIDataTypes.ADDRESS },
@@ -296,6 +504,14 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         return new BytesWriter(0);
     }
 
+    /**
+     * Decreases allowance using an EIP-712 typed signature.
+     *
+     * @param calldata - Contains owner, spender, amount, deadline, and signature
+     * @emits Approved event
+     *
+     * @throws {Revert} If signature is invalid or expired
+     */
     @method(
         { name: 'owner', type: ABIDataTypes.ADDRESS },
         { name: 'spender', type: ABIDataTypes.ADDRESS },
@@ -315,6 +531,17 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         return new BytesWriter(0);
     }
 
+    /**
+     * Burns tokens from the sender's balance.
+     *
+     * @param calldata - Contains amount to burn
+     * @emits Burned event
+     *
+     * @throws {Revert} If sender has insufficient balance
+     *
+     * @remarks
+     * Permanently removes tokens from circulation, decreasing total supply.
+     */
     @method({ name: 'amount', type: ABIDataTypes.UINT256 })
     @emit('Burned')
     public burn(calldata: Calldata): BytesWriter {
@@ -322,6 +549,14 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         return new BytesWriter(0);
     }
 
+    /**
+     * Returns all token metadata in a single call.
+     *
+     * @returns Combined metadata including name, symbol, icon, decimals, totalSupply, and domain separator
+     *
+     * @remarks
+     * Optimization for wallets/explorers to fetch all token info in one call.
+     */
     @method()
     @returns(
         { name: 'name', type: ABIDataTypes.STRING },
@@ -332,9 +567,9 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         { name: 'domainSeparator', type: ABIDataTypes.BYTES32 },
     )
     public metadata(_: Calldata): BytesWriter {
-        const name = this.name;
-        const symbol = this.symbol;
-        const icon = this.icon;
+        const name = this._name.value;
+        const symbol = this._symbol.value;
+        const icon = this._icon.value;
         const domainSeparator = this._buildDomainSeparator();
 
         const nameLength = String.UTF8.byteLength(name);
@@ -354,29 +589,41 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         w.writeStringWithLength(name);
         w.writeStringWithLength(symbol);
         w.writeStringWithLength(icon);
-        w.writeU8(this.decimals);
-        w.writeU256(this.totalSupply);
+        w.writeU8(<u8>this._decimals.value.toU32());
+        w.writeU256(this._totalSupply.value);
         w.writeBytesWithLength(domainSeparator);
 
         return w;
     }
 
+    /**
+     * Internal: Gets balance of an address.
+     * @protected
+     */
     protected _balanceOf(owner: Address): u256 {
         if (!this.balanceOfMap.has(owner)) return u256.Zero;
         return this.balanceOfMap.get(owner);
     }
 
+    /**
+     * Internal: Gets allowance between owner and spender.
+     * @protected
+     */
     protected _allowance(owner: Address, spender: Address): u256 {
         const senderMap = this.allowanceMap.get(owner);
         return senderMap.get(spender);
     }
 
-    protected _transfer(from: Address, to: Address, amount: u256, data: Uint8Array): void {
-        if (from === Address.zero() || from === Address.dead()) {
+    /**
+     * Internal: Executes token transfer logic.
+     * @protected
+     */
+    protected _transfer(from: Address, to: Address, amount: u256): void {
+        if (from === Address.zero()) {
             throw new Revert('Invalid sender');
         }
 
-        if (to === Address.zero() || to === Address.dead()) {
+        if (to === Address.zero()) {
             throw new Revert('Invalid receiver');
         }
 
@@ -390,16 +637,27 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         const toBal: u256 = this.balanceOfMap.get(to);
         this.balanceOfMap.set(to, SafeMath.add(toBal, amount));
 
+        this.createTransferredEvent(Blockchain.tx.sender, from, to, amount);
+    }
+
+    /**
+     * Internal: Safe transfer with receiver callback.
+     * @protected
+     */
+    protected _safeTransfer(from: Address, to: Address, amount: u256, data: Uint8Array): void {
+        this._transfer(from, to, amount);
+
         if (Blockchain.isContract(to)) {
             // In CALLBACK mode, the guard allows depth up to 1
             // In STANDARD mode, the guard blocks all reentrancy
             this._callOnOP20Received(from, to, amount, data);
         }
-
-        // Fire event at the end if everything succeeded indicating a successful transfer
-        this.createTransferredEvent(Blockchain.tx.sender, from, to, amount);
     }
 
+    /**
+     * Internal: Spends allowance for transferFrom.
+     * @protected
+     */
     protected _spendAllowance(owner: Address, spender: Address, amount: u256): void {
         if (owner.equals(spender)) return;
 
@@ -416,6 +674,10 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         this.allowanceMap.set(owner, ownerMap);
     }
 
+    /**
+     * Internal: Calls onOP20Received on receiver contract.
+     * @protected
+     */
     protected _callOnOP20Received(
         from: Address,
         to: Address,
@@ -447,6 +709,10 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         }
     }
 
+    /**
+     * Internal: Processes signature-based allowance increase.
+     * @protected
+     */
     protected _increaseAllowanceBySignature(
         owner: Address,
         spender: Address,
@@ -465,6 +731,10 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         this._increaseAllowance(owner, spender, amount);
     }
 
+    /**
+     * Checks if a selector should bypass reentrancy guards.
+     * @protected
+     */
     protected isSelectorExcluded(selector: Selector): boolean {
         if (
             selector === BALANCE_OF_SELECTOR ||
@@ -485,6 +755,10 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         return super.isSelectorExcluded(selector);
     }
 
+    /**
+     * Internal: Processes signature-based allowance decrease.
+     * @protected
+     */
     protected _decreaseAllowanceBySignature(
         owner: Address,
         spender: Address,
@@ -503,6 +777,10 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         this._decreaseAllowance(owner, spender, amount);
     }
 
+    /**
+     * Internal: Verifies EIP-712 typed signatures.
+     * @protected
+     */
     protected _verifySignature(
         typeHash: u8[],
         owner: Address,
@@ -546,10 +824,14 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         this._nonceMap.set(owner, SafeMath.add(nonce, u256.One));
     }
 
+    /**
+     * Internal: Builds EIP-712 domain separator.
+     * @protected
+     */
     protected _buildDomainSeparator(): Uint8Array {
         const writer = new BytesWriter(32 * 5 + ADDRESS_BYTE_LENGTH);
         writer.writeBytesU8Array(OP712_DOMAIN_TYPE_HASH);
-        writer.writeBytes(sha256String(this.name));
+        writer.writeBytes(sha256String(this._name.value));
         writer.writeBytesU8Array(OP712_VERSION_HASH);
         writer.writeBytes(Blockchain.chainId);
         writer.writeBytes(Blockchain.protocolId);
@@ -558,11 +840,15 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         return sha256(writer.getBuffer());
     }
 
+    /**
+     * Internal: Increases allowance with overflow protection.
+     * @protected
+     */
     protected _increaseAllowance(owner: Address, spender: Address, amount: u256): void {
-        if (owner === Address.zero() || owner === Address.dead()) {
+        if (owner === Address.zero()) {
             throw new Revert('Invalid approver');
         }
-        if (spender === Address.zero() || spender === Address.dead()) {
+        if (spender === Address.zero()) {
             throw new Revert('Invalid spender');
         }
 
@@ -579,11 +865,15 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         this.createApprovedEvent(owner, spender, newAllowance);
     }
 
+    /**
+     * Internal: Decreases allowance with underflow protection.
+     * @protected
+     */
     protected _decreaseAllowance(owner: Address, spender: Address, amount: u256): void {
-        if (owner === Address.zero() || owner === Address.dead()) {
+        if (owner === Address.zero()) {
             throw new Revert('Invalid approver');
         }
-        if (spender === Address.zero() || spender === Address.dead()) {
+        if (spender === Address.zero()) {
             throw new Revert('Invalid spender');
         }
 
@@ -601,8 +891,14 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         this.createApprovedEvent(owner, spender, newAllowance);
     }
 
+    /**
+     * Internal: Mints new tokens to an address.
+     * @protected
+     *
+     * @throws {Revert} If exceeds max supply
+     */
     protected _mint(to: Address, amount: u256): void {
-        if (to === Address.zero() || to === Address.dead()) {
+        if (to === Address.zero()) {
             throw new Revert('Invalid receiver');
         }
 
@@ -612,15 +908,19 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         // @ts-expect-error AssemblyScript valid
         this._totalSupply += amount;
 
-        if (this._totalSupply.value > this.maxSupply) {
+        if (this._totalSupply.value > this._maxSupply.value) {
             throw new Revert('Max supply reached');
         }
 
         this.createMintedEvent(to, amount);
     }
 
+    /**
+     * Internal: Burns tokens from an address.
+     * @protected
+     */
     protected _burn(from: Address, amount: u256): void {
-        if (from === Address.zero() || from === Address.dead()) {
+        if (from === Address.zero()) {
             throw new Revert('Invalid sender');
         }
 
@@ -634,6 +934,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         this.createBurnedEvent(from, amount);
     }
 
+    /** Event creation helpers */
     protected createBurnedEvent(from: Address, amount: u256): void {
         this.emitEvent(new BurnedEvent(from, amount));
     }

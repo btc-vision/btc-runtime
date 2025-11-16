@@ -353,6 +353,7 @@ export class BitcoinCodec {
     /**
      * Validate that a witness script is within size limits
      * Bitcoin consensus rules limit witness scripts to 10,000 bytes
+     * Witness scripts above 3,600 bytes are non-standard and will not be relayed
      *
      * @param witnessScript - The script to validate
      * @returns true if the script is within limits

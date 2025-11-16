@@ -13,7 +13,7 @@ export interface IOP721 {
     ownerOf(calldata: Calldata): BytesWriter;
 
     // Transfer functions
-    transferFrom(calldata: Calldata): BytesWriter;
+    safeTransfer(calldata: Calldata): BytesWriter;
     safeTransferFrom(calldata: Calldata): BytesWriter;
 
     // Approval functions
@@ -21,9 +21,10 @@ export interface IOP721 {
     getApproved(calldata: Calldata): BytesWriter;
     setApprovalForAll(calldata: Calldata): BytesWriter;
     isApprovedForAll(calldata: Calldata): BytesWriter;
+    approveBySignature(calldata: Calldata): BytesWriter;
+    setApprovalForAllBySignature(calldata: Calldata): BytesWriter;
 
     // Advanced functions
     burn(calldata: Calldata): BytesWriter;
-    transferBySignature(calldata: Calldata): BytesWriter;
     domainSeparator(calldata: Calldata): BytesWriter;
 }

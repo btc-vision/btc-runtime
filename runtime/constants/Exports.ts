@@ -61,10 +61,16 @@ export const OP712_VERSION_HASH: u8[] = [
     0x47, 0xad, 0xa4, 0xea, 0xa2, 0x2f, 0x1d, 0x49, 0xc0, 0x1e, 0x52, 0xdd, 0xb7, 0x87, 0x5b, 0x4b,
 ];
 
-// sha256("OP721Approve(address owner,address spender,uint256 tokenId,uint256 nonce,uint64 deadline)")
-export const OP721_APPROVE_TYPE_HASH: u8[] = [
-    0x2e, 0x4b, 0x1b, 0xb9, 0x26, 0xd1, 0xfe, 0x9c, 0x56, 0x8a, 0xca, 0xc1, 0xb9, 0xfc, 0x8b, 0x98,
-    0xf5, 0xfe, 0x67, 0xcb, 0x7b, 0x6d, 0x12, 0x03, 0x69, 0xaf, 0x3d, 0xb8, 0x44, 0x67, 0xb4, 0xcb,
+// sha256("OP721Approval(address owner,address spender,uint256 tokenId,uint256 nonce,uint64 deadline)")
+export const OP721_APPROVAL_TYPE_HASH: u8[] = [
+    0xb8, 0x6e, 0x99, 0xda, 0xc0, 0x47, 0x4b, 0x4a, 0x9f, 0xc3, 0x32, 0x3a, 0xd6, 0xed, 0x2f, 0x39,
+    0x55, 0xe7, 0xb8, 0x6d, 0xc6, 0x8c, 0x62, 0x42, 0x82, 0x1c, 0xbc, 0xac, 0xa2, 0xd8, 0x79, 0xde,
+];
+
+// sha256("OP721ApprovalForAll(address owner,address spender,bool approved,uint256 nonce,uint64 deadline)")
+export const OP721_APPROVAL_FOR_ALL_TYPE_HASH: u8[] = [
+    0x4f, 0x48, 0x06, 0x5d, 0x9e, 0xf1, 0x45, 0x25, 0x6b, 0xf7, 0x7f, 0xd2, 0xe5, 0x8b, 0x79, 0xe6,
+    0xf6, 0x0c, 0xd0, 0xd3, 0x47, 0x70, 0x14, 0x32, 0x34, 0x50, 0xc9, 0x65, 0xb7, 0x4b, 0x80, 0xed,
 ];
 
 // sha256("OP721Transfer(address from,address to,uint256 tokenId,uint256 nonce,uint64 deadline)")
@@ -73,14 +79,14 @@ export const OP721_TRANSFER_TYPE_HASH: u8[] = [
     0x64, 0xab, 0xa6, 0xaf, 0x68, 0x51, 0x03, 0xfe, 0xc4, 0xae, 0x12, 0xd7, 0xa6, 0xa9, 0xb2, 0x0f,
 ];
 
-export const BALANCE_OF_SELECTOR:      u32 = 0x5b46f8f6; // "balanceOf(address)"
-export const ALLOWANCE_SELECTOR:       u32 = 0xd864b7ca; // "allowance(address,address)"
-export const TOTAL_SUPPLY_SELECTOR:    u32 = 0xa368022e; // "totalSupply()"
-export const NAME_SELECTOR:            u32 = 0x1581f81c; // "name()"
-export const SYMBOL_SELECTOR:          u32 = 0x25967ca5; // "symbol()"
-export const DECIMALS_SELECTOR:        u32 = 0xbb844440; // "decimals()"
-export const NONCE_OF_SELECTOR:        u32 = 0xf6824b65; // "nonceOf(address)"
-export const DOMAIN_SEPARATOR_SELECTOR:u32 = 0xf1bf80e0; // "domainSeparator()"
-export const METADATA_SELECTOR:        u32 = 0xfc0d115c; // "metadata()"
-export const MAXIMUM_SUPPLY_SELECTOR:  u32 = 0x7d8d5019; // "maximumSupply()"
-export const ICON_SELECTOR:            u32 = 0xaaaa50c5; // "icon()"
+export const BALANCE_OF_SELECTOR: u32 = 0x5b46f8f6; // "balanceOf(address)"
+export const ALLOWANCE_SELECTOR: u32 = 0xd864b7ca; // "allowance(address,address)"
+export const TOTAL_SUPPLY_SELECTOR: u32 = 0xa368022e; // "totalSupply()"
+export const NAME_SELECTOR: u32 = 0x1581f81c; // "name()"
+export const SYMBOL_SELECTOR: u32 = 0x25967ca5; // "symbol()"
+export const DECIMALS_SELECTOR: u32 = 0xbb844440; // "decimals()"
+export const NONCE_OF_SELECTOR: u32 = 0xf6824b65; // "nonceOf(address)"
+export const DOMAIN_SEPARATOR_SELECTOR: u32 = 0xf1bf80e0; // "domainSeparator()"
+export const METADATA_SELECTOR: u32 = 0xfc0d115c; // "metadata()"
+export const MAXIMUM_SUPPLY_SELECTOR: u32 = 0x7d8d5019; // "maximumSupply()"
+export const ICON_SELECTOR: u32 = 0xaaaa50c5; // "icon()"
