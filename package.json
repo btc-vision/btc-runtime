@@ -44,7 +44,7 @@
     ],
     "dependencies": {
         "@assemblyscript/loader": "^0.28.9",
-        "@btc-vision/as-bignum": "^0.0.5",
+        "@btc-vision/as-bignum": "file:../as-bignum",
         "@btc-vision/opnet-transform": "^0.1.12",
         "@eslint/js": "9.39.1",
         "gulplog": "^2.2.0",
