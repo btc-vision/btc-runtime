@@ -1,8 +1,6 @@
 /* eslint-disable */
 
 import { MLDSAMetadata, MLDSASecurityLevel } from './consensus/MLDSAMetadata';
-import { BytesReader } from '../buffer/BytesReader';
-import { BytesWriter } from '../buffer/BytesWriter';
 import { ADDRESS_BYTE_LENGTH } from '../utils';
 
 /**
@@ -331,24 +329,36 @@ declare function loadMLDSA(key: ArrayBuffer, result: ArrayBuffer): void;
  * ```
  */
 export function loadMLDSAPublicKey(address: Uint8Array, level: MLDSASecurityLevel): Uint8Array {
-    const length = MLDSAMetadata.fromLevel(level);
-    const resultBuffer = new Uint8Array(
-        1 + length,
-    );
+    const length = MLDSAMetadata.fromLevel(level) as i32;
 
-    const writer = new BytesWriter(1 + ADDRESS_BYTE_LENGTH);
-    writer.writeU8(level as u8);
-    writer.writeBytes(address);
+    // Prepare Input: [Level (1 byte) + Address (32 bytes)]
+    // Allocation is cheap for small fixed sizes.
+    const inputBuffer = new Uint8Array(1 + ADDRESS_BYTE_LENGTH);
+    const inputPtr = inputBuffer.dataStart;
 
-    loadMLDSA(writer.getBuffer().buffer, resultBuffer.buffer);
+    store<u8>(inputPtr, level as u8);
 
-    const result = new BytesReader(resultBuffer);
-    const exist = result.readBoolean();
-    if (!exist) {
+    // Copy address bytes directly
+    memory.copy(inputPtr + 1, address.dataStart, ADDRESS_BYTE_LENGTH);
+
+    // Prepare Output: [Exists (1 byte) + Key (length bytes)]
+    const resultBuffer = new Uint8Array(1 + length);
+
+    // Host Call
+    loadMLDSA(inputBuffer.buffer, resultBuffer.buffer);
+
+    // Check Exists (Byte 0) via direct load
+    if (load<u8>(resultBuffer.dataStart) === 0) {
         throw new Error('ML-DSA public key not found');
     }
 
-    return result.readBytes(length);
+    // Return Key
+    // slice(1) creates a new buffer with just the key.
+
+    // Note: using .subarray(1) would be O(1) (view) vs .slice(1) which is O(N) (copy).
+    // slice is safer if you need a standalone buffer, but subarray is faster for gas.
+    // Sticking to slice to match original behavior (fresh buffer).
+    return resultBuffer.slice(1);
 }
 
 export * from './Atomic';
