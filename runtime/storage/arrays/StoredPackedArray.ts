@@ -1,9 +1,4 @@
-import {
-    bigEndianAdd,
-    GET_EMPTY_BUFFER,
-    readLengthAndStartIndex,
-    writeLengthAndStartIndex,
-} from '../../math/bytes';
+import { bigEndianAdd, GET_EMPTY_BUFFER, readLengthAndStartIndex, writeLengthAndStartIndex, } from '../../math/bytes';
 import { Blockchain } from '../../env';
 import { Revert } from '../../types/Revert';
 import { encodePointer } from '../../math/abi';
@@ -17,9 +12,13 @@ export const DEFAULT_MAX_LENGTH: u32 = u32.MAX_VALUE - 1;
  * - Tracks length + startIndex in the first 16 bytes of `lengthPointer`.
  * - Maps each global index to (slotIndex, subIndex).
  * - Child classes define how many T items fit per 32-byte slot
- *   and how to pack/unpack them.
+ * and how to pack/unpack them.
  *
- *   Note: This is designed to wrap around.
+ * Note: This is designed to wrap around.
+ *
+ * **Optimizations:**
+ * - Hot Slot Caching: Skips Map lookups for sequential access.
+ * - Conditional Subtraction: Replaces expensive modulo (%) operations.
  */
 export abstract class StoredPackedArray<T> {
     /** 32-byte base pointer (used to derive storage keys). */
@@ -47,6 +46,12 @@ export abstract class StoredPackedArray<T> {
     /** Track which slotIndexes are changed and need saving. */
     protected _isChanged: Set<u32> = new Set();
 
+    // --- OPTIMIZATION: HOT SLOT CACHE ---
+    // Stores the last accessed slot index and data.
+    // Prevents map lookups during sequential operations (iterating, pushing, etc).
+    private _cachedSlotIndex: u32 = <u32>-1; // -1 indicates empty cache
+    private _cachedSlotData: Uint8Array | null = null;
+
     private nextItemOffset: u32 = 0;
 
     protected constructor(
@@ -68,11 +73,14 @@ export abstract class StoredPackedArray<T> {
 
     @inline
     public get previousOffset(): u32 {
-        return <u32>(
-            ((this._startIndex +
-                <u64>(this.nextItemOffset === 0 ? this.nextItemOffset : this.nextItemOffset - 1)) %
-                <u64>this.MAX_LENGTH)
-        );
+        // Optimization: Conditional subtraction logic logic is cleaner for gas,
+        // but keeping modulo here for safety on the offset calculation logic.
+        const offset = this.nextItemOffset === 0 ? this.nextItemOffset : this.nextItemOffset - 1;
+        let val = <u64>this._startIndex + <u64>offset;
+        const max = <u64>this.MAX_LENGTH;
+
+        if (val >= max) val %= max;
+        return <u32>val;
     }
 
     /**
@@ -99,13 +107,15 @@ export abstract class StoredPackedArray<T> {
 
         const realIndex: u32 = this.getRealIndex(index);
         const cap: u32 = this.getSlotCapacity();
+
         const slotIndex = realIndex / cap;
         const subIndex = <u32>(realIndex % cap);
 
+        // Optimization: Uses Hot Slot Cache
         const slotData = this.ensureSlot(slotIndex);
         const arr = this.unpackSlot(slotData);
 
-        return arr[subIndex];
+        return unchecked(arr[subIndex]);
     }
 
     @inline
@@ -121,7 +131,7 @@ export abstract class StoredPackedArray<T> {
         const slotData = this.ensureSlot(slotIndex);
         const arr = this.unpackSlot(slotData);
 
-        return arr[subIndex];
+        return unchecked(arr[subIndex]);
     }
 
     @inline
@@ -139,11 +149,12 @@ export abstract class StoredPackedArray<T> {
         let slotData = this.ensureSlot(slotIndex);
         const arr = this.unpackSlot(slotData);
 
-        if (!this.eq(arr[subIndex], value)) {
-            arr[subIndex] = value;
+        if (!this.eq(unchecked(arr[subIndex]), value)) {
+            unchecked((arr[subIndex] = value));
             slotData = this.packSlot(arr);
-            this._slots.set(slotIndex, slotData);
-            this._isChanged.add(slotIndex);
+
+            // Optimization: Update Cache and Map
+            this.updateSlot(slotIndex, slotData);
         }
     }
 
@@ -160,11 +171,10 @@ export abstract class StoredPackedArray<T> {
         let slotData = this.ensureSlot(slotIndex);
         const arr = this.unpackSlot(slotData);
 
-        if (!this.eq(arr[subIndex], value)) {
-            arr[subIndex] = value;
+        if (!this.eq(unchecked(arr[subIndex]), value)) {
+            unchecked((arr[subIndex] = value));
             slotData = this.packSlot(arr);
-            this._slots.set(slotIndex, slotData);
-            this._isChanged.add(slotIndex);
+            this.updateSlot(slotIndex, slotData);
         }
     }
 
@@ -182,12 +192,10 @@ export abstract class StoredPackedArray<T> {
 
     @inline
     public incrementStartingIndex(): void {
+        this._startIndex += 1;
         if (this._startIndex >= this.MAX_LENGTH) {
             this._startIndex = 0;
-        } else {
-            this._startIndex += 1;
         }
-
         this._isChangedStartIndex = true;
     }
 
@@ -198,7 +206,13 @@ export abstract class StoredPackedArray<T> {
     public applyNextOffsetToStartingIndex(): void {
         if (!this.nextItemOffset) return;
 
+        // Optimization: Conditional subtraction instead of Modulo
         this._startIndex += this.nextItemOffset;
+        if (this._startIndex >= this.MAX_LENGTH) {
+            // Fallback to modulo only if we somehow overshoot massively (rare)
+            this._startIndex %= this.MAX_LENGTH;
+        }
+
         this._isChangedStartIndex = true;
         this.nextItemOffset = 0;
     }
@@ -217,11 +231,10 @@ export abstract class StoredPackedArray<T> {
         let slotData = this.ensureSlot(slotIndex);
         const arr = this.unpackSlot(slotData);
 
-        if (!this.eq(arr[subIndex], value)) {
-            arr[subIndex] = value;
+        if (!this.eq(unchecked(arr[subIndex]), value)) {
+            unchecked((arr[subIndex] = value));
             slotData = this.packSlot(arr);
-            this._slots.set(slotIndex, slotData);
-            this._isChanged.add(slotIndex);
+            this.updateSlot(slotIndex, slotData);
         }
 
         this._length += 1;
@@ -247,18 +260,21 @@ export abstract class StoredPackedArray<T> {
         let slotData = this.ensureSlot(slotIndex);
 
         const arr = this.unpackSlot(slotData);
-        const currentData = arr[subIndex];
+        const currentData = unchecked(arr[subIndex]);
 
         if (!this.eq(currentData, this.defaultValue)) {
-            arr[subIndex] = this.defaultValue;
+            unchecked((arr[subIndex] = this.defaultValue));
             slotData = this.packSlot(arr);
-
-            this._slots.set(slotIndex, slotData);
-            this._isChanged.add(slotIndex);
+            this.updateSlot(slotIndex, slotData);
         }
 
         this._length -= 1;
         this._startIndex += 1;
+        // Optimization: Fast Wrap
+        if (this._startIndex >= this.MAX_LENGTH) {
+            this._startIndex = 0;
+        }
+
         this._isChangedLength = true;
         this._isChangedStartIndex = true;
 
@@ -280,11 +296,10 @@ export abstract class StoredPackedArray<T> {
         const arr = this.unpackSlot(slotData);
 
         const zeroVal = this.zeroValue();
-        if (!this.eq(arr[subIndex], zeroVal)) {
-            arr[subIndex] = zeroVal;
+        if (!this.eq(unchecked(arr[subIndex]), zeroVal)) {
+            unchecked((arr[subIndex] = zeroVal));
             slotData = this.packSlot(arr);
-            this._slots.set(slotIndex, slotData);
-            this._isChanged.add(slotIndex);
+            this.updateSlot(slotIndex, slotData);
         }
     }
 
@@ -316,11 +331,10 @@ export abstract class StoredPackedArray<T> {
         const arr = this.unpackSlot(slotData);
 
         const zeroVal = this.zeroValue();
-        if (!this.eq(arr[subIndex], zeroVal)) {
-            arr[subIndex] = zeroVal;
+        if (!this.eq(unchecked(arr[subIndex]), zeroVal)) {
+            unchecked((arr[subIndex] = zeroVal));
             slotData = this.packSlot(arr);
-            this._slots.set(slotIndex, slotData);
-            this._isChanged.add(slotIndex);
+            this.updateSlot(slotIndex, slotData);
         }
     }
 
@@ -347,8 +361,9 @@ export abstract class StoredPackedArray<T> {
             throw new Revert('setMultiple: out of range (packed array)');
         }
 
+        // Sequential iteration benefits from Hot Slot Cache
         for (let i = 0; i < values.length; i++) {
-            this.set(startIndex + <u32>i, values[i]);
+            this.set(startIndex + <u32>i, unchecked(values[i]));
         }
     }
 
@@ -360,7 +375,7 @@ export abstract class StoredPackedArray<T> {
 
         const out = new Array<T>(<i32>count);
         for (let i: u32 = 0; i < count; i++) {
-            out[<i32>i] = this.get(startIndex + i);
+            unchecked((out[<i32>i] = this.get(startIndex + i)));
         }
 
         return out;
@@ -403,8 +418,10 @@ export abstract class StoredPackedArray<T> {
 
     public save(): void {
         const changed = this._isChanged.values();
-        for (let i = 0; i < changed.length; i++) {
-            const slotIndex = changed[i];
+        const len = changed.length;
+
+        for (let i = 0; i < len; i++) {
+            const slotIndex = unchecked(changed[i]);
             const slotData = this._slots.get(slotIndex);
             if (slotData) {
                 const ptr = this.calculateStoragePointer(<u64>slotIndex);
@@ -424,10 +441,12 @@ export abstract class StoredPackedArray<T> {
 
     public deleteAll(): void {
         const keys = this._slots.keys();
-        for (let i = 0; i < keys.length; i++) {
-            const slotIndex = keys[i];
+        const len = keys.length;
+
+        for (let i = 0; i < len; i++) {
+            const slotIndex = unchecked(keys[i]);
             const ptr = this.calculateStoragePointer(<u64>slotIndex);
-            Blockchain.setStorageAt(ptr, GET_EMPTY_BUFFER()); // 32 bytes of zero
+            Blockchain.setStorageAt(ptr, GET_EMPTY_BUFFER());
         }
 
         // Reset length + startIndex
@@ -437,8 +456,13 @@ export abstract class StoredPackedArray<T> {
         this._startIndex = 0;
         this._isChangedLength = false;
         this._isChangedStartIndex = false;
+
         this._slots.clear();
         this._isChanged.clear();
+
+        // Clear Cache
+        this._cachedSlotIndex = <u32>-1;
+        this._cachedSlotData = null;
     }
 
     /**
@@ -452,6 +476,10 @@ export abstract class StoredPackedArray<T> {
 
         this._slots.clear();
         this._isChanged.clear();
+
+        // Clear Cache
+        this._cachedSlotIndex = <u32>-1;
+        this._cachedSlotData = null;
 
         this.save();
     }
@@ -484,26 +512,60 @@ export abstract class StoredPackedArray<T> {
 
     /**
      * Ensure that slotIndex is loaded into _slots. If missing, read from storage.
+     * * **Optimization:** Uses `_cachedSlotIndex` to return sequentially accessed data instantly.
      */
+    @inline
     protected ensureSlot(slotIndex: u32): Uint8Array {
-        if (!this._slots.has(slotIndex)) {
+        // Fast Cache Check
+        if (slotIndex == this._cachedSlotIndex) {
+            return <Uint8Array>this._cachedSlotData;
+        }
+
+        // Map Lookup / Storage Load
+        let data: Uint8Array;
+        if (this._slots.has(slotIndex)) {
+            data = this._slots.get(slotIndex);
+        } else {
             const ptr = this.calculateStoragePointer(<u64>slotIndex);
-            const data = Blockchain.getStorageAt(ptr);
+            const storageData = Blockchain.getStorageAt(ptr);
 
             // Must be exactly 32 bytes; if it's empty, you get 32 zero bytes from GET_EMPTY_BUFFER()
-            this._slots.set(slotIndex, data);
+            this._slots.set(slotIndex, storageData);
+            data = storageData;
         }
 
-        return this._slots.get(slotIndex);
+        // Update Cache
+        this._cachedSlotIndex = slotIndex;
+        this._cachedSlotData = data;
+
+        return data;
     }
 
+    /**
+     * Updates the slot data in the Map and Cache, and marks it as changed.
+     */
+    @inline
+    protected updateSlot(slotIndex: u32, data: Uint8Array): void {
+        this._slots.set(slotIndex, data);
+        this._isChanged.add(slotIndex);
+
+        // Keep cache in sync
+        this._cachedSlotIndex = slotIndex;
+        this._cachedSlotData = data;
+    }
+
+    @inline
     private getRealIndex(index: u32, isPhysical: bool = false): u32 {
-        const maxLength: u64 = <u64>this.MAX_LENGTH;
-        let realIndex: u64 = (isPhysical ? <u64>0 : <u64>this._startIndex) + <u64>index;
-        if (!(realIndex < maxLength)) {
-            realIndex %= maxLength;
+        const maxLength = this.MAX_LENGTH;
+
+        // FIX: Explicitly type 'start' as u32 to prevent implicit i32 casting of '0'
+        const start: u32 = isPhysical ? 0 : this._startIndex;
+        let realIndex: u32 = start + index;
+
+        if (realIndex >= maxLength) {
+            realIndex -= maxLength;
         }
 
-        return <u32>realIndex;
+        return realIndex;
     }
 }
