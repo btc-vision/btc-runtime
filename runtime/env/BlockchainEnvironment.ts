@@ -50,6 +50,12 @@ export class CallResult {
     ) {}
 }
 
+const SCRATCH_SIZE: i32 = 256;
+const SCRATCH_BUF: ArrayBuffer = new ArrayBuffer(SCRATCH_SIZE);
+const SCRATCH_VIEW: Uint8Array = Uint8Array.wrap(SCRATCH_BUF);
+
+const FOUR_BYTES_UINT8ARRAY_MEMORY_CACHE = new Uint8Array(4);
+
 /**
  * BlockchainEnvironment - Core Runtime Environment for OP_NET Smart Contracts
  *
@@ -282,9 +288,10 @@ export class BlockchainEnvironment {
      * Called once during deployment. State changes here are permanent.
      */
     public onDeployment(calldata: Calldata): void {
-        for (let i: i32 = 0; i < this._plugins.length; i++) {
-            const plugin = this._plugins[i];
-            plugin.onDeployment(calldata);
+        const len = this._plugins.length;
+        for (let i: i32 = 0; i < len; i++) {
+            // Unchecked access for speed
+            unchecked(this._plugins[i].onDeployment(calldata));
         }
         this.contract.onDeployment(calldata);
     }
@@ -299,9 +306,9 @@ export class BlockchainEnvironment {
      * Used for access control, reentrancy guards, and validation.
      */
     public onExecutionStarted(selector: Selector, calldata: Calldata): void {
-        for (let i: i32 = 0; i < this._plugins.length; i++) {
-            const plugin = this._plugins[i];
-            plugin.onExecutionStarted(selector, calldata);
+        const len = this._plugins.length;
+        for (let i: i32 = 0; i < len; i++) {
+            unchecked(this._plugins[i].onExecutionStarted(selector, calldata));
         }
         this.contract.onExecutionStarted(selector, calldata);
     }
@@ -316,9 +323,9 @@ export class BlockchainEnvironment {
      * Only called on successful execution. Used for cleanup and events.
      */
     public onExecutionCompleted(selector: Selector, calldata: Calldata): void {
-        for (let i: i32 = 0; i < this._plugins.length; i++) {
-            const plugin = this._plugins[i];
-            plugin.onExecutionCompleted(selector, calldata);
+        const len = this._plugins.length;
+        for (let i: i32 = 0; i < len; i++) {
+            unchecked(this._plugins[i].onExecutionCompleted(selector, calldata));
         }
         this.contract.onExecutionCompleted(selector, calldata);
     }
@@ -332,6 +339,7 @@ export class BlockchainEnvironment {
      * Called automatically by the runtime to set up execution context.
      */
     public setEnvironmentVariables(data: Uint8Array): void {
+        // BytesReader is unavoidable for parsing complex external struct
         const reader: BytesReader = new BytesReader(data);
 
         const blockHash = reader.readBytes(32);
@@ -404,16 +412,18 @@ export class BlockchainEnvironment {
             throw new Revert('Destination contract is required');
         }
 
-        const resultLengthBuffer = new ArrayBuffer(32);
+        // This creates the underlying ArrayBuffer AND gives us a 'dataStart' pointer for free.
         const status = callContract(
             destinationContract.buffer,
             calldata.getBuffer().buffer,
             calldata.bufferLength(),
-            resultLengthBuffer,
+            FOUR_BYTES_UINT8ARRAY_MEMORY_CACHE.buffer, // Pass the underlying ArrayBuffer to the host
         );
 
-        const reader = new BytesReader(Uint8Array.wrap(resultLengthBuffer));
-        const resultLength = reader.readU32(true);
+        // OPTIMIZATION: Read raw memory directly using load<u32>
+        // We use .dataStart to get the raw pointer to the payload.
+        const resultLength = bswap<u32>(load<u32>(FOUR_BYTES_UINT8ARRAY_MEMORY_CACHE.dataStart));
+
         const resultBuffer = new ArrayBuffer(resultLength);
         getCallResult(0, resultLength, resultBuffer);
 
@@ -474,14 +484,29 @@ export class BlockchainEnvironment {
      */
     public emit(event: NetEvent): void {
         const data = event.getEventData();
-        const writer = new BytesWriter(
-            String.UTF8.byteLength(event.eventType) + 8 + data.byteLength,
-        );
+        const eventType = event.eventType;
+        const typeLen = String.UTF8.byteLength(eventType);
 
-        writer.writeStringWithLength(event.eventType);
-        writer.writeBytesWithLength(data);
+        // Structure: [4 bytes type len] + [type bytes] + [4 bytes data len] + [data bytes]
+        const totalLen = 8 + typeLen + data.length;
 
-        emit(writer.getBuffer().buffer, writer.bufferLength());
+        const writer = new Uint8Array(totalLen);
+        const ptr = writer.dataStart;
+
+        // Write type length (BE)
+        store<u32>(ptr, bswap<u32>(typeLen));
+
+        // Write type string
+        String.UTF8.encodeUnsafe(changetype<usize>(eventType), eventType.length, ptr + 4);
+
+        // Write data length (BE)
+        const offset = 4 + typeLen;
+        store<u32>(ptr + offset, bswap<u32>(data.length));
+
+        // Write data bytes (Safe memory copy)
+        memory.copy(ptr + offset + 4, data.dataStart, data.length);
+
+        emit(writer.buffer, totalLen);
     }
 
     /**
@@ -502,11 +527,21 @@ export class BlockchainEnvironment {
      * ```
      */
     public validateBitcoinAddress(address: string): bool {
-        const writer = new BytesWriter(String.UTF8.byteLength(address));
-        writer.writeString(address);
+        const len = String.UTF8.byteLength(address);
 
-        const result = validateBitcoinAddress(writer.getBuffer().buffer, address.length);
-        return result === 1;
+        if (len <= SCRATCH_SIZE) {
+            String.UTF8.encodeUnsafe(
+                changetype<usize>(address),
+                address.length,
+                SCRATCH_VIEW.dataStart,
+            );
+
+            return validateBitcoinAddress(SCRATCH_BUF, len) === 1;
+        } else {
+            const writer = new BytesWriter(len);
+            writer.writeString(address);
+            return validateBitcoinAddress(writer.getBuffer().buffer, len) === 1;
+        }
     }
 
     /**
@@ -672,7 +707,7 @@ export class BlockchainEnvironment {
      * ```
      */
     public verifySchnorrSignature(
-        publicKey: Address,
+        publicKey: ExtendedAddress,
         signature: Uint8Array,
         hash: Uint8Array,
     ): boolean {
@@ -732,32 +767,29 @@ export class BlockchainEnvironment {
     ): boolean {
         const publicKeyLength = MLDSAMetadata.fromLevel(level);
         if (publicKey.length !== (publicKeyLength as i32)) {
-            throw new Revert(
-                `Invalid ML-DSA public key length. Expected ${publicKeyLength}, got ${publicKey.length}`,
-            );
+            throw new Revert(`Invalid ML-DSA public key length.`);
         }
 
-        const signatureLength = MLDSAMetadata.signatureLen(publicKeyLength);
-        if (signature.length !== signatureLength) {
-            throw new Revert(
-                `Invalid ML-DSA signature length. Expected ${signatureLength}, got ${signature.length}`,
-            );
+        if (signature.length !== MLDSAMetadata.signatureLen(publicKeyLength)) {
+            throw new Revert(`Invalid ML-DSA signature length.`);
         }
 
         if (hash.length !== 32) {
-            throw new Revert(`Invalid hash length. Expected 32, got ${hash.length}`);
+            throw new Revert(`Invalid hash length.`);
         }
 
-        const writer = new BytesWriter(2 + publicKey.length);
-        writer.writeU8(<u8>SignaturesMethods.MLDSA);
-        writer.writeU8(<u8>level);
-        writer.writeBytes(publicKey);
+        const bufferLen = 2 + publicKey.length;
+        const writer = new Uint8Array(bufferLen);
+        const ptr = writer.dataStart;
 
-        const result: u32 = verifySignature(
-            writer.getBuffer().buffer,
-            signature.buffer,
-            hash.buffer,
-        );
+        // Single bytes - Endianness irrelevant
+        store<u8>(ptr, <u8>SignaturesMethods.MLDSA);
+        store<u8>(ptr + 1, <u8>level);
+
+        // Byte array copy
+        memory.copy(ptr + 2, publicKey.dataStart, publicKey.length);
+
+        const result: u32 = verifySignature(writer.buffer, signature.buffer, hash.buffer);
 
         return result === 1;
     }
@@ -822,7 +854,7 @@ export class BlockchainEnvironment {
      * ```
      */
     public verifySignature(
-        address: Address,
+        address: ExtendedAddress,
         signature: Uint8Array,
         hash: Uint8Array,
         forceMLDSA: boolean = false,
@@ -981,29 +1013,23 @@ export class BlockchainEnvironment {
     }
 
     private internalVerifySchnorr(
-        publicKey: Address,
+        publicKey: ExtendedAddress,
         signature: Uint8Array,
         hash: Uint8Array,
     ): boolean {
-        if (signature.byteLength !== 64) {
-            throw new Revert(`Invalid signature length. Expected 64, got ${signature.length}`);
-        }
+        if (signature.length !== 64) throw new Revert(`Invalid signature length.`);
+        if (hash.length !== 32) throw new Revert(`Invalid hash length.`);
 
-        if (hash.byteLength !== 32) {
-            throw new Revert(`Invalid hash length. Expected 32, got ${hash.length}`);
-        }
+        // 1 byte prefix + 32 bytes address
+        const totalLen = 1 + ADDRESS_BYTE_LENGTH;
+        const buffer = new Uint8Array(totalLen);
+        const ptr = buffer.dataStart;
 
-        const writer = new BytesWriter(1 + ADDRESS_BYTE_LENGTH);
-        writer.writeU8(<u8>SignaturesMethods.Schnorr);
-        writer.writeAddress(publicKey);
+        store<u8>(ptr, <u8>SignaturesMethods.Schnorr);
 
-        const result: u32 = verifySignature(
-            writer.getBuffer().buffer,
-            signature.buffer,
-            hash.buffer,
-        );
+        memory.copy(ptr + 1, publicKey.tweakedPublicKey.dataStart, ADDRESS_BYTE_LENGTH);
 
-        return result === 1;
+        return verifySignature(buffer.buffer, signature.buffer, hash.buffer) === 1;
     }
 
     private createContractIfNotExists(): void {
@@ -1017,17 +1043,16 @@ export class BlockchainEnvironment {
     }
 
     private _internalSetStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {
-        if (pointerHash.buffer.byteLength !== 32) {
+        if (pointerHash.length !== 32) {
             throw new Revert('Pointer must be 32 bytes long');
         }
 
         let finalValue: Uint8Array = value;
-        if (value.buffer.byteLength !== 32) {
-            // Auto-pad values shorter than 32 bytes
+        if (value.length !== 32) {
+            // Optimization: Pad manually using memory.copy to avoid loop
             finalValue = new Uint8Array(32);
-            for (let i = 0; i < value.buffer.byteLength && i < 32; i++) {
-                finalValue[i] = value[i];
-            }
+            const len = value.length < 32 ? value.length : 32;
+            memory.copy(finalValue.dataStart, value.dataStart, len);
         }
 
         this.storage.set(pointerHash, finalValue);

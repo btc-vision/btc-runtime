@@ -3,12 +3,10 @@ import { IMap } from './Map';
 
 /**
  * Optimized equality check using WASM intrinsic memory comparison.
- * Orders of magnitude faster than looping in AssemblyScript.
  */
 @inline
 export function eqUint(data: Uint8Array, data2: Uint8Array): bool {
     if (data.length !== data2.length) return false;
-    // CRITICAL: Use .dataStart to compare actual bytes, NOT object headers (.buffer)
     return memory.compare(data.dataStart, data2.dataStart, data.length) === 0;
 }
 
@@ -16,6 +14,9 @@ export function eqUint(data: Uint8Array, data2: Uint8Array): bool {
 export class MapUint8Array implements IMap<Uint8Array, Uint8Array> {
     protected _keys: Uint8Array[] = [];
     protected _values: Uint8Array[] = [];
+
+    // CACHE: Stores the index of the last successful lookup to make repeated access O(1)
+    private _lastIndex: i32 = -1;
 
     @inline
     public get size(): i32 {
@@ -33,38 +34,85 @@ export class MapUint8Array implements IMap<Uint8Array, Uint8Array> {
     }
 
     public set(key: Uint8Array, value: Uint8Array): this {
-        const index = this.indexOf(key);
+        let index = -1;
+
+        // Check Cache (Fastest)
+        if (this._lastIndex !== -1) {
+            const cachedKey = unchecked(this._keys[this._lastIndex]);
+            // Check length first, then full content equality
+            if (cachedKey.length === key.length) {
+                if (memory.compare(cachedKey.dataStart, key.dataStart, key.length) === 0) {
+                    index = this._lastIndex;
+                }
+            }
+        }
+
+        // Full Scan if cache missed
+        if (index === -1) {
+            index = this.indexOf(key);
+        }
 
         if (index === -1) {
             this._keys.push(key);
             this._values.push(value);
+            this._lastIndex = this._keys.length - 1;
         } else {
-            // Safe unchecked access since we know index exists
-            unchecked(this._values[index] = value);
+            unchecked((this._values[index] = value));
+            // Cache is already pointing to this index (from indexOf or the check above)
+            this._lastIndex = index;
         }
 
         return this;
     }
 
     /**
-     * Optimized linear scan.
-     * Inlines the equality check to avoid function call overhead in hot loops.
+     * HYPER-OPTIMIZED SEARCH
+     * Scans for Data Equality (not object equality).
+     * Uses a "Prefix Filter" to skip expensive memory comparisons.
      */
     public indexOf(pointerHash: Uint8Array): i32 {
         const len = this._keys.length;
+        if (len === 0) return -1;
+
         const ptrLen = pointerHash.length;
-        // Get raw data pointer once to avoid property access in loop
         const ptrData = pointerHash.dataStart;
 
-        for (let i: i32 = 0; i < len; i++) {
-            const key = unchecked(this._keys[i]);
+        // OPTIMIZATION: Prefix Filter
+        // If keys are long enough (hashes/addresses), we compare the first 8 bytes as a simple integer.
+        // This is 1 CPU cycle vs ~30+ cycles for a function call loop.
+        if (ptrLen >= 8) {
+            // Read the first 8 bytes of the SEARCH NEEDLE
+            const searchHeader = load<u64>(ptrData);
 
-            // Fast fail on length mismatch
-            if (key.length !== ptrLen) continue;
+            // Loop Backwards (finding most recently added items first is usually better for contracts)
+            for (let i = len - 1; i >= 0; i--) {
+                const key = unchecked(this._keys[i]);
 
-            // Intrinsic memory compare on data payload
-            if (memory.compare(key.dataStart, ptrData, ptrLen) === 0) {
-                return i;
+                // Cheap Length Check
+                if (key.length !== ptrLen) continue;
+
+                // Cheap Integer Check (The Prefix Filter)
+                // This reads the CONTENT of the key, not the object pointer.
+                // If the first 8 bytes of data don't match, we skip the expensive check.
+                if (load<u64>(key.dataStart) !== searchHeader) continue;
+
+                // Expensive Full Check
+                // Only runs if length AND first 8 bytes match.
+                if (memory.compare(key.dataStart, ptrData, ptrLen) === 0) {
+                    this._lastIndex = i;
+                    return i;
+                }
+            }
+        } else {
+            // Fallback for small keys (< 8 bytes)
+            for (let i = len - 1; i >= 0; i--) {
+                const key = unchecked(this._keys[i]);
+                if (key.length !== ptrLen) continue;
+
+                if (memory.compare(key.dataStart, ptrData, ptrLen) === 0) {
+                    this._lastIndex = i;
+                    return i;
+                }
             }
         }
 
@@ -84,26 +132,36 @@ export class MapUint8Array implements IMap<Uint8Array, Uint8Array> {
         return unchecked(this._values[index]);
     }
 
-    /**
-     * O(1) Delete strategy (Swap and Pop).
-     * Instead of splicing (shifting all elements), we move the last element
-     * into the gap and pop the end. Map order is not preserved, but gas is saved.
-     */
     public delete(key: Uint8Array): bool {
         const index = this.indexOf(key);
-        if (index === -1) {
-            return false;
-        }
+        if (index === -1) return false;
 
         const lastIndex = this._keys.length - 1;
 
-        // If the element to delete is not the last one, swap it with the last one
+        // Swap and Pop (O(1) delete)
         if (index !== lastIndex) {
-            unchecked(this._keys[index] = this._keys[lastIndex]);
-            unchecked(this._values[index] = this._values[lastIndex]);
+            // Move last element to the deleted position
+            unchecked((this._keys[index] = this._keys[lastIndex]));
+            unchecked((this._values[index] = this._values[lastIndex]));
+
+            // Update cache based on what was affected
+            if (this._lastIndex === lastIndex) {
+                // Cache pointed to last element, which moved to 'index'
+                this._lastIndex = index;
+            } else if (this._lastIndex === index) {
+                // Cache pointed to deleted element, invalidate it
+                this._lastIndex = -1;
+            }
+            // Note: If cache points to any other index, it remains valid
+            // because swap-and-pop only modifies positions 'index' and 'lastIndex'
+        } else {
+            // Deleting the last element (no swap needed)
+            if (this._lastIndex === lastIndex) {
+                this._lastIndex = -1;
+            }
+            // If cache points to any earlier index, it remains valid
         }
 
-        // Pop the last element (which is now either the target or a duplicate)
         this._keys.pop();
         this._values.pop();
 
@@ -112,13 +170,12 @@ export class MapUint8Array implements IMap<Uint8Array, Uint8Array> {
 
     @inline
     public clear(): void {
-        // Reassigning empty arrays is cheaper than looping pop
         this._keys = [];
         this._values = [];
+        this._lastIndex = -1;
     }
 
     public toString(): string {
         return `Map(size=${this._keys.length})`;
     }
 }
-

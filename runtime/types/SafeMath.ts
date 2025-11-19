@@ -19,7 +19,15 @@ export class SafeMath {
      * Constant representing zero in u256 format.
      * Useful for comparisons and initializations.
      */
-    public static ZERO: u256 = u256.fromU32(0);
+    public static readonly ZERO: u256 = u256.Zero;
+
+    // GAS OPTIMIZATION: Static constants to avoid allocation in hot loops
+    public static readonly ONE: u256 = u256.One;
+    private static readonly CONST_2: u256 = u256.fromU32(2);
+    private static readonly CONST_3: u256 = u256.fromU32(3);
+    private static readonly CONST_10: u256 = u256.fromU32(10);
+    private static readonly LN2_SCALED: u64 = 693147; // ln(2)*1e6
+    private static readonly SCALE_1E6: u64 = 1_000_000;
 
     // ==================== Addition Operations ====================
 
@@ -42,7 +50,7 @@ export class SafeMath {
      * - Gas efficient for small values
      */
     public static add(a: u256, b: u256): u256 {
-        const c: u256 = u256.add(a, b);
+        const c = u256.add(a, b);
         if (c < a) {
             throw new Revert('SafeMath: addition overflow');
         }
@@ -62,7 +70,7 @@ export class SafeMath {
      * - More gas efficient than u256 for values that fit in 128 bits
      */
     public static add128(a: u128, b: u128): u128 {
-        const c: u128 = u128.add(a, b);
+        const c = u128.add(a, b);
         if (c < a) {
             throw new Revert('SafeMath: addition overflow');
         }
@@ -82,7 +90,7 @@ export class SafeMath {
      * - Most gas efficient for small values
      */
     public static add64(a: u64, b: u64): u64 {
-        const c: u64 = a + b;
+        const c = a + b;
         if (c < a) {
             throw new Revert('SafeMath: addition overflow');
         }
@@ -106,7 +114,7 @@ export class SafeMath {
      * ```
      *
      * @warning Unsigned integers cannot represent negative values. Always ensure a >= b
-     *          before calling, or handle the potential revert in your contract logic.
+     * before calling, or handle the potential revert in your contract logic.
      *
      * @remarks
      * - Result is always non-negative
@@ -165,7 +173,7 @@ export class SafeMath {
      * ```
      *
      * @security The overflow check performs division after multiplication, which is safe
-     *          because if overflow occurred, the division result won't equal the original operand.
+     * because if overflow occurred, the division result won't equal the original operand.
      *
      * @remarks
      * - Returns 0 if either operand is 0
@@ -176,7 +184,8 @@ export class SafeMath {
         if (a.isZero() || b.isZero()) return u256.Zero;
 
         const c = u256.mul(a, b);
-        const d = SafeMath.div(c, a);
+        // Use native div, it's faster than manual loop and handles edge cases correctly
+        const d = u256.div(c, a);
 
         if (u256.ne(d, b)) throw new Revert('SafeMath: multiplication overflow');
 
@@ -195,7 +204,7 @@ export class SafeMath {
         if (a.isZero() || b.isZero()) return u128.Zero;
 
         const c = u128.mul(a, b);
-        const d = SafeMath.div128(c, a);
+        const d = u128.div(c, a);
 
         if (u128.ne(d, b)) throw new Revert('SafeMath: multiplication overflow');
 
@@ -240,10 +249,10 @@ export class SafeMath {
      * ```
      *
      * @warning Integer division always rounds down. For 10/3, the result is 3, not 3.333...
-     *          The remainder (1 in this case) is lost. Use `mod` to get the remainder.
+     * The remainder (1 in this case) is lost. Use `mod` to get the remainder.
      *
      * @security Division by zero is always checked and will revert the transaction,
-     *          preventing undefined behavior or exploits.
+     * preventing undefined behavior or exploits.
      *
      * @remarks
      * - Always rounds down (floor division)
@@ -257,33 +266,12 @@ export class SafeMath {
         }
 
         if (a.isZero()) {
-            return new u256();
+            return u256.Zero;
         }
 
-        if (u256.lt(a, b)) {
-            return new u256(); // Return 0 if a < b
-        }
-
-        if (u256.eq(a, b)) {
-            return new u256(1); // Return 1 if a == b
-        }
-
-        let n = a.clone();
-        let d = b.clone();
-        let result = new u256();
-
-        const shift = u256.clz(d) - u256.clz(n);
-        d = SafeMath.shl(d, shift); // align d with n by shifting left
-
-        for (let i = shift; i >= 0; i--) {
-            if (u256.ge(n, d)) {
-                n = u256.sub(n, d);
-                result = u256.or(result, SafeMath.shl(u256.One, i));
-            }
-            d = u256.shr(d, 1); // restore d to original by shifting right
-        }
-
-        return result;
+        // GAS OPTIMIZATION: Use native as-bignum division instead of manual shift loop
+        // The native implementation is likely optimized in AssemblyScript/WASM
+        return u256.div(a, b);
     }
 
     /**
@@ -295,7 +283,7 @@ export class SafeMath {
      * @throws {Revert} When b is zero
      *
      * @warning Integer division truncates decimals. Consider scaling your values
-     *          before division if you need to preserve precision.
+     * before division if you need to preserve precision.
      */
     public static div128(a: u128, b: u128): u128 {
         if (b.isZero()) {
@@ -303,33 +291,10 @@ export class SafeMath {
         }
 
         if (a.isZero()) {
-            return new u128();
+            return u128.Zero;
         }
 
-        if (u128.lt(a, b)) {
-            return new u128(); // Return 0 if a < b
-        }
-
-        if (u128.eq(a, b)) {
-            return new u128(1); // Return 1 if a == b
-        }
-
-        let n = a.clone();
-        let d = b.clone();
-        let result = new u128();
-
-        const shift = u128.clz(d) - u128.clz(n);
-        d = SafeMath.shl128(d, shift);
-
-        for (let i = shift; i >= 0; i--) {
-            if (u128.ge(n, d)) {
-                n = u128.sub(n, d);
-                result = u128.or(result, SafeMath.shl128(u128.One, i));
-            }
-            d = u128.shr(d, 1);
-        }
-
-        return result;
+        return u128.div(a, b);
     }
 
     /**
@@ -376,8 +341,8 @@ export class SafeMath {
      * ```
      *
      * @security The modulo operation is commonly used in access control patterns
-     *          (e.g., round-robin selection). Ensure the modulus is never zero
-     *          and be aware that patterns in modulo operations can be predictable.
+     * (e.g., round-robin selection). Ensure the modulus is never zero
+     * and be aware that patterns in modulo operations can be predictable.
      *
      * @remarks
      * - Result is always in range [0, b-1]
@@ -385,13 +350,11 @@ export class SafeMath {
      * - a = (a/b)*b + (a%b)
      */
     public static mod(a: u256, b: u256): u256 {
-        if (u256.eq(b, u256.Zero)) {
+        if (b.isZero()) {
             throw new Revert('SafeMath: modulo by zero');
         }
-
-        const divResult = SafeMath.div(a, b);
-        const product = SafeMath.mul(divResult, b);
-        return SafeMath.sub(a, product);
+        // Use optimized arithmetic: a - (a/b)*b
+        return u256.sub(a, u256.mul(u256.div(a, b), b));
     }
 
     /**
@@ -410,14 +373,14 @@ export class SafeMath {
      * ```
      *
      * @warning This function automatically reduces inputs modulo m before multiplication.
-     *          This means mulmod(2m, x, m) returns 0, not because 2m*x is computed,
-     *          but because 2m is reduced to 0 first. This is mathematically correct
-     *          for modular arithmetic but may surprise developers expecting raw multiplication.
+     * This means mulmod(2m, x, m) returns 0, not because 2m*x is computed,
+     * but because 2m is reduced to 0 first. This is mathematically correct
+     * for modular arithmetic but may surprise developers expecting raw multiplication.
      *
      * @security Critical for cryptographic operations. The automatic modular reduction
-     *          of inputs ensures all operations occur within the field Z/mZ, preventing
-     *          overflow attacks. Used extensively in ECC scalar multiplication and
-     *          RSA operations.
+     * of inputs ensures all operations occur within the field Z/mZ, preventing
+     * overflow attacks. Used extensively in ECC scalar multiplication and
+     * RSA operations.
      *
      * @remarks
      * - Critical for cryptographic operations (RSA, ECC)
@@ -428,18 +391,20 @@ export class SafeMath {
      * - Inputs are automatically reduced: a = a % m, b = b % m
      */
     public static mulmod(a: u256, b: u256, modulus: u256): u256 {
-        if (u256.eq(modulus, u256.Zero)) throw new Revert('SafeMath: modulo by zero');
+        if (modulus.isZero()) throw new Revert('SafeMath: modulo by zero');
 
         // Keep invariants: 0 <= a,b < modulus
-        a = SafeMath.mod(a, modulus);
-        b = SafeMath.mod(b, modulus);
+        if (u256.ge(a, modulus)) a = SafeMath.mod(a, modulus);
+        if (u256.ge(b, modulus)) b = SafeMath.mod(b, modulus);
+
         if (a.isZero() || b.isZero()) return u256.Zero;
 
         let res = u256.Zero;
 
-        // LSB-first ladder: at most 256 iterations
+        // Optimized LSB-first ladder
         while (!b.isZero()) {
-            if (u256.ne(u256.and(b, u256.One), u256.Zero)) {
+            // if (b & 1) using raw access for speed
+            if ((b.lo1 & 1) != 0) {
                 res = SafeMath.addModNoCarry(res, a, modulus);
             }
             b = u256.shr(b, 1);
@@ -458,9 +423,9 @@ export class SafeMath {
      * @param p - The modulus (must be > 1)
      * @returns x such that (k * x) % p = 1
      * @throws {Revert} When:
-     *   - p is 0 or 1 (invalid modulus)
-     *   - k is 0 (zero has no inverse)
-     *   - gcd(k, p) ≠ 1 (no inverse exists when k and p are not coprime)
+     * - p is 0 or 1 (invalid modulus)
+     * - k is 0 (zero has no inverse)
+     * - gcd(k, p) ≠ 1 (no inverse exists when k and p are not coprime)
      *
      * @example
      * ```typescript
@@ -470,13 +435,13 @@ export class SafeMath {
      * ```
      *
      * @warning Only works when gcd(k, p) = 1. For prime p, all non-zero k < p have inverses.
-     *          For composite moduli, check coprimality before calling.
+     * For composite moduli, check coprimality before calling.
      *
      * @security Essential for cryptographic protocols. Used in:
-     *          - RSA private key generation (d = e^(-1) mod φ(n))
-     *          - ECDSA signature generation (s = k^(-1)(h + rd) mod n)
-     *          - Point division in elliptic curves
-     *          Incorrect inverse computation breaks these protocols entirely.
+     * - RSA private key generation (d = e^(-1) mod φ(n))
+     * - ECDSA signature generation (s = k^(-1)(h + rd) mod n)
+     * - Point division in elliptic curves
+     * Incorrect inverse computation breaks these protocols entirely.
      *
      * @remarks
      * - Essential for RSA key generation and ECC operations
@@ -486,75 +451,62 @@ export class SafeMath {
      * - Common in cryptographic signatures and key exchanges
      */
     public static modInverse(k: u256, p: u256): u256 {
-        // Input validation
-        if (p.isZero() || u256.eq(p, u256.One)) {
+        if (p.isZero() || u256.eq(p, SafeMath.ONE)) {
             throw new Revert('SafeMath: modulus must be > 1');
         }
-
         if (k.isZero()) {
             throw new Revert('SafeMath: no inverse for zero');
         }
 
-        let s: u256 = u256.Zero;
-        let old_s: u256 = u256.One;
-        let s_negative: boolean = false;
-        let old_s_negative: boolean = false;
-        let r: u256 = p.clone();
-        let old_r: u256 = k.clone();
+        // Extended Euclidean Algo
+        let s = u256.Zero;
+        let old_s = u256.One;
+        let s_negative = false;
+        let old_s_negative = false;
+        let r = p.clone();
+        let old_r = k.clone();
 
         while (!r.isZero()) {
-            const quotient = SafeMath.div(old_r, r);
+            const quotient = u256.div(old_r, r);
 
             // Update r
-            const tmp_r = r.clone();
-            r = SafeMath.sub(old_r, SafeMath.mul(quotient, r));
-            old_r = tmp_r;
+            const next_r = u256.sub(old_r, u256.mul(quotient, r));
+            old_r = r;
+            r = next_r;
 
-            // Update s with sign tracking
-            const tmp_s = s.clone();
-            const tmp_s_negative = s_negative;
-            const product = SafeMath.mul(quotient, s);
+            // Update s
+            const prod = u256.mul(quotient, s);
+            let next_s: u256;
+            let next_s_negative: boolean;
 
-            if (!old_s_negative && !s_negative) {
-                if (u256.ge(old_s, product)) {
-                    s = SafeMath.sub(old_s, product);
-                    s_negative = false;
+            // Logic optimized to avoid excessive object allocation
+            if (old_s_negative == s_negative) {
+                if (u256.ge(old_s, prod)) {
+                    next_s = u256.sub(old_s, prod);
+                    next_s_negative = old_s_negative;
                 } else {
-                    s = SafeMath.sub(product, old_s);
-                    s_negative = true;
+                    next_s = u256.sub(prod, old_s);
+                    next_s_negative = !old_s_negative;
                 }
-            } else if (old_s_negative && s_negative) {
-                if (u256.ge(product, old_s)) {
-                    s = SafeMath.sub(product, old_s);
-                    s_negative = false;
-                } else {
-                    s = SafeMath.sub(old_s, product);
-                    s_negative = true;
-                }
-            } else if (!old_s_negative && s_negative) {
-                s = SafeMath.add(old_s, product);
-                s_negative = false;
             } else {
-                s = SafeMath.add(old_s, product);
-                s_negative = true;
+                next_s = u256.add(old_s, prod);
+                next_s_negative = old_s_negative;
             }
 
-            old_s = tmp_s;
-            old_s_negative = tmp_s_negative;
+            old_s = s;
+            old_s_negative = s_negative;
+            s = next_s;
+            s_negative = next_s_negative;
         }
 
-        // Check if inverse exists (gcd must be 1)
-        if (!u256.eq(old_r, u256.One)) {
+        if (!u256.eq(old_r, SafeMath.ONE)) {
             throw new Revert('SafeMath: no modular inverse exists');
         }
 
-        // Handle negative values
         if (old_s_negative) {
-            const mod_result = SafeMath.mod(old_s, p);
-            if (mod_result.isZero()) {
-                return u256.Zero;
-            }
-            return SafeMath.sub(p, mod_result);
+            const mod_res = SafeMath.mod(old_s, p);
+            if (mod_res.isZero()) return u256.Zero;
+            return u256.sub(p, mod_res);
         }
 
         return SafeMath.mod(old_s, p);
@@ -576,16 +528,16 @@ export class SafeMath {
      * ```
      *
      * @warning CRITICAL: Unlike ALL other SafeMath operations, bit shifts do NOT throw on overflow!
-     *          Bits shifted beyond the type width are SILENTLY LOST. This is intentional
-     *          behavior that matches CPU bit shift semantics, but differs philosophically
-     *          from other SafeMath operations which fail safely on overflow.
+     * Bits shifted beyond the type width are SILENTLY LOST. This is intentional
+     * behavior that matches CPU bit shift semantics, but differs philosophically
+     * from other SafeMath operations which fail safely on overflow.
      *
      * @security If you need overflow detection for bit shifts, implement it manually:
      * ```typescript
      * const shifted = SafeMath.shl(value, n);
      * const restored = SafeMath.shr(shifted, n);
      * if (!u256.eq(restored, value)) {
-     *     throw new Revert('Shift overflow detected');
+     * throw new Revert('Shift overflow detected');
      * }
      * ```
      *
@@ -598,23 +550,43 @@ export class SafeMath {
      * - Commonly used in bit manipulation and flag operations
      */
     public static shl(value: u256, shift: i32): u256 {
-        if (shift <= 0) {
-            return shift == 0 ? value.clone() : new u256();
-        }
-
-        if (shift >= 256) {
-            return new u256();
-        }
+        if (shift <= 0) return shift == 0 ? value.clone() : u256.Zero;
+        if (shift >= 256) return u256.Zero;
 
         shift &= 255;
 
-        const bitsPerSegment = 64;
-        const segmentShift = (shift / bitsPerSegment) | 0;
-        const bitShift = shift % bitsPerSegment;
+        // GAS OPTIMIZATION: Unrolled manual shifting avoids array allocation of segments
+        const bits = 64;
+        const segShift = (shift / bits) | 0;
+        const bitShift = shift % bits;
+        const invShift = bits - bitShift;
 
-        const segments = [value.lo1, value.lo2, value.hi1, value.hi2];
-        const result = SafeMath.shlSegment(segments, segmentShift, bitShift, bitsPerSegment, 4);
-        return new u256(result[0], result[1], result[2], result[3]);
+        let r0: u64 = 0,
+            r1: u64 = 0,
+            r2: u64 = 0,
+            r3: u64 = 0;
+        const i0 = value.lo1,
+            i1 = value.lo2,
+            i2 = value.hi1,
+            i3 = value.hi2;
+
+        if (segShift == 0) {
+            r0 = i0 << bitShift;
+            r1 = (i1 << bitShift) | (bitShift == 0 ? 0 : i0 >>> invShift);
+            r2 = (i2 << bitShift) | (bitShift == 0 ? 0 : i1 >>> invShift);
+            r3 = (i3 << bitShift) | (bitShift == 0 ? 0 : i2 >>> invShift);
+        } else if (segShift == 1) {
+            r1 = i0 << bitShift;
+            r2 = (i1 << bitShift) | (bitShift == 0 ? 0 : i0 >>> invShift);
+            r3 = (i2 << bitShift) | (bitShift == 0 ? 0 : i1 >>> invShift);
+        } else if (segShift == 2) {
+            r2 = i0 << bitShift;
+            r3 = (i1 << bitShift) | (bitShift == 0 ? 0 : i0 >>> invShift);
+        } else if (segShift == 3) {
+            r3 = i0 << bitShift;
+        }
+
+        return new u256(r0, r1, r2, r3);
     }
 
     /**
@@ -631,23 +603,28 @@ export class SafeMath {
      * - Overflow bits are truncated without error
      */
     public static shl128(value: u128, shift: i32): u128 {
-        if (shift <= 0) {
-            return shift == 0 ? value.clone() : new u128();
-        }
-
-        if (shift >= 128) {
-            return new u128();
-        }
+        if (shift <= 0) return shift == 0 ? value.clone() : u128.Zero;
+        if (shift >= 128) return u128.Zero;
 
         shift &= 127;
+        const bits = 64;
+        const segShift = (shift / bits) | 0;
+        const bitShift = shift % bits;
+        const invShift = bits - bitShift;
 
-        const bitsPerSegment = 64;
-        const segmentShift = (shift / bitsPerSegment) | 0;
-        const bitShift = shift % bitsPerSegment;
+        let r0: u64 = 0,
+            r1: u64 = 0;
+        const i0 = value.lo,
+            i1 = value.hi;
 
-        const segments = [value.lo, value.hi];
-        const result = SafeMath.shlSegment(segments, segmentShift, bitShift, bitsPerSegment, 2);
-        return new u128(result[0], result[1]);
+        if (segShift == 0) {
+            r0 = i0 << bitShift;
+            r1 = (i1 << bitShift) | (bitShift == 0 ? 0 : i0 >>> invShift);
+        } else if (segShift == 1) {
+            r1 = i0 << bitShift;
+        }
+
+        return new u128(r0, r1);
     }
 
     /**
@@ -727,11 +704,11 @@ export class SafeMath {
      * ```
      *
      * @warning Returns 1 for inputs 1, 2, and 3 (not just 1). This is because
-     *          floor(√2) = floor(√3) = 1. Be aware of this when working with small values.
+     * floor(√2) = floor(√3) = 1. Be aware of this when working with small values.
      *
      * @security No overflow possible as sqrt(u256.Max) < 2^128. Used in various DeFi
-     *          protocols for computing prices from liquidity pools (e.g., Uniswap V2's
-     *          geometric mean price calculation).
+     * protocols for computing prices from liquidity pools (e.g., Uniswap V2's
+     * geometric mean price calculation).
      *
      * @remarks
      * - Uses Newton-Raphson method for values > 3
@@ -742,26 +719,22 @@ export class SafeMath {
      * - Converges in O(log log n) iterations
      */
     public static sqrt(y: u256): u256 {
-        if (u256.gt(y, u256.fromU32(3))) {
+        if (u256.gt(y, SafeMath.CONST_3)) {
             let z = y;
 
-            const u246_2 = u256.fromU32(2);
-
-            const d = SafeMath.div(y, u246_2);
-            let x = SafeMath.add(d, u256.One);
+            // Initial guess: y / 2 + 1
+            let x = u256.add(u256.div(y, SafeMath.CONST_2), SafeMath.ONE);
 
             while (u256.lt(x, z)) {
                 z = x;
-
-                const u = SafeMath.div(y, x);
-                const y2 = u256.add(u, x);
-
-                x = SafeMath.div(y2, u246_2);
+                const divResult = u256.div(y, x);
+                const sum = u256.add(divResult, x);
+                x = u256.div(sum, SafeMath.CONST_2);
             }
 
             return z;
-        } else if (!u256.eq(y, u256.Zero)) {
-            return u256.One;
+        } else if (!y.isZero()) {
+            return SafeMath.ONE;
         } else {
             return u256.Zero;
         }
@@ -782,12 +755,12 @@ export class SafeMath {
      * ```
      *
      * @warning Large bases with even small exponents can overflow. For example,
-     *          (2^128)^2 = 2^256 which overflows. Always consider the magnitude
-     *          of your inputs.
+     * (2^128)^2 = 2^256 which overflows. Always consider the magnitude
+     * of your inputs.
      *
      * @security Used in compound interest calculations and bonding curves. Be extremely
-     *          careful with user-supplied exponents as they can easily cause DoS through
-     *          gas exhaustion (large exponents) or overflows.
+     * careful with user-supplied exponents as they can easily cause DoS through
+     * gas exhaustion (large exponents) or overflows.
      *
      * @remarks
      * - Uses binary exponentiation (square-and-multiply) for O(log n) efficiency
@@ -796,21 +769,24 @@ export class SafeMath {
      * - Gas cost increases with exponent bit count
      */
     public static pow(base: u256, exponent: u256): u256 {
-        if (exponent.isZero()) return u256.One;
+        if (exponent.isZero()) return SafeMath.ONE;
         if (base.isZero()) return u256.Zero;
-        if (u256.eq(base, u256.One)) return u256.One;
+        if (u256.eq(base, SafeMath.ONE)) return SafeMath.ONE;
 
-        let result: u256 = u256.One;
-        while (u256.gt(exponent, u256.Zero)) {
-            if (u256.ne(u256.and(exponent, u256.One), u256.Zero)) {
-                result = SafeMath.mul(result, base);
+        let result: u256 = SafeMath.ONE;
+        let b = base;
+        let e = exponent;
+
+        while (u256.gt(e, u256.Zero)) {
+            // Check LSB using bitwise for speed
+            if ((e.lo1 & 1) != 0) {
+                result = SafeMath.mul(result, b);
             }
 
-            exponent = u256.shr(exponent, 1);
+            e = u256.shr(e, 1);
 
-            // Only square the base if there are more bits to process
-            if (u256.gt(exponent, u256.Zero)) {
-                base = SafeMath.mul(base, base);
+            if (u256.gt(e, u256.Zero)) {
+                b = SafeMath.mul(b, b);
             }
         }
         return result;
@@ -830,8 +806,8 @@ export class SafeMath {
      * ```
      *
      * @security Commonly used for token decimal scaling. Ensure exponent values
-     *          come from trusted sources (e.g., immutable token decimals) rather
-     *          than user input to prevent reverts.
+     * come from trusted sources (e.g., immutable token decimals) rather
+     * than user input to prevent reverts.
      *
      * @remarks
      * - Optimized specifically for base 10 calculations
@@ -844,11 +820,9 @@ export class SafeMath {
             throw new Revert('SafeMath: exponent too large, would overflow');
         }
 
-        const ten = u256.fromU32(10);
-
-        let result: u256 = u256.One;
+        let result: u256 = SafeMath.ONE;
         for (let i: u8 = 0; i < exponent; i++) {
-            result = SafeMath.mul(result, ten);
+            result = SafeMath.mul(result, SafeMath.CONST_10);
         }
         return result;
     }
@@ -941,7 +915,7 @@ export class SafeMath {
      */
     @inline
     public static isEven(a: u256): bool {
-        return u256.and(a, u256.One) == u256.Zero;
+        return (a.lo1 & 1) == 0;
     }
 
     /**
@@ -952,7 +926,7 @@ export class SafeMath {
      * @throws {Revert} When value equals u256.Max (would overflow)
      *
      * @warning At u256.Max, incrementing would wrap to 0. This function throws
-     *          instead to prevent silent wraparound errors.
+     * instead to prevent silent wraparound errors.
      *
      * @remarks
      * - Equivalent to add(value, 1) but potentially more efficient
@@ -973,14 +947,14 @@ export class SafeMath {
      * @throws {Revert} When value equals 0 (would underflow)
      *
      * @warning At 0, decrementing would wrap to u256.Max. This function throws
-     *          instead to prevent silent wraparound errors.
+     * instead to prevent silent wraparound errors.
      *
      * @remarks
      * - Equivalent to sub(value, 1) but potentially more efficient
      * - Safe against underflow at zero
      */
     public static dec(value: u256): u256 {
-        if (u256.eq(value, u256.Zero)) {
+        if (value.isZero()) {
             throw new Revert('SafeMath: decrement underflow');
         }
         return value.preDec();
@@ -1002,15 +976,15 @@ export class SafeMath {
      * ```
      *
      * @warning Returns 0 for both input 0 and input 1. While log2(0) is mathematically
-     *          undefined and log2(1) = 0, this implementation returns 0 for both cases
-     *          to avoid reverts and maintain gas efficiency in smart contracts. Callers
-     *          requiring mathematical precision should handle these edge cases explicitly.
+     * undefined and log2(1) = 0, this implementation returns 0 for both cases
+     * to avoid reverts and maintain gas efficiency in smart contracts. Callers
+     * requiring mathematical precision should handle these edge cases explicitly.
      *
      * @security Extensively tested for monotonicity and consistency. Critical for:
-     *          - Binary search algorithms in sorted data structures
-     *          - Bit manipulation operations requiring position of highest bit
-     *          - Rough categorization of value magnitudes in O(1) time
-     *          - Efficient range checks in permission systems
+     * - Binary search algorithms in sorted data structures
+     * - Bit manipulation operations requiring position of highest bit
+     * - Rough categorization of value magnitudes in O(1) time
+     * - Efficient range checks in permission systems
      *
      * @remarks
      * - Returns the position of the highest set bit (MSB)
@@ -1021,16 +995,9 @@ export class SafeMath {
      * - More efficient than preciseLog when exact precision isn't needed
      */
     public static approximateLog2(x: u256): u256 {
-        // Count the position of the highest bit set
-        let n: u256 = u256.Zero;
-        let value = x;
-
-        while (u256.gt(value, u256.One)) {
-            value = u256.shr(value, 1);
-            n = SafeMath.add(n, u256.One);
-        }
-
-        return n;
+        const bitLen = SafeMath.bitLength256(x);
+        if (bitLen == 0) return u256.Zero;
+        return u256.fromU32(bitLen - 1);
     }
 
     /**
@@ -1052,18 +1019,18 @@ export class SafeMath {
      * ```
      *
      * @warning This function has been extensively tested and validated for accuracy.
-     *          The maximum error is bounded to 6 units (0.000006) across the entire
-     *          input domain. While the implementation is production-ready, extreme
-     *          values near u256 boundaries may experience precision degradation due
-     *          to the limitations of integer arithmetic at such scales.
+     * The maximum error is bounded to 6 units (0.000006) across the entire
+     * input domain. While the implementation is production-ready, extreme
+     * values near u256 boundaries may experience precision degradation due
+     * to the limitations of integer arithmetic at such scales.
      *
      * @security Critical for DeFi applications including:
-     *          - Automated Market Makers (AMMs) for price calculations
-     *          - Interest rate models in lending protocols
-     *          - Option pricing using Black-Scholes formulas
-     *          - Bonding curve calculations
-     *          Incorrect logarithm calculations can lead to severe mispricing,
-     *          arbitrage opportunities, or protocol insolvency.
+     * - Automated Market Makers (AMMs) for price calculations
+     * - Interest rate models in lending protocols
+     * - Option pricing using Black-Scholes formulas
+     * - Bonding curve calculations
+     * Incorrect logarithm calculations can lead to severe mispricing,
+     * arbitrage opportunities, or protocol insolvency.
      *
      * @remarks
      * - Algorithm: Decomposes x = 2^k * (1 + r) where 0 ≤ r < 1
@@ -1076,7 +1043,7 @@ export class SafeMath {
      * - Monotonicity guaranteed across entire input range
      */
     public static preciseLog(x: u256): u256 {
-        if (x.isZero() || u256.eq(x, u256.One)) {
+        if (x.isZero() || u256.eq(x, SafeMath.ONE)) {
             return u256.Zero;
         }
 
@@ -1085,28 +1052,23 @@ export class SafeMath {
             return u256.Zero;
         }
 
-        // integer part of log2(x)
         const k: u32 = bitLen - 1;
-        const LN2_SCALED = u256.fromU64(693147); // ln(2)*1e6
-        const base: u256 = SafeMath.mul(u256.fromU32(k), LN2_SCALED);
+        const base: u256 = SafeMath.mul(u256.fromU32(k), u256.fromU64(SafeMath.LN2_SCALED));
 
-        // 2^k
-        const pow2k = SafeMath.shl(u256.One, <i32>k);
+        const pow2k = SafeMath.shl(SafeMath.ONE, <i32>k);
         const xPrime = SafeMath.sub(x, pow2k);
 
         if (xPrime.isZero()) {
             return base;
         }
 
-        // rScaled = ((x - 2^k)*1e6)/2^k
-        const xPrimeTimes1e6 = SafeMath.mul(xPrime, u256.fromU64(1_000_000));
+        const xPrimeTimes1e6 = SafeMath.mul(xPrime, u256.fromU64(SafeMath.SCALE_1E6));
         const rScaled = SafeMath.div(xPrimeTimes1e6, pow2k);
 
         if (u256.gt(rScaled, u256.fromU64(u64.MAX_VALUE))) {
             throw new Revert('SafeMath: rScaled overflow, input too large');
         }
 
-        // approximate ln(1 + r)
         const frac: u64 = SafeMath.polyLn1p3(rScaled.toU64());
 
         return SafeMath.add(base, u256.fromU64(frac));
@@ -1127,15 +1089,15 @@ export class SafeMath {
      * ```
      *
      * @warning Uses step-wise approximation based on bit length. The result has
-     *          discrete jumps at powers of 2, with constant values between them.
-     *          Maximum error is ln(2) ≈ 0.693 (scaled: 693,147). For smooth,
-     *          continuous logarithm curves required in pricing models, use preciseLog.
+     * discrete jumps at powers of 2, with constant values between them.
+     * Maximum error is ln(2) ≈ 0.693 (scaled: 693,147). For smooth,
+     * continuous logarithm curves required in pricing models, use preciseLog.
      *
      * @security Suitable for applications where monotonicity matters more than precision:
-     *          - Rough categorization of token amounts
-     *          - Tier-based reward systems
-     *          - Quick magnitude comparisons
-     *          Not recommended for precise financial calculations or smooth curves.
+     * - Rough categorization of token amounts
+     * - Tier-based reward systems
+     * - Quick magnitude comparisons
+     * Not recommended for precise financial calculations or smooth curves.
      *
      * @remarks
      * - Algorithm: ln(x) ≈ (bitLength(x) - 1) * ln(2)
@@ -1146,7 +1108,7 @@ export class SafeMath {
      * - Monotonically non-decreasing (required for security)
      */
     public static approxLog(x: u256): u256 {
-        if (x.isZero() || u256.eq(x, u256.One)) {
+        if (x.isZero() || u256.eq(x, SafeMath.ONE)) {
             return u256.Zero;
         }
 
@@ -1155,10 +1117,9 @@ export class SafeMath {
             return u256.Zero;
         }
 
-        const LN2_SCALED: u64 = 693147; // ln(2)*1e6
         const log2Count: u64 = (bitLen - 1) as u64;
 
-        return SafeMath.mul(u256.fromU64(log2Count), u256.fromU64(LN2_SCALED));
+        return SafeMath.mul(u256.fromU64(log2Count), u256.fromU64(SafeMath.LN2_SCALED));
     }
 
     /**
@@ -1176,13 +1137,13 @@ export class SafeMath {
      * ```
      *
      * @warning Returns 0 for input 0, which technically requires 0 bits to represent.
-     *          This differs from some implementations that might return 1 for consistency.
+     * This differs from some implementations that might return 1 for consistency.
      *
      * @security Validated across all u256 segment boundaries. Used internally for:
-     *          - Logarithm calculations (bitLength = floor(log2(x)) + 1 for x > 0)
-     *          - Efficient range determination in binary operations
-     *          - Gas optimization by determining operation complexity
-     *          - Overflow prediction in multiplication/exponentiation
+     * - Logarithm calculations (bitLength = floor(log2(x)) + 1 for x > 0)
+     * - Efficient range determination in binary operations
+     * - Gas optimization by determining operation complexity
+     * - Overflow prediction in multiplication/exponentiation
      *
      * @remarks
      * - Handles values across all four u64 segments of u256
@@ -1193,26 +1154,13 @@ export class SafeMath {
      * - Relationship: bitLength(x) = approximateLog2(x) + 1 for x > 1
      */
     public static bitLength256(x: u256): u32 {
-        if (u256.eq(x, u256.Zero)) {
-            return 0;
-        }
-
-        if (x.hi2 != 0) {
-            const partial: u32 = SafeMath.bitLength64(x.hi2);
-            return 192 + partial;
-        }
-
-        if (x.hi1 != 0) {
-            const partial: u32 = SafeMath.bitLength64(x.hi1);
-            return 128 + partial;
-        }
-
-        if (x.lo2 != 0) {
-            const partial: u32 = SafeMath.bitLength64(x.lo2);
-            return 64 + partial;
-        }
-
-        return SafeMath.bitLength64(x.lo1);
+        // GAS OPTIMIZATION: Use clz intrinsic to find MSB in 1 instruction.
+        // Must explicit cast result to u32 for subtraction logic.
+        if (x.hi2 != 0) return 256 - <u32>clz(x.hi2);
+        if (x.hi1 != 0) return 192 - <u32>clz(x.hi1);
+        if (x.lo2 != 0) return 128 - <u32>clz(x.lo2);
+        if (x.lo1 != 0) return 64 - <u32>clz(x.lo1);
+        return 0;
     }
 
     /**
@@ -1236,18 +1184,18 @@ export class SafeMath {
      * ```
      *
      * @warning This function is optimized for internal use by preciseLog and requires
-     *          understanding of fixed-point arithmetic. The input uses a scaling factor
-     *          of 10^6, meaning rScaled=500000 represents z=0.5. Input must be strictly
-     *          less than 1,000,000 to represent valid z values in [0,1). Direct usage
-     *          outside of the logarithm calculation pipeline requires careful attention
-     *          to scaling conventions.
+     * understanding of fixed-point arithmetic. The input uses a scaling factor
+     * of 10^6, meaning rScaled=500000 represents z=0.5. Input must be strictly
+     * less than 1,000,000 to represent valid z values in [0,1). Direct usage
+     * outside of the logarithm calculation pipeline requires careful attention
+     * to scaling conventions.
      *
      * @security The algorithm uses integer arithmetic throughout to avoid
-     *          floating-point vulnerabilities. All intermediate calculations
-     *          are designed to prevent overflow: maximum intermediate value
-     *          is approximately 1.11×10^11, well below u64.Max (≈1.84×10^19).
-     *          This ensures deterministic, reproducible results critical for
-     *          consensus in blockchain applications.
+     * floating-point vulnerabilities. All intermediate calculations
+     * are designed to prevent overflow: maximum intermediate value
+     * is approximately 1.11×10^11, well below u64.Max (≈1.84×10^19).
+     * This ensures deterministic, reproducible results critical for
+     * consensus in blockchain applications.
      *
      * @remarks
      * Algorithm details:
@@ -1266,18 +1214,15 @@ export class SafeMath {
      * - All divisions use banker's rounding via (numerator + divisor/2) / divisor
      */
     public static polyLn1p3(rScaled: u64): u64 {
-        // Input validation: ensure we're in valid range [0, 1000000)
-        if (rScaled >= 1_000_000) {
+        if (rScaled >= SafeMath.SCALE_1E6) {
             throw new Revert('SafeMath.polyLn1p3: input out of range');
         }
 
-        // Handle the zero case explicitly
         if (rScaled == 0) {
             return 0;
         }
 
-        // Constants
-        const SCALE: u64 = 1_000_000;
+        const SCALE: u64 = SafeMath.SCALE_1E6;
         const HALF_SCALE: u64 = 500_000;
 
         // Compute w = z / (2 + z)
@@ -1308,54 +1253,12 @@ export class SafeMath {
 
     /**
      * @internal
-     * Calculates bit length of a u64 value.
-     * Used internally by bitLength256 for individual segment processing.
-     */
-    private static bitLength64(value: u64): u32 {
-        if (value == 0) return 0;
-
-        let count: u32 = 0;
-        let temp = value;
-        while (temp > 0) {
-            temp >>>= 1;
-            count++;
-        }
-        return count;
-    }
-
-    /**
-     * @internal
-     * Helper for shift operations across word boundaries.
-     */
-    private static shlSegment(
-        segments: u64[],
-        segmentShift: i32,
-        bitShift: i32,
-        bitsPerSegment: i32,
-        fillCount: u8,
-    ): u64[] {
-        const result = new Array<u64>(fillCount).fill(0);
-
-        for (let i = 0; i < segments.length; i++) {
-            if (i + segmentShift < segments.length) {
-                result[i + segmentShift] |= segments[i] << bitShift;
-            }
-            if (bitShift != 0 && i + segmentShift + 1 < segments.length) {
-                result[i + segmentShift + 1] |= segments[i] >>> (bitsPerSegment - bitShift);
-            }
-        }
-
-        return result;
-    }
-
-    /**
-     * @internal
      * Modular addition helper that prevents overflow.
      * Pre-condition: 0 <= x,y < m
      */
     private static addModNoCarry(x: u256, y: u256, m: u256): u256 {
-        const mMinusY = SafeMath.sub(m, y);
-        return u256.ge(x, mMinusY) ? SafeMath.sub(x, mMinusY) : SafeMath.add(x, y);
+        const mMinusY = u256.sub(m, y);
+        return u256.ge(x, mMinusY) ? u256.sub(x, mMinusY) : u256.add(x, y);
     }
 
     /**
@@ -1364,7 +1267,7 @@ export class SafeMath {
      * Pre-condition: 0 <= x < m
      */
     private static doubleModNoCarry(x: u256, m: u256): u256 {
-        const mMinusX = SafeMath.sub(m, x);
-        return u256.ge(x, mMinusX) ? SafeMath.sub(x, mMinusX) : SafeMath.add(x, x);
+        const mMinusX = u256.sub(m, x);
+        return u256.ge(x, mMinusX) ? u256.sub(x, mMinusX) : u256.add(x, x);
     }
 }
