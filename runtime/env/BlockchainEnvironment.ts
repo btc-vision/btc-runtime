@@ -499,7 +499,7 @@ export class BlockchainEnvironment {
         // Write type string
         String.UTF8.encodeUnsafe(changetype<usize>(eventType), eventType.length, ptr + 4);
 
-        // Write data length (LE)
+        // Write data length (BE)
         const offset = 4 + typeLen;
         store<u32>(ptr + offset, bswap<u32>(data.length));
 

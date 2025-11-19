@@ -73,7 +73,7 @@ export abstract class StoredPackedArray<T> {
 
     @inline
     public get previousOffset(): u32 {
-        // Optimization: Conditional subtraction logic logic is cleaner for gas,
+        // Optimization: Conditional subtraction logic is cleaner for gas,
         // but keeping modulo here for safety on the offset calculation logic.
         const offset = this.nextItemOffset === 0 ? this.nextItemOffset : this.nextItemOffset - 1;
         let val = <u64>this._startIndex + <u64>offset;
@@ -208,10 +208,7 @@ export abstract class StoredPackedArray<T> {
 
         // Optimization: Conditional subtraction instead of Modulo
         this._startIndex += this.nextItemOffset;
-        if (this._startIndex >= this.MAX_LENGTH) {
-            // Fallback to modulo only if we somehow overshoot massively (rare)
-            this._startIndex %= this.MAX_LENGTH;
-        }
+        this._startIndex %= this.MAX_LENGTH;
 
         this._isChangedStartIndex = true;
         this.nextItemOffset = 0;
@@ -562,9 +559,7 @@ export abstract class StoredPackedArray<T> {
         const start: u32 = isPhysical ? 0 : this._startIndex;
         let realIndex: u32 = start + index;
 
-        if (realIndex >= maxLength) {
-            realIndex -= maxLength;
-        }
+        realIndex %= maxLength;
 
         return realIndex;
     }

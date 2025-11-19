@@ -131,6 +131,8 @@ export class AddressMap<V> implements IMap<Address, V> {
         this._keys.splice(index, 1);
         this._values.splice(index, 1);
 
+        this._lastIndex = -1;
+
         return true;
     }
 
