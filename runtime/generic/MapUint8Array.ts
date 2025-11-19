@@ -7,15 +7,9 @@ import { IMap } from './Map';
  */
 @inline
 export function eqUint(data: Uint8Array, data2: Uint8Array): bool {
-    const len = data.length;
-    if (len !== data2.length) return false;
-
-    // Direct memory comparison via pointers
-    return memory.compare(
-        changetype<usize>(data.buffer),
-        changetype<usize>(data2.buffer),
-        len
-    ) === 0;
+    if (data.length !== data2.length) return false;
+    // CRITICAL: Use .dataStart to compare actual bytes, NOT object headers (.buffer)
+    return memory.compare(data.dataStart, data2.dataStart, data.length) === 0;
 }
 
 @final
@@ -58,21 +52,18 @@ export class MapUint8Array implements IMap<Uint8Array, Uint8Array> {
      */
     public indexOf(pointerHash: Uint8Array): i32 {
         const len = this._keys.length;
-        const ptrHashLen = pointerHash.length;
-        const ptrHashBuffer = changetype<usize>(pointerHash.buffer);
+        const ptrLen = pointerHash.length;
+        // Get raw data pointer once to avoid property access in loop
+        const ptrData = pointerHash.dataStart;
 
         for (let i: i32 = 0; i < len; i++) {
             const key = unchecked(this._keys[i]);
 
             // Fast fail on length mismatch
-            if (key.length !== ptrHashLen) continue;
+            if (key.length !== ptrLen) continue;
 
-            // Intrinsic memory compare
-            if (memory.compare(
-                changetype<usize>(key.buffer),
-                ptrHashBuffer,
-                ptrHashLen
-            ) === 0) {
+            // Intrinsic memory compare on data payload
+            if (memory.compare(key.dataStart, ptrData, ptrLen) === 0) {
                 return i;
             }
         }
@@ -127,10 +118,7 @@ export class MapUint8Array implements IMap<Uint8Array, Uint8Array> {
     }
 
     public toString(): string {
-        if (this._keys.length === 0) return "";
-
-        // Avoid string concatenation in loop (gas killer).
-        // Only used for debug usually, but implementation provided for safety.
         return `Map(size=${this._keys.length})`;
     }
 }
+
