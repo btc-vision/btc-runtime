@@ -50,13 +50,9 @@ export class CallResult {
     ) {}
 }
 
-const SCRATCH_SIZE: i32 = 512;
+const SCRATCH_SIZE: i32 = 256;
 const SCRATCH_BUF: ArrayBuffer = new ArrayBuffer(SCRATCH_SIZE);
-
 const SCRATCH_VIEW: Uint8Array = Uint8Array.wrap(SCRATCH_BUF);
-
-const RESULT_LEN_BUF: ArrayBuffer = new ArrayBuffer(32);
-const RESULT_LEN_VIEW: Uint32Array = Uint32Array.wrap(RESULT_LEN_BUF);
 
 const FOUR_BYTES_UINT8ARRAY_MEMORY_CACHE = new Uint8Array(4);
 
