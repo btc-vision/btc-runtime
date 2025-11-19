@@ -140,17 +140,26 @@ export class MapUint8Array implements IMap<Uint8Array, Uint8Array> {
 
         // Swap and Pop (O(1) delete)
         if (index !== lastIndex) {
+            // Move last element to the deleted position
             unchecked((this._keys[index] = this._keys[lastIndex]));
             unchecked((this._values[index] = this._values[lastIndex]));
 
-            // Invalidate cache if we moved data around in a way that confuses it
+            // Update cache based on what was affected
             if (this._lastIndex === lastIndex) {
+                // Cache pointed to last element, which moved to 'index'
                 this._lastIndex = index;
             } else if (this._lastIndex === index) {
+                // Cache pointed to deleted element, invalidate it
                 this._lastIndex = -1;
             }
+            // Note: If cache points to any other index, it remains valid
+            // because swap-and-pop only modifies positions 'index' and 'lastIndex'
         } else {
-            if (this._lastIndex === lastIndex) this._lastIndex = -1;
+            // Deleting the last element (no swap needed)
+            if (this._lastIndex === lastIndex) {
+                this._lastIndex = -1;
+            }
+            // If cache points to any earlier index, it remains valid
         }
 
         this._keys.pop();
