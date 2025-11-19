@@ -39,6 +39,7 @@ import {
     OP721_APPROVAL_FOR_ALL_TYPE_HASH,
     OP721_APPROVAL_TYPE_HASH,
 } from '../constants/Exports';
+import { ExtendedAddress } from '../types/ExtendedAddress';
 
 const stringPointer: u16 = Blockchain.nextPointer;
 const totalSupplyPointer: u16 = Blockchain.nextPointer;
@@ -395,7 +396,8 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     }
 
     @method(
-        { name: 'owner', type: ABIDataTypes.ADDRESS },
+        { name: 'owner', type: ABIDataTypes.BYTES32 },
+        { name: 'ownerTweakedPublicKey', type: ABIDataTypes.BYTES32 },
         { name: 'operator', type: ABIDataTypes.ADDRESS },
         { name: 'tokenId', type: ABIDataTypes.UINT256 },
         { name: 'deadline', type: ABIDataTypes.UINT64 },
@@ -403,7 +405,11 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     )
     @emit('Approved')
     public approveBySignature(calldata: Calldata): BytesWriter {
-        const owner = calldata.readAddress();
+        const ownerAddress = calldata.readBytesArray(ADDRESS_BYTE_LENGTH);
+        const ownerTweakedPublicKey = calldata.readBytesArray(ADDRESS_BYTE_LENGTH);
+
+        const owner = new ExtendedAddress(ownerTweakedPublicKey, ownerAddress);
+
         const operator = calldata.readAddress();
         const tokenId = calldata.readU256();
         const deadline = calldata.readU64();
@@ -421,7 +427,8 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     }
 
     @method(
-        { name: 'owner', type: ABIDataTypes.ADDRESS },
+        { name: 'owner', type: ABIDataTypes.BYTES32 },
+        { name: 'ownerTweakedPublicKey', type: ABIDataTypes.BYTES32 },
         { name: 'operator', type: ABIDataTypes.ADDRESS },
         { name: 'approved', type: ABIDataTypes.BOOL },
         { name: 'deadline', type: ABIDataTypes.UINT64 },
@@ -429,7 +436,11 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     )
     @emit('Approved')
     public setApprovalForAllBySignature(calldata: Calldata): BytesWriter {
-        const owner = calldata.readAddress();
+        const ownerAddress = calldata.readBytesArray(ADDRESS_BYTE_LENGTH);
+        const ownerTweakedPublicKey = calldata.readBytesArray(ADDRESS_BYTE_LENGTH);
+
+        const owner = new ExtendedAddress(ownerTweakedPublicKey, ownerAddress);
+
         const operator = calldata.readAddress();
         const approved = calldata.readBoolean();
         const deadline = calldata.readU64();
@@ -784,7 +795,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     }
 
     protected _verifyApproveSignature(
-        owner: Address,
+        owner: ExtendedAddress,
         spender: Address,
         tokenId: u256,
         deadline: u64,
@@ -814,7 +825,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     }
 
     protected _verifySetApprovalForAllSignature(
-        owner: Address,
+        owner: ExtendedAddress,
         spender: Address,
         approved: boolean,
         deadline: u64,
@@ -845,7 +856,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
 
     protected _verifySignature(
         structHash: Uint8Array,
-        owner: Address,
+        owner: ExtendedAddress,
         signature: Uint8Array,
         nonce: u256,
     ): void {
@@ -856,7 +867,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
 
         const hash = sha256(messageWriter.getBuffer());
 
-        if (!Blockchain.verifySchnorrSignature(owner, signature, hash)) {
+        if (!Blockchain.verifySignature(owner, signature, hash)) {
             throw new Revert('Invalid signature');
         }
 
