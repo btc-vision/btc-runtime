@@ -1,8 +1,8 @@
-import { Blockchain } from '../env';
-import { encodePointer } from '../math/abi';
-import { Address } from '../types/Address';
-import { EMPTY_POINTER } from '../math/bytes';
-import { eqUint } from '../generic/MapUint8Array';
+import {Blockchain} from '../env';
+import {encodePointer} from '../math/abi';
+import {Address} from '../types/Address';
+import {EMPTY_POINTER} from '../math/bytes';
+import {eqUint} from '../generic/MapUint8Array';
 
 /**
  * Default is Address.dead();
@@ -15,7 +15,7 @@ export class StoredAddress {
         this.addressPointer = encodePointer(pointer, EMPTY_POINTER, true, 'StoredAddress');
     }
 
-    private _value: Address = Address.dead();
+    private _value: Address = Address.zero();
 
     public get value(): Address {
         this.ensureValue();
@@ -34,7 +34,7 @@ export class StoredAddress {
     }
 
     public isDead(): bool {
-        return eqUint(Address.dead(), this.value);
+        return eqUint(Address.zero(), this.value);
     }
 
     private ensureValue(): void {
