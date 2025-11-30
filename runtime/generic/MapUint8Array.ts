@@ -33,7 +33,7 @@ export class MapUint8Array implements IMap<Uint8Array, Uint8Array> {
         return this._values;
     }
 
-    public copy():MapUint8Array {
+    public copy(): MapUint8Array {
         const copy = new MapUint8Array();
 
         for (let i = 0; i < this._keys.length; i++) {
