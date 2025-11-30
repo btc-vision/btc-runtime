@@ -43,6 +43,7 @@ import {
 import { IOP20 } from './interfaces/IOP20';
 import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { ReentrancyGuard, ReentrancyLevel } from './ReentrancyGuard';
+import { ExtendedAddress } from '../types/ExtendedAddress';
 
 const nonceMapPointer: u16 = Blockchain.nextPointer;
 const maxSupplyPointer: u16 = Blockchain.nextPointer;
@@ -486,7 +487,8 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
      * Uses Schnorr signatures now, will support ML-DSA after quantum transition.
      */
     @method(
-        { name: 'owner', type: ABIDataTypes.ADDRESS },
+        { name: 'owner', type: ABIDataTypes.BYTES32 },
+        { name: 'ownerTweakedPublicKey', type: ABIDataTypes.BYTES32 },
         { name: 'spender', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
         { name: 'deadline', type: ABIDataTypes.UINT64 },
@@ -494,7 +496,11 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
     )
     @emit('Approved')
     public increaseAllowanceBySignature(calldata: Calldata): BytesWriter {
-        const owner: Address = calldata.readAddress();
+        const ownerAddress = calldata.readBytesArray(ADDRESS_BYTE_LENGTH);
+        const ownerTweakedPublicKey = calldata.readBytesArray(ADDRESS_BYTE_LENGTH);
+
+        const owner = new ExtendedAddress(ownerTweakedPublicKey, ownerAddress);
+
         const spender: Address = calldata.readAddress();
         const amount: u256 = calldata.readU256();
         const deadline: u64 = calldata.readU64();
@@ -513,7 +519,8 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
      * @throws {Revert} If signature is invalid or expired
      */
     @method(
-        { name: 'owner', type: ABIDataTypes.ADDRESS },
+        { name: 'owner', type: ABIDataTypes.BYTES32 },
+        { name: 'ownerTweakedPublicKey', type: ABIDataTypes.BYTES32 },
         { name: 'spender', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
         { name: 'deadline', type: ABIDataTypes.UINT64 },
@@ -521,7 +528,11 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
     )
     @emit('Approved')
     public decreaseAllowanceBySignature(calldata: Calldata): BytesWriter {
-        const owner: Address = calldata.readAddress();
+        const ownerAddress = calldata.readBytesArray(ADDRESS_BYTE_LENGTH);
+        const ownerTweakedPublicKey = calldata.readBytesArray(ADDRESS_BYTE_LENGTH);
+
+        const owner = new ExtendedAddress(ownerTweakedPublicKey, ownerAddress);
+
         const spender: Address = calldata.readAddress();
         const amount: u256 = calldata.readU256();
         const deadline: u64 = calldata.readU64();
@@ -714,7 +725,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
      * @protected
      */
     protected _increaseAllowanceBySignature(
-        owner: Address,
+        owner: ExtendedAddress,
         spender: Address,
         amount: u256,
         deadline: u64,
@@ -760,7 +771,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
      * @protected
      */
     protected _decreaseAllowanceBySignature(
-        owner: Address,
+        owner: ExtendedAddress,
         spender: Address,
         amount: u256,
         deadline: u64,
@@ -783,7 +794,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
      */
     protected _verifySignature(
         typeHash: u8[],
-        owner: Address,
+        owner: ExtendedAddress,
         spender: Address,
         amount: u256,
         deadline: u64,
@@ -817,7 +828,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
 
         const hash = sha256(messageWriter.getBuffer());
 
-        if (!Blockchain.verifySchnorrSignature(owner, signature, hash)) {
+        if (!Blockchain.verifySignature(owner, signature, hash)) {
             throw new Revert('Invalid signature');
         }
 

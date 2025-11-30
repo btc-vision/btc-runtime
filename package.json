@@ -1,6 +1,6 @@
 {
     "name": "@btc-vision/btc-runtime",
-    "version": "1.10.2",
+    "version": "1.10.5",
     "description": "Bitcoin Smart Contract Runtime",
     "main": "btc/index.ts",
     "scripts": {
@@ -44,7 +44,7 @@
     ],
     "dependencies": {
         "@assemblyscript/loader": "^0.28.9",
-        "@btc-vision/as-bignum": "^0.0.5",
+        "@btc-vision/as-bignum": "^0.0.6",
         "@btc-vision/opnet-transform": "^0.1.12",
         "@eslint/js": "9.39.1",
         "gulplog": "^2.2.0",

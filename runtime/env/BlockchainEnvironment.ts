@@ -26,6 +26,7 @@ import { Network, Networks } from '../script/Networks';
 import { ExtendedAddress } from '../types/ExtendedAddress';
 import { SignaturesMethods } from './consensus/Signatures';
 import { MLDSAMetadata, MLDSASecurityLevel } from './consensus/MLDSAMetadata';
+import { AddressMap } from '../generic/AddressMap';
 
 export * from '../env/global';
 
@@ -39,6 +40,21 @@ export class CallResult {
         public readonly success: boolean,
         public readonly data: BytesReader,
     ) {}
+}
+
+const SCRATCH_SIZE: i32 = 256;
+const SCRATCH_BUF: ArrayBuffer = new ArrayBuffer(SCRATCH_SIZE);
+const SCRATCH_VIEW: Uint8Array = Uint8Array.wrap(SCRATCH_BUF);
+
+const FOUR_BYTES_UINT8ARRAY_MEMORY_CACHE = new Uint8Array(4);
+
+export class MockedCallResult {
+    constructor(
+        public readonly success: boolean,
+        public readonly response: Uint8Array
+    ) {
+
+    }
 }
 
 /**
@@ -62,7 +78,7 @@ export class BlockchainEnvironment {
     private _selfContract: Potential<OP_NET> = null;
     private _plugins: Plugin[] = [];
 
-    private _mockedCallResult: Uint8Array = new Uint8Array(1);
+    private _mockedCallResults: AddressMap<MockedCallResult> = new AddressMap();
     private _mockedValidateBitcoinAddressResult: bool = false;
     private _mockedDeployContractResponse: Address = new Address();
     private _mockedVerifySchnorrSignature: boolean = false;
@@ -289,9 +305,10 @@ export class BlockchainEnvironment {
      * Called once during deployment. State changes here are permanent.
      */
     public onDeployment(calldata: Calldata): void {
-        for (let i: i32 = 0; i < this._plugins.length; i++) {
-            const plugin = this._plugins[i];
-            plugin.onDeployment(calldata);
+        const len = this._plugins.length;
+        for (let i: i32 = 0; i < len; i++) {
+            // Unchecked access for speed
+            unchecked(this._plugins[i].onDeployment(calldata));
         }
         this.contract.onDeployment(calldata);
     }
@@ -306,9 +323,9 @@ export class BlockchainEnvironment {
      * Used for access control, reentrancy guards, and validation.
      */
     public onExecutionStarted(selector: Selector, calldata: Calldata): void {
-        for (let i: i32 = 0; i < this._plugins.length; i++) {
-            const plugin = this._plugins[i];
-            plugin.onExecutionStarted(selector, calldata);
+        const len = this._plugins.length;
+        for (let i: i32 = 0; i < len; i++) {
+            unchecked(this._plugins[i].onExecutionStarted(selector, calldata));
         }
         this.contract.onExecutionStarted(selector, calldata);
     }
@@ -323,23 +340,30 @@ export class BlockchainEnvironment {
      * Only called on successful execution. Used for cleanup and events.
      */
     public onExecutionCompleted(selector: Selector, calldata: Calldata): void {
-        for (let i: i32 = 0; i < this._plugins.length; i++) {
-            const plugin = this._plugins[i];
-            plugin.onExecutionCompleted(selector, calldata);
+        const len = this._plugins.length;
+        for (let i: i32 = 0; i < len; i++) {
+            unchecked(this._plugins[i].onExecutionCompleted(selector, calldata));
         }
         this.contract.onExecutionCompleted(selector, calldata);
     }
 
     public clearMockedResults(): void {
-        this._mockedCallResult = new Uint8Array(1);
+        this._mockedCallResults.clear();
         this._mockedValidateBitcoinAddressResult = false;
         this._mockedDeployContractResponse = new Address();
         this._mockedVerifySchnorrSignature = false;
         this._mockedOutputs = [];
     }
 
-    public mockCallResult(data: Uint8Array): void {
-        this._mockedCallResult = data;
+    public mockCallResult(destinationContract: Address, calldata: BytesWriter, success: boolean, data: Uint8Array): void {
+        const dataToHash = new BytesWriter(calldata.bufferLength() + ADDRESS_BYTE_LENGTH);
+        dataToHash.writeAddress(destinationContract);
+        dataToHash.writeBytes(calldata.getBuffer());
+
+        const hash: Uint8Array = sha256(dataToHash.getBuffer());
+        const fakeAddress = Address.fromUint8Array(hash);
+
+        this._mockedCallResults.set(fakeAddress, new MockedCallResult(success, data));
     }
 
     public mockValidateBitcoinAddressResult(result: bool): void {
@@ -420,6 +444,7 @@ export class BlockchainEnvironment {
      * Called automatically by the runtime to set up execution context.
      */
     public setEnvironmentVariables(data: Uint8Array): void {
+        // BytesReader is unavoidable for parsing complex external struct
         const reader: BytesReader = new BytesReader(data);
 
         const blockHash = reader.readBytes(32);
@@ -485,14 +510,32 @@ export class BlockchainEnvironment {
     public call(
         destinationContract: Address,
         calldata: BytesWriter,
-        stopExecutionOnFailure: boolean = true,
-        failOnPurpose: boolean = false,
+        stopExecutionOnFailure: boolean = true
     ): CallResult {
         if (!destinationContract) {
             throw new Revert('Destination contract is required');
         }
 
-        return new CallResult(failOnPurpose, new BytesReader(this._mockedCallResult));
+        const dataToHash = new BytesWriter(calldata.bufferLength() + ADDRESS_BYTE_LENGTH);
+        dataToHash.writeAddress(destinationContract);
+        dataToHash.writeBytes(calldata.getBuffer());
+
+        const hash: Uint8Array = sha256(dataToHash.getBuffer());
+        const fakeAddress = Address.fromUint8Array(hash);
+        const element = this._mockedCallResults.get(fakeAddress);
+
+        // By default, if not mocked, return success.
+        if(!element) {
+            return new CallResult(true, new BytesReader(new Uint8Array(1)));
+        }
+
+        if (stopExecutionOnFailure) {
+            if(!element.success) {
+                throw new Revert(`Execution reverted.`);
+            }
+        }
+
+        return new CallResult(element.success, new BytesReader(element.response));
     }
 
     /**
@@ -709,7 +752,7 @@ export class BlockchainEnvironment {
      * ```
      */
     public verifySchnorrSignature(
-        publicKey: Address,
+        publicKey: ExtendedAddress,
         signature: Uint8Array,
         hash: Uint8Array,
     ): boolean {
@@ -769,20 +812,15 @@ export class BlockchainEnvironment {
     ): boolean {
         const publicKeyLength = MLDSAMetadata.fromLevel(level);
         if (publicKey.length !== (publicKeyLength as i32)) {
-            throw new Revert(
-                `Invalid ML-DSA public key length. Expected ${publicKeyLength}, got ${publicKey.length}`,
-            );
+            throw new Revert(`Invalid ML-DSA public key length.`);
         }
 
-        const signatureLength = MLDSAMetadata.signatureLen(publicKeyLength);
-        if (signature.length !== signatureLength) {
-            throw new Revert(
-                `Invalid ML-DSA signature length. Expected ${signatureLength}, got ${signature.length}`,
-            );
+        if (signature.length !== MLDSAMetadata.signatureLen(publicKeyLength)) {
+            throw new Revert(`Invalid ML-DSA signature length.`);
         }
 
         if (hash.length !== 32) {
-            throw new Revert(`Invalid hash length. Expected 32, got ${hash.length}`);
+            throw new Revert(`Invalid hash length.`);
         }
 
         return this._mockedVerifySchnorrSignature;
@@ -848,7 +886,7 @@ export class BlockchainEnvironment {
      * ```
      */
     public verifySignature(
-        address: Address,
+        address: ExtendedAddress,
         signature: Uint8Array,
         hash: Uint8Array,
         forceMLDSA: boolean = false,
@@ -1005,17 +1043,17 @@ export class BlockchainEnvironment {
     }
 
     private internalVerifySchnorr(
-        publicKey: Address,
+        publicKey: ExtendedAddress,
         signature: Uint8Array,
         hash: Uint8Array,
     ): boolean {
-        if (signature.byteLength !== 64) {
-            throw new Revert(`Invalid signature length. Expected 64, got ${signature.length}`);
-        }
+        if (signature.length !== 64) throw new Revert(`Invalid signature length.`);
+        if (hash.length !== 32) throw new Revert(`Invalid hash length.`);
 
-        if (hash.byteLength !== 32) {
-            throw new Revert(`Invalid hash length. Expected 32, got ${hash.length}`);
-        }
+        // 1 byte prefix + 32 bytes address
+        const totalLen = 1 + ADDRESS_BYTE_LENGTH;
+        const buffer = new Uint8Array(totalLen);
+        const ptr = buffer.dataStart;
 
         return this._mockedVerifySchnorrSignature;
     }
@@ -1031,17 +1069,16 @@ export class BlockchainEnvironment {
     }
 
     private _internalSetStorageAt(pointerHash: Uint8Array, value: Uint8Array): void {
-        if (pointerHash.buffer.byteLength !== 32) {
+        if (pointerHash.length !== 32) {
             throw new Revert('Pointer must be 32 bytes long');
         }
 
         let finalValue: Uint8Array = value;
-        if (value.buffer.byteLength !== 32) {
-            // Auto-pad values shorter than 32 bytes
+        if (value.length !== 32) {
+            // Optimization: Pad manually using memory.copy to avoid loop
             finalValue = new Uint8Array(32);
-            for (let i = 0; i < value.buffer.byteLength && i < 32; i++) {
-                finalValue[i] = value[i];
-            }
+            const len = value.length < 32 ? value.length : 32;
+            memory.copy(finalValue.dataStart, value.dataStart, len);
         }
 
         this.storage.set(pointerHash, finalValue);
