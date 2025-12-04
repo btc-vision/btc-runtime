@@ -19,6 +19,7 @@ export * from './interfaces/IBTC';
 /** Events */
 export * from './events/NetEvent';
 export * from './events/predefined';
+export * from './events/op20s/OP20SEvents';
 
 /** Env */
 export * from './env/classes/UTXO';
