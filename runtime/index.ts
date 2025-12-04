@@ -55,6 +55,9 @@ export * from './secp256k1/ECPoint';
 
 /** Memory */
 export * from './memory/Nested';
+export * from './memory/MapOfMap';
+export * from './memory/KeyMerger';
+export * from './memory/AddressMemoryMap';
 
 /** Storage */
 export * from './storage/StoredU256';

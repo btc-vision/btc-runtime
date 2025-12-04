@@ -12,14 +12,12 @@ import { Revert } from '../types/Revert';
  * While this may appear to introduce collision risks, it is secure within the OP_NET
  * protocol context because:
  *
- * 1. All addresses in OP_NET are tweaked public keys (32-byte elliptic curve points)
+ * 1. All addresses in OP_NET are hashed public keys. SHA256(mldsaPublicKey)
  *
- * 2. Tweaked public keys are uniformly distributed across the secp256k1 curve space
- *
- * 3. Finding two public keys with identical 30-byte prefixes (240 bits) requires
+ * 2. Finding two public keys with identical 30-byte prefixes (240 bits) requires
  *    approximately 2^120 operations due to the birthday paradox
  *
- * 4. The probability of accidentally generating colliding addresses through normal
+ * 3. The probability of accidentally generating colliding addresses through normal
  *    key generation is cryptographically negligible
  *
  * The truncation from 32 to 30 bytes is a space optimization that does not
