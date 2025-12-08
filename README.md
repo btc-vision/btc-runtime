@@ -309,7 +309,7 @@ npm test
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE.md](./LICENSE.md) for details.
+This project is licensed under the Apache-2.0 License. See [LICENSE.md](./LICENSE.md) for details.
 
 ## Links
 
