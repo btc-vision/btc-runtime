@@ -1,36 +1,46 @@
 {
     "name": "@btc-vision/btc-runtime",
     "version": "1.10.10",
-    "description": "Bitcoin Smart Contract Runtime",
+    "description": "Bitcoin L1 Smart Contract Runtime for OPNet. Build decentralized applications on Bitcoin using AssemblyScript and WebAssembly. Fully audited.",
     "main": "btc/index.ts",
+    "types": "btc/index.ts",
+    "author": "OPNet <support@opnet.org>",
+    "license": "Apache-2.0",
+    "homepage": "https://opnet.org",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/btc-vision/btc-runtime.git"
+    },
+    "bugs": {
+        "url": "https://github.com/btc-vision/btc-runtime/issues"
+    },
+    "funding": {
+        "type": "github",
+        "url": "https://github.com/sponsors/btc-vision"
+    },
+    "keywords": [
+        "bitcoin",
+        "smart-contracts",
+        "blockchain",
+        "runtime",
+        "opnet",
+        "OP_NET",
+        "OP20",
+        "OP721",
+        "wasm",
+        "webassembly",
+        "assemblyscript",
+        "defi",
+        "tokens",
+        "nft",
+        "l1",
+        "layer1",
+        "deterministic",
+        "quantum-resistant"
+    ],
     "scripts": {
         "test": "asp --config as-pect.config.js --verbose --no-logo",
         "test:ci": "asp --config as-pect.config.js --summary --no-logo"
-    },
-    "types": "btc/index.ts",
-    "keywords": [
-        "bitcoin",
-        "smart",
-        "contract",
-        "runtime",
-        "opnet",
-        "OP_NET"
-    ],
-    "homepage": "https://opnet.org",
-    "author": "BlobMaster41",
-    "license": "MIT",
-    "devDependencies": {
-        "@btc-vision/as-covers-assembly": "^0.4.4",
-        "@btc-vision/as-covers-transform": "^0.4.4",
-        "@btc-vision/as-pect-assembly": "^8.2.0",
-        "@btc-vision/as-pect-cli": "^8.2.0",
-        "@btc-vision/as-pect-transform": "^8.2.0",
-        "@types/node": "^24.10.1",
-        "assemblyscript": "^0.28.9"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/btc-vision/btc-runtime"
     },
     "type": "module",
     "files": [
@@ -40,8 +50,14 @@
         "runtime/**/*.ts",
         "!**/*.js.map",
         "!**/*.tsbuildinfo",
-        "test/*.ts"
+        "README.md",
+        "SECURITY.md",
+        "LICENSE.md",
+        "docs"
     ],
+    "engines": {
+        "node": ">=22.0.0"
+    },
     "dependencies": {
         "@assemblyscript/loader": "^0.28.9",
         "@btc-vision/as-bignum": "^0.0.7",
@@ -51,5 +67,14 @@
         "ts-node": "^10.9.2",
         "typescript": "^5.9.3",
         "typescript-eslint": "^8.46.3"
+    },
+    "devDependencies": {
+        "@btc-vision/as-covers-assembly": "^0.4.4",
+        "@btc-vision/as-covers-transform": "^0.4.4",
+        "@btc-vision/as-pect-assembly": "^8.2.0",
+        "@btc-vision/as-pect-cli": "^8.2.0",
+        "@btc-vision/as-pect-transform": "^8.2.0",
+        "@types/node": "^24.10.1",
+        "assemblyscript": "^0.28.9"
     }
 }
