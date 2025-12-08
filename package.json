@@ -52,7 +52,7 @@
         "!**/*.tsbuildinfo",
         "README.md",
         "SECURITY.md",
-        "LICENSE.md",
+        "LICENSE",
         "docs"
     ],
     "engines": {
