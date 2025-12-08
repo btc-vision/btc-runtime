@@ -268,13 +268,13 @@ export class MyContract extends OP_NET {
 // mapping(address => uint256) balances;
 
 // OPNet: Explicit pointer allocation
-private
-balancePointer: u16 = Blockchain.nextPointer;
-private
-balances: AddressMemoryMap<Address, StoredU256> = new AddressMemoryMap(
-    this.balancePointer,
-    u256.Zero
-);
+class Test {
+    private balancePointer: u16 = Blockchain.nextPointer;
+    private balances: AddressMemoryMap<Address, StoredU256> = new AddressMemoryMap(
+        this.balancePointer,
+        u256.Zero
+    );
+}
 ```
 
 ### 3. Integer Types
