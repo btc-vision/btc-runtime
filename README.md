@@ -20,9 +20,10 @@ guarantees and decentralization properties while adding programmable smart contr
 
 > **What is OPNet?**
 >
-> OPNet (Open Protocol Network) is a smart contract platform built on Bitcoin L1. It allows developers to write smart
-> contracts in AssemblyScript that compile to WebAssembly (WASM) and execute deterministically across all network nodes.
-> Think of it as "Solidity for Bitcoin" - you get the programmability of Ethereum with the security of Bitcoin.
+> OPNet (Open Protocol Network) is a consensus-layer built on Bitcoin L1. It allows developers to write smart
+> contracts in AssemblyScript or similar that compile to WebAssembly (WASM) and execute deterministically across all
+> network nodes. Think of it as "Solidity for Bitcoin" - you get the programmability of Ethereum with the security of
+> Bitcoin.
 
 > **Why AssemblyScript?**
 >
@@ -35,8 +36,8 @@ guarantees and decentralization properties while adding programmable smart contr
 > **IMPORTANT: Floating-Point Arithmetic is Prohibited**
 >
 > Floating-point arithmetic (`f32`, `f64`) is **strictly prohibited** in blockchain and smart contract environments.
-> Floating-point operations are **non-deterministic** across different CPU architectures, compilers, and platforms due to
-> differences in rounding, precision, and IEEE 754 implementation details.
+> Floating-point operations are **non-deterministic** across different CPU architectures, compilers, and platforms due
+> to differences in rounding, precision, and IEEE 754 implementation details.
 >
 > **Always use integer arithmetic** (`u128`, `u256`) for all blockchain computations. For decimal values, use
 > fixed-point representation (e.g., store currency as smallest units like satoshis). This library provides full support
