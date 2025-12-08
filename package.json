@@ -1,6 +1,6 @@
 {
     "name": "@btc-vision/btc-runtime",
-    "version": "1.10.10",
+    "version": "1.10.11",
     "description": "Bitcoin L1 Smart Contract Runtime for OPNet. Build decentralized applications on Bitcoin using AssemblyScript and WebAssembly. Fully audited.",
     "main": "btc/index.ts",
     "types": "btc/index.ts",
