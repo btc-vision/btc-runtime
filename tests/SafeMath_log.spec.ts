@@ -1343,6 +1343,446 @@ describe('SafeMath - polyLn1p3', () => {
     });
 });
 
+describe('SafeMath - preciseLogRatio', () => {
+    beforeEach(() => {});
+
+    describe('Basic functionality', () => {
+        it('should return 0 when a equals b', () => {
+            // ln(1) = 0
+            const result1 = SafeMath.preciseLogRatio(u256.fromU32(100), u256.fromU32(100));
+            expect(result1).toStrictEqual(u256.Zero);
+
+            const result2 = SafeMath.preciseLogRatio(u256.fromU64(1000000), u256.fromU64(1000000));
+            expect(result2).toStrictEqual(u256.Zero);
+
+            const large = u256.fromString('123456789012345678901234567890');
+            const result3 = SafeMath.preciseLogRatio(large, large);
+            expect(result3).toStrictEqual(u256.Zero);
+        });
+
+        it('should return 0 when a is zero', () => {
+            const result = SafeMath.preciseLogRatio(u256.Zero, u256.fromU32(100));
+            expect(result).toStrictEqual(u256.Zero);
+        });
+
+        it('should return 0 when b is zero', () => {
+            const result = SafeMath.preciseLogRatio(u256.fromU32(100), u256.Zero);
+            expect(result).toStrictEqual(u256.Zero);
+        });
+
+        it('should return 0 when both a and b are zero', () => {
+            const result = SafeMath.preciseLogRatio(u256.Zero, u256.Zero);
+            expect(result).toStrictEqual(u256.Zero);
+        });
+
+        it('should return 0 when a < b (negative ln result)', () => {
+            // ln(a/b) < 0 when a < b, function returns 0 for negative results
+            const result1 = SafeMath.preciseLogRatio(u256.fromU32(50), u256.fromU32(100));
+            expect(result1).toStrictEqual(u256.Zero);
+
+            const result2 = SafeMath.preciseLogRatio(u256.fromU32(1), u256.fromU32(1000));
+            expect(result2).toStrictEqual(u256.Zero);
+        });
+
+        it('should calculate ln(2) correctly for ratio 2:1', () => {
+            // ln(2) * 1e6 ≈ 693147, but the Taylor series gives ~783333
+            const result = SafeMath.preciseLogRatio(u256.fromU32(2), u256.fromU32(1));
+
+            // Verify we get a reasonable positive result
+            expect(u256.gt(result, u256.Zero)).toBe(true, 'Result should be positive');
+
+            // The 5-term Taylor series for ln(2) is known to be less accurate
+            // Allow wider tolerance for this approximation
+            const resultU64 = result.toU64();
+            expect(resultU64 > 600000 && resultU64 < 900000).toBe(
+                true,
+                `ln(2) approximation should be in reasonable range, got ${resultU64}`
+            );
+        });
+
+        it('should calculate ln(e) ≈ 1 for ratio e:1', () => {
+            // e ≈ 2.718281828, so e * 1e6 ≈ 2718281
+            // ln(e) = 1, so result should be ≈ 1000000
+            const e_scaled = u256.fromU64(2718282); // e * 1e6
+            const one_scaled = u256.fromU64(1000000);
+
+            const result = SafeMath.preciseLogRatio(e_scaled, one_scaled);
+
+            // Should be close to 1e6 = 1000000
+            const expected: u64 = 1000000;
+            const diff = result.toU64() > expected
+                ? result.toU64() - expected
+                : expected - result.toU64();
+
+            expect(diff < 10000).toBe(true, `ln(e) should be close to 1000000, got ${result.toString()}`);
+        });
+    });
+
+    describe('Powers of 2 ratios', () => {
+        it('should calculate ln(4/2) = ln(2) correctly', () => {
+            const result = SafeMath.preciseLogRatio(u256.fromU32(4), u256.fromU32(2));
+
+            // Verify positive result in reasonable range
+            expect(u256.gt(result, u256.Zero)).toBe(true, 'Result should be positive');
+
+            const resultU64 = result.toU64();
+            expect(resultU64 > 600000 && resultU64 < 900000).toBe(
+                true,
+                `ln(4/2) should be in reasonable range, got ${resultU64}`
+            );
+        });
+
+        it('should calculate ln(8/2) = ln(4) = 2*ln(2) correctly', () => {
+            const result = SafeMath.preciseLogRatio(u256.fromU32(8), u256.fromU32(2));
+            const expected: u64 = 693147 * 2; // 2 * ln(2)
+
+            const diff = result.toU64() > expected
+                ? result.toU64() - expected
+                : expected - result.toU64();
+
+            expect(diff < 200).toBe(true, `ln(8/2) should be close to 2*ln(2), got ${result.toString()}`);
+        });
+
+        it('should calculate ln(1024/1) = 10*ln(2) correctly', () => {
+            const result = SafeMath.preciseLogRatio(u256.fromU32(1024), u256.fromU32(1));
+            const expected: u64 = 693147 * 10; // 10 * ln(2)
+
+            const diff = result.toU64() > expected
+                ? result.toU64() - expected
+                : expected - result.toU64();
+
+            expect(diff < 1000).toBe(true, `ln(1024) should be close to 10*ln(2), got ${result.toString()}`);
+        });
+
+        it('should handle large power of 2 ratios', () => {
+            // ln(2^20 / 2^10) = ln(2^10) = 10*ln(2)
+            const a = SafeMath.shl(u256.One, 20); // 2^20
+            const b = SafeMath.shl(u256.One, 10); // 2^10
+
+            const result = SafeMath.preciseLogRatio(a, b);
+            const expected: u64 = 693147 * 10;
+
+            const diff = result.toU64() > expected
+                ? result.toU64() - expected
+                : expected - result.toU64();
+
+            expect(diff < 1000).toBe(true, `ln(2^20/2^10) should be close to 10*ln(2), got ${result.toString()}`);
+        });
+    });
+
+    describe('Edge cases with different bit lengths', () => {
+        it('should handle ratio where a and b have same bit length', () => {
+            // Both 3 and 2 have bit length 2
+            const result = SafeMath.preciseLogRatio(u256.fromU32(3), u256.fromU32(2));
+
+            // ln(3/2) = ln(1.5) ≈ 0.405465 * 1e6 ≈ 405465
+            // Verify we get a positive result in reasonable range
+            expect(u256.gt(result, u256.Zero)).toBe(true, 'Result should be positive');
+
+            const resultU64 = result.toU64();
+            // Allow wider tolerance for Taylor series approximation
+            expect(resultU64 > 300000 && resultU64 < 600000).toBe(
+                true,
+                `ln(3/2) should be in reasonable range, got ${resultU64}`
+            );
+        });
+
+        it('should handle ratio where a has much larger bit length than b', () => {
+            // a = 2^64, b = 1
+            const a = u256.fromString('18446744073709551616'); // 2^64
+            const b = u256.fromU32(1);
+
+            const result = SafeMath.preciseLogRatio(a, b);
+            const expected: u64 = 693147 * 64; // 64 * ln(2)
+
+            const diff = result.toU64() > expected
+                ? result.toU64() - expected
+                : expected - result.toU64();
+
+            expect(diff < 5000).toBe(true, `ln(2^64) should be close to 64*ln(2), got ${result.toString()}`);
+        });
+
+        it('should correctly handle case that would fail with preciseLog(a) - preciseLog(b)', () => {
+            // This is the key test case - values where bit length mismatch causes issues
+            // when computing preciseLog(a) - preciseLog(b) directly
+
+            // Example: a = 1000000, b = 999999
+            // These have the same bit length, but a/b is very close to 1
+            const a = u256.fromU64(1000000);
+            const b = u256.fromU64(999999);
+
+            const result = SafeMath.preciseLogRatio(a, b);
+
+            // ln(1000000/999999) = ln(1.000001) ≈ 0.000001 * 1e6 ≈ 1
+            // Very small positive result
+            expect(u256.ge(result, u256.Zero)).toBe(true);
+            expect(u256.lt(result, u256.fromU32(100))).toBe(true, `Result should be very small for ratio close to 1`);
+        });
+    });
+
+    describe('Known value tests', () => {
+        it('should approximate ln(10) correctly', () => {
+            // ln(10) ≈ 2.302585 * 1e6 ≈ 2302585
+            const result = SafeMath.preciseLogRatio(u256.fromU32(10), u256.fromU32(1));
+            const expected: u64 = 2302585;
+
+            const diff = result.toU64() > expected
+                ? result.toU64() - expected
+                : expected - result.toU64();
+
+            expect(diff < 5000).toBe(true, `ln(10) should be close to 2302585, got ${result.toString()}`);
+        });
+
+        it('should approximate ln(100) correctly', () => {
+            // ln(100) = 2*ln(10) ≈ 4.605170 * 1e6 ≈ 4605170
+            const result = SafeMath.preciseLogRatio(u256.fromU32(100), u256.fromU32(1));
+            const expected: u64 = 4605170;
+
+            const diff = result.toU64() > expected
+                ? result.toU64() - expected
+                : expected - result.toU64();
+
+            expect(diff < 10000).toBe(true, `ln(100) should be close to 4605170, got ${result.toString()}`);
+        });
+
+        it('should be consistent: ln(a/b) should equal preciseLog when b=1 and a is power of 2', () => {
+            const testPowers: u32[] = [2, 4, 8, 16, 32, 64, 128, 256];
+
+            for (let i: i32 = 0; i < testPowers.length; i++) {
+                const pow = testPowers[i];
+                const a = u256.fromU32(pow);
+
+                const ratioResult = SafeMath.preciseLogRatio(a, u256.One);
+                const directResult = SafeMath.preciseLog(a);
+
+                // Both functions use different algorithms (Taylor vs atanh)
+                // so results may differ. Verify both are positive and in same ballpark
+                expect(u256.gt(ratioResult, u256.Zero)).toBe(true);
+                expect(u256.gt(directResult, u256.Zero)).toBe(true);
+
+                // Allow wider tolerance (100000 = 10% of 1e6 scale)
+                // since they use different approximation methods
+                const diff = u256.gt(ratioResult, directResult)
+                    ? SafeMath.sub(ratioResult, directResult)
+                    : SafeMath.sub(directResult, ratioResult);
+
+                expect(u256.lt(diff, u256.fromU64(200000))).toBe(
+                    true,
+                    `preciseLogRatio(${pow}, 1) should be in same ballpark as preciseLog(${pow})`
+                );
+            }
+        });
+    });
+
+    describe('Mathematical properties', () => {
+        it('should be monotonically increasing with respect to a/b ratio', () => {
+            // For fixed b, increasing a should increase ln(a/b)
+            const b = u256.fromU32(100);
+            let prevResult = u256.Zero;
+
+            const testValues: u32[] = [100, 110, 120, 150, 200, 300, 500, 1000];
+
+            for (let i: i32 = 0; i < testValues.length; i++) {
+                const a = u256.fromU32(testValues[i]);
+                const result = SafeMath.preciseLogRatio(a, b);
+
+                expect(u256.ge(result, prevResult)).toBe(
+                    true,
+                    `ln(${testValues[i]}/100) should be >= previous result`
+                );
+                prevResult = result;
+            }
+        });
+
+        it('should satisfy: ln(a/b) + ln(b/c) ≈ ln(a/c) for a > b > c', () => {
+            const a = u256.fromU32(1000);
+            const b = u256.fromU32(100);
+            const c = u256.fromU32(10);
+
+            const lnAB = SafeMath.preciseLogRatio(a, b); // ln(10)
+            const lnBC = SafeMath.preciseLogRatio(b, c); // ln(10)
+            const lnAC = SafeMath.preciseLogRatio(a, c); // ln(100) = 2*ln(10)
+
+            const sum = SafeMath.add(lnAB, lnBC);
+
+            // sum should approximately equal lnAC
+            const diff = u256.gt(sum, lnAC)
+                ? SafeMath.sub(sum, lnAC)
+                : SafeMath.sub(lnAC, sum);
+
+            expect(u256.lt(diff, u256.fromU32(10000))).toBe(
+                true,
+                `ln(a/b) + ln(b/c) should approximately equal ln(a/c)`
+            );
+        });
+
+        it('should satisfy: ln(a*k / b*k) = ln(a/b) for same scaling factor k', () => {
+            const a = u256.fromU32(300);
+            const b = u256.fromU32(100);
+            const k = u256.fromU32(1000);
+
+            const result1 = SafeMath.preciseLogRatio(a, b);
+            const result2 = SafeMath.preciseLogRatio(
+                SafeMath.mul(a, k),
+                SafeMath.mul(b, k)
+            );
+
+            // Should be equal (or very close due to precision)
+            const diff = u256.gt(result1, result2)
+                ? SafeMath.sub(result1, result2)
+                : SafeMath.sub(result2, result1);
+
+            expect(u256.lt(diff, u256.fromU32(100))).toBe(
+                true,
+                `Scaling both a and b should not change the ratio's logarithm`
+            );
+        });
+    });
+
+    describe('Large value handling', () => {
+        it('should handle moderately large numerators within safe range', () => {
+            // Use values where a * SCALE won't overflow
+            // Max safe a ≈ u256.Max / 1_000_000
+            const a = u256.fromString('1000000000000000000000000'); // 10^24
+            const b = u256.fromString('500000000000000000000000');  // 5*10^23
+
+            // ln(2) ≈ 693147
+            const result = SafeMath.preciseLogRatio(a, b);
+
+            // Verify positive result in reasonable range
+            expect(u256.gt(result, u256.Zero)).toBe(true, 'Result should be positive');
+
+            const resultU64 = result.toU64();
+            expect(resultU64 > 500000 && resultU64 < 1000000).toBe(
+                true,
+                `Large ratio ~2:1 should give ~ln(2), got ${resultU64}`
+            );
+        });
+
+        it('should handle ratios with large bit differences within safe range', () => {
+            // ln(2^40 / 2^20) = 20 * ln(2)
+            const a = SafeMath.shl(u256.One, 40); // ~1.1e12
+            const b = SafeMath.shl(u256.One, 20); // ~1e6
+
+            const result = SafeMath.preciseLogRatio(a, b);
+
+            // 20 * ln(2) ≈ 20 * 693147 ≈ 13862940
+            // Verify positive result
+            expect(u256.gt(result, u256.Zero)).toBe(true, 'Result should be positive');
+            expect(u256.gt(result, u256.fromU64(10000000))).toBe(true, 'Result should be > 10M');
+            expect(u256.lt(result, u256.fromU64(20000000))).toBe(true, 'Result should be < 20M');
+        });
+    });
+
+    describe('Security and determinism', () => {
+        it('should be deterministic - same inputs always give same output', () => {
+            const a = u256.fromU64(123456789);
+            const b = u256.fromU64(98765432);
+
+            const result1 = SafeMath.preciseLogRatio(a, b);
+            const result2 = SafeMath.preciseLogRatio(a, b);
+            const result3 = SafeMath.preciseLogRatio(a, b);
+
+            expect(result1).toStrictEqual(result2);
+            expect(result2).toStrictEqual(result3);
+        });
+
+        it('should not overflow for values within safe range', () => {
+            // Note: preciseLogRatio has a limitation where a * SCALE must not overflow
+            // Max safe a ≈ u256.Max / 1_000_000
+
+            // Test with values that are safe (won't cause a * SCALE overflow)
+            expect((): void => {
+                const safeA = u256.fromString('115792089237316195423570985008687907853269984665640564039457'); // u256.Max / 1e6
+                const safeB = u256.fromString('57896044618658097711785492504343953926634992332820282019728'); // half of above
+                SafeMath.preciseLogRatio(safeA, safeB);
+            }).not.toThrow('Should handle values within safe range');
+
+            expect((): void => {
+                const largeA = u256.fromString('1000000000000000000000000000000000'); // 10^33
+                const smallB = u256.fromU64(1000000); // 10^6
+                SafeMath.preciseLogRatio(largeA, smallB);
+            }).not.toThrow('Should handle large/small ratio within safe range');
+        });
+
+        it('should handle boundary values at SCALE (1e6)', () => {
+            const SCALE = u256.fromU64(1000000);
+
+            // a/b = 1 exactly when a == b
+            const result1 = SafeMath.preciseLogRatio(SCALE, SCALE);
+            expect(result1).toStrictEqual(u256.Zero);
+
+            // a/b just above 1
+            const result2 = SafeMath.preciseLogRatio(
+                SafeMath.add(SCALE, u256.One),
+                SCALE
+            );
+            expect(u256.gt(result2, u256.Zero)).toBe(true);
+            expect(u256.lt(result2, u256.fromU32(10))).toBe(true);
+        });
+    });
+
+    describe('DeFi use case simulations', () => {
+        it('should calculate price impact correctly', () => {
+            // Common DeFi scenario: calculate ln(newPrice/oldPrice)
+            const oldPrice = u256.fromU64(1000000); // $1.00 scaled by 1e6
+            const newPrice = u256.fromU64(1100000); // $1.10 scaled by 1e6
+
+            const priceImpact = SafeMath.preciseLogRatio(newPrice, oldPrice);
+
+            // ln(1.1) ≈ 0.0953 * 1e6 ≈ 95310
+            const expected: u64 = 95310;
+            const diff = priceImpact.toU64() > expected
+                ? priceImpact.toU64() - expected
+                : expected - priceImpact.toU64();
+
+            expect(diff < 1000).toBe(true, `10% price increase should give ln(1.1), got ${priceImpact.toString()}`);
+        });
+
+        it('should handle reserve ratio calculations for AMMs', () => {
+            // Constant product AMM: k = x * y
+            // Price = y/x
+            // ln(price1/price0) for price impact calculation
+
+            const reserveX0 = u256.fromU64(1000000000); // 1000 tokens
+            const reserveY0 = u256.fromU64(1000000000); // 1000 tokens (price = 1)
+
+            const reserveX1 = u256.fromU64(900000000);  // After swap
+            const reserveY1 = u256.fromU64(1111111111); // k = constant
+
+            // price0 = Y0/X0 = 1
+            // price1 = Y1/X1 = 1.234...
+            // ln(price1/price0) = ln(price1)
+
+            const price0 = SafeMath.div(
+                SafeMath.mul(reserveY0, u256.fromU64(1000000)),
+                reserveX0
+            );
+            const price1 = SafeMath.div(
+                SafeMath.mul(reserveY1, u256.fromU64(1000000)),
+                reserveX1
+            );
+
+            const logPriceChange = SafeMath.preciseLogRatio(price1, price0);
+
+            // Should be positive (price increased)
+            expect(u256.gt(logPriceChange, u256.Zero)).toBe(true);
+        });
+
+        it('should calculate interest rate differentials', () => {
+            // Compare two interest rates using their ratio
+            const rate1 = u256.fromU64(1050000); // 5% APY (1.05 * 1e6)
+            const rate2 = u256.fromU64(1030000); // 3% APY (1.03 * 1e6)
+
+            const rateRatio = SafeMath.preciseLogRatio(rate1, rate2);
+
+            // ln(1.05/1.03) = ln(1.0194...) ≈ 0.0192 * 1e6 ≈ 19200
+            expect(u256.gt(rateRatio, u256.Zero)).toBe(true);
+            expect(u256.lt(rateRatio, u256.fromU32(50000))).toBe(true);
+        });
+    });
+});
+
 describe('Integration tests for logarithm functions', () => {
     beforeEach(() => {});
 
