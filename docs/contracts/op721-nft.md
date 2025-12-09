@@ -641,13 +641,8 @@ import {
     method,
     returns,
     ABIDataTypes,
-    encodeSelector,
     EMPTY_POINTER,
 } from '@btc-vision/btc-runtime/runtime';
-
-// Define method selectors (sha256 first 4 bytes of method signature)
-const MINT_SELECTOR: u32 = encodeSelector('mint');
-const OPEN_MINTING_SELECTOR: u32 = encodeSelector('openMinting');
 
 @final
 export class MyNFTCollection extends OP721 {

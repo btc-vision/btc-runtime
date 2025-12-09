@@ -334,11 +334,10 @@ contract Router {
 
 ```typescript
 // OPNet
-import { OP_NET, Blockchain, Address, Calldata, BytesWriter, Selector, encodeSelector, ABIDataTypes } from '@btc-vision/btc-runtime/runtime';
+import { OP_NET, Blockchain, Address, Calldata, BytesWriter, ABIDataTypes, method, returns } from '@btc-vision/btc-runtime/runtime';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 
-// Define method selectors at the top
-const SWAP_SELECTOR: u32 = encodeSelector('swap');
+// Selectors for calling OTHER contracts (cross-contract calls only)
 const TRANSFER_SELECTOR: u32 = 0xa9059cbb;       // transfer(address,uint256)
 const TRANSFER_FROM_SELECTOR: u32 = 0x23b872dd;  // transferFrom(address,address,uint256)
 
