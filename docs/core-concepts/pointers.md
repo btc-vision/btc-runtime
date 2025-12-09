@@ -13,7 +13,7 @@ Storage Key = SHA256(pointer || subPointer)
 ### Pointer Structure Visualization
 
 ```mermaid
-flowchart TD
+flowchart LR
     subgraph Construction["32-Byte Storage Key Construction"]
         A["Pointer<br/>(u16, 2 bytes)<br/>0x0003"]
         B["SubPointer<br/>(u256, 30 bytes)<br/>0x00...ABC123"]
@@ -141,7 +141,7 @@ Contract Storage
 ### Multiple Storage Variables Example
 
 ```mermaid
-flowchart TD
+flowchart LR
     subgraph Contract["Token Contract"]
         Root["Contract Root"]
     end

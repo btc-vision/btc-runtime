@@ -59,7 +59,7 @@ import {
 ## Storage Type Hierarchy
 
 ```mermaid
-graph TB
+graph LR
     A[Storage Types]
 
     subgraph "Primitive Types"
@@ -368,7 +368,7 @@ sequenceDiagram
 ```
 
 ```mermaid
-flowchart TB
+flowchart LR
     A[StoredU256Array] --> B{Operation<br/>Type}
 
     subgraph "push Operation"
@@ -457,7 +457,7 @@ const value = this.data.get(key);
 ## Map Operation Patterns
 
 ```mermaid
-flowchart TB
+flowchart LR
     subgraph "Key to Hash"
         A[AddressMemoryMap] --> B[Address Key]
         B --> C[encodePointer<br/>pointer, address.toBytes]
@@ -543,7 +543,7 @@ protected setAllowance(owner: Address, spender: Address, amount: u256): void {
 ## MapOfMap Nested Storage
 
 ```mermaid
-flowchart TB
+flowchart LR
     subgraph "Read Path - Two-Level Mapping"
         A[MapOfMap allowances] --> B[First Level:<br/>Owner Address]
         B --> C[allowances.get owner]

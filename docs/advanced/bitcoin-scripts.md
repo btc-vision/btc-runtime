@@ -284,7 +284,7 @@ public buildMultisigManual(
 config:
   theme: dark
 ---
-flowchart TD
+flowchart LR
     CSV1["Transaction Input<br/>nSequence field"] --> CSV2{"Timelock Type?"}
     CSV2 -->|"Block-based"| CSV3["Blocks since confirmation"]
     CSV2 -->|"Time-based"| CSV4["512-second units + FLAG"]
@@ -302,7 +302,7 @@ flowchart TD
 config:
   theme: dark
 ---
-flowchart TD
+flowchart LR
     CLTV1["Transaction<br/>nLockTime field"] --> CLTV2{"Timelock Type?"}
     CLTV2 -->|"Block-based"| CLTV3["Block height<br/>Value < 500000000"]
     CLTV2 -->|"Time-based"| CLTV4["Unix timestamp<br/>Value >= 500000000"]

@@ -208,7 +208,7 @@ public override onDeployment(calldata: Calldata): void {
 ## Role-Based Access Control Flow
 
 ```mermaid
-flowchart TD
+flowchart LR
     subgraph OPNet["OPNet Plugin-Based Access Control"]
         A["👤 User calls method"] --> B["onExecutionStarted"]
         B --> C{"Method requires role?"}

@@ -18,7 +18,7 @@ Unlike Solidity where storage is implicitly managed, OPNet requires explicit poi
 config:
   theme: dark
 ---
-flowchart TB
+flowchart LR
     subgraph UserLayer["User Layer"]
         USER[("👤 User")]
     end
@@ -81,7 +81,7 @@ flowchart TB
 config:
   theme: dark
 ---
-flowchart TB
+flowchart LR
     subgraph SolidityFlow["Solidity (Ethereum)"]
         direction TB
         S_USER[("👤 User")] -->|"Sends ETH + calldata"| S_TX["Ethereum Transaction"]
@@ -192,7 +192,7 @@ flowchart LR
 config:
   theme: dark
 ---
-flowchart TD
+flowchart LR
     CS[Contract Storage] --> P0["Pointer 0: totalSupply"]
     CS --> P1["Pointer 1: name"]
     CS --> P2["Pointer 2: symbol"]
@@ -510,7 +510,7 @@ private userActives: StoredMapU256 = new StoredMapU256(this.userActivePointer);
 config:
   theme: dark
 ---
-flowchart TD
+flowchart LR
     subgraph Transaction["Bitcoin Transaction"]
         TX_IN["TX Input<br/>(User Signs)"]
         TX_OUT["TX Outputs<br/>(UTXOs)"]
@@ -687,7 +687,7 @@ export class MyContract extends OP_NET {
 config:
   theme: dark
 ---
-flowchart TD
+flowchart LR
     subgraph Bad["Expensive: Multiple Storage Reads"]
         LOOP1["for (i = 0; i < 100; i++)"]
         LOOP1 --> READ1["Storage Read #1"]

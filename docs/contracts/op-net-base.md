@@ -39,7 +39,7 @@ export class MyContract extends OP_NET {
 ## Contract Lifecycle
 
 ```mermaid
-flowchart TD
+flowchart LR
     subgraph Bitcoin["Bitcoin L1"]
         A[👤 User submits deployment TX] --> B[Blockchain creates contract]
     end

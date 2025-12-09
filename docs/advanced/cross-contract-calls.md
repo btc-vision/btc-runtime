@@ -92,7 +92,7 @@ const result = Blockchain.call(tokenContract, writer, true);
 ### stopOnFailure Behavior
 
 ```mermaid
-flowchart TD
+flowchart LR
     subgraph OPNet["OPNet Cross-Contract Call Flow"]
         A["Blockchain.call<br/>target, data, stopOnFailure"] --> B{"stopOnFailure?"}
 

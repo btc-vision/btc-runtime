@@ -148,7 +148,7 @@ User (EOA) --> Contract A --> Contract B
 config:
   theme: dark
 ---
-flowchart TD
+flowchart LR
     subgraph Transaction["Transaction Initiation"]
         User["User/EOA<br/>Signs Transaction"]
         TX["Transaction Broadcast"]

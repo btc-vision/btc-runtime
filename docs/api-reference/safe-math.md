@@ -88,7 +88,7 @@ const remainder = SafeMath.mod(u256.fromU64(100), u256.fromU64(30));  // 10
 config:
   theme: dark
 ---
-flowchart TB
+flowchart LR
     subgraph "Addition add"
         A[SafeMath.add a, b] --> B[Compute<br/>result = a + b]
         B --> C{result < a?}
@@ -342,7 +342,7 @@ const abs = SafeMathI128.abs(a);     // 100
 ## Cryptographic Operations Flow
 
 ```mermaid
-flowchart TB
+flowchart LR
     subgraph "Modular Multiplication mulmod"
         A[mulmod a, b, modulus] --> B{modulus<br/>== 0?}
         B -->|Yes| C[Revert]
@@ -361,7 +361,7 @@ flowchart TB
 ```
 
 ```mermaid
-graph TB
+graph LR
     A[Cryptographic Operations]
 
     subgraph "Elliptic Curve"
