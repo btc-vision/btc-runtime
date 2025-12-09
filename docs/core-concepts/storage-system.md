@@ -145,6 +145,10 @@ storageKey = SHA256(3 || 0xABC...)
 ### Storage Key Derivation Flow
 
 ```mermaid
+---
+config:
+  theme: dark
+---
 flowchart LR
     subgraph Input["Developer Input"]
         DEV["Contract Code"]
@@ -170,17 +174,6 @@ flowchart LR
         P1 --> ADDR["User Address<br/>0xABC..."]
         ADDR --> HASH2["SHA256(1 || 0xABC...)"]
         HASH2 --> KEY2[("Storage Key<br/>for balances[0xABC]")]
-    end
-
-    subgraph NestedKey["Nested Mapping (allowances)"]
-        P2["Pointer 2"] --> OWNER["Owner: 0xAAA..."]
-        P2 --> SPENDER["Spender: 0xBBB..."]
-        OWNER --> CONCAT["Concatenate 64 bytes"]
-        SPENDER --> CONCAT
-        CONCAT --> INNER["SHA256(owner || spender)"]
-        INNER --> SUBPTR["SubPointer (u256)"]
-        SUBPTR --> HASH3["SHA256(2 || subPtr)"]
-        HASH3 --> KEY3[("Storage Key<br/>for allowances[owner][spender]")]
     end
 ```
 
