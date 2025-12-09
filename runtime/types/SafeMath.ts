@@ -1249,8 +1249,6 @@ export class SafeMath {
         return atanhSum << 1; // Multiply by 2 using bit shift
     }
 
-    // ==================== Internal Helper Functions ====================
-
     /**
      * @internal
      * Modular addition helper that prevents overflow.
@@ -1269,5 +1267,125 @@ export class SafeMath {
     private static doubleModNoCarry(x: u256, m: u256): u256 {
         const mMinusX = u256.sub(m, x);
         return u256.ge(x, mMinusX) ? u256.sub(x, mMinusX) : u256.add(x, x);
+    }
+
+    /**
+     * Calculate ln(a/b) with precision, avoiding bit-length mismatch issues.
+     * Returns the result scaled by 1e6 (i.e., ln(a/b) * 1,000,000)
+     *
+     * This function correctly handles the case where a and b have different
+     * bit lengths, which would cause incorrect results if computing
+     * preciseLog(a) - preciseLog(b) directly.
+     *
+     * @param a - Numerator (must be > 0)
+     * @param b - Denominator (must be > 0)
+     * @returns ln(a/b) * 1,000,000
+     */
+    public preciseLogRatio(a: u256, b: u256): u256 {
+        if (a.isZero() || b.isZero()) {
+            return u256.Zero;
+        }
+
+        // If a == b, ln(1) = 0
+        if (u256.eq(a, b)) {
+            return u256.Zero;
+        }
+
+        const SCALE = u256.fromU64(1_000_000);
+        const LN2_SCALED = u256.fromU64(693147); // ln(2) * 1e6
+
+        // Compute ratio = a / b with scaling to preserve precision
+        // scaledRatio = (a * SCALE) / b represents (a/b) * SCALE
+        const scaledRatio = SafeMath.div(SafeMath.mul(a, SCALE), b);
+
+        if (scaledRatio.isZero()) {
+            // a/b is very small, return negative (but we only handle positive ln)
+            // For a < b, ln(a/b) < 0. Return 0 or handle separately if needed.
+            return u256.Zero;
+        }
+
+        // If scaledRatio == SCALE, then a/b == 1, ln = 0
+        if (u256.eq(scaledRatio, SCALE)) {
+            return u256.Zero;
+        }
+
+        // If scaledRatio < SCALE (i.e., a < b), ln is negative
+        // We only return positive values, so return 0 for this case
+        if (u256.lt(scaledRatio, SCALE)) {
+            return u256.Zero;
+        }
+
+        // Now scaledRatio > SCALE, meaning a/b > 1, so ln(a/b) > 0
+        // We want to compute ln(scaledRatio / SCALE) = ln(scaledRatio) - ln(SCALE)
+        // But we do this correctly by computing ln(1 + (scaledRatio - SCALE) / SCALE)
+
+        // fraction = (scaledRatio - SCALE) / SCALE = (a/b - 1)
+        // fractionScaled = scaledRatio - SCALE represents fraction * SCALE
+        const fractionScaled = SafeMath.sub(scaledRatio, SCALE);
+
+        // For small fractions (a/b <= 2, i.e., fractionScaled <= SCALE), use Taylor series
+        if (u256.le(fractionScaled, SCALE)) {
+            return this.calculateLnOnePlusFraction(fractionScaled, SCALE);
+        }
+
+        // For larger ratios, use the decomposition:
+        // ln(a/b) = k * ln(2) + ln(normalized)
+        // where normalized = (a/b) / 2^k is in range [1, 2)
+
+        // Find k such that scaledRatio / 2^k is in [SCALE, 2*SCALE)
+        let temp = scaledRatio;
+        let k: u32 = 0;
+        const twoScale = SafeMath.mul(SCALE, u256.fromU32(2));
+
+        while (u256.ge(temp, twoScale)) {
+            temp = SafeMath.shr(temp, 1);
+            k++;
+        }
+
+        // Now temp is in [SCALE, 2*SCALE), representing a value in [1, 2)
+        // ln(a/b) = k * ln(2) + ln(temp/SCALE)
+        // temp/SCALE is in [1, 2), so (temp - SCALE)/SCALE is in [0, 1)
+
+        const normalizedFraction = SafeMath.sub(temp, SCALE);
+        const lnNormalized = this.calculateLnOnePlusFraction(normalizedFraction, SCALE);
+        const base = SafeMath.mul(u256.fromU32(k), LN2_SCALED);
+
+        return SafeMath.add(base, lnNormalized);
+    }
+
+    // ==================== Internal Helper Functions ====================
+
+    /**
+     * Helper function: Calculate ln(1 + x) where x is provided as xScaled = x * scale
+     * Returns the result scaled by scale (i.e., ln(1+x) * scale)
+     *
+     * Uses Taylor series: ln(1+x) ≈ x - x²/2 + x³/3 - x⁴/4 + x⁵/5
+     * Valid for 0 <= x <= 1 (i.e., xScaled <= scale)
+     */
+    private calculateLnOnePlusFraction(xScaled: u256, scale: u256): u256 {
+        if (xScaled.isZero()) {
+            return u256.Zero;
+        }
+
+        // x² scaled
+        const x2 = SafeMath.div(SafeMath.mul(xScaled, xScaled), scale);
+
+        // x³ scaled
+        const x3 = SafeMath.div(SafeMath.mul(x2, xScaled), scale);
+
+        // x⁴ scaled
+        const x4 = SafeMath.div(SafeMath.mul(x3, xScaled), scale);
+
+        // x⁵ scaled
+        const x5 = SafeMath.div(SafeMath.mul(x4, xScaled), scale);
+
+        // ln(1+x) ≈ x - x²/2 + x³/3 - x⁴/4 + x⁵/5
+        let result = xScaled;
+        result = SafeMath.sub(result, SafeMath.div(x2, u256.fromU32(2)));
+        result = SafeMath.add(result, SafeMath.div(x3, u256.fromU32(3)));
+        result = SafeMath.sub(result, SafeMath.div(x4, u256.fromU32(4)));
+        result = SafeMath.add(result, SafeMath.div(x5, u256.fromU32(5)));
+
+        return result;
     }
 }

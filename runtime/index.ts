@@ -3,7 +3,9 @@ export * from './env';
 
 /** Contracts */
 export * from './contracts/interfaces/IOP20';
+export * from './contracts/interfaces/IOP20S';
 export * from './contracts/OP20';
+export * from './contracts/OP20S';
 export * from './contracts/OP_NET';
 export * from './contracts/interfaces/OP20InitParameters';
 
@@ -17,6 +19,7 @@ export * from './interfaces/IBTC';
 /** Events */
 export * from './events/NetEvent';
 export * from './events/predefined';
+export * from './events/op20s/OP20SEvents';
 
 /** Env */
 export * from './env/classes/UTXO';
@@ -52,6 +55,9 @@ export * from './secp256k1/ECPoint';
 
 /** Memory */
 export * from './memory/Nested';
+export * from './memory/MapOfMap';
+export * from './memory/KeyMerger';
+export * from './memory/AddressMemoryMap';
 
 /** Storage */
 export * from './storage/StoredU256';

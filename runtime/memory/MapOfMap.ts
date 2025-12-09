@@ -1,5 +1,6 @@
 import { Address } from '../types/Address';
 import { Nested } from './Nested';
+import { Map } from '../generic/Map';
 
 @final
 export class MapOfMap<T> extends Map<Address, Nested<T>> {
