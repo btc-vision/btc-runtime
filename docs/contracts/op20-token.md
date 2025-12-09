@@ -348,6 +348,7 @@ export class MyToken extends OP20 {
         { name: 'to', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
     )
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('Transfer')
     public mint(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
@@ -362,6 +363,7 @@ export class MyToken extends OP20 {
 
     // Custom burn function
     @method({ name: 'amount', type: ABIDataTypes.UINT256 })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('Transfer')
     public burn(calldata: Calldata): BytesWriter {
         const amount = calldata.readU256();
@@ -586,6 +588,7 @@ export class AdvancedToken extends OP20 {
         { name: 'to', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
     )
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('Transfer')
     public mint(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
@@ -595,6 +598,7 @@ export class AdvancedToken extends OP20 {
 
     // Admin: Pause/unpause
     @method()
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     public pause(_calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
         this._paused.value = true;
@@ -602,6 +606,7 @@ export class AdvancedToken extends OP20 {
     }
 
     @method()
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     public unpause(_calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
         this._paused.value = false;
@@ -610,6 +615,7 @@ export class AdvancedToken extends OP20 {
 
     // Admin: Blacklist management
     @method({ name: 'address', type: ABIDataTypes.ADDRESS })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     public blacklist(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
         this._blacklist.set(calldata.readAddress(), true);

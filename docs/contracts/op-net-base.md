@@ -412,6 +412,7 @@ private onlyAdmin(): void {
 }
 
 @method({ name: 'value', type: ABIDataTypes.UINT256 })
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
 public setParameter(calldata: Calldata): BytesWriter {
     this.onlyAdmin();
     // ...
@@ -564,6 +565,8 @@ export class SimpleToken extends OP_NET {
         { name: 'to', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
     )
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('Transfer')
     public transfer(calldata: Calldata): BytesWriter {
         const to = calldata.readAddress();
         const amount = calldata.readU256();
@@ -644,6 +647,7 @@ export class MyToken extends Pausable {
         { name: 'to', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
     )
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('Transfer')
     public transfer(calldata: Calldata): BytesWriter {
         this.whenNotPaused();
@@ -692,6 +696,8 @@ public constructor() {
 ```typescript
 // CORRECT: Use @method decorator for automatic routing
 @method({ name: 'to', type: ABIDataTypes.ADDRESS }, { name: 'amount', type: ABIDataTypes.UINT256 })
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
+@emit('Transfer')
 public transfer(calldata: Calldata): BytesWriter {
     // Implementation...
 }

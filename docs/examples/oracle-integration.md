@@ -380,6 +380,7 @@ export class MultiOracle extends OP_NET {
     // ============ ORACLE MANAGEMENT ============
 
     @method({ name: 'oracle', type: ABIDataTypes.ADDRESS })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('OracleAdded')
     public addOracle(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
@@ -401,6 +402,7 @@ export class MultiOracle extends OP_NET {
     }
 
     @method({ name: 'oracle', type: ABIDataTypes.ADDRESS })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('OracleRemoved')
     public removeOracle(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
@@ -446,6 +448,7 @@ export class MultiOracle extends OP_NET {
         { name: 'asset', type: ABIDataTypes.ADDRESS },
         { name: 'price', type: ABIDataTypes.UINT256 },
     )
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('PriceUpdated')
     public submitPrice(calldata: Calldata): BytesWriter {
         const oracle = Blockchain.tx.sender;

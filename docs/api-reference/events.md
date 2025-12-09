@@ -337,6 +337,12 @@ Use `emitEvent` from the contract:
 
 ```typescript
 // In contract method
+@method(
+    { name: 'to', type: ABIDataTypes.ADDRESS },
+    { name: 'amount', type: ABIDataTypes.UINT256 },
+)
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
+@emit('Transferred')
 public transfer(calldata: Calldata): BytesWriter {
     const to: Address = calldata.readAddress();
     const amount: u256 = calldata.readU256();

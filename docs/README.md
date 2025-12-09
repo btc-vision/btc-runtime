@@ -1,4 +1,4 @@
-# btc-runtime Documentation
+# Documentation
 
 Welcome to the comprehensive documentation for **@btc-vision/btc-runtime**, the OPNet Smart Contract Runtime for Bitcoin L1.
 

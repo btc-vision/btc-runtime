@@ -566,6 +566,8 @@ export class Stablecoin extends OP20 {
         { name: 'account', type: ABIDataTypes.ADDRESS },
         { name: 'role', type: ABIDataTypes.UINT256 },
     )
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('RoleGranted')
     public grantRole(calldata: Calldata): BytesWriter {
         this.onlyRole(u256.fromU64(Role.ADMIN));
 
@@ -581,6 +583,8 @@ export class Stablecoin extends OP20 {
         { name: 'account', type: ABIDataTypes.ADDRESS },
         { name: 'role', type: ABIDataTypes.UINT256 },
     )
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('RoleRevoked')
     public revokeRole(calldata: Calldata): BytesWriter {
         this.onlyRole(u256.fromU64(Role.ADMIN));
 
@@ -598,6 +602,8 @@ export class Stablecoin extends OP20 {
         { name: 'minter', type: ABIDataTypes.ADDRESS },
         { name: 'allowance', type: ABIDataTypes.UINT256 },
     )
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('MinterConfigured')
     public configureMinter(calldata: Calldata): BytesWriter {
         this.onlyMasterMinter();
 
@@ -616,6 +622,8 @@ export class Stablecoin extends OP20 {
     }
 
     @method({ name: 'minter', type: ABIDataTypes.ADDRESS })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('MinterRemoved')
     public removeMinter(calldata: Calldata): BytesWriter {
         this.onlyMasterMinter();
 
@@ -631,6 +639,7 @@ export class Stablecoin extends OP20 {
         { name: 'to', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
     )
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('Mint')
     public mint(calldata: Calldata): BytesWriter {
         this.onlyRole(u256.fromU64(Role.MINTER));
@@ -658,6 +667,7 @@ export class Stablecoin extends OP20 {
     }
 
     @method({ name: 'amount', type: ABIDataTypes.UINT256 })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('Burn')
     public burn(calldata: Calldata): BytesWriter {
         this.onlyRole(u256.fromU64(Role.MINTER));
@@ -676,6 +686,7 @@ export class Stablecoin extends OP20 {
     // ============ PAUSABLE ============
 
     @method()
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('Paused')
     public pause(_calldata: Calldata): BytesWriter {
         this.onlyRole(u256.fromU64(Role.PAUSER));
@@ -687,6 +698,7 @@ export class Stablecoin extends OP20 {
     }
 
     @method()
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('Unpaused')
     public unpause(_calldata: Calldata): BytesWriter {
         this.onlyRole(u256.fromU64(Role.PAUSER));
@@ -700,6 +712,7 @@ export class Stablecoin extends OP20 {
     // ============ BLACKLIST ============
 
     @method({ name: 'account', type: ABIDataTypes.ADDRESS })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('Blacklisted')
     public blacklist(calldata: Calldata): BytesWriter {
         this.onlyRole(u256.fromU64(Role.BLACKLISTER));
@@ -713,6 +726,7 @@ export class Stablecoin extends OP20 {
     }
 
     @method({ name: 'account', type: ABIDataTypes.ADDRESS })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('UnBlacklisted')
     public unBlacklist(calldata: Calldata): BytesWriter {
         this.onlyRole(u256.fromU64(Role.BLACKLISTER));
@@ -727,6 +741,12 @@ export class Stablecoin extends OP20 {
 
     // ============ OVERRIDE TRANSFERS ============
 
+    @method(
+        { name: 'to', type: ABIDataTypes.ADDRESS },
+        { name: 'amount', type: ABIDataTypes.UINT256 },
+    )
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('Transfer')
     public override transfer(calldata: Calldata): BytesWriter {
         this.whenNotPaused();
         this.notBlacklisted(Blockchain.tx.sender);
@@ -739,6 +759,13 @@ export class Stablecoin extends OP20 {
         return super.transfer(fullCalldata);
     }
 
+    @method(
+        { name: 'from', type: ABIDataTypes.ADDRESS },
+        { name: 'to', type: ABIDataTypes.ADDRESS },
+        { name: 'amount', type: ABIDataTypes.UINT256 },
+    )
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('Transfer')
     public override transferFrom(calldata: Calldata): BytesWriter {
         this.whenNotPaused();
 
@@ -774,7 +801,10 @@ export class Stablecoin extends OP20 {
         return writer;
     }
 
-    @method({ name: 'account', type: ABIDataTypes.ADDRESS })
+    @method(
+        { name: 'account', type: ABIDataTypes.ADDRESS },
+        { name: 'role', type: ABIDataTypes.UINT256 },
+    )
     @returns({ name: 'hasRole', type: ABIDataTypes.BOOL })
     public checkHasRole(calldata: Calldata): BytesWriter {
         const account = calldata.readAddress();

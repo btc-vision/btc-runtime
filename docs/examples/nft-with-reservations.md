@@ -204,6 +204,8 @@ sequenceDiagram
 
 ```typescript
 @method({ name: 'quantity', type: ABIDataTypes.UINT256 })
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
+@emit('Reserved')
 public reserve(calldata: Calldata): BytesWriter {
     const quantity = calldata.readU256();
     const sender = Blockchain.tx.sender;
@@ -253,6 +255,8 @@ flowchart LR
 
 ```typescript
 @method({ name: 'quantity', type: ABIDataTypes.UINT256 })
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
+@emit('Minted')
 public whitelistMint(calldata: Calldata): BytesWriter {
     const quantity = calldata.readU256();
     const sender = Blockchain.tx.sender;
@@ -285,6 +289,8 @@ function whitelistMint(uint256 quantity, bytes32[] calldata proof) external {
 
 // OPNet - Using on-chain mapping (simpler approach)
 @method({ name: 'quantity', type: ABIDataTypes.UINT256 })
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
+@emit('Minted')
 public whitelistMint(calldata: Calldata): BytesWriter {
     if (!this._whitelist.get(sender)) {
         throw new Revert('Not whitelisted');
@@ -503,6 +509,8 @@ export class NFTWithReservations extends OP721 {
      * Tokens are held until reservation period ends.
      */
     @method({ name: 'quantity', type: ABIDataTypes.UINT256 })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('Reserved')
     public reserve(calldata: Calldata): BytesWriter {
         const quantity = calldata.readU256();
         const sender = Blockchain.tx.sender;
@@ -531,6 +539,8 @@ export class NFTWithReservations extends OP721 {
      * Claim reserved tokens after reservation period.
      */
     @method()
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('ReservationClaimed')
     public claimReserved(_calldata: Calldata): BytesWriter {
         const sender = Blockchain.tx.sender;
 
@@ -565,6 +575,8 @@ export class NFTWithReservations extends OP721 {
      * Cancel reservation and get refund.
      */
     @method()
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('ReservationCancelled')
     public cancelReservation(_calldata: Calldata): BytesWriter {
         const sender = Blockchain.tx.sender;
 
@@ -593,6 +605,8 @@ export class NFTWithReservations extends OP721 {
      * Whitelist mint during whitelist phase.
      */
     @method({ name: 'quantity', type: ABIDataTypes.UINT256 })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('Minted')
     public whitelistMint(calldata: Calldata): BytesWriter {
         const quantity = calldata.readU256();
         const sender = Blockchain.tx.sender;
@@ -616,6 +630,8 @@ export class NFTWithReservations extends OP721 {
      * Public mint during public phase.
      */
     @method({ name: 'quantity', type: ABIDataTypes.UINT256 })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('Minted')
     public publicMint(calldata: Calldata): BytesWriter {
         const quantity = calldata.readU256();
         const sender = Blockchain.tx.sender;
@@ -678,6 +694,8 @@ export class NFTWithReservations extends OP721 {
     // ============ ADMIN FUNCTIONS ============
 
     @method({ name: 'duration', type: ABIDataTypes.UINT64 })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('ReservationStarted')
     public startReservation(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
 
@@ -690,6 +708,8 @@ export class NFTWithReservations extends OP721 {
     }
 
     @method({ name: 'phase', type: ABIDataTypes.UINT8 })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('SalePhaseChanged')
     public setSalePhase(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
 
@@ -707,6 +727,8 @@ export class NFTWithReservations extends OP721 {
         { name: 'addresses', type: ABIDataTypes.ADDRESS_ARRAY },
         { name: 'status', type: ABIDataTypes.BOOL },
     )
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('WhitelistUpdated')
     public setWhitelist(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
 
@@ -721,6 +743,8 @@ export class NFTWithReservations extends OP721 {
     }
 
     @method({ name: 'baseURI', type: ABIDataTypes.STRING })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('Revealed')
     public reveal(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
 
@@ -733,6 +757,8 @@ export class NFTWithReservations extends OP721 {
     }
 
     @method({ name: 'price', type: ABIDataTypes.UINT256 })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('PriceChanged')
     public setPrice(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
         this._price.value = calldata.readU256();
@@ -862,6 +888,8 @@ if (now >= this._reservationEnd.value) { }
 
 ```typescript
 @method({ name: 'quantity', type: ABIDataTypes.UINT256 })
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
+@emit('Reserved')
 public reserve(calldata: Calldata): BytesWriter { }
 
 @method()
@@ -1091,6 +1119,8 @@ private _reservedBy: AddressMemoryMap;
 private _reservationEnd: StoredU256;
 
 @method({ name: 'quantity', type: ABIDataTypes.UINT256 })
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
+@emit('Reserved')
 public reserve(calldata: Calldata): BytesWriter {
     const quantity = calldata.readU256();
     const sender = Blockchain.tx.sender;
@@ -1135,6 +1165,8 @@ function whitelistMint(uint256 quantity, bytes32[] calldata proof) external paya
 private _whitelist: AddressMemoryMap;
 
 @method({ name: 'quantity', type: ABIDataTypes.UINT256 })
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
+@emit('Minted')
 public whitelistMint(calldata: Calldata): BytesWriter {
     const quantity = calldata.readU256();
     const sender = Blockchain.tx.sender;
@@ -1195,6 +1227,8 @@ public override tokenURI(tokenId: u256): string {
 }
 
 @method({ name: 'baseURI', type: ABIDataTypes.STRING })
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
+@emit('Revealed')
 public reveal(calldata: Calldata): BytesWriter {
     this.onlyDeployer(Blockchain.tx.sender);
     const baseURI = calldata.readString();

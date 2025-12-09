@@ -18,6 +18,8 @@ export class MyContract extends ReentrancyGuard {
         super();
     }
 
+    @method()
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     public withdraw(calldata: Calldata): BytesWriter {
         // Protected automatically by ReentrancyGuard
         const amount = this.balances.get(Blockchain.tx.sender);
@@ -307,11 +309,15 @@ export class SecureVault extends ReentrancyGuard {
         super();
     }
 
+    @method({ name: 'amount', type: ABIDataTypes.UINT256 })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     public deposit(calldata: Calldata): BytesWriter {
         // Cannot be re-entered
         // ...
     }
 
+    @method()
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     public withdraw(calldata: Calldata): BytesWriter {
         // Cannot be re-entered
         // deposit() also blocked while this runs
@@ -338,6 +344,13 @@ export class TokenWithCallbacks extends ReentrancyGuard {
         super();
     }
 
+    @method(
+        { name: 'from', type: ABIDataTypes.ADDRESS },
+        { name: 'to', type: ABIDataTypes.ADDRESS },
+        { name: 'tokenId', type: ABIDataTypes.UINT256 },
+    )
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('Transfer')
     public safeTransfer(calldata: Calldata): BytesWriter {
         // Transfer token
         this._transfer(from, to, tokenId);
@@ -450,6 +463,8 @@ export class ProtectedContract extends ReentrancyGuard {
         super();
     }
 
+    @method()
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     public sensitiveOperation(calldata: Calldata): BytesWriter {
         // All public methods are automatically protected
         // No additional code needed
@@ -480,6 +495,8 @@ export class SecureToken extends OP20 {
         this.locked = false;
     }
 
+    @method()
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     public customWithdraw(calldata: Calldata): BytesWriter {
         this.nonReentrant();
         try {

@@ -133,6 +133,7 @@ export class BasicToken extends OP20 {
         { name: 'to', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
     )
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('Minted')
     public mint(calldata: Calldata): BytesWriter {
         // Access control
@@ -171,6 +172,7 @@ export class BasicToken extends OP20 {
      * Burn tokens from the caller's balance.
      */
     @method({ name: 'amount', type: ABIDataTypes.UINT256 })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('Burned')
     public burn(calldata: Calldata): BytesWriter {
         const amount = calldata.readU256();
@@ -203,6 +205,7 @@ export class BasicToken extends OP20 {
         { name: 'from', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
     )
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     @emit('Burned')
     public burnFrom(calldata: Calldata): BytesWriter {
         const from = calldata.readAddress();
@@ -348,13 +351,14 @@ sequenceDiagram
 
 ### Mint Method
 
-The `@method` decorator defines the ABI parameters, and `@emit` declares the event:
+The `@method` decorator defines the ABI parameters, `@returns` defines the return type, and `@emit` declares the event:
 
 ```typescript
 @method(
     { name: 'to', type: ABIDataTypes.ADDRESS },     // First parameter
     { name: 'amount', type: ABIDataTypes.UINT256 }, // Second parameter
 )
+@returns({ name: 'success', type: ABIDataTypes.BOOL })  // Return type
 @emit('Minted')  // Emits Minted event
 public mint(calldata: Calldata): BytesWriter {
     const to = calldata.readAddress();       // Read first param
@@ -377,6 +381,7 @@ function mint(address to, uint256 amount) external onlyOwner {
     { name: 'to', type: ABIDataTypes.ADDRESS },
     { name: 'amount', type: ABIDataTypes.UINT256 },
 )
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
 @emit('Minted')
 public mint(calldata: Calldata): BytesWriter {
     // ...
@@ -389,6 +394,7 @@ Single parameter methods use a simplified decorator syntax:
 
 ```typescript
 @method({ name: 'amount', type: ABIDataTypes.UINT256 })  // Single parameter
+@returns({ name: 'success', type: ABIDataTypes.BOOL })   // Return type
 @emit('Burned')
 public burn(calldata: Calldata): BytesWriter {
     const amount = calldata.readU256();
@@ -473,6 +479,7 @@ Always use decorators for public methods to define the ABI:
 ```typescript
 // With decorators - proper ABI generation
 @method({ name: 'to', type: ABIDataTypes.ADDRESS })
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
 @emit('Transfer')
 public transfer(calldata: Calldata): BytesWriter
 
@@ -547,6 +554,7 @@ Method routing is handled **AUTOMATICALLY** via `@method` decorators. You do NOT
     { name: 'to', type: ABIDataTypes.ADDRESS },
     { name: 'amount', type: ABIDataTypes.UINT256 },
 )
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
 @emit('Minted')
 public mint(calldata: Calldata): BytesWriter {
     // Implementation - runtime routes calls automatically
@@ -657,6 +665,7 @@ function mint(address to, uint256 amount) external onlyOwner {
     { name: 'to', type: ABIDataTypes.ADDRESS },
     { name: 'amount', type: ABIDataTypes.UINT256 },
 )
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
 @emit('Minted')
 public mint(calldata: Calldata): BytesWriter {
     this.onlyDeployer(Blockchain.tx.sender);

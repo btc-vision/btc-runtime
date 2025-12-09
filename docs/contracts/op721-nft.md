@@ -360,6 +360,9 @@ export class MyNFT extends OP721 {
         this._nextTokenId.value = u256.One;  // Set initial token ID
     }
 
+    @method({ name: 'to', type: ABIDataTypes.ADDRESS })
+    @returns({ name: 'tokenId', type: ABIDataTypes.UINT256 })
+    @emit('Transfer')
     public mint(calldata: Calldata): BytesWriter {
         const to = calldata.readAddress();
         const tokenId = this._nextTokenId.value;
@@ -419,8 +422,9 @@ export class MyNFT extends OP721 {
         this._nextTokenId.value = u256.One;  // Set initial token ID
     }
 
-    @method()
+    @method({ name: 'to', type: ABIDataTypes.ADDRESS })
     @returns({ name: 'tokenId', type: ABIDataTypes.UINT256 })
+    @emit('Transfer')
     public mint(calldata: Calldata): BytesWriter {
         const to = calldata.readAddress();
 
@@ -446,7 +450,8 @@ export class MyNFT extends OP721 {
         0
     );
 
-    @method()
+    @method({ name: 'uri', type: ABIDataTypes.STRING })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     public setBaseURI(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
         this._baseURI.value = calldata.readString();
@@ -483,7 +488,11 @@ export class MyNFT extends OP721 {
         this._collectionImage = new StoredString(this.imagePointer, 1);
     }
 
-    @method()
+    @method(
+        { name: 'description', type: ABIDataTypes.STRING },
+        { name: 'image', type: ABIDataTypes.STRING },
+    )
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     public setCollectionMetadata(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
 
@@ -684,7 +693,9 @@ export class MyNFTCollection extends OP721 {
     }
 
     // Public mint
-    @method()
+    @method({ name: 'quantity', type: ABIDataTypes.UINT256 })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
+    @emit('Transfer')
     public mint(calldata: Calldata): BytesWriter {
         if (!this._mintingOpen.value) {
             throw new Revert('Minting not open');
@@ -712,6 +723,7 @@ export class MyNFTCollection extends OP721 {
 
     // Admin: Open minting
     @method()
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     public openMinting(_calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
         this._mintingOpen.value = true;
