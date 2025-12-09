@@ -516,7 +516,8 @@ export class MultiOracle extends OP_NET {
 
         // Update price
         this._prices.set(asset, medianPrice);
-        this._timestamps.set(asset, now);
+        // AddressMemoryMap stores u256; convert timestamp to u256
+        this._timestamps.set(asset, u256.fromU64(now));
 
         this.emitEvent(new PriceUpdated(asset, medianPrice, now));
     }
@@ -535,7 +536,8 @@ export class MultiOracle extends OP_NET {
         const asset = calldata.readAddress();
 
         const price = this._prices.get(asset);
-        const timestamp = this._timestamps.get(asset);
+        // AddressMemoryMap returns u256; convert to u64 for timestamp
+        const timestamp: u64 = this._timestamps.get(asset).toU64();
 
         // Check for stale price
         const now = Blockchain.block.medianTime;
@@ -566,7 +568,8 @@ export class MultiOracle extends OP_NET {
 
         const writer = new BytesWriter(40);
         writer.writeU256(this._prices.get(asset));
-        writer.writeU64(this._timestamps.get(asset));
+        // AddressMemoryMap returns u256; convert to u64 for timestamp
+        writer.writeU64(this._timestamps.get(asset).toU64());
         return writer;
     }
 
@@ -1028,7 +1031,8 @@ contract PriceConsumer {
 public getPrice(calldata: Calldata): BytesWriter {
     const asset = calldata.readAddress();
     const price = this._prices.get(asset);
-    const timestamp = this._timestamps.get(asset);
+    // AddressMemoryMap returns u256; convert to u64 for timestamp
+    const timestamp: u64 = this._timestamps.get(asset).toU64();
 
     const now = Blockchain.block.medianTime;
     if (now - timestamp > this._maxStaleness.value) {

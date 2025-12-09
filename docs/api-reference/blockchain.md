@@ -16,19 +16,20 @@ import { Blockchain } from '@btc-vision/btc-runtime/runtime';
 |----------|------|-------------|
 | `Blockchain.block` | `Block` | Current block information |
 | `Blockchain.block.number` | `u64` | Block height |
+| `Blockchain.block.numberU256` | `u256` | Block height as u256 |
 | `Blockchain.block.hash` | `Uint8Array` | 32-byte block hash |
-| `Blockchain.block.medianTime` | `u64` | Median timestamp (seconds) |
+| `Blockchain.block.medianTimestamp` | `u64` | Median timestamp (seconds) |
 
 ```typescript
 const blockNum = Blockchain.block.number;
-const timestamp = Blockchain.block.medianTime;
+const timestamp = Blockchain.block.medianTimestamp;
 ```
 
 **Solidity Comparison:**
 | Solidity | OPNet |
 |----------|-------|
 | `block.number` | `Blockchain.block.number` |
-| `block.timestamp` | `Blockchain.block.medianTime` |
+| `block.timestamp` | `Blockchain.block.medianTimestamp` |
 
 ### Transaction Context
 
@@ -37,9 +38,11 @@ const timestamp = Blockchain.block.medianTime;
 | `Blockchain.tx` | `Transaction` | Current transaction info |
 | `Blockchain.tx.sender` | `Address` | Immediate caller |
 | `Blockchain.tx.origin` | `ExtendedAddress` | Original signer |
-| `Blockchain.tx.id` | `Uint8Array` | Transaction ID |
+| `Blockchain.tx.txId` | `Uint8Array` | Transaction ID |
 | `Blockchain.tx.hash` | `Uint8Array` | Transaction hash |
-| `Blockchain.tx.consensus` | `Consensus` | Consensus flags |
+| `Blockchain.tx.inputs` | `TransactionInput[]` | Transaction inputs (UTXOs) |
+| `Blockchain.tx.outputs` | `TransactionOutput[]` | Transaction outputs (UTXOs) |
+| `Blockchain.tx.consensus` | `ConsensusRules` | Consensus rules |
 
 ```typescript
 const caller = Blockchain.tx.sender;      // Immediate caller
@@ -478,29 +481,26 @@ verifySignature(
 | `forceMLDSA` | `boolean` | Force ML-DSA verification |
 | **Returns** | `boolean` | True if valid |
 
-The signature verification automatically detects the signature type based on length and applies the appropriate verification algorithm:
+The signature verification selects the appropriate algorithm based on consensus rules:
 
 ```mermaid
 flowchart LR
-    subgraph "Signature Type Detection"
-        Start([Verify Signature]) --> GetSig[Receive signature<br/>hash, address]
-        GetSig --> CheckLen{Signature<br/>Length}
-        CheckLen -->|64 bytes| Schnorr[Schnorr Path]
-        CheckLen -->|2420+ bytes| MLDSA[ML-DSA Path]
-        CheckLen -->|Other| Invalid[Invalid]
+    subgraph "verifySignature Flow"
+        Start([Verify Signature]) --> GetInput[Receive address,<br/>signature, hash]
+        GetInput --> CheckConsensus{unsafeSignaturesAllowed()<br/>AND !forceMLDSA?}
+        CheckConsensus -->|Yes| Schnorr[Schnorr Path]
+        CheckConsensus -->|No| MLDSA[ML-DSA Path]
     end
 
     subgraph "Schnorr Verification"
-        Schnorr --> CheckConsensus{Consensus<br/>allows unsafe?}
-        CheckConsensus -->|Yes| SchnorrVerify[verifySchnorrSignature]
-        CheckConsensus -->|No| CheckMLDSA{Has ML-DSA<br/>key?}
-        CheckMLDSA -->|Yes| MLDSAVerify[verifyMLDSASignature]
-        CheckMLDSA -->|No| SchnorrVerify
+        Schnorr --> ValidateSig{signature.length<br/>== 64?}
+        ValidateSig -->|Yes| SchnorrVerify[Verify Schnorr]
+        ValidateSig -->|No| SchnorrFail([Revert])
         SchnorrVerify --> SchnorrResult{Valid?}
     end
 
     subgraph "ML-DSA Verification"
-        MLDSA --> MLDSAVerify
+        MLDSA --> MLDSAVerify[Verify ML-DSA-44<br/>Level2]
         MLDSAVerify --> MLDSAResult{Valid?}
     end
 
@@ -508,7 +508,6 @@ flowchart LR
     MLDSAResult -->|No| Fail([Return false])
     SchnorrResult -->|Yes| Success
     SchnorrResult -->|No| Fail
-    Invalid --> Fail
 ```
 
 ```typescript
@@ -537,24 +536,18 @@ sequenceDiagram
     C->>C: Combine: 0x1901 + domain + structHash
     C->>C: messageHash = SHA-256(combined)
 
-    C->>BC: verifySignature(address, signature, messageHash)
+    C->>BC: verifySignature(address, signature, messageHash, forceMLDSA?)
 
-    BC->>BC: Check signature.length
+    BC->>Cons: Check consensus flags
+    Cons->>BC: unsafeSignaturesAllowed()
 
-    alt Schnorr (64 bytes)
-        BC->>Cons: Check consensus flags
-        Cons->>BC: unsafeSignaturesAllowed()
-
-        alt Unsafe allowed OR no ML-DSA key
-            BC->>Crypto: verifySchnorr(pubKey, sig, hash)
-            Crypto->>BC: Valid/Invalid
-        else ML-DSA available
-            BC->>Crypto: verifyMLDSA(pubKey, sig, hash)
-            Crypto->>BC: Valid/Invalid
-        end
-
-    else ML-DSA (2420+ bytes)
-        BC->>Crypto: verifyMLDSA(Level, pubKey, sig, hash)
+    alt unsafeSignaturesAllowed() AND !forceMLDSA
+        BC->>BC: Validate signature.length == 64
+        BC->>Crypto: verifySchnorr(tweakedPublicKey, sig, hash)
+        Crypto->>BC: Valid/Invalid
+    else ML-DSA required (consensus or forced)
+        BC->>BC: Use ML-DSA Level2 (ML-DSA-44)
+        BC->>Crypto: verifyMLDSA(Level2, mldsaPublicKey, sig, hash)
         Crypto->>BC: Valid/Invalid
     end
 

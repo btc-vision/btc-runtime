@@ -26,15 +26,21 @@ classDiagram
     class Address {
         +Uint8Array[32] bytes
         -bool isDefined
-        -Uint8Array mldsaPublicKey
-        +zero() Address
-        +fromString(hex) Address
-        +fromUint8Array(bytes) Address
+        -Uint8Array _mldsaPublicKey
+        +zero() Address$
+        +fromString(hex) Address$
+        +fromUint8Array(bytes) Address$
         +equals(other) bool
+        +notEquals(other) bool
+        +lessThan(other) bool
+        +greaterThan(other) bool
+        +lessThanOrEqual(other) bool
+        +greaterThanOrEqual(other) bool
         +isZero() bool
         +clone() Address
         +toHex() string
-        +toBytes() Uint8Array
+        +toString() string
+        +mldsaPublicKey Uint8Array
     }
 
     class ExtendedAddress {
@@ -70,7 +76,7 @@ config:
 flowchart LR
     A["Address Creation"] --> B{"Source?"}
     B -->|"Runtime"| C["Blockchain.tx.sender/origin"]
-    B -->|"Factory"| D["Address.zero/dead"]
+    B -->|"Factory"| D["Address.zero()<br/>ExtendedAddress.dead()"]
     B -->|"Parsing"| E["fromString/fromBytes"]
     B -->|"Calldata"| F["calldata.readAddress"]
     C --> G["32-byte Address"]
@@ -105,22 +111,25 @@ const deployer: Address = Blockchain.contract.deployer;
 const zero: Address = Address.zero();
 // Equivalent to address(0) in Solidity
 
-// Dead address (for burns)
-const dead: Address = Address.dead();
-// 0x000000000000000000000000000000000000dEaD
+// Note: For dead/burn addresses, use ExtendedAddress.dead()
+// See ExtendedAddress section below
 ```
 
 ### From Bytes
 
 ```typescript
-// From Uint8Array (32 bytes)
+// From Uint8Array (32 bytes) - uses efficient memory copy
 const bytes = new Uint8Array(32);
 bytes[31] = 0x01;
-const addr = Address.fromBytes(bytes);
+const addr = Address.fromUint8Array(bytes);
 
-// From StaticArray
-const staticBytes = new StaticArray<u8>(32);
-const addr2 = Address.fromStaticBytes(staticBytes);
+// From u8[] array (32 bytes)
+const byteArray: u8[] = new Array<u8>(32);
+byteArray[31] = 0x01;
+const addr2 = new Address(byteArray);
+
+// From hex string
+const addr3 = Address.fromString('0x' + '00'.repeat(32));
 ```
 
 ### From Calldata
@@ -207,11 +216,15 @@ private preventSelfTransfer(from: Address, to: Address): void {
 ```typescript
 const addr: Address = Blockchain.tx.sender;
 
-// To Uint8Array
-const bytes: Uint8Array = addr.toBytes();
+// Address extends Uint8Array, so it can be used directly as bytes
+// Access the underlying buffer
+const bytes: ArrayBuffer = addr.buffer;
 
-// To StaticArray
-const staticBytes: StaticArray<u8> = addr.toStaticBytes();
+// Get hex string representation
+const hexString: string = addr.toHex();
+
+// Clone the address
+const cloned: Address = addr.clone();
 ```
 
 ### With BytesWriter
@@ -243,10 +256,9 @@ OPNet addresses are **32 bytes**, compared to Ethereum's 20 bytes:
 | OPNet | 32 bytes | 64 hex chars |
 
 ```typescript
-// Full 32-byte address
+// Full 32-byte address (Address extends Uint8Array)
 const addr: Address = Blockchain.tx.sender;
-const bytes = addr.toBytes();
-assert(bytes.length === 32);
+assert(addr.length === 32);
 ```
 
 ## Storage with Addresses
@@ -394,15 +406,26 @@ graph LR
 
 ### Dead Address
 
+The dead address is derived from the Bitcoin genesis block (block 0) public key:
+- **Genesis block public key**: `04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f`
+- **Resulting hash**: `284ae4acdb32a99ba3ebfa66a91ddb41a7b7a1d2fef415399922cd8a04485c02`
+
+This address is commonly used as a burn address or null recipient in contracts.
+
 ```typescript
-// Dead address for burns
+// Dead address for burns (derived from Bitcoin block 0 pubkey)
 const dead: ExtendedAddress = ExtendedAddress.dead();
 
 // Check if address is dead
 if (extAddr.isDead()) {
     // Funds are being burned
 }
+
+// Also available via Blockchain singleton
+const deadAddr: ExtendedAddress = Blockchain.DEAD_ADDRESS;
 ```
+
+**Note:** The `Address` base class does NOT have a `dead()` method. Only `ExtendedAddress` provides the dead address functionality.
 
 See [Quantum Resistance](../advanced/quantum-resistance.md) for details.
 
@@ -416,7 +439,7 @@ See [Quantum Resistance](../advanced/quantum-resistance.md) for details.
 | **Size** | 20 bytes (160 bits) | 32 bytes (256 bits) |
 | **Format** | `0x` + 40 hex chars | 64 hex chars |
 | **Zero address** | `address(0)` | `Address.zero()` |
-| **Dead/burn address** | `0x000...dEaD` | `Address.dead()` |
+| **Dead/burn address** | `0x000...dEaD` | `ExtendedAddress.dead()` (Bitcoin block 0 pubkey hash) |
 | **Payable variant** | `address payable` | N/A (different model) |
 | **Current sender** | `msg.sender` | `Blockchain.tx.sender` |
 | **Original signer** | `tx.origin` | `Blockchain.tx.origin` |
@@ -424,8 +447,8 @@ See [Quantum Resistance](../advanced/quantum-resistance.md) for details.
 | **Deployer** | N/A (use constructor arg) | `Blockchain.contract.deployer` |
 | **Equality check** | `addr1 == addr2` | `addr1.equals(addr2)` |
 | **Zero check** | `addr == address(0)` | `addr.isZero()` or `addr.equals(Address.zero())` |
-| **From bytes** | `address(bytes20(data))` | `Address.fromBytes(data)` |
-| **To bytes** | `abi.encodePacked(addr)` | `addr.toBytes()` |
+| **From bytes** | `address(bytes20(data))` | `Address.fromUint8Array(data)` |
+| **To bytes** | `abi.encodePacked(addr)` | `addr` (extends Uint8Array) |
 | **Checksum** | EIP-55 mixed-case | N/A |
 | **Quantum-resistant key** | N/A | `addr.mldsaPublicKey` (1312 bytes) |
 
@@ -689,20 +712,24 @@ public getUserData(calldata: Calldata): BytesWriter {
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `Address.zero()` | `Address` | All-zero address |
-| `Address.dead()` | `Address` | Dead/burn address |
-| `Address.fromBytes(bytes)` | `Address` | Create from Uint8Array |
-| `Address.fromStaticBytes(bytes)` | `Address` | Create from StaticArray |
+| `Address.zero()` | `Address` | All-zero address (cloned from constant) |
+| `Address.fromString(hex)` | `Address` | Create from hex string (with or without 0x prefix) |
+| `Address.fromUint8Array(bytes)` | `Address` | Create from Uint8Array using direct memory copy |
 
 ### Instance Methods
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `equals(other)` | `bool` | Compare addresses |
+| `equals(other)` | `bool` | Compare addresses (operator `==`) |
+| `notEquals(other)` | `bool` | Check inequality (operator `!=`) |
+| `lessThan(other)` | `bool` | Compare as big-endian integers (operator `<`) |
+| `greaterThan(other)` | `bool` | Compare as big-endian integers (operator `>`) |
+| `lessThanOrEqual(other)` | `bool` | Compare addresses (operator `<=`) |
+| `greaterThanOrEqual(other)` | `bool` | Compare addresses (operator `>=`) |
 | `isZero()` | `bool` | Check if zero address |
 | `clone()` | `Address` | Create a deep copy |
-| `toBytes()` | `Uint8Array` | Convert to bytes |
-| `toHex()` | `string` | Convert to hex string |
+| `toHex()` | `string` | Convert to hex string (no 0x prefix) |
+| `toString()` | `string` | Same as toHex() |
 
 ### Instance Properties
 
@@ -710,13 +737,27 @@ public getUserData(calldata: Calldata): BytesWriter {
 |----------|------|-------------|
 | `mldsaPublicKey` | `Uint8Array` | ML-DSA public key (lazily loaded, 1312 bytes) |
 
-### ExtendedAddress Methods
+### ExtendedAddress Static Methods
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `ExtendedAddress.dead()` | `ExtendedAddress` | Bitcoin block 0 pubkey-derived burn address |
+| `ExtendedAddress.zero()` | `ExtendedAddress` | All-zero address (cloned from constant) |
+| `ExtendedAddress.fromStringPair(schnorr, mldsa)` | `ExtendedAddress` | Create from two hex strings |
+| `ExtendedAddress.fromUint8Array(bytes)` | `ExtendedAddress` | Create from 64-byte array |
+| `ExtendedAddress.toCSV(address, blocks)` | `string` | Generate CSV timelocked P2WSH address |
+| `ExtendedAddress.p2wpkh(address)` | `string` | Generate P2WPKH address |
+
+### ExtendedAddress Instance Methods
 
 | Method | Returns | Description |
 |--------|---------|-------------|
 | `p2tr()` | `string` | Generate P2TR (taproot) address |
 | `isDead()` | `bool` | Check if this is the dead address |
+| `isZero()` | `bool` | Check if ML-DSA key hash is all zeros |
 | `downCast()` | `Address` | Cast to base Address type |
+| `clone()` | `ExtendedAddress` | Create a deep copy |
+| `toString()` | `string` | Returns P2TR address (overrides base) |
 
 ### ExtendedAddress Properties
 

@@ -465,11 +465,11 @@ config:
 ---
 flowchart LR
     subgraph Verify["Blockchain.verifySignature()"]
-        Check{"unsafeSignatures<br/>Allowed?"}
+        Check{"unsafeSignaturesAllowed()<br/>AND !forceMLDSA?"}
         Check -->|Yes| Schnorr["Schnorr Verification<br/>(64-byte signature)"]
-        Check -->|No| MLDSA["ML-DSA Verification<br/>(quantum-resistant)"]
+        Check -->|No| MLDSA["ML-DSA Verification<br/>(ML-DSA-44, Level2)"]
     end
-    Input["address, signature, hash"] --> Check
+    Input["address, signature, hash, forceMLDSA?"] --> Check
     Schnorr --> Result["boolean"]
     MLDSA --> Result
 ```
@@ -687,9 +687,12 @@ export class MyContract extends OP_NET {
 | `Blockchain.tx.hash` | `Uint8Array` | Transaction hash |
 | `Blockchain.tx.inputs` | `TransactionInput[]` | Transaction inputs |
 | `Blockchain.tx.outputs` | `TransactionOutput[]` | Transaction outputs |
+| `Blockchain.tx.consensus` | `ConsensusRules` | Consensus rules |
+| `Blockchain.contract` | `OP_NET` | Current contract instance |
 | `Blockchain.contractAddress` | `Address` | This contract's address |
 | `Blockchain.contractDeployer` | `Address` | Contract deployer |
 | `Blockchain.chainId` | `Uint8Array` | Chain identifier |
+| `Blockchain.protocolId` | `Uint8Array` | Protocol identifier |
 | `Blockchain.network` | `Networks` | Current network |
 | `Blockchain.DEAD_ADDRESS` | `ExtendedAddress` | Burn address |
 | `Blockchain.nextPointer` | `u16` | Next storage pointer |
@@ -700,6 +703,7 @@ export class MyContract extends OP_NET {
 | `Blockchain.hasStorageAt()` | `bool` | Check storage existence |
 | `Blockchain.getTransientStorageAt()` | `Uint8Array` | Read transient storage |
 | `Blockchain.setTransientStorageAt()` | `void` | Write transient storage |
+| `Blockchain.hasTransientStorageAt()` | `bool` | Check transient storage existence |
 | `Blockchain.sha256()` | `Uint8Array` | SHA256 hash |
 | `Blockchain.hash256()` | `Uint8Array` | Double SHA256 |
 | `Blockchain.verifySignature()` | `bool` | Consensus-aware signature verification |
@@ -711,6 +715,7 @@ export class MyContract extends OP_NET {
 | `Blockchain.getBlockHash()` | `Uint8Array` | Historical block hash |
 | `Blockchain.emit()` | `void` | Emit event |
 | `Blockchain.log()` | `void` | Debug logging (testing only) |
+| `Blockchain.registerPlugin()` | `void` | Register a plugin |
 
 ---
 

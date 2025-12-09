@@ -84,7 +84,7 @@ config:
 ---
 classDiagram
     class Plugin {
-        <<abstract>>
+        <<base>>
         +onDeployment(calldata: Calldata) void
         +onExecutionStarted(selector: Selector, calldata: Calldata) void
         +onExecutionCompleted(selector: Selector, calldata: Calldata) void

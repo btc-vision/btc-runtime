@@ -72,21 +72,18 @@ classDiagram
     BytesWriter --> DataView : uses
     BytesReader --> DataView : uses
 
-    note for BytesWriter "Sequential write\nwith auto-grow buffer"
+    note for BytesWriter "Sequential write\nfixed-size buffer"
     note for BytesReader "Sequential read\nwith position tracking"
 ```
 
 ### Creating a BytesWriter
 
 ```typescript
-// With initial capacity (recommended)
+// With initial capacity (recommended - buffer does NOT auto-grow)
 const writer = new BytesWriter(128);
 
-// Empty writer (will grow as needed)
-const writer = new BytesWriter(0);
-
-// From existing buffer
-const writer = BytesWriter.fromBuffer(existingBuffer);
+// Note: Buffer does NOT grow dynamically - will throw Revert if exceeded
+// Always pre-calculate required size or use generous initial capacity
 ```
 
 ### Writing Primitives
@@ -116,30 +113,43 @@ writer.writeI64(value);
 // Address (32 bytes)
 writer.writeAddress(address);
 
-// String (length-prefixed)
+// String without length prefix
 writer.writeString('Hello, World!');
 
-// Bytes (length-prefixed)
+// String with u32 length prefix
+writer.writeStringWithLength('Hello, World!');
+
+// Bytes without length prefix
 writer.writeBytes(data);
 
-// Selector (4 bytes)
+// Bytes with u32 length prefix
+writer.writeBytesWithLength(data);
+
+// Selector (4 bytes, big-endian)
 writer.writeSelector(selector);
 ```
 
 ### Writing Arrays
 
+All array methods use a u16 length prefix (max 65535 elements):
+
 ```typescript
-// Address array
+// Address array (u16 length prefix + addresses)
 writer.writeAddressArray(addresses);
 
-// u256 array
-writer.writeU256Array(amounts);
+// Numeric arrays (u16 length prefix + values)
+writer.writeU8Array(u8Values);
+writer.writeU16Array(u16Values);
+writer.writeU32Array(u32Values);
+writer.writeU64Array(u64Values);
+writer.writeU128Array(u128Values);
+writer.writeU256Array(u256Values);
 
-// Manual array writing
-writer.writeU32(items.length);  // Length prefix
-for (let i = 0; i < items.length; i++) {
-    writer.writeU256(items[i]);
-}
+// Array of variable-length buffers (u16 count, then u32 length + data for each)
+writer.writeArrayOfBuffer(buffers);
+
+// AddressMap<u256> (u16 count, then address + u256 pairs)
+writer.writeAddressMapU256(addressMap);
 ```
 
 ### Getting Results
@@ -148,8 +158,14 @@ for (let i = 0; i < items.length; i++) {
 // Get the full buffer
 const buffer: Uint8Array = writer.getBuffer();
 
-// Get current length
-const length: u32 = writer.length;
+// Get current write offset (bytes written so far)
+const offset: u32 = writer.getOffset();
+
+// Get total buffer capacity
+const capacity: u32 = writer.bufferLength();
+
+// Convert to BytesReader for reading
+const reader: BytesReader = writer.toBytesReader();
 ```
 
 ## BytesReader
@@ -175,8 +191,8 @@ const flag: bool = reader.readBoolean();
 // From Uint8Array
 const reader = new BytesReader(buffer);
 
-// From StaticArray
-const reader = BytesReader.fromStaticArray(staticBuffer);
+// From BytesWriter
+const reader = writer.toBytesReader();
 ```
 
 ### Reading Primitives
@@ -206,46 +222,59 @@ const i64val: i64 = reader.readI64();
 // Address (32 bytes)
 const addr: Address = reader.readAddress();
 
-// String (length-prefixed)
-const name: string = reader.readString();
+// String with known length (bytes read, zeroStop = true)
+const name: string = reader.readString(32);  // reads up to 32 bytes, stops at null
 
-// Bytes (length-prefixed)
-const data: Uint8Array = reader.readBytes();
+// String with u32 length prefix
+const name2: string = reader.readStringWithLength();
 
-// Selector (4 bytes)
+// Bytes with known length
+const data: Uint8Array = reader.readBytes(64);
+
+// Bytes with u32 length prefix
+const data2: Uint8Array = reader.readBytesWithLength();
+
+// Selector (4 bytes, big-endian)
 const selector: Selector = reader.readSelector();
 ```
 
 ### Reading Arrays
 
+All array methods expect a u16 length prefix:
+
 ```typescript
 // Address array
 const addresses: Address[] = reader.readAddressArray();
 
-// u256 array
-const amounts: u256[] = reader.readU256Array();
+// Numeric arrays
+const u8Values: u8[] = reader.readU8Array();
+const u16Values: u16[] = reader.readU16Array();
+const u32Values: u32[] = reader.readU32Array();
+const u64Values: u64[] = reader.readU64Array();
+const u128Values: u128[] = reader.readU128Array();
+const u256Values: u256[] = reader.readU256Array();
 
-// Manual array reading
-const length = reader.readU32();
-const items: u256[] = [];
-for (let i: u32 = 0; i < length; i++) {
-    items.push(reader.readU256());
-}
+// Array of variable-length buffers
+const buffers: Uint8Array[] = reader.readArrayOfBuffer();
+
+// AddressMap<u256>
+const addressMap: AddressMap<u256> = reader.readAddressMapU256();
 ```
 
 ### Position Management
 
 ```typescript
-// Check remaining data
-if (reader.hasMoreData()) {
-    // More data available
-}
+// Get current read offset
+const offset: i32 = reader.getOffset();
 
-// Get current position
-const pos: u32 = reader.position;
+// Set read position (must be within buffer bounds)
+reader.setOffset(32);
 
-// Get remaining bytes
-const remaining: u32 = reader.remaining;
+// Get total buffer length
+const total: i32 = reader.byteLength;
+
+// Verify enough bytes remain for next read
+reader.verifyEnd(offset + 32);  // Throws Revert if not enough bytes
 ```
 
 ## Data Format
@@ -256,14 +285,22 @@ const remaining: u32 = reader.remaining;
 |------|------|--------|
 | `bool` | 1 | 0 or 1 |
 | `u8`/`i8` | 1 | Raw byte |
-| `u16`/`i16` | 2 | Little-endian |
-| `u32`/`i32` | 4 | Little-endian |
-| `u64`/`i64` | 8 | Little-endian |
-| `u128` | 16 | Little-endian |
-| `u256` | 32 | Little-endian |
+| `u16`/`i16` | 2 | Big-endian (default) |
+| `u32`/`i32` | 4 | Big-endian (default) |
+| `u64`/`i64` | 8 | Big-endian (default) |
+| `u128`/`i128` | 16 | Big-endian (default) |
+| `u256` | 32 | Big-endian (default) |
 | `Address` | 32 | Raw bytes |
-| `string` | 4 + n | Length prefix (u32) + UTF-8 |
-| `bytes` | 4 + n | Length prefix (u32) + raw |
+| `Selector` | 4 | Big-endian (u32) |
+| `string` | 4 + n | Length prefix (u32 BE) + UTF-8 |
+| `bytes` | 4 + n | Length prefix (u32 BE) + raw |
+| `arrays` | 2 + n | Length prefix (u16 BE) + elements |
+
+**Note:** All multi-byte integers default to big-endian. Pass `be = false` for little-endian:
+```typescript
+writer.writeU32(value, false);  // Little-endian
+reader.readU32(false);          // Little-endian
+```
 
 ### Data Encoding Flow
 
@@ -513,7 +550,7 @@ protected override encodeData(writer: BytesWriter): void {
 | **Packed encoding** | `abi.encodePacked(...)` | Default behavior (no padding) |
 | **Encode with selector** | `abi.encodeWithSelector(sel, ...)` | `writer.writeSelector(sel); writer.write...()` |
 | **Encode with signature** | `abi.encodeWithSignature(sig, ...)` | Manual selector + params |
-| **Byte order** | Big-endian | Little-endian |
+| **Byte order** | Big-endian | Big-endian (default) |
 | **Padding** | 32-byte aligned | No padding (native sizes) |
 | **Return encoding** | Automatic | Manual via BytesWriter |
 
@@ -789,7 +826,7 @@ function extractAddress(data: Uint8Array, offset: u32): Address {
 | **Dynamic sizing** | Automatic | Pre-calculate or auto-grow |
 | **Return values** | Automatic encoding | Manual BytesWriter construction |
 | **Error on overflow** | Reverts | Reverts |
-| **Endianness** | Big-endian | Little-endian |
+| **Endianness** | Big-endian | Big-endian (default) |
 
 ### Migration Patterns
 

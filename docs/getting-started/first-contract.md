@@ -12,12 +12,11 @@ A simple fungible token (like an ERC20 on Ethereum) with:
 
 ## Step 1: Create the Contract File
 
-Create `assembly/contracts/MyToken.ts`:
+Create `src/token/MyToken.ts`:
 
 ```typescript
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import {
-    ABIDataTypes,
     Blockchain,
     BytesWriter,
     Calldata,
@@ -42,15 +41,14 @@ export class MyToken extends OP20 {
     }
 
     @method(
-        { name: 'to', type: ABIDataTypes.ADDRESS },
+        { name: 'address', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 }
     )
+    @emit('Minted')
     public mint(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
 
-        const to = calldata.readAddress();
-        const amount = calldata.readU256();
-        this._mint(to, amount);
+        this._mint(calldata.readAddress(), calldata.readU256());
 
         return new BytesWriter(0);
     }
@@ -211,15 +209,14 @@ constructor() ERC20("MyToken", "MTK") {
 
 ```typescript
 @method(
-    { name: 'to', type: ABIDataTypes.ADDRESS },
+    { name: 'address', type: ABIDataTypes.ADDRESS },
     { name: 'amount', type: ABIDataTypes.UINT256 }
 )
+@emit('Minted')
 public mint(calldata: Calldata): BytesWriter {
     this.onlyDeployer(Blockchain.tx.sender);
 
-    const to = calldata.readAddress();
-    const amount = calldata.readU256();
-    this._mint(to, amount);
+    this._mint(calldata.readAddress(), calldata.readU256());
 
     return new BytesWriter(0);
 }
@@ -287,6 +284,7 @@ Breaking this down:
 | Line | Purpose |
 |------|---------|
 | `@method(...)` | Declares method parameters for ABI generation |
+| `@emit('Minted')` | Declares event emission for ABI documentation |
 | `onlyDeployer(...)` | Access control - only the deployer can call |
 | `calldata.readAddress()` | Parse the recipient address from input |
 | `calldata.readU256()` | Parse the amount from input |
@@ -384,22 +382,39 @@ Add to your `package.json`:
 ```json
 {
   "scripts": {
-    "build": "asc assembly/index.ts --target release",
-    "build:debug": "asc assembly/index.ts --target debug"
+    "build:token": "asc src/token/index.ts --target token --measure --uncheckedBehavior never"
   }
 }
 ```
 
-Create `assembly/index.ts`:
+Create `src/token/index.ts`:
 
 ```typescript
-export { MyToken } from './contracts/MyToken';
+import { Blockchain } from '@btc-vision/btc-runtime/runtime';
+import { revertOnError } from '@btc-vision/btc-runtime/runtime/abort/abort';
+import { MyToken } from './MyToken';
+
+// DO NOT TOUCH TO THIS.
+Blockchain.contract = () => {
+    // ONLY CHANGE THE CONTRACT CLASS NAME.
+    // DO NOT ADD CUSTOM LOGIC HERE.
+
+    return new MyToken();
+};
+
+// VERY IMPORTANT
+export * from '@btc-vision/btc-runtime/runtime/exports';
+
+// VERY IMPORTANT
+export function abort(message: string, fileName: string, line: u32, column: u32): void {
+    revertOnError(message, fileName, line, column);
+}
 ```
 
 Build:
 
 ```bash
-npm run build
+npm run build:token
 ```
 
 ## Solidity Comparison
@@ -417,7 +432,6 @@ Here's a side-by-side comparison of the complete contract:
 ```typescript
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import {
-    ABIDataTypes,
     Blockchain,
     BytesWriter,
     Calldata,
@@ -432,19 +446,21 @@ export class MyToken extends OP20 {
     }
 
     public override onDeployment(_: Calldata): void {
+        const maxSupply = u256.fromString('1000000000000000000000000');
         this.instantiate(new OP20InitParameters(
-            u256.fromString('1000000000000000000000000'),
+            maxSupply,
             18,
             'MyToken',
             'MTK'
         ));
-        this._mint(Blockchain.tx.origin, this.maxSupply());
+        this._mint(Blockchain.tx.origin, maxSupply);
     }
 
     @method(
-        { name: 'to', type: ABIDataTypes.ADDRESS },
+        { name: 'address', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 }
     )
+    @emit('Minted')
     public mint(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
         this._mint(
@@ -497,22 +513,27 @@ contract MyToken is ERC20, Ownable {
 ```typescript
 // Only deployer can call
 @method({ name: 'param', type: ABIDataTypes.UINT256 })
+@returns({ name: 'result', type: ABIDataTypes.UINT256 })
 public adminFunction(calldata: Calldata): BytesWriter {
     this.onlyDeployer(Blockchain.tx.sender);
     const param = calldata.readU256();
-    // ...
+    // ... perform admin logic
+    const result = new BytesWriter(32);
+    result.writeU256(param);
+    return result;
 }
 ```
 
 ### Error Handling
 
 ```typescript
-import { Revert, Address } from '@btc-vision/btc-runtime/runtime';
+import { Revert, Address, BytesWriter, Calldata } from '@btc-vision/btc-runtime/runtime';
 
 @method(
     { name: 'to', type: ABIDataTypes.ADDRESS },
     { name: 'amount', type: ABIDataTypes.UINT256 }
 )
+@emit('Transferred')
 public transfer(calldata: Calldata): BytesWriter {
     const to = calldata.readAddress();
     const amount = calldata.readU256();
@@ -521,6 +542,7 @@ public transfer(calldata: Calldata): BytesWriter {
         throw new Revert('Cannot transfer to zero address');
     }
     // ...
+    return new BytesWriter(0);
 }
 ```
 

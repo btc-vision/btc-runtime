@@ -178,14 +178,14 @@ flowchart LR
 
 | Mode | Description | Use Case |
 |------|-------------|----------|
-| `ReentrancyLevel.STANDARD` | Strict mutual exclusion | Default for most contracts |
-| `ReentrancyLevel.CALLBACK` | Allows one level of re-entry | Safe transfer callbacks |
+| `ReentrancyLevel.STANDARD` | Uses boolean lock, strict mutual exclusion | Default for most contracts |
+| `ReentrancyLevel.CALLBACK` | Uses depth counter, still blocks reentrancy | Depth tracking use cases |
 
 ```typescript
-// STANDARD: No re-entry allowed (default)
+// STANDARD: No re-entry allowed, uses boolean lock (default)
 protected override readonly reentrancyLevel: ReentrancyLevel = ReentrancyLevel.STANDARD;
 
-// CALLBACK: Allows controlled re-entry for callbacks
+// CALLBACK: No re-entry allowed, uses depth counter for tracking
 protected override readonly reentrancyLevel: ReentrancyLevel = ReentrancyLevel.CALLBACK;
 ```
 
@@ -199,12 +199,12 @@ config:
 flowchart LR
     Start{"External Calls?"}
     Start -->|No| None["No Guard Needed"]
-    Start -->|Yes| Callback{"Needs Callback?"}
-    Callback -->|No| Standard["STANDARD Mode"]
-    Callback -->|Yes| Safe{"Safe?"}
-    Safe -->|Yes| CallbackMode["CALLBACK Mode"]
-    Safe -->|No| Redesign["Redesign"]
+    Start -->|Yes| Tracking{"Need Depth Tracking?"}
+    Tracking -->|No| Standard["STANDARD Mode"]
+    Tracking -->|Yes| CallbackMode["CALLBACK Mode"]
 ```
+
+Note: Both modes block reentrancy. STANDARD uses a boolean lock; CALLBACK uses a depth counter.
 
 See [ReentrancyGuard](../contracts/reentrancy-guard.md) for detailed usage.
 

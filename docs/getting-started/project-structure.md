@@ -18,22 +18,21 @@ graph LR
         ROOT["my-opnet-project/"]
     end
 
-    subgraph source["Source Code - assembly/"]
-        ASM["assembly/"]
-        CONTRACTS["contracts/"]
-        TYPES["types/"]
-        INDEX["index.ts"]
+    subgraph source["Source Code - src/"]
+        SRC["src/"]
+        TOKEN_DIR["token/"]
+        NFT_DIR["nft/"]
 
         TOKEN["MyToken.ts"]
+        TOKEN_INDEX["index.ts"]
         NFT["MyNFT.ts"]
-        CUSTOM["CustomTypes.ts"]
+        NFT_INDEX["index.ts"]
     end
 
     subgraph build["Build Output - build/"]
         BUILD["build/"]
-        RELEASE["release.wasm"]
-        DEBUG["debug.wasm"]
-        WAT["release.wat"]
+        TOKEN_WASM["MyToken.wasm"]
+        NFT_WASM["MyNFT.wasm"]
     end
 
     subgraph tests["Tests - tests/"]
@@ -47,28 +46,28 @@ graph LR
         TSCONFIG["tsconfig.json"]
     end
 
-    ROOT --> ASM
+    ROOT --> SRC
     ROOT --> BUILD
     ROOT --> TESTS
     ROOT --> ASCONFIG
     ROOT --> PKG
     ROOT --> TSCONFIG
 
-    ASM --> CONTRACTS
-    ASM --> TYPES
-    ASM --> INDEX
+    SRC --> TOKEN_DIR
+    SRC --> NFT_DIR
 
-    CONTRACTS --> TOKEN
-    CONTRACTS --> NFT
-    TYPES --> CUSTOM
+    TOKEN_DIR --> TOKEN
+    TOKEN_DIR --> TOKEN_INDEX
+    NFT_DIR --> NFT
+    NFT_DIR --> NFT_INDEX
 
-    TOKEN -.->|"exported by"| INDEX
-    NFT -.->|"exported by"| INDEX
+    TOKEN -.->|"imported by"| TOKEN_INDEX
+    NFT -.->|"imported by"| NFT_INDEX
 
-    INDEX -.->|"compiled by"| ASCONFIG
-    ASCONFIG -.->|"produces"| RELEASE
-    ASCONFIG -.->|"produces"| DEBUG
-    ASCONFIG -.->|"produces"| WAT
+    TOKEN_INDEX -.->|"compiled by"| ASCONFIG
+    NFT_INDEX -.->|"compiled by"| ASCONFIG
+    ASCONFIG -.->|"produces"| TOKEN_WASM
+    ASCONFIG -.->|"produces"| NFT_WASM
 
     TOKEN -.->|"tested by"| SPEC
 ```
@@ -77,17 +76,17 @@ A typical OPNet contract project looks like this:
 
 ```
 my-opnet-project/
-├── assembly/                   # AssemblyScript source code
-│   ├── contracts/              # Your smart contracts
-│   │   ├── MyToken.ts
+├── src/                        # AssemblyScript source code
+│   ├── token/                  # Token contract
+│   │   ├── MyToken.ts          # Contract implementation
+│   │   └── index.ts            # Entry point with Blockchain.contract
+│   ├── nft/                    # NFT contract (optional)
 │   │   ├── MyNFT.ts
-│   │   └── ...
-│   ├── types/                  # Custom types (optional)
-│   │   └── MyTypes.ts
-│   └── index.ts                # Entry point - exports contracts
+│   │   └── index.ts
+│   └── tsconfig.json           # AssemblyScript config for src/
 ├── build/                      # Compiled output
-│   ├── release.wasm            # Production build
-│   └── debug.wasm              # Debug build
+│   ├── MyToken.wasm            # Token contract build
+│   └── MyNFT.wasm              # NFT contract build
 ├── tests/                      # Test files
 │   └── MyToken.spec.ts
 ├── asconfig.json               # AssemblyScript configuration
@@ -97,51 +96,79 @@ my-opnet-project/
 
 ## Key Files
 
-### assembly/index.ts
+### src/token/index.ts
 
-The entry point that exports all your contracts:
+The entry point for each contract that sets up the contract instance:
 
 ```typescript
-// Export all contracts that should be compiled
-export { MyToken } from './contracts/MyToken';
-export { MyNFT } from './contracts/MyNFT';
-export { MyCustomContract } from './contracts/MyCustomContract';
+import { Blockchain } from '@btc-vision/btc-runtime/runtime';
+import { revertOnError } from '@btc-vision/btc-runtime/runtime/abort/abort';
+import { MyToken } from './MyToken';
+
+// DO NOT TOUCH TO THIS.
+Blockchain.contract = () => {
+    // ONLY CHANGE THE CONTRACT CLASS NAME.
+    // DO NOT ADD CUSTOM LOGIC HERE.
+
+    return new MyToken();
+};
+
+// VERY IMPORTANT
+export * from '@btc-vision/btc-runtime/runtime/exports';
+
+// VERY IMPORTANT
+export function abort(message: string, fileName: string, line: u32, column: u32): void {
+    revertOnError(message, fileName, line, column);
+}
 ```
 
 ### asconfig.json
 
-AssemblyScript compiler configuration:
+AssemblyScript compiler configuration with per-contract targets:
 
 ```json
 {
-  "targets": {
-    "debug": {
-      "outFile": "build/debug.wasm",
-      "textFile": "build/debug.wat",
-      "sourceMap": true,
-      "debug": true
+    "targets": {
+        "token": {
+            "outFile": "build/MyToken.wasm",
+            "use": ["abort=src/token/index/abort"]
+        },
+        "nft": {
+            "outFile": "build/MyNFT.wasm",
+            "use": ["abort=src/nft/index/abort"]
+        }
     },
-    "release": {
-      "outFile": "build/release.wasm",
-      "textFile": "build/release.wat",
-      "sourceMap": true,
-      "optimizeLevel": 3,
-      "shrinkLevel": 1,
-      "noAssert": true
+    "options": {
+        "sourceMap": false,
+        "optimizeLevel": 3,
+        "shrinkLevel": 1,
+        "converge": true,
+        "noAssert": false,
+        "enable": [
+            "sign-extension",
+            "mutable-globals",
+            "nontrapping-f2i",
+            "bulk-memory",
+            "simd",
+            "reference-types",
+            "multi-value"
+        ],
+        "runtime": "stub",
+        "memoryBase": 0,
+        "initialMemory": 1,
+        "exportStart": "start",
+        "transform": "@btc-vision/opnet-transform"
     }
-  },
-  "options": {
-    "bindings": "esm",
-    "runtime": "stub"
-  }
 }
 ```
 
 | Option | Description |
 |--------|-------------|
+| `targets` | Per-contract build targets with output paths |
+| `use` | Links custom abort function for error handling |
 | `optimizeLevel` | Optimization level (0-3), higher = faster but larger |
 | `shrinkLevel` | Code size reduction (0-2) |
-| `noAssert` | Remove assertions in release builds |
+| `transform` | OPNet transform for decorator processing |
 | `runtime: "stub"` | Minimal runtime (OPNet provides its own) |
 
 ### package.json Scripts
@@ -151,10 +178,8 @@ Recommended scripts for your `package.json`:
 ```json
 {
   "scripts": {
-    "build": "asc assembly/index.ts --target release",
-    "build:debug": "asc assembly/index.ts --target debug",
-    "test": "asp --config as-pect.config.js --verbose",
-    "test:ci": "asp --config as-pect.config.js --summary"
+    "build:token": "asc src/token/index.ts --target token --measure --uncheckedBehavior never",
+    "build:nft": "asc src/nft/index.ts --target nft --measure --uncheckedBehavior never"
   }
 }
 ```
@@ -436,10 +461,11 @@ flowchart LR
 For simple projects with one contract:
 
 ```
-assembly/
-├── contracts/
-│   └── MyToken.ts
-└── index.ts
+src/
+├── token/
+│   ├── MyToken.ts
+│   └── index.ts
+└── tsconfig.json
 ```
 
 ### Multi-Contract Project
@@ -447,21 +473,20 @@ assembly/
 For larger projects with multiple contracts:
 
 ```
-assembly/
-├── contracts/
-│   ├── tokens/
-│   │   ├── MyToken.ts
-│   │   └── MyStablecoin.ts
-│   ├── nft/
-│   │   └── MyNFT.ts
-│   └── governance/
-│       └── Governor.ts
-├── types/
+src/
+├── token/
+│   ├── MyToken.ts
+│   └── index.ts
+├── stablecoin/
+│   ├── MyStablecoin.ts
+│   └── index.ts
+├── nft/
+│   ├── MyNFT.ts
+│   └── index.ts
+├── shared/
 │   ├── CustomTypes.ts
-│   └── Interfaces.ts
-├── utils/
 │   └── Helpers.ts
-└── index.ts
+└── tsconfig.json
 ```
 
 ### Shared Logic
@@ -469,10 +494,13 @@ assembly/
 For contracts sharing common functionality:
 
 ```typescript
-// assembly/contracts/base/Pausable.ts
+// src/shared/Pausable.ts
+import { Blockchain, OP_NET, Revert, StoredBoolean } from '@btc-vision/btc-runtime/runtime';
+
+const pausedPointer: u16 = Blockchain.nextPointer;
+
 export abstract class Pausable extends OP_NET {
-    private _pausedPointer: u16 = Blockchain.nextPointer;
-    private _paused: StoredBoolean = new StoredBoolean(this._pausedPointer, false);
+    private _paused: StoredBoolean = new StoredBoolean(pausedPointer, false);
 
     protected whenNotPaused(): void {
         if (this._paused.value) {
@@ -491,7 +519,9 @@ export abstract class Pausable extends OP_NET {
     }
 }
 
-// assembly/contracts/MyToken.ts
+// src/token/MyToken.ts
+import { Pausable } from '../shared/Pausable';
+
 export class MyToken extends Pausable {
     // Now has pause functionality
 }
@@ -501,9 +531,9 @@ export class MyToken extends Pausable {
 
 | Solidity | OPNet | Notes |
 |----------|-------|-------|
-| `contracts/` | `assembly/contracts/` | Contract source files |
-| `interfaces/` | `assembly/types/` | Type definitions |
-| `libraries/` | `assembly/utils/` | Shared utilities |
+| `contracts/` | `src/token/`, `src/nft/` | Contract source files (one folder per contract) |
+| `interfaces/` | `src/shared/` | Type definitions and shared logic |
+| `libraries/` | `src/shared/` | Shared utilities |
 | `test/` | `tests/` | Test files |
 | `artifacts/` | `build/` | Compiled output |
 | `hardhat.config.js` | `asconfig.json` | Build configuration |
@@ -513,11 +543,12 @@ export class MyToken extends Pausable {
 ### 1. Organize by Feature
 
 ```
-assembly/contracts/
-├── tokens/           # Token-related contracts
-├── governance/       # Governance contracts
-├── oracles/          # Oracle integrations
-└── utils/            # Shared utilities
+src/
+├── token/            # Token contract
+├── stablecoin/       # Stablecoin contract
+├── nft/              # NFT contract
+├── governance/       # Governance contract
+└── shared/           # Shared utilities and types
 ```
 
 ### 2. Use Consistent Naming
@@ -534,16 +565,25 @@ CustomTypes.ts
 mathHelpers.ts
 ```
 
-### 3. Export Clearly
+### 3. Entry Point Pattern
+
+Each contract should have its own index.ts with the proper pattern:
 
 ```typescript
-// assembly/index.ts
-// Only export contracts that should be deployable
-export { MyToken } from './contracts/MyToken';
-export { MyNFT } from './contracts/MyNFT';
+// src/token/index.ts
+import { Blockchain } from '@btc-vision/btc-runtime/runtime';
+import { revertOnError } from '@btc-vision/btc-runtime/runtime/abort/abort';
+import { MyToken } from './MyToken';
 
-// Don't export internal utilities
-// export { InternalHelper } from './utils/InternalHelper'; // Don't do this
+Blockchain.contract = () => {
+    return new MyToken();
+};
+
+export * from '@btc-vision/btc-runtime/runtime/exports';
+
+export function abort(message: string, fileName: string, line: u32, column: u32): void {
+    revertOnError(message, fileName, line, column);
+}
 ```
 
 ### 4. Separate Concerns

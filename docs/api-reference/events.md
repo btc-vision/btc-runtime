@@ -7,10 +7,14 @@ Events provide a way to emit state change notifications that off-chain applicati
 ```typescript
 import {
     NetEvent,
-    TransferEvent,
-    ApprovalEvent,
-    MintEvent,
-    BurnEvent,
+    TransferredEvent,
+    ApprovedEvent,
+    MintedEvent,
+    BurnedEvent,
+    TransferredSingleEvent,
+    TransferredBatchEvent,
+    ApprovedForAllEvent,
+    URIEvent,
     BytesWriter,
 } from '@btc-vision/btc-runtime/runtime';
 ```
@@ -43,41 +47,49 @@ classDiagram
     }
 
     class TransferredEvent {
-        +Address operator
-        +Address from
-        +Address to
-        +u256 amount
         +constructor(operator, from, to, amount)
     }
 
+    class TransferredSingleEvent {
+        +constructor(operator, from, to, id, value)
+    }
+
+    class TransferredBatchEvent {
+        +constructor(operator, from, to, ids, values)
+    }
+
     class ApprovedEvent {
-        +Address owner
-        +Address spender
-        +u256 amount
         +constructor(owner, spender, amount)
     }
 
+    class ApprovedForAllEvent {
+        +constructor(account, operator, approved)
+    }
+
     class MintedEvent {
-        +Address to
-        +u256 amount
         +constructor(to, amount)
     }
 
     class BurnedEvent {
-        +Address from
-        +u256 amount
         +constructor(from, amount)
     }
 
+    class URIEvent {
+        +constructor(value, id)
+    }
+
     class CustomEvent {
-        +Custom fields...
         +constructor(...)
     }
 
     NetEvent <|-- TransferredEvent
+    NetEvent <|-- TransferredSingleEvent
+    NetEvent <|-- TransferredBatchEvent
     NetEvent <|-- ApprovedEvent
+    NetEvent <|-- ApprovedForAllEvent
     NetEvent <|-- MintedEvent
     NetEvent <|-- BurnedEvent
+    NetEvent <|-- URIEvent
     NetEvent <|-- CustomEvent
 
     note for NetEvent "All events must extend NetEvent\nand build data in constructor"
@@ -164,15 +176,15 @@ class ComplexEvent extends NetEvent {
 
 ### TransferredEvent
 
-Standard token transfer event. Note: OP20 transfers include an operator field.
+Standard token transfer event. Event type: `'Transferred'`. Note: OP20 transfers include an operator field.
 
 ```typescript
 class TransferredEvent extends NetEvent {
     constructor(
-        operator: Address,
-        from: Address,
-        to: Address,
-        amount: u256
+        operator: Address,  // The address initiating the transfer
+        from: Address,      // The sender address
+        to: Address,        // The recipient address
+        amount: u256        // The amount transferred
     )
 }
 ```
@@ -181,16 +193,56 @@ class TransferredEvent extends NetEvent {
 this.emitEvent(new TransferredEvent(Blockchain.tx.sender, sender, recipient, amount));
 ```
 
+### TransferredSingleEvent
+
+Single token transfer event for ERC1155-style tokens. Event type: `'TransferredSingle'`.
+
+```typescript
+class TransferredSingleEvent extends NetEvent {
+    constructor(
+        operator: Address,  // The address initiating the transfer
+        from: Address,      // The sender address
+        to: Address,        // The recipient address
+        id: u256,           // The token ID
+        value: u256         // The amount transferred
+    )
+}
+```
+
+```typescript
+this.emitEvent(new TransferredSingleEvent(Blockchain.tx.sender, from, to, tokenId, amount));
+```
+
+### TransferredBatchEvent
+
+Batch token transfer event for ERC1155-style tokens. Event type: `'TransferredBatch'`. Limited to 3 items due to the 352-byte event size limit.
+
+```typescript
+class TransferredBatchEvent extends NetEvent {
+    constructor(
+        operator: Address,  // The address initiating the transfer
+        from: Address,      // The sender address
+        to: Address,        // The recipient address
+        ids: u256[],        // The token IDs (max 3 items)
+        values: u256[]      // The amounts transferred (max 3 items)
+    )
+}
+```
+
+```typescript
+this.emitEvent(new TransferredBatchEvent(Blockchain.tx.sender, from, to, tokenIds, amounts));
+```
+
 ### ApprovedEvent
 
-Standard approval event.
+Standard approval event. Event type: `'Approved'`.
 
 ```typescript
 class ApprovedEvent extends NetEvent {
     constructor(
-        owner: Address,
-        spender: Address,
-        amount: u256
+        owner: Address,     // The token owner
+        spender: Address,   // The approved spender
+        amount: u256        // The approved amount
     )
 }
 ```
@@ -199,15 +251,33 @@ class ApprovedEvent extends NetEvent {
 this.emitEvent(new ApprovedEvent(owner, spender, allowance));
 ```
 
+### ApprovedForAllEvent
+
+Operator approval event for all tokens. Event type: `'ApprovedForAll'`.
+
+```typescript
+class ApprovedForAllEvent extends NetEvent {
+    constructor(
+        account: Address,   // The account granting approval
+        operator: Address,  // The approved operator
+        approved: boolean   // Whether approval is granted or revoked
+    )
+}
+```
+
+```typescript
+this.emitEvent(new ApprovedForAllEvent(owner, operator, true));
+```
+
 ### MintedEvent
 
-Token minting event.
+Token minting event. Event type: `'Minted'`.
 
 ```typescript
 class MintedEvent extends NetEvent {
     constructor(
-        to: Address,
-        amount: u256
+        to: Address,        // The recipient of minted tokens
+        amount: u256        // The amount minted
     )
 }
 ```
@@ -218,19 +288,36 @@ this.emitEvent(new MintedEvent(recipient, mintAmount));
 
 ### BurnedEvent
 
-Token burning event.
+Token burning event. Event type: `'Burned'`.
 
 ```typescript
 class BurnedEvent extends NetEvent {
     constructor(
-        from: Address,
-        amount: u256
+        from: Address,      // The address tokens are burned from
+        amount: u256        // The amount burned
     )
 }
 ```
 
 ```typescript
 this.emitEvent(new BurnedEvent(burner, burnAmount));
+```
+
+### URIEvent
+
+URI update event for token metadata. Event type: `'URI'`. URI length is limited to 200 bytes.
+
+```typescript
+class URIEvent extends NetEvent {
+    constructor(
+        value: string,      // The URI string (max 200 bytes)
+        id: u256            // The token ID
+    )
+}
+```
+
+```typescript
+this.emitEvent(new URIEvent('https://example.com/token/1', tokenId));
 ```
 
 ## Event Lifecycle
@@ -314,20 +401,25 @@ Events have a maximum payload size of **352 bytes**.
 
 ```typescript
 // Calculate event data size
-const ADDRESS_SIZE = 32;
-const U256_SIZE = 32;
+// Address: 32 bytes, u256: 32 bytes
 
+@final
 class LargeEvent extends NetEvent {
     constructor(
-        public readonly addr1: Address,     // 32 bytes
-        public readonly addr2: Address,     // 32 bytes
-        public readonly value1: u256,       // 32 bytes
-        public readonly value2: u256,       // 32 bytes
-        public readonly value3: u256        // 32 bytes
-    ) {                                      // Total: 160 bytes - OK
-        super('LargeEvent');
+        addr1: Address,     // 32 bytes
+        addr2: Address,     // 32 bytes
+        value1: u256,       // 32 bytes
+        value2: u256,       // 32 bytes
+        value3: u256        // 32 bytes
+    ) {                     // Total: 160 bytes - OK
+        const data = new BytesWriter(ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH * 3);
+        data.writeAddress(addr1);
+        data.writeAddress(addr2);
+        data.writeU256(value1);
+        data.writeU256(value2);
+        data.writeU256(value3);
+        super('LargeEvent', data);
     }
-    // ...
 }
 ```
 
@@ -341,7 +433,6 @@ Use `emitEvent` from the contract:
     { name: 'to', type: ABIDataTypes.ADDRESS },
     { name: 'amount', type: ABIDataTypes.UINT256 },
 )
-@returns({ name: 'success', type: ABIDataTypes.BOOL })
 @emit('Transferred')
 public transfer(calldata: Calldata): BytesWriter {
     const to: Address = calldata.readAddress();
@@ -351,10 +442,11 @@ public transfer(calldata: Calldata): BytesWriter {
     // Perform transfer
     this._transfer(from, to, amount);
 
-    // Emit event
-    this.emitEvent(new TransferredEvent(Blockchain.tx.sender, from, to, amount));
+    // Emit event (OP_NET base class handles emitting via internal _transfer)
+    // For custom events, use:
+    // this.emitEvent(new TransferredEvent(Blockchain.tx.sender, from, to, amount));
 
-    return new BytesWriter(1);
+    return new BytesWriter(0);
 }
 ```
 
@@ -446,10 +538,10 @@ class OrderFilled extends NetEvent {
 ```typescript
 // Good - emit after state is updated
 this._balances.set(to, newBalance);
-this.emitEvent(new TransferEvent(from, to, amount));
+this.emitEvent(new TransferredEvent(Blockchain.tx.sender, from, to, amount));
 
 // Bad - emit before state change
-this.emitEvent(new TransferEvent(from, to, amount));
+this.emitEvent(new TransferredEvent(Blockchain.tx.sender, from, to, amount));
 this._balances.set(to, newBalance);  // Could fail
 ```
 

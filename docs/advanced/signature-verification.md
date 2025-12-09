@@ -68,6 +68,10 @@ Blockchain.verifySignature(
 ): boolean
 ```
 
+**Important:** The first parameter must be an `ExtendedAddress`, not a plain `Address`. Use `Blockchain.tx.origin` which returns `ExtendedAddress` for verifying the transaction originator's signature. The `ExtendedAddress` type contains both:
+- `tweakedPublicKey` (32 bytes) - for Schnorr/Taproot signatures
+- `mldsaPublicKey` (1,312 bytes for Level2) - for quantum-resistant ML-DSA signatures
+
 **Behavior:**
 - When `forceMLDSA = false`: Uses Schnorr if `UNSAFE_QUANTUM_SIGNATURES_ALLOWED` consensus flag is set, otherwise ML-DSA
 - When `forceMLDSA = true`: Always uses ML-DSA (quantum-resistant)
@@ -292,21 +296,21 @@ class SignatureContract extends OP_NET {
     }
 
     @method(
-        { name: 'signer', type: ABIDataTypes.ADDRESS },
         { name: 'signature', type: ABIDataTypes.BYTES },
         { name: 'message', type: ABIDataTypes.BYTES },
     )
     @returns({ name: 'valid', type: ABIDataTypes.BOOL })
-    public verifyFor(calldata: Calldata): BytesWriter {
-        const signer = calldata.readAddress();
+    public verifyForOrigin(calldata: Calldata): BytesWriter {
         const signature = calldata.readBytesWithLength();
         const message = calldata.readBytesWithLength();
 
         const messageHash = sha256(message);
 
-        // Verify signature for a specific signer
+        // Verify signature for the transaction origin (ExtendedAddress)
+        // Note: Blockchain.tx.origin returns ExtendedAddress which supports both
+        // Schnorr (via tweakedPublicKey) and ML-DSA (via mldsaPublicKey) signatures
         const isValid = Blockchain.verifySignature(
-            signer,
+            Blockchain.tx.origin,  // ExtendedAddress from transaction
             signature,
             messageHash,
             false  // Use consensus-aware verification

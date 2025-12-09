@@ -115,8 +115,8 @@ this.balances.set(userId, balance);
 // Get value (returns u256.Zero if not set)
 const balance: u256 = this.balances.get(userId);
 
-// Check existence
-const exists: bool = this.balances.has(userId);
+// Check existence (StoredMapU256 doesn't have has() - compare with zero)
+const exists: bool = !this.balances.get(userId).isZero();
 
 // Delete (set to zero)
 this.balances.set(userId, u256.Zero);
@@ -280,7 +280,7 @@ flowchart LR
 | Initialize | Automatic | `this.data = new StoredMapU256(this.dataPointer);` |
 | Read value | `data[key]` | `data.get(key)` |
 | Write value | `data[key] = value;` | `data.set(key, value)` |
-| Check exists | `data[key] != 0` | `data.has(key)` or `!data.get(key).isZero()` |
+| Check exists | `data[key] != 0` | `!data.get(key).isZero()` |
 | Delete entry | `delete data[key];` | `data.set(key, u256.Zero)` |
 | Default value | `0` | `u256.Zero` |
 

@@ -54,14 +54,20 @@ constructor() {
 // Get value for address
 public get(key: Address): u256
 
-// Set value for address
-public set(key: Address, value: u256): void
+// Set value for address (returns this for chaining)
+public set(key: Address, value: u256): this
+
+// Get raw bytes
+public getAsUint8Array(key: Address): Uint8Array
+
+// Set raw bytes
+public setAsUint8Array(key: Address, value: Uint8Array): this
 
 // Check if key has non-default value
 public has(key: Address): bool
 
-// Delete (set to default)
-public delete(key: Address): void
+// Delete (set to default, returns true if key existed)
+public delete(key: Address): bool
 ```
 
 ## Storage Flow

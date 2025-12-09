@@ -101,12 +101,23 @@ const remainder = SafeMath.mod(a, b);
 
 ```typescript
 const base = u256.fromU64(2);
-const exp: u32 = 10;
+const exp = u256.fromU64(10);
 
 const result = SafeMath.pow(base, exp);  // 2^10 = 1024
 
 // Reverts on overflow
-// Uses efficient exponentiation by squaring
+// Uses efficient exponentiation by squaring (binary exponentiation)
+```
+
+### Power of 10
+
+```typescript
+// Optimized function for 10^n
+const million = SafeMath.pow10(6);  // 10^6 = 1,000,000
+const ether = SafeMath.pow10(18);   // 10^18
+
+// Maximum safe exponent is 77 (10^78 > u256.Max)
+// Reverts if exponent > 77
 ```
 
 ### Square Root
@@ -119,28 +130,16 @@ const sqrt = SafeMath.sqrt(value);  // 12
 // Returns floor of square root
 ```
 
-### Fast Division by 10
+### Increment and Decrement
 
 ```typescript
-const value = u256.fromU64(123);
+const value = u256.fromU64(100);
 
-const quotient = SafeMath.div10(value);  // 12
-const remainder = SafeMath.rem10(value); // 3
+// Safe increment (reverts at u256.Max)
+const incremented = SafeMath.inc(value);  // 101
 
-// Optimized for base-10 operations (string conversion, etc.)
-```
-
-### Multiply then Divide
-
-```typescript
-// Calculate (a * b) / c without intermediate overflow
-const a = u256.Max;
-const b = u256.fromU64(2);
-const c = u256.fromU64(3);
-
-const result = u128.muldiv(a, b, c);  // Uses u256 internally
-
-// Useful for percentage calculations, price conversions, etc.
+// Safe decrement (reverts at 0)
+const decremented = SafeMath.dec(value);  // 99
 ```
 
 ## Shift Operations
@@ -148,39 +147,53 @@ const result = u128.muldiv(a, b, c);  // Uses u256 internally
 ### Left Shift
 
 ```typescript
-const shifted = SafeMath.shl(value, bits);
+const shifted = SafeMath.shl(value, 10);  // value << 10
 
-// NOTE: Left shift can silently discard high bits
-// If you need overflow checking, use multiplication:
-const safe = SafeMath.mul(value, SafeMath.pow(u256.fromU64(2), bits));
+// WARNING: Unlike other SafeMath operations, bit shifts do NOT throw on overflow!
+// Bits shifted beyond the type width are SILENTLY LOST
+// Shifts >= 256 return 0
+// Negative shifts return 0 (defensive behavior)
 ```
 
 ### Right Shift
 
 ```typescript
-const shifted = SafeMath.shr(value, bits);
+const shifted = SafeMath.shr(value, 5);  // value >> 5
 
 // Right shift is always safe (can't overflow)
 // Equivalent to division by 2^bits
 ```
 
+### Bitwise Operations
+
+```typescript
+// AND operation
+const result1 = SafeMath.and(a, b);  // a & b
+
+// OR operation
+const result2 = SafeMath.or(a, b);   // a | b
+
+// XOR operation
+const result3 = SafeMath.xor(a, b);  // a ^ b
+
+// Check if even
+const isEven = SafeMath.isEven(value);  // (value & 1) == 0
+```
+
 ## Comparison Operations
 
 ```typescript
-// Less than
-if (SafeMath.lt(a, b)) { }
+// Use u256 built-in comparison methods (not SafeMath)
+if (u256.lt(a, b)) { }   // Less than
+if (u256.le(a, b)) { }   // Less than or equal
+if (u256.gt(a, b)) { }   // Greater than
+if (u256.ge(a, b)) { }   // Greater than or equal
+if (u256.eq(a, b)) { }   // Equal
+if (u256.ne(a, b)) { }   // Not equal
 
-// Less than or equal
-if (SafeMath.lte(a, b)) { }
-
-// Greater than
-if (SafeMath.gt(a, b)) { }
-
-// Greater than or equal
-if (SafeMath.gte(a, b)) { }
-
-// Equal
-if (SafeMath.eq(a, b)) { }
+// SafeMath provides min/max operations
+const smaller = SafeMath.min(a, b);
+const larger = SafeMath.max(a, b);
 ```
 
 ## Specialized Functions
@@ -204,16 +217,58 @@ const inverse = SafeMath.modInverse(a, n);
 // Reverts if inverse doesn't exist
 ```
 
-### Logarithm
+### Logarithm Operations
 
 ```typescript
-// Log base 2 (floor)
-const log2 = SafeMath.log2(value);
+// Approximate log2 (returns floor of log2(x))
+// Fast O(1) using bit length calculation
+const log2 = SafeMath.approximateLog2(value);  // Returns u256
 
-// Log base 10 (floor)
-const log10 = SafeMath.log10(value);
+// Precise natural log (ln) scaled by 10^6 for fixed-point precision
+// Higher accuracy but more gas intensive
+const lnScaled = SafeMath.preciseLog(value);  // ln(x) * 1e6
 
-// Useful for AMM pricing, bit operations
+// Approximate natural log scaled by 10^6
+// Uses bit length * ln(2) approximation
+const approxLn = SafeMath.approxLog(value);  // Approximate ln(x) * 1e6
+
+// Bit length (number of bits needed to represent value)
+const bits = SafeMath.bitLength256(value);  // Returns u32
+```
+
+## Operations for Other Integer Sizes
+
+SafeMath provides variants for u128 and u64 for more efficient operations when u256 is not needed:
+
+### u128 Operations
+
+```typescript
+import { u128 } from '@btc-vision/as-bignum/assembly';
+
+const a = u128.fromU64(100);
+const b = u128.fromU64(50);
+
+SafeMath.add128(a, b);    // Addition
+SafeMath.sub128(a, b);    // Subtraction
+SafeMath.mul128(a, b);    // Multiplication
+SafeMath.div128(a, b);    // Division
+SafeMath.min128(a, b);    // Minimum
+SafeMath.max128(a, b);    // Maximum
+SafeMath.shl128(a, 10);   // Left shift
+```
+
+### u64 Operations
+
+```typescript
+const x: u64 = 100;
+const y: u64 = 50;
+
+SafeMath.add64(x, y);     // Addition
+SafeMath.sub64(x, y);     // Subtraction
+SafeMath.mul64(x, y);     // Multiplication
+SafeMath.div64(x, y);     // Division
+SafeMath.min64(x, y);     // Minimum
+SafeMath.max64(x, y);     // Maximum
 ```
 
 ## Solidity Comparison
@@ -323,13 +378,16 @@ SafeMath.mod(u256.fromU64(100), u256.Zero);  // Reverts!
 
 ```typescript
 // 0^0 = 1 (mathematical convention)
-SafeMath.pow(u256.Zero, 0);  // Returns 1
+SafeMath.pow(u256.Zero, u256.Zero);  // Returns 1
 
 // n^0 = 1
-SafeMath.pow(u256.fromU64(5), 0);  // Returns 1
+SafeMath.pow(u256.fromU64(5), u256.Zero);  // Returns 1
 
 // 0^n = 0 (for n > 0)
-SafeMath.pow(u256.Zero, 5);  // Returns 0
+SafeMath.pow(u256.Zero, u256.fromU64(5));  // Returns 0
+
+// 1^n = 1
+SafeMath.pow(u256.One, u256.fromU64(1000));  // Returns 1
 ```
 
 ### Maximum Values

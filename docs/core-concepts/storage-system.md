@@ -113,16 +113,13 @@ In Solidity, storage slots are assigned implicitly by the compiler. In OPNet, yo
 | Solidity Type | OPNet Equivalent | Notes |
 |---------------|------------------|-------|
 | `uint256` | `StoredU256` | 32 bytes |
-| `uint128` | `StoredU128` | 16 bytes |
-| `uint64` | `StoredU64` | 8 bytes |
-| `uint32` | `StoredU32` | 4 bytes |
-| `uint16` | `StoredU16` | 2 bytes |
-| `uint8` | `StoredU8` | 1 byte |
+| `uint64` (packed) | `StoredU64` | Stores up to 4 u64 values in one slot |
+| `uint32` (packed) | `StoredU32` | Stores up to 8 u32 values in one slot |
 | `bool` | `StoredBoolean` | 1 byte |
 | `string` | `StoredString` | Variable length |
 | `address` | `StoredAddress` | 32 bytes |
-| `uint256[]` | `StoredU256Array` | Max 65,535 elements |
-| `address[]` | `StoredAddressArray` | Max 65,535 elements |
+| `uint256[]` | `StoredU256Array` | Dynamic array |
+| `address[]` | `StoredAddressArray` | Dynamic array |
 | `mapping(address => uint256)` | `AddressMemoryMap` | Address-keyed |
 | `mapping(uint256 => uint256)` | `StoredMapU256` | u256-keyed |
 | `mapping(address => mapping(address => uint256))` | `MapOfMap<u256>` | Two-level nesting |
@@ -358,11 +355,8 @@ OPNet provides typed storage classes for common data types:
 ```typescript
 import {
     StoredU256,
-    StoredU128,
     StoredU64,
     StoredU32,
-    StoredU16,
-    StoredU8,
     StoredBoolean,
     StoredString,
     StoredAddress,
@@ -398,19 +392,21 @@ import {
 
 // Usage
 private readonly holdersPointer: u16 = Blockchain.nextPointer;
-private readonly holders: StoredAddressArray = new StoredAddressArray(this.holdersPointer);
+private readonly holders: StoredAddressArray = new StoredAddressArray(this.holdersPointer, EMPTY_POINTER);
 
 // Operations
 @method({ name: 'holder', type: ABIDataTypes.ADDRESS })
 public addHolder(calldata: Calldata): BytesWriter {
     const newHolder = calldata.readAddress();
     this.holders.push(newHolder);
+    this.holders.save();  // Commit changes
     return new BytesWriter(0);
 }
 
 const holder = this.holders.get(index);
-const length = this.holders.length;
-this.holders.pop();
+const length = this.holders.getLength();
+this.holders.deleteLast();
+this.holders.save();
 ```
 
 ### Map Storage
@@ -447,8 +443,8 @@ public constructor() {
 | Write balance | `balances[addr] = x` | `balanceOf.set(addr, x)` |
 | Check approval | `allowances[owner][spender]` | `allowances.get(owner).get(spender)` |
 | Set approval | `allowances[owner][spender] = x` | `ownerMap = allowances.get(owner); ownerMap.set(spender, x); allowances.set(owner, ownerMap);` |
-| Array push | `arr.push(x)` | `arr.push(x)` |
-| Array length | `arr.length` | `arr.length` |
+| Array push | `arr.push(x)` | `arr.push(x); arr.save()` |
+| Array length | `arr.length` | `arr.getLength()` |
 | Array access | `arr[i]` | `arr.get(i)` |
 | Require/revert | `require(cond, "msg")` | `if (!cond) throw new Revert("msg")` |
 | Get sender | `msg.sender` | `Blockchain.tx.sender` |
@@ -638,7 +634,6 @@ import {
     SafeMath,
     StoredString,
     StoredU256,
-    StoredU8,
     EMPTY_POINTER,
 } from '@btc-vision/btc-runtime/runtime';
 
@@ -647,7 +642,6 @@ export class SimpleToken extends OP_NET {
     // Pointer allocation (equivalent to slot assignment)
     private readonly namePointer: u16 = Blockchain.nextPointer;
     private readonly symbolPointer: u16 = Blockchain.nextPointer;
-    private readonly decimalsPointer: u16 = Blockchain.nextPointer;
     private readonly totalSupplyPointer: u16 = Blockchain.nextPointer;
     private readonly balancesPointer: u16 = Blockchain.nextPointer;
     private readonly allowancesPointer: u16 = Blockchain.nextPointer;
@@ -655,7 +649,7 @@ export class SimpleToken extends OP_NET {
     // Storage variables
     private readonly _name: StoredString = new StoredString(this.namePointer, 0);
     private readonly _symbol: StoredString = new StoredString(this.symbolPointer, 0);
-    private readonly _decimals: StoredU8 = new StoredU8(this.decimalsPointer, 18);
+    private readonly _decimals: u8 = 18; // Constant value, no storage needed
     private readonly _totalSupply: StoredU256 = new StoredU256(this.totalSupplyPointer, EMPTY_POINTER);
     private readonly _balanceOf: AddressMemoryMap;
     private readonly _allowance: MapOfMap<u256>;
@@ -795,7 +789,7 @@ const balance = this.balanceOf.get(address);
 
 // Read from array
 const holder = this.holders.get(index);
-const length = this.holders.length;
+const length = this.holders.getLength();
 ```
 
 ### Write Operations
@@ -810,6 +804,7 @@ this.balanceOf.set(address, newBalance);
 // Write to array
 this.holders.push(newAddress);
 this.holders.set(index, address);
+this.holders.save();  // Commit changes
 ```
 
 ### Commit Optimization
@@ -847,8 +842,8 @@ private paused: StoredBoolean = new StoredBoolean(pointer, false);
 | Limit | Value | Notes |
 |-------|-------|-------|
 | Pointers per contract | 65,535 | `u16` range |
-| Array length | 65,535 | Hard limit per array |
-| String length | Variable | Encoded in storage |
+| Array length | ~4 billion | `u32` range (default maxLength configurable) |
+| String length | 65,535 bytes | Encoded in storage |
 | Sub-pointers | `u256` range | Effectively unlimited |
 
 ## Best Practices

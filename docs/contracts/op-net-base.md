@@ -1,6 +1,6 @@
 # OP_NET Base Contract
 
-`OP_NET` is the abstract base class for all OPNet smart contracts. It provides the foundational structure for contract lifecycle, method dispatching, event emission, and access control.
+`OP_NET` is the base class for all OPNet smart contracts. It implements the `IBTC` interface and provides the foundational structure for contract lifecycle, method dispatching, event emission, and access control.
 
 ## Overview
 
@@ -57,15 +57,18 @@ OPNet contracts follow a clear inheritance pattern:
 ```mermaid
 classDiagram
     class OP_NET {
-        <<abstract>>
         Base Contract
-        +constructor()
-        +onDeployment(calldata: Calldata) void
-        +onExecutionStarted(method: Selector) void
-        +onExecutionCompleted(method: Selector) void
-        +emitEvent(event: NetEvent) void
-        +onlyDeployer(address: Address) void
-        #isDeployer(address: Address) bool
+        implements IBTC
+        +address Address (getter)
+        +contractDeployer Address (getter)
+        +onDeployment(_calldata: Calldata) void
+        +onExecutionStarted(_selector: Selector, _calldata: Calldata) void
+        +onExecutionCompleted(_selector: Selector, _calldata: Calldata) void
+        +execute(method: Selector, _calldata: Calldata) BytesWriter
+        #emitEvent(event: NetEvent) void
+        #onlyDeployer(caller: Address) void
+        #isSelf(address: Address) boolean
+        #_buildDomainSeparator() Uint8Array
         Note: @method decorator handles routing
     }
 
@@ -79,8 +82,18 @@ classDiagram
         Note: @method decorator handles routing
     }
 
+    class ReentrancyGuard {
+        Reentrancy Protection
+        extends OP_NET
+        #_locked: StoredBoolean
+        #_reentrancyDepth: StoredU256
+        +nonReentrantBefore() void
+        +nonReentrantAfter() void
+    }
+
     class OP20 {
         Fungible Token Standard
+        extends ReentrancyGuard
         -_totalSupply: StoredU256
         -balanceOfMap: AddressMemoryMap
         +transfer(calldata: Calldata) BytesWriter
@@ -89,6 +102,7 @@ classDiagram
 
     class OP721 {
         NFT Standard
+        extends ReentrancyGuard
         -_owners: AddressMemoryMap
         -_balances: AddressMemoryMap
         +transferFrom(calldata: Calldata) BytesWriter
@@ -96,8 +110,9 @@ classDiagram
     }
 
     OP_NET <|-- MyContract : extends
-    OP_NET <|-- OP20 : extends
-    OP_NET <|-- OP721 : extends
+    OP_NET <|-- ReentrancyGuard : extends
+    ReentrancyGuard <|-- OP20 : extends
+    ReentrancyGuard <|-- OP721 : extends
 ```
 
 ### Deployment and Execution Flow
@@ -133,7 +148,7 @@ sequenceDiagram
     Bitcoin->>WASM: Route to contract
     WASM->>Contract: constructor() runs AGAIN
     Contract->>Contract: Re-initialize storage maps
-    WASM->>Contract: onExecutionStarted(selector)
+    WASM->>Contract: onExecutionStarted(selector, calldata)
     Contract->>Contract: Read method selector from TX
     WASM->>Contract: execute(method, calldata)
 
@@ -159,7 +174,7 @@ sequenceDiagram
         end
     end
 
-    WASM->>Contract: onExecutionCompleted(selector)
+    WASM->>Contract: onExecutionCompleted(selector, calldata)
     Contract->>WASM: Return BytesWriter result
     WASM->>Bitcoin: Commit state changes
     Bitcoin->>User: Transaction complete
@@ -285,7 +300,7 @@ sequenceDiagram
     Contract->>Storage: Allocate storage pointers
     Storage-->>Contract: Pointer addresses
 
-    VM->>Contract: onExecutionStarted(selector)
+    VM->>Contract: onExecutionStarted(selector, calldata)
     Note over Contract: Pre-execution hook<br/>Can add logging/validation
 
     VM->>Contract: execute(selector, calldata)
@@ -326,7 +341,7 @@ sequenceDiagram
         end
     end
 
-    Contract->>Contract: onExecutionCompleted(selector)
+    Contract->>Contract: onExecutionCompleted(selector, calldata)
     Note over Contract: Post-execution hook<br/>Cleanup, final checks
 
     Contract->>VM: Return BytesWriter
@@ -366,6 +381,18 @@ function transfer(address to, uint256 amount) public { }
 ```
 
 **Note:** Both Solidity and OPNet handle selector generation automatically. In OPNet, use `@method` decorators and the runtime handles routing.
+
+### Built-in Methods
+
+The base `OP_NET` class provides a built-in `deployer()` method that returns the contract deployer address:
+
+```typescript
+// Built-in method handled by OP_NET.execute()
+// Selector: encodeSelector('deployer()')
+// Returns: Address (the contract deployer)
+```
+
+This method is automatically available on all contracts that extend `OP_NET`. When called, it returns the `contractDeployer` address.
 
 ## Access Control
 
@@ -462,6 +489,36 @@ emit Transfer(from, to, amount);
 
 // OPNet: emitEvent method
 this.emitEvent(new TransferEvent(from, to, amount));
+```
+
+## Protected Helper Methods
+
+The `OP_NET` base class provides several protected helper methods:
+
+### isSelf
+
+Checks if a given address is the contract's own address:
+
+```typescript
+protected isSelf(address: Address): boolean {
+    return this.address === address;
+}
+
+// Usage example
+if (this.isSelf(targetAddress)) {
+    // Handle self-call case
+}
+```
+
+### _buildDomainSeparator
+
+A method stub for building EIP-712 style domain separators. Must be overridden in derived classes that need signature verification:
+
+```typescript
+protected _buildDomainSeparator(): Uint8Array {
+    // Override in derived class to provide domain separator
+    throw new Error('Method not implemented.');
+}
 ```
 
 ## Storage Patterns
@@ -621,9 +678,12 @@ export class SimpleToken extends OP_NET {
 // Direct extension
 export class MyContract extends OP_NET { }
 
-// Extend with additional features
-export class MyToken extends OP20 { }  // OP20 extends OP_NET
-export class MyNFT extends OP721 { }   // OP721 extends OP_NET
+// Extend with reentrancy protection
+export class MySecureContract extends ReentrancyGuard { }
+
+// Extend with additional features (OP20/OP721 extend ReentrancyGuard which extends OP_NET)
+export class MyToken extends OP20 { }  // OP20 extends ReentrancyGuard extends OP_NET
+export class MyNFT extends OP721 { }   // OP721 extends ReentrancyGuard extends OP_NET
 ```
 
 ### Adding Functionality

@@ -9,8 +9,6 @@ import {
     StoredU256,
     StoredU64,
     StoredU32,
-    StoredU16,
-    StoredU8,
     StoredBoolean,
     StoredString,
     StoredAddress,
@@ -66,8 +64,7 @@ graph LR
 
     subgraph "Primitive Types"
         B1[StoredU256<br/>StoredU64<br/>StoredU32]
-        B2[StoredU16<br/>StoredU8<br/>StoredBoolean]
-        B3[StoredString<br/>StoredAddress]
+        B2[StoredBoolean<br/>StoredString<br/>StoredAddress]
     end
 
     subgraph "Array Types"
@@ -88,11 +85,11 @@ graph LR
         E3[setStorageAt<br/>Write value]
     end
 
-    A --> B1 & B2 & B3
+    A --> B1 & B2
     A --> C1 & C2 & C3
     A --> D1 & D2 & D3
 
-    B1 & B2 & B3 --> E1
+    B1 & B2 --> E1
     C1 & C2 & C3 --> E1
     D1 & D2 & D3 --> E1
 
@@ -120,21 +117,25 @@ classDiagram
         +get(key: Address) u256
         +set(key: Address, value: u256)
         +has(key: Address) bool
+        +delete(key: Address) bool
     }
 
     class StoredU256Array {
         -pointer: u16
-        +get length() u64
-        +push(value: u256)
-        +pop() u256
-        +get(index: u64) u256
-        +set(index: u64, value: u256)
+        +getLength() u32
+        +push(value: u256) u32
+        +shift() u256
+        +get(index: u32) u256
+        +set(index: u32, value: u256)
+        +save()
     }
 
     class MapOfMap {
         -pointer: u16
         +get(key: Address) Nested~u256~
         +set(key: Address, value: Nested~u256~)
+        +has(key: Address) bool
+        +delete(key: Address) bool
     }
 
     class Blockchain {
@@ -163,6 +164,16 @@ class StoredU256 {
     constructor(pointer: u16, subPointer: Uint8Array)
     public get value(): u256
     public set value(v: u256)
+    public get toBytes(): Uint8Array
+    public toString(): string
+    public set(value: u256): this
+    public add(value: u256): this       // operator +
+    public sub(value: u256): this       // operator -
+    public mul(value: u256): this       // operator *
+    public addNoCommit(value: u256): this
+    public subNoCommit(value: u256): this
+    public commit(): this
+    public toUint8Array(): Uint8Array
 }
 ```
 
@@ -217,10 +228,13 @@ Stores up to four 64-bit unsigned integers within a single u256 storage slot.
 ```typescript
 class StoredU64 {
     constructor(pointer: u16, subPointer: Uint8Array)
-    public get(index: u8): u64
+    public get(index: u8): u64        // index 0-3
     public set(index: u8, value: u64): void
     public save(): void
     public getAll(): u64[]
+    public setMultiple(values: u64[]): void
+    public reset(): void
+    public toString(): string
 }
 ```
 
@@ -236,16 +250,33 @@ this._timestamps.save();                                // Commit to storage
 const firstTimestamp = this._timestamps.get(0);
 ```
 
-### StoredU32 / StoredU16 / StoredU8
+### StoredU32
 
-Similar pattern for smaller integers:
+Stores up to eight 32-bit unsigned integers within a single u256 storage slot.
 
 ```typescript
-private countPointer: u16 = Blockchain.nextPointer;
-private _count: StoredU32 = new StoredU32(this.countPointer, 0);
+class StoredU32 {
+    constructor(pointer: u16, subPointer: Uint8Array)
+    public get(index: u8): u32        // index 0-7
+    public set(index: u8, value: u32): void
+    public save(): void
+    public getAll(): u32[]
+    public setMultiple(values: u32[]): void
+    public reset(): void
+    public toString(): string
+}
+```
 
-private flagPointer: u16 = Blockchain.nextPointer;
-private _flag: StoredU8 = new StoredU8(this.flagPointer, 0);
+```typescript
+private configPointer: u16 = Blockchain.nextPointer;
+private _config: StoredU32 = new StoredU32(this.configPointer, EMPTY_POINTER);
+
+// Usage - stores up to 8 u32 values in one storage slot
+this._config.set(0, 100);  // First u32
+this._config.set(1, 200);  // Second u32
+this._config.save();       // Commit to storage
+
+const firstValue = this._config.get(0);
 ```
 
 ### StoredBoolean
@@ -257,6 +288,7 @@ class StoredBoolean {
     constructor(pointer: u16, defaultValue: bool)
     public get value(): bool
     public set value(v: bool)
+    public toUint8Array(): Uint8Array
 }
 ```
 
@@ -301,7 +333,7 @@ class StoredAddress {
     constructor(pointer: u16)
     public get value(): Address
     public set value(v: Address)
-    public isDead(): bool
+    public isDead(): bool  // Note: checks if address equals Address.zero(), not ExtendedAddress.dead()
 }
 ```
 
@@ -318,17 +350,25 @@ const owner = this._owner.value;
 
 ### StoredU256Array
 
-Dynamic array of u256 values.
+Dynamic array of u256 values. Elements are packed into 32-byte storage slots.
 
 ```typescript
 class StoredU256Array {
     constructor(pointer: u16, subPointer: Uint8Array, maxLength: u32 = DEFAULT_MAX_LENGTH)
     public getLength(): u32
-    public push(value: u256): void
+    public push(value: u256, isPhysical?: bool): u32
     public deleteLast(): void
+    public delete(index: u32): void
+    public shift(): u256
     public get(index: u32): u256
     public set(index: u32, value: u256): void
+    public getAll(startIndex: u32, count: u32): u256[]
+    public setMultiple(startIndex: u32, values: u256[]): void
     public save(): void
+    public reset(): void
+    public deleteAll(): void
+    public startingIndex(): u32
+    public setStartingIndex(index: u32): void
 }
 ```
 
@@ -365,9 +405,9 @@ flowchart LR
         I --> J[Return u256]
     end
 
-    subgraph "pop Operation"
-        B -->|pop| K[Validate<br/>length > 0]
-        K --> L[Read last element]
+    subgraph "shift Operation"
+        B -->|shift| K[Validate<br/>length > 0]
+        K --> L[Read first element]
         L --> M[Decrement length]
         M --> N[Return value]
     end
@@ -381,17 +421,25 @@ flowchart LR
 
 ### StoredAddressArray
 
-Dynamic array of Address values.
+Dynamic array of Address values. Each address takes one 32-byte storage slot.
 
 ```typescript
 class StoredAddressArray {
     constructor(pointer: u16, subPointer: Uint8Array, maxLength: u32 = DEFAULT_MAX_LENGTH)
     public getLength(): u32
-    public push(value: Address): void
+    public push(value: Address, isPhysical?: bool): u32
     public deleteLast(): void
+    public delete(index: u32): void
+    public shift(): Address
     public get(index: u32): Address
     public set(index: u32, value: Address): void
+    public getAll(startIndex: u32, count: u32): Address[]
+    public setMultiple(startIndex: u32, values: Address[]): void
     public save(): void
+    public reset(): void
+    public deleteAll(): void
+    public startingIndex(): u32
+    public setStartingIndex(index: u32): void
 }
 ```
 
@@ -412,11 +460,16 @@ for (let i: u32 = 0; i < this.oracles.getLength(); i++) {
 
 ### Other Array Types
 
-- `StoredU64Array`
-- `StoredU32Array`
-- `StoredU16Array`
-- `StoredU8Array`
-- `StoredBooleanArray`
+All array types share the same base API as `StoredU256Array` (extending `StoredPackedArray<T>`) with their respective element types:
+
+- `StoredU128Array` - 2 u128 values per 32-byte slot
+- `StoredU64Array` - 4 u64 values per 32-byte slot
+- `StoredU32Array` - 8 u32 values per 32-byte slot
+- `StoredU16Array` - 16 u16 values per 32-byte slot
+- `StoredU8Array` - 32 u8 values per 32-byte slot
+- `StoredBooleanArray` - 256 boolean values per 32-byte slot (bit-packed)
+
+> **Note:** These are array types only. There are no standalone `StoredU128`, `StoredU16`, or `StoredU8` primitive classes. For storing single small values, use `StoredU64` (which packs 4 u64 values) or `StoredU32` (which packs 8 u32 values) in a single storage slot.
 
 ## Map Storage
 
@@ -428,8 +481,11 @@ Maps addresses to u256 values. Always returns u256.Zero for unset addresses.
 class AddressMemoryMap {
     constructor(pointer: u16)
     public get(key: Address): u256
-    public set(key: Address, value: u256): void
+    public set(key: Address, value: u256): this
+    public getAsUint8Array(key: Address): Uint8Array
+    public setAsUint8Array(key: Address, value: Uint8Array): this
     public has(key: Address): bool
+    public delete(key: Address): bool
 }
 ```
 
@@ -515,9 +571,11 @@ class StoredMapU256 {
     constructor(pointer: u16, subPointer: Uint8Array = new Uint8Array(30))
     public get(key: u256): u256
     public set(key: u256, value: u256): void
-    public delete(key: u256): void
+    public delete(key: u256): void  // Sets value to zero
 }
 ```
+
+Note: `StoredMapU256` does not have a `has()` method. To check if a key exists, compare the returned value with `u256.Zero`.
 
 ```typescript
 private dataPointer: u16 = Blockchain.nextPointer;
@@ -532,6 +590,24 @@ const value = this.data.get(key);
 ### Nested Maps (MapOfMap)
 
 For allowances pattern (owner => spender => amount):
+
+```typescript
+class MapOfMap<T> {
+    constructor(pointer: u16)
+    public get(key: Address): Nested<T>
+    public set(key: Address, value: Nested<T>): this
+    public has(key: Address): bool
+    public delete(key: Address): bool
+    public clear(): void
+}
+
+class Nested<T> {
+    constructor(parent: Uint8Array, pointer: u16)
+    public get(key: Uint8Array): T
+    public set(key: Uint8Array, value: T): this
+    public has(key: Uint8Array): bool
+}
+```
 
 ```typescript
 import { MapOfMap, Nested } from '@btc-vision/btc-runtime/runtime';

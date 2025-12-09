@@ -266,8 +266,8 @@ public whitelistMint(calldata: Calldata): BytesWriter {
         throw new Revert('Whitelist sale not active');
     }
 
-    // Check whitelist
-    if (!this._whitelist.get(sender)) {
+    // Check whitelist (AddressMemoryMap returns u256; non-zero = whitelisted)
+    if (this._whitelist.get(sender).isZero()) {
         throw new Revert('Not whitelisted');
     }
 
@@ -292,7 +292,8 @@ function whitelistMint(uint256 quantity, bytes32[] calldata proof) external {
 @returns({ name: 'success', type: ABIDataTypes.BOOL })
 @emit('Minted')
 public whitelistMint(calldata: Calldata): BytesWriter {
-    if (!this._whitelist.get(sender)) {
+    // AddressMemoryMap returns u256; non-zero = whitelisted
+    if (this._whitelist.get(sender).isZero()) {
         throw new Revert('Not whitelisted');
     }
     // ...
@@ -493,7 +494,9 @@ export class NFTWithReservations extends OP721 {
         const maxPerWallet = calldata.readU256();
         const hiddenURI = calldata.readString();
 
-        this.instantiate(new OP721InitParameters(name, symbol));
+        // OP721InitParameters requires: name, symbol, baseURI, maxSupply
+        // baseURI is empty initially since we use hiddenURI before reveal
+        this.instantiate(new OP721InitParameters(name, symbol, '', maxSupply));
 
         this._maxSupply.value = maxSupply;
         this._price.value = price;
@@ -616,8 +619,8 @@ export class NFTWithReservations extends OP721 {
             throw new Revert('Whitelist sale not active');
         }
 
-        // Check whitelist
-        if (!this._whitelist.get(sender)) {
+        // Check whitelist (AddressMemoryMap returns u256; non-zero = whitelisted)
+        if (this._whitelist.get(sender).isZero()) {
             throw new Revert('Not whitelisted');
         }
 
@@ -734,9 +737,11 @@ export class NFTWithReservations extends OP721 {
 
         const addresses = calldata.readAddressArray();
         const status = calldata.readBoolean();
+        // AddressMemoryMap stores u256; convert boolean to u256.One/Zero
+        const statusValue = status ? u256.One : u256.Zero;
 
         for (let i = 0; i < addresses.length; i++) {
-            this._whitelist.set(addresses[i], status);
+            this._whitelist.set(addresses[i], statusValue);
         }
 
         return new BytesWriter(0);
@@ -782,7 +787,8 @@ export class NFTWithReservations extends OP721 {
     @returns({ name: 'whitelisted', type: ABIDataTypes.BOOL })
     public isWhitelisted(calldata: Calldata): BytesWriter {
         const addr = calldata.readAddress();
-        const status = this._whitelist.get(addr);
+        // AddressMemoryMap.get() returns u256; convert to boolean
+        const status = !this._whitelist.get(addr).isZero();
 
         const writer = new BytesWriter(1);
         writer.writeBoolean(status);
@@ -1175,7 +1181,8 @@ public whitelistMint(calldata: Calldata): BytesWriter {
         throw new Revert('Whitelist sale not active');
     }
 
-    if (!this._whitelist.get(sender)) {
+    // AddressMemoryMap returns u256; non-zero = whitelisted
+    if (this._whitelist.get(sender).isZero()) {
         throw new Revert('Not whitelisted');
     }
 

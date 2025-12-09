@@ -26,6 +26,7 @@ OPNet supports three Bitcoin networks:
 import { Networks, Network } from '@btc-vision/btc-runtime/runtime';
 
 // Network enum values
+Networks.Unknown  // -1 (uninitialized)
 Networks.Mainnet  // 0
 Networks.Testnet  // 1
 Networks.Regtest  // 2
@@ -37,6 +38,9 @@ const hrpRegtest = Network.hrp(Networks.Regtest);  // "bcrt"
 
 // Get chain ID (32-byte identifier)
 const chainId = Network.getChainId(Networks.Mainnet);
+
+// Convert chain ID back to network enum
+const network = Network.fromChainId(chainId);  // Networks.Mainnet
 ```
 
 ## Address Types
@@ -468,14 +472,17 @@ public analyzeOutputs(): void {
         // Output value in satoshis
         const value: u64 = output.value;
 
-        // Output script
-        const script: Uint8Array = output.script;
+        // Output script (may be null)
+        const script: Uint8Array | null = output.scriptPublicKey;
 
-        // Parse script type
-        if (this.isP2TR(script)) {
-            // Taproot output
-        } else if (this.isP2WSH(script)) {
-            // Witness script hash
+        // Check if output has script before parsing
+        if (script !== null) {
+            // Parse script type
+            if (this.isP2TR(script)) {
+                // Taproot output
+            } else if (this.isP2WSH(script)) {
+                // Witness script hash
+            }
         }
     }
 }
@@ -507,13 +514,26 @@ public analyzeInputs(): void {
         const input = inputs[i];
 
         // Previous transaction hash
-        const txid: Uint8Array = input.txid;
+        const txId: Uint8Array = input.txId;
 
-        // Output index being spent
-        const vout: u32 = input.vout;
+        // Output index being spent (u16)
+        const outputIndex: u16 = input.outputIndex;
 
-        // Witness data
-        const witness: Uint8Array[] = input.witness;
+        // Script signature
+        const scriptSig: Uint8Array = input.scriptSig;
+
+        // Witness data (may be null)
+        const witnesses: Uint8Array[] | null = input.witnesses;
+
+        // Check if input has witnesses
+        if (input.hasWitnesses && witnesses !== null) {
+            // Process witness data
+        }
+
+        // Check if this is a coinbase input
+        if (input.isCoinbase) {
+            // This is a coinbase transaction
+        }
     }
 }
 ```
@@ -802,10 +822,12 @@ if (recognized.ok) {
 | Access tx outputs | `msg.value` only | `Blockchain.tx.outputs` (full array) |
 | Access tx inputs | Not possible | `Blockchain.tx.inputs` (full array) |
 | Get output value | Limited | `output.value` (satoshis) |
-| Get output script | Not possible | `output.script` (full script bytes) |
-| Get input txid | Not possible | `input.txid` |
-| Get input vout | Not possible | `input.vout` |
-| Get witness data | Not possible | `input.witness` |
+| Get output script | Not possible | `output.scriptPublicKey` (full script bytes, nullable) |
+| Get input txid | Not possible | `input.txId` |
+| Get input output index | Not possible | `input.outputIndex` (u16) |
+| Get witness data | Not possible | `input.witnesses` (array, nullable) |
+| Get script signature | Not possible | `input.scriptSig` |
+| Check coinbase input | Not possible | `input.isCoinbase` |
 | Parse script type | Not possible | Pattern matching on script bytes |
 
 ### Data Embedding Comparison

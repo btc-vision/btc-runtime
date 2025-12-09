@@ -22,8 +22,10 @@ export class MyNFT extends OP721 {
 
     public override onDeployment(_calldata: Calldata): void {
         this.instantiate(new OP721InitParameters(
-            'My NFT Collection',
-            'MNFT'
+            'My NFT Collection',           // name
+            'MNFT',                         // symbol
+            'https://example.com/nft/',    // baseURI
+            u256.fromU64(10000)             // maxSupply
         ));
     }
 }
@@ -46,15 +48,27 @@ export class MyNFT extends OP721 {
 
 ### OP721InitParameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `name` | `string` | Collection name |
-| `symbol` | `string` | Collection symbol |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | `string` | Yes | Collection name |
+| `symbol` | `string` | Yes | Collection symbol |
+| `baseURI` | `string` | Yes | Base URI for token metadata |
+| `maxSupply` | `u256` | Yes | Maximum number of tokens that can be minted |
+| `collectionBanner` | `string` | No | Collection banner URL (default: '') |
+| `collectionIcon` | `string` | No | Collection icon URL (default: '') |
+| `collectionWebsite` | `string` | No | Collection website URL (default: '') |
+| `collectionDescription` | `string` | No | Collection description (default: '') |
 
 ```typescript
 this.instantiate(new OP721InitParameters(
-    'My NFT Collection',
-    'MNFT'
+    'My NFT Collection',      // name
+    'MNFT',                   // symbol
+    'https://example.com/nft/', // baseURI
+    u256.fromU64(10000),      // maxSupply
+    'https://example.com/banner.png',  // collectionBanner (optional)
+    'https://example.com/icon.png',    // collectionIcon (optional)
+    'https://example.com',             // collectionWebsite (optional)
+    'My awesome NFT collection'        // collectionDescription (optional)
 ));
 ```
 
@@ -100,9 +114,9 @@ sequenceDiagram
     participant TokenIndex as _ownedTokensIndex<br/>(Pointer 8)
     participant EventLog as Event Log
 
-    User->>Blockchain: Submit transferFrom(from, to, tokenId) TX
+    User->>Blockchain: Submit safeTransferFrom(from, to, tokenId, data) TX
     Blockchain->>VM: Route transaction
-    VM->>OP721: Call transferFrom
+    VM->>OP721: Call safeTransferFrom
 
     activate OP721
 
@@ -125,7 +139,7 @@ sequenceDiagram
         OP721->>VM: Revert('Not authorized')
         VM->>User: Transaction failed
     else Authorized to transfer
-        OP721->>OP721: _transfer(from, to, tokenId)
+        OP721->>OP721: _transfer(from, to, tokenId, data)
 
         OP721->>OP721: Validate currentOwner == from
 
@@ -285,27 +299,41 @@ stateDiagram-v2
 | `name()` | `string` | Collection name |
 | `symbol()` | `string` | Collection symbol |
 | `totalSupply()` | `u256` | Total minted NFTs |
-| `balanceOf(address)` | `u256` | NFT count for address |
+| `maxSupply()` | `u256` | Maximum supply limit |
+| `balanceOf(owner)` | `u256` | NFT count for address |
 | `ownerOf(tokenId)` | `Address` | Owner of token |
 | `tokenURI(tokenId)` | `string` | Metadata URI |
 | `tokenOfOwnerByIndex(owner, index)` | `u256` | Token ID at index |
+| `collectionInfo()` | `(icon, banner, description, website)` | Collection metadata |
+| `metadata()` | `(name, symbol, icon, banner, description, website, totalSupply, domainSeparator)` | Full collection metadata |
+| `domainSeparator()` | `bytes32` | EIP-712 domain separator |
+| `getApproveNonce(owner)` | `u256` | Signature nonce for owner |
 
 ### Transfer Methods
 
 | Method | Description |
 |--------|-------------|
-| `transferFrom(from, to, tokenId)` | Transfer NFT |
-| `safeTransferFrom(from, to, tokenId)` | Safe transfer with callback |
-| `safeTransferFrom(from, to, tokenId, data)` | Safe transfer with data |
+| `safeTransfer(to, tokenId, data)` | Transfer NFT from sender to recipient |
+| `safeTransferFrom(from, to, tokenId, data)` | Safe transfer with callback |
+| `burn(tokenId)` | Burn token (owner or approved only) |
 
 ### Approval Methods
 
 | Method | Description |
 |--------|-------------|
-| `approve(to, tokenId)` | Approve address for token |
+| `approve(operator, tokenId)` | Approve address for token |
 | `setApprovalForAll(operator, approved)` | Approve operator for all tokens |
 | `getApproved(tokenId)` | Get approved address |
 | `isApprovedForAll(owner, operator)` | Check operator approval |
+| `approveBySignature(...)` | Approve via EIP-712 signature |
+| `setApprovalForAllBySignature(...)` | Set operator approval via signature |
+
+### Admin Methods
+
+| Method | Description |
+|--------|-------------|
+| `setBaseURI(baseURI)` | Update base URI (deployer only) |
+| `changeMetadata(icon, banner, description, website)` | Update collection metadata (deployer only) |
 
 ## Solidity Comparison
 
@@ -339,32 +367,30 @@ contract MyNFT is ERC721 {
 <td>
 
 ```typescript
-import { EMPTY_POINTER } from '@btc-vision/btc-runtime/runtime';
+// OP721 base class already manages _nextTokenId internally
 
 @final
 export class MyNFT extends OP721 {
-    private nextTokenIdPointer: u16 = Blockchain.nextPointer;
-    private _nextTokenId: StoredU256;
-
     public constructor() {
         super();
-        this._nextTokenId = new StoredU256(
-            this.nextTokenIdPointer, EMPTY_POINTER
-        );
     }
 
     public override onDeployment(_: Calldata): void {
+        // Base class sets _nextTokenId to 1 automatically
         this.instantiate(new OP721InitParameters(
-            'MyNFT', 'MNFT'
+            'MyNFT',                    // name
+            'MNFT',                     // symbol
+            'https://example.com/nft/', // baseURI
+            u256.fromU64(10000)         // maxSupply
         ));
-        this._nextTokenId.value = u256.One;  // Set initial token ID
     }
 
     @method({ name: 'to', type: ABIDataTypes.ADDRESS })
     @returns({ name: 'tokenId', type: ABIDataTypes.UINT256 })
-    @emit('Transfer')
+    @emit('Transferred')
     public mint(calldata: Calldata): BytesWriter {
         const to = calldata.readAddress();
+        // Use base class _nextTokenId
         const tokenId = this._nextTokenId.value;
 
         this._mint(to, tokenId);
@@ -383,51 +409,64 @@ export class MyNFT extends OP721 {
 
 ## Storage Layout
 
-OP721 uses these storage pointers internally:
+OP721 uses these storage pointers internally (allocated via `Blockchain.nextPointer`):
 
-| Pointer | Storage | Description |
-|---------|---------|-------------|
-| 0 | `name` | Collection name |
-| 1 | `symbol` | Collection symbol |
-| 2 | `totalSupply` | Total minted count |
-| 3 | `owners` | tokenId -> owner mapping |
-| 4 | `balances` | address -> balance mapping |
-| 5 | `tokenApprovals` | tokenId -> approved address |
-| 6 | `operatorApprovals` | owner -> operator -> bool |
-| 7 | `ownedTokens` | owner -> index -> tokenId |
-| 8 | `ownedTokensIndex` | tokenId -> index in owner's list |
-| 9 | `tokenURIs` | tokenId -> URI mapping |
+| Storage Variable | Type | Description |
+|------------------|------|-------------|
+| `stringPointer` | StoredString | Stores name, symbol, baseURI, banner, icon, description, website |
+| `totalSupplyPointer` | StoredU256 | Total minted count |
+| `maxSupplyPointer` | StoredU256 | Maximum supply limit |
+| `ownerOfMapPointer` | StoredMapU256 | tokenId -> owner mapping |
+| `tokenApprovalMapPointer` | StoredMapU256 | tokenId -> approved address |
+| `operatorApprovalMapPointer` | MapOfMap | owner -> operator -> bool |
+| `balanceOfMapPointer` | AddressMemoryMap | address -> balance mapping |
+| `tokenURIMapPointer` | StoredMapU256 | tokenId -> URI index mapping |
+| `nextTokenIdPointer` | StoredU256 | Next token ID to mint |
+| `ownerTokensMapPointer` | StoredU256Array | owner -> array of token IDs |
+| `tokenIndexMapPointer` | StoredMapU256 | tokenId -> index in owner's list |
+| `initializedPointer` | StoredU256 | Initialization flag |
+| `tokenURICounterPointer` | StoredU256 | Counter for custom URIs |
+| `approveNonceMapPointer` | AddressMemoryMap | address -> signature nonce |
 
 ## Extending OP721
 
 ### Adding Minting
 
 ```typescript
-import { method, returns, ABIDataTypes } from '@btc-vision/btc-runtime/runtime';
+import { u256 } from '@btc-vision/as-bignum/assembly';
+import {
+    OP721,
+    OP721InitParameters,
+    Blockchain,
+    Calldata,
+    BytesWriter,
+    SafeMath,
+    ABIDataTypes,
+} from '@btc-vision/btc-runtime/runtime';
 
 @final
 export class MyNFT extends OP721 {
-    private nextTokenIdPointer: u16 = Blockchain.nextPointer;
-    private _nextTokenId: StoredU256 = new StoredU256(
-        this.nextTokenIdPointer,
-        EMPTY_POINTER
-    );
-
     public constructor() {
         super();
     }
 
     public override onDeployment(_calldata: Calldata): void {
-        this.instantiate(new OP721InitParameters('MyNFT', 'MNFT'));
-        this._nextTokenId.value = u256.One;  // Set initial token ID
+        // Base class sets _nextTokenId to 1 automatically
+        this.instantiate(new OP721InitParameters(
+            'MyNFT',                    // name
+            'MNFT',                     // symbol
+            'https://example.com/nft/', // baseURI
+            u256.fromU64(10000)         // maxSupply
+        ));
     }
 
     @method({ name: 'to', type: ABIDataTypes.ADDRESS })
     @returns({ name: 'tokenId', type: ABIDataTypes.UINT256 })
-    @emit('Transfer')
+    @emit('Transferred')
     public mint(calldata: Calldata): BytesWriter {
         const to = calldata.readAddress();
 
+        // Use base class _nextTokenId (already initialized to 1)
         const tokenId = this._nextTokenId.value;
         this._mint(to, tokenId);
         this._nextTokenId.value = SafeMath.add(tokenId, u256.One);
@@ -439,79 +478,75 @@ export class MyNFT extends OP721 {
 }
 ```
 
-### Adding Token URIs
+### Setting Custom Token URIs
+
+The OP721 base class already includes `baseURI` support and a `setBaseURI` method. You can also set custom URIs per token:
 
 ```typescript
 @final
 export class MyNFT extends OP721 {
-    private baseURIPointer: u16 = Blockchain.nextPointer;
-    private _baseURI: StoredString = new StoredString(
-        this.baseURIPointer,
-        0
-    );
-
-    @method({ name: 'uri', type: ABIDataTypes.STRING })
-    @returns({ name: 'success', type: ABIDataTypes.BOOL })
-    public setBaseURI(calldata: Calldata): BytesWriter {
-        this.onlyDeployer(Blockchain.tx.sender);
-        this._baseURI.value = calldata.readString();
-        return new BytesWriter(0);
+    public constructor() {
+        super();
     }
 
-    // Override tokenURI to use base URI
-    public override tokenURI(tokenId: u256): string {
-        // Check token exists
-        if (this._owners.get(tokenId).equals(Address.zero())) {
-            throw new Revert('Token does not exist');
-        }
+    public override onDeployment(_calldata: Calldata): void {
+        this.instantiate(new OP721InitParameters(
+            'MyNFT',
+            'MNFT',
+            'https://example.com/nft/',  // Default baseURI
+            u256.fromU64(10000)
+        ));
+    }
 
-        const base = this._baseURI.value;
-        return base + tokenId.toString();
+    // Set custom URI for a specific token
+    @method(
+        { name: 'tokenId', type: ABIDataTypes.UINT256 },
+        { name: 'uri', type: ABIDataTypes.STRING },
+    )
+    public setTokenURI(calldata: Calldata): BytesWriter {
+        this.onlyDeployer(Blockchain.tx.sender);
+        const tokenId = calldata.readU256();
+        const uri = calldata.readStringWithLength();
+
+        // Uses internal _setTokenURI from OP721 base class
+        this._setTokenURI(tokenId, uri);
+
+        return new BytesWriter(0);
     }
 }
 ```
+
+Note: The base class automatically handles token URI resolution - if a custom URI is set for a token, it returns that; otherwise, it returns `baseURI + tokenId`.
 
 ### Collection Metadata
 
+The OP721 base class includes built-in collection metadata support. You can set it during initialization:
+
 ```typescript
 @final
 export class MyNFT extends OP721 {
-    private descriptionPointer: u16 = Blockchain.nextPointer;
-    private imagePointer: u16 = Blockchain.nextPointer;
-
-    private _description: StoredString;
-    private _collectionImage: StoredString;
-
     public constructor() {
         super();
-        this._description = new StoredString(this.descriptionPointer, 0);
-        this._collectionImage = new StoredString(this.imagePointer, 1);
     }
 
-    @method(
-        { name: 'description', type: ABIDataTypes.STRING },
-        { name: 'image', type: ABIDataTypes.STRING },
-    )
-    @returns({ name: 'success', type: ABIDataTypes.BOOL })
-    public setCollectionMetadata(calldata: Calldata): BytesWriter {
-        this.onlyDeployer(Blockchain.tx.sender);
-
-        this._description.value = calldata.readString();
-        this._collectionImage.value = calldata.readString();
-
-        return new BytesWriter(0);
-    }
-
-    @method()
-    @returns({ name: 'metadata', type: ABIDataTypes.STRING })
-    public collectionMetadata(_calldata: Calldata): BytesWriter {
-        const writer = new BytesWriter(1024);
-        writer.writeString(this._description.value);
-        writer.writeString(this._collectionImage.value);
-        return writer;
+    public override onDeployment(_calldata: Calldata): void {
+        this.instantiate(new OP721InitParameters(
+            'MyNFT',                              // name
+            'MNFT',                               // symbol
+            'https://example.com/nft/',           // baseURI
+            u256.fromU64(10000),                  // maxSupply
+            'https://example.com/banner.png',    // collectionBanner
+            'https://example.com/icon.png',      // collectionIcon
+            'https://example.com',                // collectionWebsite
+            'An awesome NFT collection'           // collectionDescription
+        ));
     }
 }
 ```
+
+The built-in `collectionInfo()` method returns the icon, banner, description, and website. The `metadata()` method returns all collection data including name, symbol, and totalSupply.
+
+Use `changeMetadata(icon, banner, description, website)` to update collection metadata after deployment (deployer only).
 
 ## Internal Methods
 
@@ -519,9 +554,15 @@ export class MyNFT extends OP721 {
 |--------|-------------|
 | `_mint(to, tokenId)` | Mint new token |
 | `_burn(tokenId)` | Burn token |
-| `_transfer(from, to, tokenId)` | Internal transfer |
-| `_approve(to, tokenId)` | Internal approval |
+| `_transfer(from, to, tokenId, data)` | Internal transfer with data |
+| `_approve(operator, tokenId)` | Internal approval |
 | `_setApprovalForAll(owner, operator, approved)` | Internal operator approval |
+| `_setTokenURI(tokenId, uri)` | Set custom token URI |
+| `_setBaseURI(baseURI)` | Set base URI |
+| `_exists(tokenId)` | Check if token exists |
+| `_ownerOf(tokenId)` | Get owner (throws if not exists) |
+| `_balanceOf(owner)` | Get balance (throws if zero address) |
+| `_isApprovedForAll(owner, operator)` | Check operator approval |
 
 ## Enumeration
 
@@ -557,15 +598,19 @@ OP721 emits:
 
 ```typescript
 // On transfer, mint, burn
-TransferEvent(from: Address, to: Address, tokenId: u256)
+TransferredEvent(operator: Address, from: Address, to: Address, tokenId: u256)
+// operator = Blockchain.tx.sender
 // For mint: from = Address.zero()
 // For burn: to = Address.zero()
 
 // On approval
-ApprovalEvent(owner: Address, approved: Address, tokenId: u256)
+ApprovedEvent(owner: Address, spender: Address, tokenId: u256)
 
 // On operator approval
-ApprovalForAllEvent(owner: Address, operator: Address, approved: bool)
+ApprovedForAllEvent(owner: Address, operator: Address, approved: bool)
+
+// On URI change
+URIEvent(value: string, id: u256)
 ```
 
 ## Edge Cases
@@ -641,76 +686,66 @@ import {
     Address,
     Calldata,
     BytesWriter,
-    Selector,
     StoredU256,
-    StoredString,
     StoredBoolean,
     SafeMath,
     Revert,
-    method,
-    returns,
     ABIDataTypes,
     EMPTY_POINTER,
 } from '@btc-vision/btc-runtime/runtime';
 
 @final
 export class MyNFTCollection extends OP721 {
-    // Configuration
-    private maxSupplyPointer: u16 = Blockchain.nextPointer;
+    // Configuration - additional storage beyond base class
     private pricePointer: u16 = Blockchain.nextPointer;
-    private nextTokenIdPointer: u16 = Blockchain.nextPointer;
-    private baseURIPointer: u16 = Blockchain.nextPointer;
     private mintingOpenPointer: u16 = Blockchain.nextPointer;
 
-    private _maxSupply: StoredU256;
     private _price: StoredU256;
-    private _nextTokenId: StoredU256;
-    private _baseURI: StoredString;
     private _mintingOpen: StoredBoolean;
 
     public constructor() {
         super();
-        this._maxSupply = new StoredU256(this.maxSupplyPointer, EMPTY_POINTER);
         this._price = new StoredU256(this.pricePointer, EMPTY_POINTER);
-        this._nextTokenId = new StoredU256(this.nextTokenIdPointer, EMPTY_POINTER);
-        this._baseURI = new StoredString(this.baseURIPointer, 0);
         this._mintingOpen = new StoredBoolean(this.mintingOpenPointer, false);
     }
 
     public override onDeployment(calldata: Calldata): void {
-        const name = calldata.readString();
-        const symbol = calldata.readString();
+        const name = calldata.readStringWithLength();
+        const symbol = calldata.readStringWithLength();
+        const baseURI = calldata.readStringWithLength();
         const maxSupply = calldata.readU256();
         const price = calldata.readU256();
-        const baseURI = calldata.readString();
 
-        this.instantiate(new OP721InitParameters(name, symbol));
+        // Initialize OP721 base class with all required parameters
+        this.instantiate(new OP721InitParameters(
+            name,
+            symbol,
+            baseURI,
+            maxSupply
+        ));
 
-        this._maxSupply.value = maxSupply;
         this._price.value = price;
-        this._baseURI.value = baseURI;
-        this._nextTokenId.value = u256.One;  // Set initial token ID
     }
 
-    // Public mint
+    // Public mint - uses internal _nextTokenId from base class
     @method({ name: 'quantity', type: ABIDataTypes.UINT256 })
     @returns({ name: 'success', type: ABIDataTypes.BOOL })
-    @emit('Transfer')
+    @emit('Transferred')
     public mint(calldata: Calldata): BytesWriter {
         if (!this._mintingOpen.value) {
             throw new Revert('Minting not open');
         }
 
         const quantity = calldata.readU256();
-        const currentSupply = this.totalSupply();
-        const maxSupply = this._maxSupply.value;
+        const currentSupply = this.totalSupply;
+        const max = this.maxSupply;
 
         // Check supply
-        if (SafeMath.add(currentSupply, quantity) > maxSupply) {
+        if (SafeMath.add(currentSupply, quantity) > max) {
             throw new Revert('Exceeds max supply');
         }
 
-        // Mint tokens
+        // Mint tokens using base class _nextTokenId
         const to = Blockchain.tx.sender;
         for (let i: u256 = u256.Zero; i < quantity; i = SafeMath.add(i, u256.One)) {
             const tokenId = this._nextTokenId.value;
@@ -729,22 +764,19 @@ export class MyNFTCollection extends OP721 {
         this._mintingOpen.value = true;
         return new BytesWriter(0);
     }
-
-    // Token URI
-    public override tokenURI(tokenId: u256): string {
-        return this._baseURI.value + tokenId.toString() + '.json';
-    }
 }
 ```
 
+Note: The base class handles `tokenURI()`, `maxSupply`, `totalSupply`, and `_nextTokenId` - you don't need to redefine these unless you want custom behavior.
+
 ## Best Practices
 
-1. **Use incrementing token IDs** for simplicity
-2. **Implement `tokenURI`** for marketplace compatibility
-3. **Add collection metadata** for discoverability
-4. **Use `_safeMint`** when receiver might be a contract
-5. **Emit events** for all state changes
-6. **Validate token existence** before operations
+1. **Use the built-in `_nextTokenId`** for automatic token ID management
+2. **Use the built-in `tokenURI`** or set custom URIs via `_setTokenURI` for marketplace compatibility
+3. **Set collection metadata** via `OP721InitParameters` for discoverability
+4. **Use `safeTransferFrom`** when receiver might be a contract (calls `onOP721Received`)
+5. **Events are emitted automatically** by internal methods like `_mint`, `_burn`, `_transfer`, `_approve`
+6. **Use `_exists(tokenId)`** to validate token existence before operations
 
 ---
 

@@ -7,11 +7,8 @@ Stored primitives are typed wrappers for single values that persist on-chain. Th
 ```typescript
 import {
     StoredU256,
-    StoredU128,
     StoredU64,
     StoredU32,
-    StoredU16,
-    StoredU8,
     StoredBoolean,
     StoredString,
     StoredAddress,
@@ -33,82 +30,75 @@ this.counter.value = newValue;            // Write
 
 ## Class Hierarchy
 
-All stored primitives extend the abstract `Stored` base class:
+The stored primitives are standalone final classes (not inheriting from a common base):
 
 ```mermaid
 classDiagram
-    class Stored {
-        <<abstract>>
-        #pointer: u16
-        #subPointer: Uint8Array
-        #cached: bool
-        +encodePointer() Uint8Array
-        +ensureValue() void
-    }
-
     class StoredU256 {
+        -pointer: u16
+        -subPointer: Uint8Array
         -_value: u256
         +value: u256 getter/setter
-        +decode(data: Uint8Array) u256
-        +encode(value: u256) Uint8Array
-    }
-
-    class StoredU128 {
-        -_value: u128
-        +value: u128 getter/setter
-        +decode(data: Uint8Array) u128
-        +encode(value: u128) Uint8Array
+        +add(value: u256) this
+        +sub(value: u256) this
+        +mul(value: u256) this
+        +set(value: u256) this
+        +toString() string
     }
 
     class StoredU64 {
-        -_value: u64
-        +value: u64 getter/setter
-        +decode(data: Uint8Array) u64
-        +encode(value: u64) Uint8Array
+        -pointer: u16
+        -subPointer: Uint8Array
+        -_values: u64[4]
+        +get(index: u8) u64
+        +set(index: u8, value: u64) void
+        +save() void
+        +getAll() u64[]
+    }
+
+    class StoredU32 {
+        -pointer: u16
+        -subPointer: Uint8Array
+        -_values: u32[8]
+        +get(index: u8) u32
+        +set(index: u8, value: u32) void
+        +save() void
+        +getAll() u32[]
     }
 
     class StoredBoolean {
-        -_value: bool
+        -pointer: u16
+        -_value: Uint8Array
         +value: bool getter/setter
-        +decode(data: Uint8Array) bool
-        +encode(value: bool) Uint8Array
+        +toUint8Array() Uint8Array
     }
 
     class StoredString {
-        -_value: string
+        -pointer: u16
+        -index: u64
         +value: string getter/setter
-        +decode(data: Uint8Array) string
-        +encode(value: string) Uint8Array
     }
 
     class StoredAddress {
+        -pointer: u16
         -_value: Address
         +value: Address getter/setter
-        +decode(data: Uint8Array) Address
-        +encode(value: Address) Uint8Array
+        +isDead() bool
     }
-
-    Stored <|-- StoredU256
-    Stored <|-- StoredU128
-    Stored <|-- StoredU64
-    Stored <|-- StoredBoolean
-    Stored <|-- StoredString
-    Stored <|-- StoredAddress
 ```
 
 ## Available Types
 
 | Type | Value Type | Size | Description |
 |------|------------|------|-------------|
-| `StoredU256` | `u256` | 32 bytes | 256-bit unsigned |
-| `StoredU128` | `u128` | 16 bytes | 128-bit unsigned |
-| `StoredU64` | `u64` | 8 bytes | 64-bit unsigned |
-| `StoredU32` | `u32` | 4 bytes | 32-bit unsigned |
-| `StoredU16` | `u16` | 2 bytes | 16-bit unsigned |
-| `StoredU8` | `u8` | 1 byte | 8-bit unsigned |
-| `StoredBoolean` | `bool` | 1 byte | Boolean |
-| `StoredString` | `string` | Variable | UTF-8 string |
-| `StoredAddress` | `Address` | 32 bytes | Address |
+| `StoredU256` | `u256` | 32 bytes | 256-bit unsigned integer |
+| `StoredU64` | `u64[4]` | 32 bytes | Stores 4 u64 values in one slot |
+| `StoredU32` | `u32[8]` | 32 bytes | Stores 8 u32 values in one slot |
+| `StoredBoolean` | `bool` | 32 bytes | Boolean value |
+| `StoredString` | `string` | Variable | UTF-8 string (max 65,535 bytes) |
+| `StoredAddress` | `Address` | 32 bytes | Address value |
+
+> **Note:** `StoredU64` and `StoredU32` are packed storage types that store multiple values in a single 256-bit storage slot. Use `get(index)` and `set(index, value)` to access individual values, then call `save()` to persist changes.
 
 ## Storage Key Generation
 
@@ -173,15 +163,25 @@ const name: string = this._name.value;
 ### StoredAddress
 
 ```typescript
-// Declaration
+// Declaration - takes only pointer (default value is Address.zero())
 private ownerPointer: u16 = Blockchain.nextPointer;
-private _owner: StoredAddress = new StoredAddress(this.ownerPointer, Address.zero());
+private _owner: StoredAddress = new StoredAddress(this.ownerPointer);
 
 // Write
 this._owner.value = Blockchain.tx.origin;
 
 // Read
 const owner: Address = this._owner.value;
+
+// Check if address is zero (Note: isDead() in StoredAddress actually checks for zero address)
+if (this._owner.isDead()) {
+    throw new Revert('Owner not set');
+}
+
+// Alternative: use isZero() on the Address instance directly
+if (this._owner.value.isZero()) {
+    throw new Revert('Owner not set');
+}
 
 // Compare
 if (!Blockchain.tx.sender.equals(this._owner.value)) {
@@ -265,7 +265,7 @@ Always provide a meaningful default:
 private counter: StoredU256 = new StoredU256(ptr, EMPTY_POINTER);
 private name: StoredString = new StoredString(ptr, 0);
 private paused: StoredBoolean = new StoredBoolean(ptr, false);
-private owner: StoredAddress = new StoredAddress(ptr, Address.zero());
+private owner: StoredAddress = new StoredAddress(ptr);  // Default is Address.zero()
 
 // The default is returned when storage slot is empty (never written)
 ```
@@ -291,14 +291,13 @@ public override onDeployment(calldata: Calldata): void {
 | Solidity | OPNet | Default Value |
 |----------|-------|---------------|
 | `uint256 public value;` | `StoredU256` | `u256.Zero` |
-| `uint128 public value;` | `StoredU128` | `u128.Zero` |
-| `uint64 public value;` | `StoredU64` | `0` |
-| `uint32 public value;` | `StoredU32` | `0` |
-| `uint16 public value;` | `StoredU16` | `0` |
-| `uint8 public value;` | `StoredU8` | `0` |
+| `uint64[4] packed;` | `StoredU64` | `[0, 0, 0, 0]` |
+| `uint32[8] packed;` | `StoredU32` | `[0, 0, 0, 0, 0, 0, 0, 0]` |
 | `string public name;` | `StoredString` | `""` |
 | `bool public paused;` | `StoredBoolean` | `false` |
 | `address public owner;` | `StoredAddress` | `Address.zero()` |
+
+> **Note:** `StoredU64` and `StoredU32` pack multiple values into a single storage slot for efficiency. For single-value storage, use `StoredU256` with appropriate conversions.
 
 ### Operations Comparison
 
@@ -322,7 +321,7 @@ public override onDeployment(calldata: Calldata): void {
 | `uint256 public totalSupply;` | `private totalSupplyPtr: u16 = Blockchain.nextPointer;`<br>`private _totalSupply: StoredU256 = new StoredU256(this.totalSupplyPtr, EMPTY_POINTER);` |
 | `string public name = "Token";` | `private namePtr: u16 = Blockchain.nextPointer;`<br>`private _name: StoredString = new StoredString(this.namePtr, 0);`<br>Then in `onDeployment`: `this._name.value = "Token";` |
 | `bool public paused = false;` | `private pausedPtr: u16 = Blockchain.nextPointer;`<br>`private _paused: StoredBoolean = new StoredBoolean(this.pausedPtr, false);` |
-| `address public owner;` | `private ownerPtr: u16 = Blockchain.nextPointer;`<br>`private _owner: StoredAddress = new StoredAddress(this.ownerPtr, Address.zero());` |
+| `address public owner;` | `private ownerPtr: u16 = Blockchain.nextPointer;`<br>`private _owner: StoredAddress = new StoredAddress(this.ownerPtr);` |
 
 ### Full Example Comparison
 
@@ -472,7 +471,7 @@ export class Ownable extends OP_NET {
     private ownerPointer: u16 = Blockchain.nextPointer;
     private pausedPointer: u16 = Blockchain.nextPointer;
 
-    private _owner: StoredAddress = new StoredAddress(this.ownerPointer, Address.zero());
+    private _owner: StoredAddress = new StoredAddress(this.ownerPointer);
     private _paused: StoredBoolean = new StoredBoolean(this.pausedPointer, false);
 
     public override onDeployment(_calldata: Calldata): void {

@@ -26,19 +26,29 @@ classDiagram
     class Calldata {
         <<extends BytesReader>>
         +readU8() u8
-        +readU16() u16
-        +readU32() u32
-        +readU64() u64
-        +readU128() u128
-        +readU256() u256
+        +readU16(be) u16
+        +readU32(be) u32
+        +readU64(be) u64
+        +readU128(be) u128
+        +readU256(be) u256
+        +readI8() i8
+        +readI16() i16
+        +readI32() i32
+        +readI64(be) i64
+        +readI128(be) i128
         +readAddress() Address
-        +readString() string
-        +readBytes() Uint8Array
+        +readString(length) string
+        +readStringWithLength(be) string
+        +readBytes(length) Uint8Array
+        +readBytesWithLength(be) Uint8Array
         +readBoolean() bool
-        +readAddressArray() Address[]
-        +readU256Array() u256[]
-        +readAddressMapU256() AddressMap~u256~
-        +hasMoreData() bool
+        +readSelector() Selector
+        +readAddressArray(be) Address[]
+        +readU256Array(be) u256[]
+        +readAddressMapU256(be) AddressMap~u256~
+        +getOffset() i32
+        +setOffset(offset) void
+        +byteLength i32
     }
 
     class BytesReader {
@@ -91,31 +101,40 @@ const i64val: i64 = calldata.readI64();
 // Address (32 bytes)
 const addr: Address = calldata.readAddress();
 
-// String (length-prefixed)
-const name: string = calldata.readString();
+// String with u32 length prefix
+const name: string = calldata.readStringWithLength();
 
-// Bytes (length-prefixed)
-const data: Uint8Array = calldata.readBytes();
+// String with known length (stops at null byte)
+const fixedName: string = calldata.readString(32);
 
-// Selector (4 bytes)
+// Bytes with u32 length prefix
+const data: Uint8Array = calldata.readBytesWithLength();
+
+// Bytes with known length
+const fixedData: Uint8Array = calldata.readBytes(64);
+
+// Selector (4 bytes, big-endian)
 const selector: Selector = calldata.readSelector();
 ```
 
 ### Arrays
 
+All array methods expect a u16 length prefix (max 65535 elements):
+
 ```typescript
 // Array of addresses
 const addresses: Address[] = calldata.readAddressArray();
 
-// Array of u256
-const amounts: u256[] = calldata.readU256Array();
+// Numeric arrays
+const u8Values: u8[] = calldata.readU8Array();
+const u16Values: u16[] = calldata.readU16Array();
+const u32Values: u32[] = calldata.readU32Array();
+const u64Values: u64[] = calldata.readU64Array();
+const u128Values: u128[] = calldata.readU128Array();
+const u256Values: u256[] = calldata.readU256Array();
 
-// Generic array with length prefix
-const length = calldata.readU32();
-const items: MyType[] = [];
-for (let i: u32 = 0; i < length; i++) {
-    items.push(/* read item */);
-}
+// Array of variable-length buffers
+const buffers: Uint8Array[] = calldata.readArrayOfBuffer();
 ```
 
 ### Maps
@@ -188,28 +207,32 @@ Each field is encoded according to its type:
 |------|----------|
 | `bool` | 1 byte (0 or 1) |
 | `u8` | 1 byte |
-| `u16` | 2 bytes (little-endian) |
-| `u32` | 4 bytes (little-endian) |
-| `u64` | 8 bytes (little-endian) |
-| `u128` | 16 bytes (little-endian) |
-| `u256` | 32 bytes (little-endian) |
+| `u16` | 2 bytes (big-endian, default) |
+| `u32` | 4 bytes (big-endian, default) |
+| `u64` | 8 bytes (big-endian, default) |
+| `u128` | 16 bytes (big-endian, default) |
+| `u256` | 32 bytes (big-endian, default) |
 | `Address` | 32 bytes |
-| `string` | 4-byte length + UTF-8 bytes |
-| `bytes` | 4-byte length + raw bytes |
+| `Selector` | 4 bytes (big-endian u32) |
+| `string` | 4-byte length (u32 BE) + UTF-8 bytes |
+| `bytes` | 4-byte length (u32 BE) + raw bytes |
+| `arrays` | 2-byte length (u16 BE) + elements |
 
-### String Encoding
+### String Encoding (with length prefix)
 
 ```
-| Length (4 bytes) | UTF-8 Content |
-|------------------|---------------|
-| 0x0B 0x00 0x00 0x00 | "Hello World" |
+| Length (4 bytes, BE) | UTF-8 Content |
+|----------------------|---------------|
+| 0x00 0x00 0x00 0x0B  | "Hello World" |
 ```
 
 ### Array Encoding
 
+Arrays use a u16 length prefix (max 65535 elements):
+
 ```
-| Length (4 bytes) | Element 1 | Element 2 | ... |
-|------------------|-----------|-----------|-----|
+| Length (2 bytes, BE) | Element 1 | Element 2 | ... |
+|----------------------|-----------|-----------|-----|
 ```
 
 ## Solidity vs OPNet Comparison
@@ -426,10 +449,10 @@ public safeTransferFrom(calldata: Calldata): BytesWriter {
     const to: Address = calldata.readAddress();
     const tokenId: u256 = calldata.readU256();
 
-    // Check if optional data is present
+    // Check if optional data is present by comparing offset to total length
     let data: Uint8Array = new Uint8Array(0);
-    if (calldata.hasMoreData()) {
-        data = calldata.readBytes();
+    if (calldata.getOffset() < calldata.byteLength) {
+        data = calldata.readBytesWithLength();  // Read length-prefixed bytes
     }
 
     this._transfer(from, to, tokenId);
@@ -445,11 +468,11 @@ public safeTransferFrom(calldata: Calldata): BytesWriter {
 
 | Aspect | Solidity ABI | OPNet |
 |--------|--------------|-------|
-| **Byte order** | Big-endian | Little-endian |
+| **Byte order** | Big-endian | Big-endian (default) |
 | **Address padding** | Left-padded to 32 bytes | 32 bytes (native size) |
 | **Dynamic offset** | Pointer + data section | Inline length prefix |
-| **String encoding** | Offset + length + data | 4-byte length + UTF-8 |
-| **Array encoding** | Offset + length + elements | 4-byte length + elements |
+| **String encoding** | Offset + length + data | 4-byte u32 length + UTF-8 |
+| **Array encoding** | Offset + length + elements | 2-byte u16 length + elements |
 | **Boolean** | 32 bytes (padded) | 1 byte |
 | **uint8-uint248** | 32 bytes (padded) | Native size |
 
@@ -546,10 +569,10 @@ public safeTransfer(calldata: Calldata): BytesWriter {
     const to = calldata.readAddress();
     const tokenId = calldata.readU256();
 
-    // Check if there's more data
+    // Check if there's more data by comparing offset to total length
     let data: Uint8Array = new Uint8Array(0);
-    if (calldata.hasMoreData()) {
-        data = calldata.readBytes();
+    if (calldata.getOffset() < calldata.byteLength) {
+        data = calldata.readBytesWithLength();  // Read length-prefixed bytes
     }
 
     this._safeTransfer(Blockchain.tx.sender, to, tokenId, data);

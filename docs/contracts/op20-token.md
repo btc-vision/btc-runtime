@@ -26,11 +26,12 @@ export class MyToken extends OP20 {
             u256.fromString('1000000000000000000000000'), // maxSupply: 1M tokens
             18,                                            // decimals
             'MyToken',                                     // name
-            'MTK'                                          // symbol
+            'MTK',                                         // symbol
+            'https://example.com/icon.png'                 // icon (optional)
         ));
 
         // Mint initial supply to deployer
-        this._mint(Blockchain.tx.origin, this.maxSupply());
+        this._mint(Blockchain.tx.origin, this._maxSupply.value);
     }
 }
 ```
@@ -44,7 +45,7 @@ export class MyToken extends OP20 {
 | Integer Type | `uint256` | `u256` |
 | Max Decimals | 18 (convention) | 32 (hard limit) |
 | Max Supply | Unlimited | Enforced at instantiation |
-| Approval Pattern | `approve()` + `transferFrom()` | Same + `increaseAllowance()`/`decreaseAllowance()` |
+| Approval Pattern | `approve()` + `transferFrom()` | `increaseAllowance()`/`decreaseAllowance()` + `transferFrom()` |
 | Unlimited Approval | Decremented on transfer | Optimized - not decremented |
 | Events | Solidity events | `emitEvent()` system |
 | Inheritance | Multiple inheritance | Single inheritance |
@@ -59,13 +60,15 @@ export class MyToken extends OP20 {
 | `decimals` | `u8` | Decimal places (max 32) |
 | `name` | `string` | Token name |
 | `symbol` | `string` | Token symbol |
+| `icon` | `string` | Token icon URL (optional, defaults to empty string) |
 
 ```typescript
 const params = new OP20InitParameters(
     u256.fromString('1000000000000000000000000000'), // 1 billion with 18 decimals
     18,
     'My Token',
-    'MTK'
+    'MTK',
+    'https://example.com/icon.png'  // optional
 );
 
 this.instantiate(params);
@@ -101,7 +104,7 @@ flowchart LR
     F -->|No| G[Revert]
     F -->|Yes| H[Subtract from sender]
     H --> I[Add to recipient]
-    I --> J[Emit TransferEvent]
+    I --> J[Emit TransferredEvent]
     J --> K[Return success]
 ```
 
@@ -169,7 +172,7 @@ sequenceDiagram
             BalanceMap->>Storage: Write updated balance
             Note over Storage: Both balances now updated
 
-            OP20->>OP20: Create TransferredEvent(sender, to, amount)
+            OP20->>OP20: Create TransferredEvent(operator, from, to, amount)
             OP20->>EventLog: emitEvent(transferEvent)
             Note over EventLog: Indexed for off-chain queries
 
@@ -194,7 +197,7 @@ stateDiagram-v2
         [*] --> ZeroSupply
         ZeroSupply --> HasSupply: _mint()
         HasSupply --> HasSupply: transfer()
-        HasSupply --> HasSupply: approve()
+        HasSupply --> HasSupply: increaseAllowance()
         HasSupply --> HasSupply: transferFrom()
         HasSupply --> LowerSupply: _burn()
         LowerSupply --> HasSupply: _mint()
@@ -220,11 +223,15 @@ OP20 provides these methods automatically:
 |--------|---------|-------------|
 | `name()` | `string` | Token name |
 | `symbol()` | `string` | Token symbol |
+| `icon()` | `string` | Token icon URL |
 | `decimals()` | `u8` | Decimal places |
 | `totalSupply()` | `u256` | Current total supply |
-| `maxSupply()` | `u256` | Maximum possible supply |
-| `balanceOf(address)` | `u256` | Balance of address |
+| `maximumSupply()` | `u256` | Maximum possible supply |
+| `balanceOf(owner)` | `u256` | Balance of address |
 | `allowance(owner, spender)` | `u256` | Approved amount |
+| `nonceOf(owner)` | `u256` | Nonce for signature verification |
+| `domainSeparator()` | `bytes32` | EIP-712 domain separator |
+| `metadata()` | `multiple` | All token metadata in one call |
 
 ### Transfer Methods
 
@@ -232,14 +239,23 @@ OP20 provides these methods automatically:
 |--------|-------------|
 | `transfer(to, amount)` | Transfer tokens from sender |
 | `transferFrom(from, to, amount)` | Transfer using approval |
+| `safeTransfer(to, amount, data)` | Transfer with recipient callback |
+| `safeTransferFrom(from, to, amount, data)` | TransferFrom with recipient callback |
 
 ### Approval Methods
 
 | Method | Description |
 |--------|-------------|
-| `approve(spender, amount)` | Approve spender |
 | `increaseAllowance(spender, amount)` | Increase approval |
 | `decreaseAllowance(spender, amount)` | Decrease approval |
+| `increaseAllowanceBySignature(...)` | Gasless approval increase via signature |
+| `decreaseAllowanceBySignature(...)` | Gasless approval decrease via signature |
+
+### Other Methods
+
+| Method | Description |
+|--------|-------------|
+| `burn(amount)` | Burn tokens from sender's balance |
 
 ## Approval Flow
 
@@ -251,8 +267,8 @@ config:
   theme: dark
 ---
 flowchart LR
-    A[👤 User approves spender] --> B[Set allowance in storage]
-    B --> C[Emit ApprovalEvent]
+    A[👤 User increases allowance] --> B[Set allowance in storage]
+    B --> C[Emit ApprovedEvent]
     C --> D[Spender calls transferFrom]
     D --> E{Sufficient allowance?}
     E -->|No| F[Revert]
@@ -262,7 +278,7 @@ flowchart LR
     H --> J[Execute transfer]
     I --> J
     J --> K[Update balances]
-    K --> L[Emit TransferEvent]
+    K --> L[Emit TransferredEvent]
 ```
 
 ## Solidity Comparison
@@ -298,9 +314,9 @@ export class MyToken extends OP20 {
     public override onDeployment(_: Calldata): void {
         this.instantiate(new OP20InitParameters(
             u256.fromString('1000000000000000000000000'),
-            18, 'MyToken', 'MTK'
+            18, 'MyToken', 'MTK', ''
         ));
-        this._mint(Blockchain.tx.origin, this.maxSupply());
+        this._mint(Blockchain.tx.origin, this._maxSupply.value);
     }
 }
 ```
@@ -315,15 +331,15 @@ OP20 uses the following storage pointers internally:
 
 | Pointer | Storage | Description |
 |---------|---------|-------------|
-| 0 | `maxSupply` | Maximum token supply |
-| 1 | `decimals` | Decimal places |
-| 2 | `name` | Token name |
-| 3 | `symbol` | Token symbol |
+| 0 | `nonceMap` | Address -> nonce mapping (for signatures) |
+| 1 | `maxSupply` | Maximum token supply |
+| 2 | `decimals` | Decimal places |
+| 3 | `stringPointer` | Shared pointer for name (sub 0), symbol (sub 1), icon (sub 2) |
 | 4 | `totalSupply` | Current total supply |
-| 5 | `balanceOf` | Address -> balance mapping |
-| 6 | `allowance` | Owner -> spender -> amount mapping |
+| 5 | `allowanceMap` | Owner -> spender -> amount mapping |
+| 6 | `balanceOfMap` | Address -> balance mapping |
 
-**Note:** Your contract's pointers start after OP20's internal pointers.
+**Note:** Your contract's pointers start after OP20's internal pointers (pointer 7+).
 
 ## Extending OP20
 
@@ -343,13 +359,13 @@ export class MyToken extends OP20 {
         ));
     }
 
-    // Custom mint function
+    // Custom mint function (OP20 does not have a built-in public mint)
     @method(
         { name: 'to', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
     )
     @returns({ name: 'success', type: ABIDataTypes.BOOL })
-    @emit('Transfer')
+    @emit('Minted')
     public mint(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
 
@@ -357,21 +373,14 @@ export class MyToken extends OP20 {
         const amount = calldata.readU256();
 
         this._mint(to, amount);
+        // Note: _mint() already emits MintedEvent internally
 
         return new BytesWriter(0);
     }
 
-    // Custom burn function
-    @method({ name: 'amount', type: ABIDataTypes.UINT256 })
-    @returns({ name: 'success', type: ABIDataTypes.BOOL })
-    @emit('Transfer')
-    public burn(calldata: Calldata): BytesWriter {
-        const amount = calldata.readU256();
-
-        this._burn(Blockchain.tx.sender, amount);
-
-        return new BytesWriter(0);
-    }
+    // Note: OP20 already has a public burn(amount) method built-in
+    // You can override it if you need custom behavior:
+    // public override burn(calldata: Calldata): BytesWriter { ... }
 }
 ```
 
@@ -384,7 +393,12 @@ OP20 provides protected methods for extending functionality:
 | `_mint(to, amount)` | Mint new tokens |
 | `_burn(from, amount)` | Burn tokens |
 | `_transfer(from, to, amount)` | Internal transfer |
-| `_approve(owner, spender, amount)` | Internal approval |
+| `_balanceOf(owner)` | Get balance of address |
+| `_allowance(owner, spender)` | Get allowance amount |
+| `_increaseAllowance(owner, spender, amount)` | Increase allowance with overflow protection |
+| `_decreaseAllowance(owner, spender, amount)` | Decrease allowance with underflow protection |
+| `_spendAllowance(owner, spender, amount)` | Spend from allowance (for transferFrom) |
+| `_safeTransfer(from, to, amount, data)` | Transfer with receiver callback |
 
 ```typescript
 // Minting tokens
@@ -401,21 +415,37 @@ this._transfer(from, to, amount);
 
 OP20 emits these events automatically:
 
-### TransferEvent
+### TransferredEvent
 
 ```typescript
-// Emitted on transfer(), transferFrom(), _mint(), _burn()
-TransferEvent(from: Address, to: Address, amount: u256)
+// Emitted on transfer(), transferFrom(), safeTransfer(), safeTransferFrom()
+TransferredEvent(operator: Address, from: Address, to: Address, amount: u256)
 
-// For minting: from = Address.zero()
-// For burning: to = Address.zero()
+// operator: the address that initiated the transfer (Blockchain.tx.sender)
+// from: the address tokens are transferred from
+// to: the address tokens are transferred to
+// amount: the number of tokens transferred
 ```
 
-### ApprovalEvent
+### ApprovedEvent
 
 ```typescript
-// Emitted on approve(), increaseAllowance(), decreaseAllowance()
-ApprovalEvent(owner: Address, spender: Address, amount: u256)
+// Emitted on increaseAllowance(), decreaseAllowance()
+ApprovedEvent(owner: Address, spender: Address, amount: u256)
+```
+
+### MintedEvent
+
+```typescript
+// Emitted when new tokens are minted via _mint()
+MintedEvent(to: Address, amount: u256)
+```
+
+### BurnedEvent
+
+```typescript
+// Emitted when tokens are burned via burn() or _burn()
+BurnedEvent(from: Address, amount: u256)
 ```
 
 ## Approval Patterns
@@ -430,26 +460,26 @@ config:
 stateDiagram-v2
     [*] --> NoAllowance
 
-    NoAllowance --> LimitedAllowance: approve(amount)
-    NoAllowance --> UnlimitedAllowance: approve(u256.Max)
+    NoAllowance --> LimitedAllowance: increaseAllowance(amount)
+    NoAllowance --> UnlimitedAllowance: increaseAllowance(u256.Max)
 
     LimitedAllowance --> LimitedAllowance: increaseAllowance(delta)
     LimitedAllowance --> LimitedAllowance: decreaseAllowance(delta)
     LimitedAllowance --> LimitedAllowance: transferFrom (decrements)
     LimitedAllowance --> NoAllowance: transferFrom (exhausted)
-    LimitedAllowance --> NoAllowance: approve(0)
-    LimitedAllowance --> UnlimitedAllowance: approve(u256.Max)
+    LimitedAllowance --> NoAllowance: decreaseAllowance(all)
+    LimitedAllowance --> UnlimitedAllowance: increaseAllowance (overflow)
 
     UnlimitedAllowance --> UnlimitedAllowance: transferFrom (no change)
-    UnlimitedAllowance --> LimitedAllowance: approve(amount)
-    UnlimitedAllowance --> NoAllowance: approve(0)
+    UnlimitedAllowance --> LimitedAllowance: decreaseAllowance(amount)
+    UnlimitedAllowance --> NoAllowance: decreaseAllowance(all)
 ```
 
 ### Standard Approval
 
 ```typescript
-// User approves spender for exact amount
-approve(spender, 1000);
+// User increases allowance for spender
+increaseAllowance(spender, 1000);
 
 // Spender can transfer up to 1000 tokens
 transferFrom(user, recipient, 500);  // Allowance now 500
@@ -459,21 +489,24 @@ transferFrom(user, recipient, 500);  // Allowance now 0
 ### Unlimited Approval
 
 ```typescript
-// Approve maximum amount to avoid repeated approvals
-approve(spender, u256.Max);
+// Increase allowance to maximum - overflows to u256.Max
+increaseAllowance(spender, u256.Max);
 
 // Transfers don't reduce unlimited allowance
 transferFrom(user, recipient, 1000);  // Allowance still u256.Max
 ```
 
-**Note:** OP20 optimizes unlimited approvals - they're not decremented on transfer.
+**Note:** OP20 optimizes unlimited approvals (u256.Max) - they're not decremented on transfer.
 
 ### Increase/Decrease Pattern
 
 ```typescript
-// Safer than direct approve (prevents front-running)
+// Safe pattern using increase/decrease (prevents front-running)
 increaseAllowance(spender, 100);  // Add 100 to current allowance
 decreaseAllowance(spender, 50);   // Remove 50 from current allowance
+
+// Note: If decrease amount > current allowance, it sets to zero (no underflow)
+// If increase would overflow, it sets to u256.Max (unlimited)
 ```
 
 ## Edge Cases
@@ -530,7 +563,7 @@ _mint(to, amount);  // Throws if totalSupply + amount > maxSupply
 
 ```typescript
 // Approving yourself is valid but pointless
-approve(Blockchain.tx.sender, amount);  // Works, but why?
+increaseAllowance(Blockchain.tx.sender, amount);  // Works, but why?
 ```
 
 ## Complete Token Example
@@ -589,10 +622,11 @@ export class AdvancedToken extends OP20 {
         { name: 'amount', type: ABIDataTypes.UINT256 },
     )
     @returns({ name: 'success', type: ABIDataTypes.BOOL })
-    @emit('Transfer')
+    @emit('Minted')
     public mint(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
         this._mint(calldata.readAddress(), calldata.readU256());
+        // Note: _mint() already emits MintedEvent internally
         return new BytesWriter(0);
     }
 

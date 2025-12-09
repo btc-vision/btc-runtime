@@ -36,10 +36,10 @@ export class MyContract extends ReentrancyGuard {
 | Feature | OpenZeppelin (Solidity) | OPNet ReentrancyGuard |
 |---------|-------------------------|----------------------|
 | Protection Scope | Per-function (`nonReentrant` modifier) | All methods by default |
-| Opt-in/Opt-out | Opt-in per function | Opt-out via `isExcludedFromReentrancy` |
-| Lock Type | Boolean lock | Depth counter |
-| Callback Support | No (always blocks) | Yes (`CALLBACK` mode) |
-| Storage | Persistent storage | Transient storage |
+| Opt-in/Opt-out | Opt-in per function | Opt-out via `isSelectorExcluded` |
+| Lock Type | Boolean lock | Boolean lock (STANDARD) / Depth counter (CALLBACK) |
+| Callback Support | No (always blocks) | No (both modes block reentry) |
+| Storage | Persistent storage | Persistent storage |
 
 ## What is Reentrancy?
 
@@ -98,10 +98,10 @@ config:
 ---
 flowchart LR
     A[👤 User submits TX] --> B[onExecutionStarted]
-    B --> C{Check depth}
-    C -->|STANDARD: depth > 0| D[Revert]
-    C -->|CALLBACK: depth >= 2| E[Revert]
-    C -->|Valid| F[Increment depth]
+    B --> C{Check lock/depth}
+    C -->|STANDARD: locked| D[Revert]
+    C -->|CALLBACK: depth >= 1| E[Revert]
+    C -->|Valid| F[Set lock/Increment depth]
     F --> G[Execute method]
     G --> H{External call?}
     H -->|Yes| I{Callback attempt?}
@@ -184,7 +184,7 @@ sequenceDiagram
     participant Blockchain as Bitcoin L1
     participant VM as WASM Runtime
     participant Protected as Protected Contract<br/>(WITH ReentrancyGuard)
-    participant Guard as ReentrancyGuard<br/>Transient Storage
+    participant Guard as ReentrancyGuard<br/>Persistent Storage
     participant Storage as Storage Pointers
     participant MaliciousContract as Attacker's Contract
 
@@ -196,11 +196,11 @@ sequenceDiagram
     activate Protected
 
     Protected->>Protected: onExecutionStarted hook
-    Protected->>Guard: checkReentrancy()
-    Guard->>Guard: Read _reentrancyDepth
-    Note over Guard: depth = 0 (unlocked)
+    Protected->>Guard: nonReentrantBefore()
+    Guard->>Guard: Read _locked
+    Note over Guard: _locked = false (unlocked)
 
-    Guard->>Guard: Set _reentrancyDepth = 1
+    Guard->>Guard: Set _locked = true
     Note over Guard: LOCK ACQUIRED
 
     Protected->>Storage: Read balances[attacker]
@@ -219,12 +219,12 @@ sequenceDiagram
     activate Protected
 
     Protected->>Protected: onExecutionStarted hook
-    Protected->>Guard: checkReentrancy()
-    Guard->>Guard: Read _reentrancyDepth
-    Note over Guard: depth = 1 (LOCKED!)
+    Protected->>Guard: nonReentrantBefore()
+    Guard->>Guard: Read _locked
+    Note over Guard: _locked = true (LOCKED!)
 
-    alt Depth check fails
-        Guard->>Protected: REVERT('ReentrancyGuard: reentrant call')
+    alt Lock check fails
+        Guard->>Protected: REVERT('ReentrancyGuard: LOCKED')
         Protected->>VM: Revert transaction
         deactivate Protected
         VM->>MaliciousContract: Call reverted
@@ -235,8 +235,8 @@ sequenceDiagram
 
     Protected->>Protected: Continue execution
     Protected->>Protected: onExecutionCompleted hook
-    Protected->>Guard: Reset depth
-    Guard->>Guard: Set _reentrancyDepth = 0
+    Protected->>Guard: nonReentrantAfter()
+    Guard->>Guard: Set _locked = false
     Note over Guard: LOCK RELEASED
 
     Protected->>VM: Return success
@@ -260,11 +260,12 @@ config:
 ---
 flowchart LR
     A{External calls?} -->|No| B[No guard needed]
-    A -->|Yes| C{Safe callbacks?}
+    A -->|Yes| C{Need depth tracking?}
     C -->|No| D[Use STANDARD mode]
-    C -->|Yes, single level| E[Use CALLBACK mode]
-    C -->|Yes, nested| D
+    C -->|Yes| E[Use CALLBACK mode]
 ```
+
+Note: Both modes block reentrancy. STANDARD uses a boolean lock; CALLBACK uses a depth counter.
 
 ## Guard Modes
 
@@ -288,10 +289,8 @@ stateDiagram-v2
     state "CALLBACK Mode" as Callback {
         [*] --> Depth0
         Depth0 --> Depth1: First call
-        Depth1 --> Depth2: Callback reentry
-        Depth2 --> Reverted2: Second reentry
+        Depth1 --> Reverted2: Any reentry attempt
         Reverted2 --> [*]: Transaction fails
-        Depth2 --> Depth1: Callback completes
         Depth1 --> Depth0: First call completes
     }
 ```
@@ -333,7 +332,7 @@ export class SecureVault extends ReentrancyGuard {
 
 ### CALLBACK Mode
 
-Allows one level of controlled re-entry for safe patterns.
+Uses depth tracking instead of a simple boolean lock. Currently configured to reject any reentry (depth >= 1 triggers revert).
 
 ```typescript
 @final
@@ -357,8 +356,7 @@ export class TokenWithCallbacks extends ReentrancyGuard {
 
         // Notify receiver (might call back)
         this.onTokenReceived(to, from, tokenId);
-        // Callback can re-enter ONE level
-        // But that callback cannot trigger another
+        // Note: With current implementation, any reentry is rejected
 
         return new BytesWriter(0);
     }
@@ -366,15 +364,15 @@ export class TokenWithCallbacks extends ReentrancyGuard {
 ```
 
 **Use CALLBACK when:**
-- Implementing safe transfer callbacks
-- Known, controlled re-entry patterns
-- ERC721/ERC1155 style receiver notifications
+- You need depth-based tracking instead of a simple boolean lock
+- You want differentiated error messages (Max depth exceeded vs LOCKED)
+- Note: Current implementation rejects any reentry at depth >= 1
 
 ## How It Works
 
 ### Internal State
 
-The reentrancy guard uses a depth counter stored in transient storage:
+The reentrancy guard uses a boolean lock and depth counter stored in storage:
 
 ```mermaid
 ---
@@ -384,7 +382,7 @@ config:
 stateDiagram-v2
     [*] --> depth_0: Transaction starts
 
-    depth_0 --> depth_1: Method entry
+    depth_0 --> depth_1: Method entry (lock acquired)
 
     state depth_1 {
         [*] --> Executing
@@ -392,62 +390,76 @@ stateDiagram-v2
         ExternalCall --> CallbackCheck: Contract calls back
     }
 
-    depth_1 --> depth_0: Method exit (success)
+    depth_1 --> depth_0: Method exit (lock released)
     depth_1 --> Revert: Method exit (error)
 
     state "Callback Handling" as CallbackHandling {
-        CallbackCheck --> depth_2: CALLBACK mode allows
-        CallbackCheck --> Blocked: STANDARD mode blocks
+        CallbackCheck --> Blocked: Both modes block reentry
         Blocked --> Revert
     }
 
-    depth_2 --> depth_1: Callback completes
     depth_0 --> [*]: Transaction ends
     Revert --> [*]: Transaction reverted
 ```
 
 ```typescript
-// ReentrancyGuard uses transient storage for the lock
-// Transient storage is cleared after each transaction
+// ReentrancyGuard uses storage for the lock state
+// _locked: StoredBoolean - tracks if guard is engaged
+// _reentrancyDepth: StoredU256 - tracks call depth in CALLBACK mode
 
-enum LockState {
-    UNLOCKED = 0,
-    LOCKED = 1,
-    CALLBACK = 2
+// The ReentrancyLevel enum (defined in ReentrancyGuard.ts):
+enum ReentrancyLevel {
+    STANDARD = 0,  // Strict single entry, uses boolean lock
+    CALLBACK = 1   // Uses depth counter (still blocks reentrancy at depth >= 1)
 }
 ```
 
 ### STANDARD Mode Logic
 
 ```typescript
-// On method entry:
-if (lock !== UNLOCKED) {
-    throw new Revert('ReentrancyGuard: reentrant call');
+// On method entry (nonReentrantBefore):
+if (this._locked.value) {
+    throw new Revert('ReentrancyGuard: LOCKED');
 }
-lock = LOCKED;
+this._locked.value = true;
 
 // ... execute method ...
 
-// On method exit:
-lock = UNLOCKED;
+// On method exit (nonReentrantAfter):
+this._locked.value = false;
 ```
 
 ### CALLBACK Mode Logic
 
 ```typescript
-// On method entry:
+// On method entry (nonReentrantBefore):
 const currentDepth = this._reentrancyDepth.value;
 
-// Maximum depth of 2 (original call + one callback reentry)
+// Maximum depth of 1 (original call only, rejects any callback reentry)
 if (currentDepth >= u256.One) {
     throw new Revert('ReentrancyGuard: Max depth exceeded');
 }
 
 this._reentrancyDepth.value = SafeMath.add(currentDepth, u256.One);
 
-// On method exit:
-const depth = this._reentrancyDepth.value;
-this._reentrancyDepth.value = SafeMath.sub(depth, u256.One);
+// Use locked flag for first entry
+if (currentDepth.isZero()) {
+    this._locked.value = true;
+}
+
+// On method exit (nonReentrantAfter):
+const currentDepth = this._reentrancyDepth.value;
+if (currentDepth.isZero()) {
+    throw new Revert('ReentrancyGuard: Depth underflow');
+}
+
+const newDepth = SafeMath.sub(currentDepth, u256.One);
+this._reentrancyDepth.value = newDepth;
+
+// Clear locked flag when fully exited
+if (newDepth.isZero()) {
+    this._locked.value = false;
+}
 ```
 
 ## Usage Patterns
@@ -511,7 +523,17 @@ export class SecureToken extends OP20 {
 
 ### Excluded Methods
 
-Some methods can be excluded from reentrancy protection:
+The base `ReentrancyGuard` automatically excludes standard token receiver callbacks from reentrancy checks:
+
+```typescript
+// Built-in exclusions in ReentrancyGuard base class:
+// - ON_OP20_RECEIVED_SELECTOR
+// - ON_OP721_RECEIVED_SELECTOR
+// - ON_OP1155_RECEIVED_MAGIC
+// - ON_OP1155_BATCH_RECEIVED_MAGIC
+```
+
+You can override `isSelectorExcluded` to add custom exclusions:
 
 ```typescript
 @final
@@ -523,7 +545,7 @@ export class MyContract extends ReentrancyGuard {
     }
 
     // Override to exclude specific selectors
-    protected override isExcludedFromReentrancy(selector: Selector): bool {
+    protected override isSelectorExcluded(selector: Selector): boolean {
         // Define selectors for view functions
         const BALANCE_OF_SELECTOR: u32 = encodeSelector('balanceOf');
         const TOTAL_SUPPLY_SELECTOR: u32 = encodeSelector('totalSupply');
@@ -532,7 +554,7 @@ export class MyContract extends ReentrancyGuard {
         if (selector === BALANCE_OF_SELECTOR) return true;
         if (selector === TOTAL_SUPPLY_SELECTOR) return true;
 
-        return super.isExcludedFromReentrancy(selector);
+        return super.isSelectorExcluded(selector);
     }
 }
 ```
@@ -593,7 +615,7 @@ export class MyContract extends ReentrancyGuard {
 
 Key differences:
 - Solidity: Explicit `nonReentrant` modifier per function
-- OPNet: All methods protected by default (opt-out via `isExcludedFromReentrancy`)
+- OPNet: All methods protected by default (opt-out via `isSelectorExcluded`)
 
 ## Best Practices
 
@@ -641,7 +663,7 @@ public withdraw(calldata: Calldata): BytesWriter {
 
 ```typescript
 // View functions can be excluded
-protected override isExcludedFromReentrancy(selector: Selector): bool {
+protected override isSelectorExcluded(selector: Selector): boolean {
     // Define selectors for read-only functions
     const BALANCE_OF_SELECTOR: u32 = encodeSelector('balanceOf');
     const NAME_SELECTOR: u32 = encodeSelector('name');
@@ -657,11 +679,11 @@ protected override isExcludedFromReentrancy(selector: Selector): bool {
 }
 ```
 
-### 4. Be Careful with Callbacks
+### 4. Be Careful with External Calls
 
 ```typescript
-// CALLBACK mode allows controlled re-entry
-// Make sure the callback pattern is safe
+// Both STANDARD and CALLBACK modes block reentrancy
+// Always update state before making external calls
 
 @method(
     { name: 'from', type: ABIDataTypes.ADDRESS },
@@ -671,10 +693,10 @@ protected override isExcludedFromReentrancy(selector: Selector): bool {
 @returns({ name: 'success', type: ABIDataTypes.BOOL })
 @emit('Transfer')
 public safeTransfer(calldata: Calldata): BytesWriter {
-    // Update state BEFORE callback
+    // Update state BEFORE external call
     this._transfer(from, to, tokenId);
 
-    // Callback happens after state is consistent
+    // External call - if it tries to re-enter, ReentrancyGuard blocks it
     this.notifyReceiver(to, from, tokenId);
 
     return new BytesWriter(0);
@@ -717,7 +739,7 @@ public getValue(): u256 {
 
 ```typescript
 // WRONG: Excluding too many functions
-protected override isExcludedFromReentrancy(selector: Selector): bool {
+protected override isSelectorExcluded(selector: Selector): boolean {
     const TRANSFER_SELECTOR: u32 = encodeSelector('transfer');
 
     // DON'T exclude state-changing functions!

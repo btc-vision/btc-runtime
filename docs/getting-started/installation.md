@@ -235,7 +235,6 @@ mkdir -p src/token
 ```typescript
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import {
-    Address,
     Blockchain,
     BytesWriter,
     Calldata,
@@ -246,15 +245,19 @@ import {
 @final
 export class MyToken extends OP20 {
     public constructor() {
-        super(new OP20InitParameters('MyToken', 'MTK', u256.fromU32(18)));
+        super();
     }
 
     public override onDeployment(_calldata: Calldata): void {
-        // Mint initial supply to deployer
-        const deployer: Address = Blockchain.tx.sender;
-        const initialSupply: u256 = u256.fromU64(1_000_000) * this.decimalBase;
+        const maxSupply: u256 = u256.fromString('1000000000000000000000000'); // 1 million tokens with 18 decimals
+        const decimals: u8 = 18;
+        const name: string = 'MyToken';
+        const symbol: string = 'MTK';
 
-        this._mint(deployer, initialSupply);
+        this.instantiate(new OP20InitParameters(maxSupply, decimals, name, symbol));
+
+        // Mint initial supply to deployer
+        this._mint(Blockchain.tx.origin, maxSupply);
     }
 }
 ```
@@ -263,16 +266,24 @@ export class MyToken extends OP20 {
 
 ```typescript
 import { Blockchain } from '@btc-vision/btc-runtime/runtime';
+import { revertOnError } from '@btc-vision/btc-runtime/runtime/abort/abort';
 import { MyToken } from './MyToken';
 
-export function abort(message: string | null, fileName: string | null, line: u32, column: u32): void {
-    const msg = message ? message : '';
-    const file = fileName ? fileName : '';
-    Blockchain.log(`ABORT: ${msg} at ${file}:${line}:${column}`);
-}
+// DO NOT TOUCH TO THIS.
+Blockchain.contract = () => {
+    // ONLY CHANGE THE CONTRACT CLASS NAME.
+    // DO NOT ADD CUSTOM LOGIC HERE.
 
-export * from './MyToken';
-Blockchain.contract = new MyToken();
+    return new MyToken();
+};
+
+// VERY IMPORTANT
+export * from '@btc-vision/btc-runtime/runtime/exports';
+
+// VERY IMPORTANT
+export function abort(message: string, fileName: string, line: u32, column: u32): void {
+    revertOnError(message, fileName, line, column);
+}
 ```
 
 ### 5. Build

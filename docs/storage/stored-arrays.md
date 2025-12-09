@@ -18,19 +18,20 @@ import { u256 } from '@btc-vision/as-bignum/assembly';
 // Allocate storage pointer
 private holdersPointer: u16 = Blockchain.nextPointer;
 
-// Create stored array
+// Create stored array with subPointer
 private holders: StoredAddressArray;
 
 constructor() {
     super();
-    this.holders = new StoredAddressArray(this.holdersPointer);
+    this.holders = new StoredAddressArray(this.holdersPointer, EMPTY_POINTER);
 }
 
 // Operations
 this.holders.push(newAddress);
 const first = this.holders.get(0);
-const length = this.holders.length;
-this.holders.pop();
+const length = this.holders.getLength();
+this.holders.deleteLast();  // removes last element
+this.holders.save();        // commit changes to storage
 ```
 
 ## Available Types
@@ -86,14 +87,15 @@ flowchart LR
 
 ### Size Limits
 
-Maximum array length: **65,535 elements**
+Maximum array length: **4,294,967,294 elements** (u32.MAX_VALUE - 1), though practical limits depend on gas costs.
 
 ```typescript
 // Check before adding
-if (this.holders.length >= 65535) {
+if (this.holders.getLength() >= MAX_ALLOWED) {
     throw new Revert('Array full');
 }
 this.holders.push(newHolder);
+this.holders.save();  // Don't forget to save!
 ```
 
 ## Operations
@@ -120,14 +122,15 @@ flowchart LR
 ```typescript
 // Add new element
 this.holders.push(newHolder);
+this.holders.save();  // Commit changes
 
 // Length increases by 1
-const newLength = this.holders.length;
+const newLength = this.holders.getLength();
 ```
 
-### Pop
+### deleteLast / shift
 
-Remove and return last element. The pop operation follows this flow:
+Remove elements from the array. `deleteLast()` removes from the end, `shift()` removes from the beginning.
 
 ```mermaid
 ---
@@ -135,20 +138,23 @@ config:
   theme: dark
 ---
 flowchart LR
-    A["array.pop()"] --> B["Read length"]
+    A["array.deleteLast()"] --> B["Read length"]
     B --> C{"length > 0?"}
     C -->|"No"| D["Throw error"]
-    C -->|"Yes"| E["Get last element"]
+    C -->|"Yes"| E["Zero last element"]
     E --> F["Decrement length"]
-    F --> G["Save length"]
-    G --> H["Return value"]
+    F --> G["Mark as changed"]
 ```
 
 ```typescript
 // Remove last element
-const removed: Address = this.holders.pop();
+this.holders.deleteLast();
+this.holders.save();  // Commit changes
 
-// Length decreases by 1
+// Remove first element and return it
+const removed: Address = this.holders.shift();
+this.holders.save();  // Commit changes
+
 // Reverts if array is empty
 ```
 
@@ -170,9 +176,10 @@ Write element at index:
 ```typescript
 // Set element at index
 this.holders.set(index, newValue);
+this.holders.save();  // Commit changes
 
-// Reverts if index >= length
-// Cannot set beyond current length - use push instead
+// Reverts if index >= MAX_LENGTH
+// Can set beyond current length (use push for proper length tracking)
 ```
 
 ### Length
@@ -181,10 +188,10 @@ Get current array length:
 
 ```typescript
 // Get length
-const count: u64 = this.holders.length;
+const count: u32 = this.holders.getLength();
 
 // Check if empty
-if (this.holders.length === 0) {
+if (this.holders.getLength() === 0) {
     throw new Revert('No holders');
 }
 ```
@@ -193,41 +200,43 @@ if (this.holders.length === 0) {
 
 ### Quick Reference Table
 
-| Solidity Array Type | OPNet Equivalent | Max Elements |
-|---------------------|------------------|--------------|
-| `uint256[]` | `StoredU256Array` | 65,535 |
-| `uint128[]` | `StoredU128Array` | 65,535 |
-| `uint64[]` | `StoredU64Array` | 65,535 |
-| `uint32[]` | `StoredU32Array` | 65,535 |
-| `uint16[]` | `StoredU16Array` | 65,535 |
-| `uint8[]` / `bytes` | `StoredU8Array` | 65,535 |
-| `address[]` | `StoredAddressArray` | 65,535 |
-| `bool[]` | `StoredBooleanArray` | 65,535 |
+| Solidity Array Type | OPNet Equivalent | Elements per Slot | Default Max |
+|---------------------|------------------|-------------------|-------------|
+| `uint256[]` | `StoredU256Array` | 1 | u32.MAX_VALUE - 1 |
+| `uint128[]` | `StoredU128Array` | 2 | u32.MAX_VALUE - 1 |
+| `uint64[]` | `StoredU64Array` | 4 | u32.MAX_VALUE - 1 |
+| `uint32[]` | `StoredU32Array` | 8 | u32.MAX_VALUE - 1 |
+| `uint16[]` | `StoredU16Array` | 16 | u32.MAX_VALUE - 1 |
+| `uint8[]` / `bytes` | `StoredU8Array` | 32 | u32.MAX_VALUE - 1 |
+| `address[]` | `StoredAddressArray` | 1 | u32.MAX_VALUE - 1 |
+| `bool[]` | `StoredBooleanArray` | 256 (bit-packed) | u32.MAX_VALUE - 1 |
 
 ### Operations Comparison
 
 | Operation | Solidity | OPNet |
 |-----------|----------|-------|
 | Declare array | `address[] public holders;` | `private holders: StoredAddressArray;` |
-| Initialize | Automatic | `this.holders = new StoredAddressArray(this.holdersPointer);` |
-| Push element | `holders.push(addr);` | `holders.push(addr);` |
-| Pop element | `holders.pop();` | `holders.pop();` |
+| Initialize | Automatic | `this.holders = new StoredAddressArray(this.holdersPointer, EMPTY_POINTER);` |
+| Push element | `holders.push(addr);` | `holders.push(addr); holders.save();` |
+| Pop element | `holders.pop();` | `holders.deleteLast(); holders.save();` |
+| Shift element | N/A | `holders.shift(); holders.save();` |
 | Get element | `holders[i]` | `holders.get(i)` |
-| Set element | `holders[i] = addr;` | `holders.set(i, addr);` |
-| Get length | `holders.length` | `holders.length` |
-| Delete at index | `delete holders[i];` | N/A (use swap-and-pop) |
+| Set element | `holders[i] = addr;` | `holders.set(i, addr); holders.save();` |
+| Get length | `holders.length` | `holders.getLength()` |
+| Delete at index | `delete holders[i];` | `holders.delete(i); holders.save();` |
 | Check bounds | Runtime revert | Runtime revert |
-| Clear array | `delete holders;` | Pop all elements |
+| Clear array | `delete holders;` | `holders.deleteAll();` |
+| Reset array | N/A | `holders.reset();` |
 
 ### Common Patterns
 
 | Pattern | Solidity | OPNet |
 |---------|----------|-------|
-| Loop through array | `for (uint i = 0; i < arr.length; i++)` | `for (let i: u64 = 0; i < arr.length; i++)` |
-| Remove at index (swap) | `arr[i] = arr[arr.length-1]; arr.pop();` | `arr.set(i, arr.get(arr.length-1)); arr.pop();` |
-| Check if empty | `arr.length == 0` | `arr.length === 0` |
-| Get last element | `arr[arr.length - 1]` | `arr.get(arr.length - 1)` |
-| Initialize with values | `arr = [1, 2, 3];` | Multiple `arr.push()` calls in `onDeployment` |
+| Loop through array | `for (uint i = 0; i < arr.length; i++)` | `for (let i: u32 = 0; i < arr.getLength(); i++)` |
+| Remove at index (swap) | `arr[i] = arr[arr.length-1]; arr.pop();` | `arr.set(i, arr.get(arr.getLength()-1)); arr.deleteLast(); arr.save();` |
+| Check if empty | `arr.length == 0` | `arr.getLength() === 0` |
+| Get last element | `arr[arr.length - 1]` | `arr.get(arr.getLength() - 1)` |
+| Initialize with values | `arr = [1, 2, 3];` | Multiple `arr.push()` calls in `onDeployment`, then `arr.save()` |
 
 ### Full Example Comparison
 
@@ -260,18 +269,19 @@ export class Registry extends OP_NET {
 
     constructor() {
         super();
-        this.members = new StoredAddressArray(this.membersPointer);
+        this.members = new StoredAddressArray(this.membersPointer, EMPTY_POINTER);
     }
 
     public addMember(calldata: Calldata): BytesWriter {
         const member = calldata.readAddress();
         this.members.push(member);
+        this.members.save();
         return new BytesWriter(0);
     }
 
     public removeMember(calldata: Calldata): BytesWriter {
-        const index = calldata.readU64();
-        const length = this.members.length;
+        const index = calldata.readU32();
+        const length = this.members.getLength();
 
         if (index >= length) {
             throw new Revert('Index out of bounds');
@@ -280,14 +290,15 @@ export class Registry extends OP_NET {
         if (index < length - 1) {
             this.members.set(index, this.members.get(length - 1));
         }
-        this.members.pop();
+        this.members.deleteLast();
+        this.members.save();
 
         return new BytesWriter(0);
     }
 
     public getMemberCount(_calldata: Calldata): BytesWriter {
-        const writer = new BytesWriter(8);
-        writer.writeU64(this.members.length);
+        const writer = new BytesWriter(4);
+        writer.writeU32(this.members.getLength());
         return writer;
     }
 }
@@ -338,46 +349,48 @@ export class AddressList extends OP_NET {
 
     constructor() {
         super();
-        this.addresses = new StoredAddressArray(this.addressesPointer);
+        this.addresses = new StoredAddressArray(this.addressesPointer, EMPTY_POINTER);
     }
 
     public add(calldata: Calldata): BytesWriter {
         const addr = calldata.readAddress();
         this.addresses.push(addr);
+        this.addresses.save();
         return new BytesWriter(0);
     }
 
     public remove(calldata: Calldata): BytesWriter {
-        const index = calldata.readU64();
-        const length = this.addresses.length;
+        const index = calldata.readU32();
+        const length = this.addresses.getLength();
         if (index >= length) {
             throw new Revert('Out of bounds');
         }
         if (index < length - 1) {
             this.addresses.set(index, this.addresses.get(length - 1));
         }
-        this.addresses.pop();
+        this.addresses.deleteLast();
+        this.addresses.save();
         return new BytesWriter(0);
     }
 
     public get(calldata: Calldata): BytesWriter {
-        const index = calldata.readU64();
+        const index = calldata.readU32();
         const writer = new BytesWriter(32);
         writer.writeAddress(this.addresses.get(index));
         return writer;
     }
 
     public count(_calldata: Calldata): BytesWriter {
-        const writer = new BytesWriter(8);
-        writer.writeU64(this.addresses.length);
+        const writer = new BytesWriter(4);
+        writer.writeU32(this.addresses.getLength());
         return writer;
     }
 
     public contains(calldata: Calldata): BytesWriter {
         const addr = calldata.readAddress();
         let found = false;
-        const length = this.addresses.length;
-        for (let i: u64 = 0; i < length; i++) {
+        const length = this.addresses.getLength();
+        for (let i: u32 = 0; i < length; i++) {
             if (this.addresses.get(i).equals(addr)) {
                 found = true;
                 break;
@@ -432,26 +445,24 @@ export class ValueQueue extends OP_NET {
 
     constructor() {
         super();
-        this.values = new StoredU256Array(this.valuesPointer);
+        this.values = new StoredU256Array(this.valuesPointer, EMPTY_POINTER);
     }
 
     public enqueue(calldata: Calldata): BytesWriter {
         const value = calldata.readU256();
         this.values.push(value);
+        this.values.save();
         return new BytesWriter(0);
     }
 
-    // Note: This is O(n) - not efficient for large queues
+    // Note: Use shift() for O(1) dequeue - it uses circular buffer with startIndex
     public dequeue(_calldata: Calldata): BytesWriter {
-        const length = this.values.length;
+        const length = this.values.getLength();
         if (length === 0) {
             throw new Revert('Empty queue');
         }
-        const first = this.values.get(0);
-        for (let i: u64 = 0; i < length - 1; i++) {
-            this.values.set(i, this.values.get(i + 1));
-        }
-        this.values.pop();
+        const first = this.values.shift();  // O(1) operation
+        this.values.save();
 
         const writer = new BytesWriter(32);
         writer.writeU256(first);
@@ -459,7 +470,7 @@ export class ValueQueue extends OP_NET {
     }
 
     public peek(_calldata: Calldata): BytesWriter {
-        if (this.values.length === 0) {
+        if (this.values.getLength() === 0) {
             throw new Revert('Empty queue');
         }
         const writer = new BytesWriter(32);
@@ -468,8 +479,8 @@ export class ValueQueue extends OP_NET {
     }
 
     public size(_calldata: Calldata): BytesWriter {
-        const writer = new BytesWriter(8);
-        writer.writeU64(this.values.length);
+        const writer = new BytesWriter(4);
+        writer.writeU32(this.values.getLength());
         return writer;
     }
 }
@@ -481,16 +492,17 @@ export class ValueQueue extends OP_NET {
 
 ```typescript
 // Forward iteration
-const length = this.holders.length;
-for (let i: u64 = 0; i < length; i++) {
+const length = this.holders.getLength();
+for (let i: u32 = 0; i < length; i++) {
     const holder = this.holders.get(i);
     // Process holder...
 }
 
-// With u256 index
-for (let i: u256 = u256.Zero; i < u256.fromU64(length); i = SafeMath.add(i, u256.One)) {
-    const value = this.values.get(i.toU64());
-    // Process value...
+// Batch retrieval for efficiency
+const batchSize: u32 = 100;
+const allValues = this.values.getAll(0, batchSize);
+for (let i = 0; i < allValues.length; i++) {
+    // Process allValues[i]...
 }
 ```
 
@@ -498,11 +510,11 @@ for (let i: u256 = u256.Zero; i < u256.fromU64(length); i = SafeMath.add(i, u256
 
 ```typescript
 // Find index of element
-private indexOf(array: StoredAddressArray, target: Address): i64 {
-    const length = array.length;
-    for (let i: u64 = 0; i < length; i++) {
+private indexOf(array: StoredAddressArray, target: Address): i32 {
+    const length = array.getLength();
+    for (let i: u32 = 0; i < length; i++) {
         if (array.get(i).equals(target)) {
-            return i64(i);
+            return i32(i);
         }
     }
     return -1;  // Not found
@@ -510,16 +522,16 @@ private indexOf(array: StoredAddressArray, target: Address): i64 {
 
 // Check if element exists
 private contains(array: StoredAddressArray, target: Address): bool {
-    return indexOf(array, target) >= 0;
+    return this.indexOf(array, target) >= 0;
 }
 ```
 
 ### Removing Elements
 
 ```typescript
-// Remove at index (swap with last, then pop)
-private removeAt(array: StoredAddressArray, index: u64): void {
-    const length = array.length;
+// Remove at index (swap with last, then deleteLast)
+private removeAt(array: StoredAddressArray, index: u32): void {
+    const length = array.getLength();
 
     if (index >= length) {
         throw new Revert('Index out of bounds');
@@ -532,18 +544,22 @@ private removeAt(array: StoredAddressArray, index: u64): void {
     }
 
     // Remove last element
-    array.pop();
+    array.deleteLast();
+    array.save();
 }
 
 // Remove by value
 private removeValue(array: StoredAddressArray, value: Address): bool {
-    const idx = indexOf(array, value);
+    const idx = this.indexOf(array, value);
     if (idx < 0) {
         return false;
     }
-    removeAt(array, u64(idx));
+    this.removeAt(array, u32(idx));
     return true;
 }
+
+// Alternative: Use delete(index) to remove at specific index
+// This sets the element to zero but doesn't shift other elements
 ```
 
 ### Unique Elements Set
@@ -551,15 +567,12 @@ private removeValue(array: StoredAddressArray, value: Address): bool {
 ```typescript
 // Add only if not present
 private addUnique(array: StoredAddressArray, value: Address): bool {
-    if (contains(array, value)) {
+    if (this.contains(array, value)) {
         return false;  // Already exists
     }
 
-    if (array.length >= 65535) {
-        throw new Revert('Array full');
-    }
-
     array.push(value);
+    array.save();
     return true;
 }
 ```
@@ -576,13 +589,14 @@ export class Token extends OP20 {
 
     constructor() {
         super();
-        this.holders = new StoredAddressArray(this.holdersPointer);
+        this.holders = new StoredAddressArray(this.holdersPointer, EMPTY_POINTER);
     }
 
     public override _transfer(from: Address, to: Address, amount: u256): void {
         // Track new holders
         if (this.balanceOf(to).isZero() && !amount.isZero()) {
             this.holders.push(to);
+            this.holders.save();
         }
 
         super._transfer(from, to, amount);
@@ -592,8 +606,8 @@ export class Token extends OP20 {
     }
 
     public getHolderCount(_calldata: Calldata): BytesWriter {
-        const writer = new BytesWriter(8);
-        writer.writeU64(this.holders.length);
+        const writer = new BytesWriter(4);
+        writer.writeU32(this.holders.getLength());
         return writer;
     }
 }
@@ -609,23 +623,24 @@ export class OrderBook extends OP_NET {
 
     constructor() {
         super();
-        this.orders = new StoredU256Array(this.ordersPointer);
+        this.orders = new StoredU256Array(this.ordersPointer, EMPTY_POINTER);
     }
 
     public addOrder(calldata: Calldata): BytesWriter {
         const orderId = calldata.readU256();
         this.orders.push(orderId);
+        this.orders.save();
         return new BytesWriter(0);
     }
 
     public processNextOrder(_calldata: Calldata): BytesWriter {
-        if (this.orders.length === 0) {
+        if (this.orders.getLength() === 0) {
             throw new Revert('No orders');
         }
 
-        // Get first order (FIFO requires different approach)
-        // For simple LIFO (last in, first out):
-        const orderId = this.orders.pop();
+        // FIFO: Use shift() to get first order (O(1) with circular buffer)
+        const orderId = this.orders.shift();
+        this.orders.save();
 
         // Process order...
 
@@ -646,7 +661,7 @@ export class Whitelist extends OP_NET {
 
     constructor() {
         super();
-        this.addresses = new StoredAddressArray(this.addressesPointer);
+        this.addresses = new StoredAddressArray(this.addressesPointer, EMPTY_POINTER);
     }
 
     public add(calldata: Calldata): BytesWriter {
@@ -655,13 +670,15 @@ export class Whitelist extends OP_NET {
         const addr = calldata.readAddress();
 
         // Check not already in list
-        for (let i: u64 = 0; i < this.addresses.length; i++) {
+        const length = this.addresses.getLength();
+        for (let i: u32 = 0; i < length; i++) {
             if (this.addresses.get(i).equals(addr)) {
                 throw new Revert('Already whitelisted');
             }
         }
 
         this.addresses.push(addr);
+        this.addresses.save();
         return new BytesWriter(0);
     }
 
@@ -669,7 +686,8 @@ export class Whitelist extends OP_NET {
         const addr = calldata.readAddress();
 
         let found = false;
-        for (let i: u64 = 0; i < this.addresses.length; i++) {
+        const length = this.addresses.getLength();
+        for (let i: u32 = 0; i < length; i++) {
             if (this.addresses.get(i).equals(addr)) {
                 found = true;
                 break;
@@ -688,13 +706,14 @@ export class Whitelist extends OP_NET {
 ### 1. Limit Array Size
 
 ```typescript
-const MAX_ARRAY_SIZE: u64 = 1000;
+const MAX_ARRAY_SIZE: u32 = 1000;
 
 public addItem(calldata: Calldata): BytesWriter {
-    if (this.items.length >= MAX_ARRAY_SIZE) {
+    if (this.items.getLength() >= MAX_ARRAY_SIZE) {
         throw new Revert('Array size limit reached');
     }
     this.items.push(calldata.readU256());
+    this.items.save();
     return new BytesWriter(0);
 }
 ```
@@ -703,14 +722,15 @@ public addItem(calldata: Calldata): BytesWriter {
 
 ```typescript
 // Good: Cache length
-const length = this.items.length;
-for (let i: u64 = 0; i < length; i++) {
+const length = this.items.getLength();
+for (let i: u32 = 0; i < length; i++) {
     // ...
 }
 
-// Avoid: Reading length each iteration
-for (let i: u64 = 0; i < this.items.length; i++) {
-    // Might be OK, but caching is safer
+// Even better: Use getAll() for batch operations
+const items = this.items.getAll(0, 100);
+for (let i = 0; i < items.length; i++) {
+    // Process items[i]
 }
 ```
 
@@ -727,7 +747,7 @@ private itemExists: StoredMapU256;
 
 constructor() {
     super();
-    this.items = new StoredU256Array(this.itemsPointer);
+    this.items = new StoredU256Array(this.itemsPointer, EMPTY_POINTER);
     this.itemExists = new StoredMapU256(this.itemExistsPointer);
 }
 
@@ -736,8 +756,19 @@ public addItem(item: u256): void {
         throw new Revert('Already exists');
     }
     this.items.push(item);
+    this.items.save();
     this.itemExists.set(item, u256.One);
 }
+```
+
+### 4. Always Call save() After Modifications
+
+```typescript
+// Multiple modifications, single save
+this.items.push(value1);
+this.items.push(value2);
+this.items.set(0, value3);
+this.items.save();  // Commit all changes at once
 ```
 
 ---

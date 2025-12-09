@@ -279,7 +279,8 @@ flowchart LR
 
 ```typescript
 private notBlacklisted(account: Address): void {
-    if (this._blacklist.get(account)) {
+    // AddressMemoryMap.get() returns u256; non-zero means blacklisted
+    if (!this._blacklist.get(account).isZero()) {
         throw new Revert('Blacklisted');
     }
 }
@@ -524,7 +525,8 @@ export class Stablecoin extends OP20 {
     }
 
     private notBlacklisted(account: Address): void {
-        if (this._blacklist.get(account)) {
+        // AddressMemoryMap.get() returns u256; non-zero means blacklisted
+        if (!this._blacklist.get(account).isZero()) {
             throw new Revert('Blacklisted');
         }
     }
@@ -718,7 +720,8 @@ export class Stablecoin extends OP20 {
         this.onlyRole(u256.fromU64(Role.BLACKLISTER));
 
         const account = calldata.readAddress();
-        this._blacklist.set(account, true);
+        // AddressMemoryMap stores u256; use u256.One for true
+        this._blacklist.set(account, u256.One);
 
         this.emitEvent(new Blacklisted(account));
 
@@ -732,7 +735,8 @@ export class Stablecoin extends OP20 {
         this.onlyRole(u256.fromU64(Role.BLACKLISTER));
 
         const account = calldata.readAddress();
-        this._blacklist.set(account, false);
+        // AddressMemoryMap stores u256; use u256.Zero for false
+        this._blacklist.set(account, u256.Zero);
 
         this.emitEvent(new UnBlacklisted(account));
 
@@ -797,7 +801,8 @@ export class Stablecoin extends OP20 {
         const account = calldata.readAddress();
 
         const writer = new BytesWriter(1);
-        writer.writeBoolean(this._blacklist.get(account));
+        // AddressMemoryMap.get() returns u256; convert to boolean
+        writer.writeBoolean(!this._blacklist.get(account).isZero());
         return writer;
     }
 
@@ -1106,7 +1111,8 @@ function blacklist(address account) external onlyRole(BLACKLISTER_ROLE) {
 private _blacklist: AddressMemoryMap;
 
 private notBlacklisted(account: Address): void {
-    if (this._blacklist.get(account)) {
+    // AddressMemoryMap.get() returns u256; non-zero means blacklisted
+    if (!this._blacklist.get(account).isZero()) {
         throw new Revert('Blacklisted');
     }
 }
@@ -1116,7 +1122,8 @@ private notBlacklisted(account: Address): void {
 public blacklist(calldata: Calldata): BytesWriter {
     this.onlyRole(u256.fromU64(Role.BLACKLISTER));
     const account = calldata.readAddress();
-    this._blacklist.set(account, true);
+    // AddressMemoryMap stores u256; use u256.One for true
+    this._blacklist.set(account, u256.One);
     this.emitEvent(new Blacklisted(account));
     return new BytesWriter(0);
 }
