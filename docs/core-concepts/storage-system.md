@@ -158,31 +158,13 @@ config:
   theme: dark
 ---
 flowchart LR
-    subgraph Input["Developer Input"]
-        DEV["Contract Code"]
-        DEV -->|"Declares"| VAR1["totalSupplyPointer: u16"]
-        DEV -->|"Declares"| VAR2["balancesPointer: u16"]
-    end
-
-    subgraph Allocation["Runtime Allocation"]
-        BC["Blockchain.nextPointer"]
-        VAR1 -->|"Calls"| BC
-        VAR2 -->|"Calls"| BC
-        BC -->|"Returns 0"| P0["Pointer 0"]
-        BC -->|"Returns 1"| P1["Pointer 1"]
-    end
-
-    subgraph SimpleKey["Simple Value Key"]
-        P0 --> EMPTY["EMPTY_POINTER<br/>(u256.Zero)"]
-        EMPTY --> HASH1["SHA256(0 || 0x00...00)"]
-        HASH1 --> KEY1[("Storage Key<br/>for totalSupply")]
-    end
-
-    subgraph MappingKey["Mapping Key (balances)"]
-        P1 --> ADDR["User Address<br/>0xABC..."]
-        ADDR --> HASH2["SHA256(1 || 0xABC...)"]
-        HASH2 --> KEY2[("Storage Key<br/>for balances[0xABC]")]
-    end
+    Dev["Contract Code"] --> Alloc["Blockchain.nextPointer"]
+    Alloc --> P0["Pointer 0"]
+    Alloc --> P1["Pointer 1"]
+    P0 --> Hash1["SHA256(0 || 0)"]
+    P1 --> Hash2["SHA256(1 || address)"]
+    Hash1 --> K1["totalSupply Key"]
+    Hash2 --> K2["balances Key"]
 ```
 
 ### Storage Layout
@@ -192,18 +174,12 @@ flowchart LR
 config:
   theme: dark
 ---
-flowchart TD
-    CS[Contract Storage] --> P0["Pointer 0: totalSupply"]
-    CS --> P1["Pointer 1: name"]
-    CS --> P2["Pointer 2: symbol"]
-    CS --> P3["Pointer 3: balances mapping"]
-    CS --> P4["Pointer 4: allowances mapping"]
-
-    P3 --> S1["subPointer 0xAAA → balance"]
-    P3 --> S2["subPointer 0xBBB → balance"]
-    P3 --> S3["..."]
-
-    P4 --> N1["owner+spender hash → allowance"]
+flowchart LR
+    Contract["Contract Storage"] --> P0["Pointer 0: totalSupply"]
+    Contract --> P1["Pointer 1: name"]
+    Contract --> P2["Pointer 2: balances"]
+    P2 --> B1["balance[0xAAA]"]
+    P2 --> B2["balance[0xBBB]"]
 ```
 
 ## CRITICAL: Map Implementation Warning
@@ -510,51 +486,12 @@ private userActives: StoredMapU256 = new StoredMapU256(this.userActivePointer);
 config:
   theme: dark
 ---
-flowchart TD
-    subgraph Transaction["Bitcoin Transaction"]
-        TX_IN["TX Input<br/>(User Signs)"]
-        TX_OUT["TX Outputs<br/>(UTXOs)"]
-    end
-
-    subgraph Contract["Contract Execution"]
-        CALL["Method Call"]
-        LOGIC["Business Logic"]
-    end
-
-    subgraph ReadFlow["Read Flow"]
-        R1["Get pointer + subPointer"]
-        R2["Compute SHA256 key"]
-        R3["Blockchain.getStorageAt"]
-        R4["Decode to typed value"]
-        R1 --> R2 --> R3 --> R4
-    end
-
-    subgraph WriteFlow["Write Flow"]
-        W1["Get pointer + subPointer"]
-        W2["Compute SHA256 key"]
-        W3["Encode typed value"]
-        W4["Buffer in memory"]
-        W5["Commit on TX complete"]
-        W1 --> W2 --> W3 --> W4 --> W5
-    end
-
-    subgraph StateCommit["State Commitment"]
-        BUFFER["Memory Buffer"]
-        STATE["Persistent State"]
-        CHECKSUM["State Checksum"]
-        EPOCH["Epoch Root"]
-    end
-
-    TX_IN -->|"Triggers"| CALL
-    CALL --> LOGIC
-    LOGIC -->|"Reads"| ReadFlow
-    LOGIC -->|"Writes"| WriteFlow
-    LOGIC -->|"Verifies"| TX_OUT
-
-    W5 --> BUFFER
-    BUFFER -->|"TX Success"| STATE
-    STATE --> CHECKSUM
-    CHECKSUM -->|"Every 20 blocks"| EPOCH
+flowchart LR
+    TX["Transaction"] --> Call["Method Call"]
+    Call --> Read["Read: pointer → SHA256 → value"]
+    Call --> Write["Write: value → SHA256 → buffer"]
+    Write --> Commit["Commit on Success"]
+    Commit --> State["Persistent State"]
 ```
 
 ### Read Operations
