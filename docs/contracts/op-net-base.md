@@ -38,94 +38,181 @@ export class MyContract extends OP_NET {
 
 ## Contract Lifecycle
 
-### Deployment Phase (Once)
-
 ```mermaid
----
-config:
-  theme: dark
----
-flowchart LR
-    A["👤 User deploys"] --> B["constructor()"]
-    B --> C["Init pointers"]
-    C --> D["onDeployment()"]
-    D --> E["Set initial state"]
-    E --> F["Contract Ready"]
+flowchart TD
+    subgraph Bitcoin["Bitcoin L1"]
+        A[👤 User submits deployment TX] --> B[Blockchain creates contract]
+    end
+
+    subgraph WASM1["WASM Runtime - Deployment Phase (Once)"]
+        B --> C[Contract.constructor runs]
+        C --> D[Initialize storage pointers]
+        D --> E[🗺Create storage map instances]
+        E --> F[onDeployment called]
+        F --> G[Read deployment calldata]
+        G --> H[Set initial state in Storage]
+        H --> I[Emit deployment events]
+        I --> J[Contract Ready]
+    end
+
+    subgraph Execution["Every Transaction - Runs Every Call"]
+        J --> K[👤 User submits transaction]
+
+        subgraph WASM2["WASM Runtime - Execution"]
+            K --> L[Blockchain routes to contract]
+            L --> M[Contract.constructor runs AGAIN]
+            M --> N[🗺Re-initialize storage maps]
+            N --> O[onExecutionStarted hook]
+            O --> P[Read method selector from TX]
+            P --> Q[execute method called]
+            Q --> R{Selector matches?}
+
+            R -->|Match| S[📞 Call method handler]
+            R -->|No match| T[⬆super.execute parent]
+
+            S --> U[Read calldata parameters]
+            U --> V[✔Validate inputs]
+            V --> W{Valid?}
+            W -->|No| X[Revert transaction]
+            W -->|Yes| Y[📚 Read from Storage]
+            Y --> Z[Execute business logic]
+            Z --> AA[Write to Storage]
+            AA --> AB[emitEvent]
+
+            T --> AC{Parent has method?}
+            AC -->|Yes| AD[Execute parent method]
+            AC -->|No| AE[Revert: Unknown selector]
+
+            AD --> AB
+            AB --> AF[🏁 onExecutionCompleted hook]
+            AF --> AG[Return BytesWriter result]
+            AG --> AH[Blockchain commits state]
+            AH --> AI[Transaction complete]
+        end
+    end
 ```
 
-### Execution Phase (Every Call)
-
 ```mermaid
----
-config:
-  theme: dark
----
-flowchart LR
-    A["👤 User calls"] --> B["constructor()"]
-    B --> C["onExecutionStarted()"]
-    C --> D["execute(selector)"]
-    D --> E{"Match?"}
-    E -->|"Yes"| F["Method handler"]
-    E -->|"No"| G["super.execute()"]
-    F --> H["Business logic"]
-    G --> H
-    H --> I["onExecutionCompleted()"]
-    I --> J["Return result"]
-```
-
-```mermaid
----
-config:
-  theme: dark
----
 classDiagram
     class OP_NET {
         <<abstract>>
+        Base Contract
         +constructor()
-        +onDeployment(calldata) void
-        +execute(method, calldata) BytesWriter
-        +onExecutionStarted(method) void
-        +onExecutionCompleted(method) void
-        +emitEvent(event) void
+        +onDeployment(calldata: Calldata) void
+        +execute(method: Selector, calldata: Calldata) BytesWriter
+        +onExecutionStarted(method: Selector) void
+        +onExecutionCompleted(method: Selector) void
+        +emitEvent(event: NetEvent) void
+        +onlyDeployer(address: Address) void
+        #isDeployer(address: Address) bool
+    }
+
+    class MyContract {
+        Custom Contract
+        -balancesPointer: u16
+        -balances: AddressMemoryMap
+        +constructor()
+        +onDeployment(calldata: Calldata) void
+        +execute(method: Selector, calldata: Calldata) BytesWriter
+        -myMethod(calldata: Calldata) BytesWriter
     }
 
     class OP20 {
-        Fungible Token
-        +transfer(calldata) BytesWriter
-        +approve(calldata) BytesWriter
+        🪙 Fungible Token Standard
+        -_totalSupply: StoredU256
+        -balanceOfMap: AddressMemoryMap
+        +transfer(calldata: Calldata) BytesWriter
+        +approve(calldata: Calldata) BytesWriter
     }
 
     class OP721 {
-        NFT
-        +transferFrom(calldata) BytesWriter
-        +mint(to, tokenId) void
+        🖼NFT Standard
+        -_owners: AddressMemoryMap
+        -_balances: AddressMemoryMap
+        +transferFrom(calldata: Calldata) BytesWriter
+        +mint(to: Address, tokenId: u256) void
     }
 
-    OP_NET <|-- OP20
-    OP_NET <|-- OP721
+    OP_NET <|-- MyContract : extends
+    OP_NET <|-- OP20 : extends
+    OP_NET <|-- OP721 : extends
 ```
 
-### Method Execution Sequence
-
 ```mermaid
----
-config:
-  theme: dark
----
 sequenceDiagram
-    participant User as 👤 User
-    participant VM as Runtime
-    participant Contract
-    participant Storage
+    participant User as 👤 User Wallet
+    participant Blockchain as Bitcoin L1
+    participant TxPool as 📬 Transaction Pool
+    participant VM as WASM Runtime
+    participant Contract as OP_NET Contract
+    participant Storage as Storage Pointers
+    participant EventLog as Event Log
 
-    User->>VM: Call contract
-    VM->>Contract: constructor()
-    VM->>Contract: onExecutionStarted()
+    User->>TxPool: Submit signed transaction
+    Note over User,TxPool: Contains: contract address,<br/>method selector, calldata
+
+    TxPool->>Blockchain: Transaction confirmed
+    Blockchain->>VM: Route to contract address
+
+    VM->>Contract: Instantiate contract instance
+    activate Contract
+
+    Contract->>Contract: constructor()
+    Note over Contract: Runs EVERY call<br/>Initialize storage maps
+
+    Contract->>Storage: Allocate storage pointers
+    Storage-->>Contract: Pointer addresses
+
+    VM->>Contract: onExecutionStarted(selector)
+    Note over Contract: Pre-execution hook<br/>Can add logging/validation
+
     VM->>Contract: execute(selector, calldata)
-    Contract->>Storage: Read/Write state
-    Contract->>VM: Return result
-    VM->>Contract: onExecutionCompleted()
-    VM->>User: Transaction receipt
+
+    Contract->>Contract: switch(selector)
+    Note over Contract: Method routing logic
+
+    alt Known Method Selector
+        Contract->>Contract: 📞 methodHandler(calldata)
+
+        Contract->>Contract: calldata.readAddress()
+        Contract->>Contract: calldata.readU256()
+        Note over Contract: Parse parameters
+
+        Contract->>Storage: 📚 Read current state
+        Storage-->>Contract: Current values
+
+        Contract->>Contract: Business logic
+        Note over Contract: SafeMath operations,<br/>validations, state changes
+
+        Contract->>Storage: Write updated state
+        Note over Storage: Persistent storage<br/>committed on success
+
+        Contract->>EventLog: emitEvent(TransferEvent)
+        Note over EventLog: Events for indexing<br/>off-chain systems
+
+    else Unknown Method
+        Contract->>Contract: ⬆super.execute(selector, calldata)
+
+        alt Parent Has Method
+            Note over Contract: OP_NET parent<br/>or OP20/OP721 parent
+            Contract->>Storage: Parent method logic
+            Contract->>EventLog: Parent method events
+        else No Handler
+            Contract->>VM: throw Revert('Unknown method')
+            VM->>User: Transaction reverted
+            Note over User: No state changes,<br/>gas still consumed
+        end
+    end
+
+    Contract->>Contract: 🏁 onExecutionCompleted(selector)
+    Note over Contract: Post-execution hook<br/>Cleanup, final checks
+
+    Contract->>VM: Return BytesWriter
+    deactivate Contract
+
+    VM->>Blockchain: Commit state changes
+    Blockchain->>User: Transaction receipt
+    Note over User: Success with events<br/>or revert with error
 ```
 
 ### 1. Construction

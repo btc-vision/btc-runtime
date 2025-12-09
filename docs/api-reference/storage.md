@@ -679,6 +679,15 @@ const stored = Blockchain.getStorageAt(pointerHash);
 const value = u256.fromUint8ArrayBE(stored);
 ```
 
+## Storage Costs
+
+| Operation | Approximate Gas |
+|-----------|----------------|
+| Write new slot | ~20,000 |
+| Update existing | ~5,000 |
+| Read (cold) | ~2,100 |
+| Read (warm) | ~100 |
+
 ## Best Practices
 
 ### 1. Declare Pointers First

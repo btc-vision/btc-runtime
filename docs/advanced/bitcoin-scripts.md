@@ -284,14 +284,15 @@ public buildMultisigManual(
 config:
   theme: dark
 ---
-flowchart LR
-    CSV1["nSequence field"] --> CSV2{"Type?"}
-    CSV2 -->|"Block"| CSV3["Blocks since confirm"]
-    CSV2 -->|"Time"| CSV4["512s units + FLAG"]
-    CSV3 --> CSV5["OP_CSV check"]
+flowchart TD
+    CSV1["Transaction Input<br/>nSequence field"] --> CSV2{"Timelock Type?"}
+    CSV2 -->|"Block-based"| CSV3["Blocks since confirmation"]
+    CSV2 -->|"Time-based"| CSV4["512-second units + FLAG"]
+    CSV3 --> CSV5["OP_CSV verifies:<br/>nSequence >= CSV_VALUE"]
     CSV4 --> CSV5
-    CSV5 -->|"Valid"| CSV6["Continue"]
-    CSV5 -->|"Invalid"| CSV7["TX fails"]
+    CSV5 --> CSV6{"Valid?"}
+    CSV6 -->|"Yes"| CSV7["Continue execution"]
+    CSV6 -->|"No"| CSV8["Transaction invalid"]
 ```
 
 ### CLTV (CheckLockTimeVerify) - Absolute Timelock
@@ -301,14 +302,15 @@ flowchart LR
 config:
   theme: dark
 ---
-flowchart LR
-    CLTV1["nLockTime field"] --> CLTV2{"Type?"}
-    CLTV2 -->|"Block"| CLTV3["Block height<br/>< 500000000"]
-    CLTV2 -->|"Time"| CLTV4["Unix timestamp<br/>>= 500000000"]
-    CLTV3 --> CLTV5["OP_CLTV check"]
+flowchart TD
+    CLTV1["Transaction<br/>nLockTime field"] --> CLTV2{"Timelock Type?"}
+    CLTV2 -->|"Block-based"| CLTV3["Block height<br/>Value < 500000000"]
+    CLTV2 -->|"Time-based"| CLTV4["Unix timestamp<br/>Value >= 500000000"]
+    CLTV3 --> CLTV5["OP_CLTV verifies:<br/>nLockTime >= CLTV_VALUE"]
     CLTV4 --> CLTV5
-    CLTV5 -->|"Valid"| CLTV6["Continue"]
-    CLTV5 -->|"Invalid"| CLTV7["TX fails"]
+    CLTV5 --> CLTV6{"Valid?"}
+    CLTV6 -->|"Yes"| CLTV7["Continue execution"]
+    CLTV6 -->|"No"| CLTV8["Transaction invalid"]
 ```
 
 ## CSV Timelocks

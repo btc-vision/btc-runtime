@@ -92,21 +92,25 @@ const result = Blockchain.call(tokenContract, writer, true);
 ### stopOnFailure Behavior
 
 ```mermaid
----
-config:
-  theme: dark
----
-flowchart LR
-    subgraph StopTrue["stopOnFailure = true"]
-        A1["Call"] --> B1{"Success?"}
-        B1 -->|"Yes"| C1["Continue"]
-        B1 -->|"No"| D1["REVERT TX"]
-    end
+flowchart TD
+    subgraph OPNet["OPNet Cross-Contract Call Flow"]
+        A["Blockchain.call<br/>target, data, stopOnFailure"] --> B{"stopOnFailure?"}
 
-    subgraph StopFalse["stopOnFailure = false"]
-        A2["Call"] --> B2{"Success?"}
-        B2 -->|"Yes"| C2["Continue"]
-        B2 -->|"No"| D2["Return success: false<br/>Continue execution"]
+        B -->|"true"| C["Execute call"]
+        B -->|"false"| D["Execute call"]
+
+        C --> E{"Call successful?"}
+        D --> F{"Call successful?"}
+
+        E -->|"Yes"| G["Return CallResult<br/>success: true<br/>data: response"]
+        E -->|"No"| H["REVERT ENTIRE TX<br/>Execution stops here"]
+
+        F -->|"Yes"| I["Return CallResult<br/>success: true<br/>data: response"]
+        F -->|"No"| J["Return CallResult<br/>success: false<br/>data: empty"]
+
+        G --> K["Continue execution"]
+        I --> L["Continue execution"]
+        J --> M["Continue execution<br/>Check result.success"]
     end
 ```
 
@@ -433,13 +437,13 @@ if (result.data.length > 0) {
 }
 ```
 
-### 3. Limit External Calls
+### 3. Gas Considerations
 
 ```typescript
-// External calls have overhead
+// External calls consume gas
 // Be careful with loops
 for (let i = 0; i < 1000; i++) {
-    Blockchain.call(contracts[i], data, true);  // Could exceed limits
+    Blockchain.call(contracts[i], data, true);  // Could run out of gas
 }
 ```
 
@@ -452,7 +456,7 @@ public callExternalContract(calldata: Calldata): BytesWriter {
 
     // Only call trusted contracts
     // Malicious contracts can:
-    // - Consume excessive resources
+    // - Consume all gas
     // - Return malicious data
     // - Re-enter your contract
 

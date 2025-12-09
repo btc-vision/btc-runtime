@@ -45,7 +45,7 @@ Build standardized contracts:
 |----------|-------------|
 | [OP_NET Base](./contracts/op-net-base.md) | Abstract contract base class |
 | [OP20 Token](./contracts/op20-token.md) | Fungible token standard (like ERC20) |
-| [OP20S Signatures](./contracts/op20s-signatures.md) | Off-chain approval with signatures |
+| [OP20S Signatures](./contracts/op20s-signatures.md) | Gasless approval with signatures |
 | [OP721 NFT](./contracts/op721-nft.md) | Non-fungible token standard (like ERC721) |
 | [ReentrancyGuard](./contracts/reentrancy-guard.md) | Reentrancy protection |
 
