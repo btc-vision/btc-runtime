@@ -80,20 +80,12 @@ import {
     Address,
     Calldata,
     BytesWriter,
-    Selector,
-    encodeSelector,
     SafeMath,
     Revert,
     MintEvent,
     BurnEvent,
     ABIDataTypes,
 } from '@btc-vision/btc-runtime/runtime';
-
-// Define method selectors (sha256 first 4 bytes of method signature)
-const MINT_SELECTOR: u32 = 0x40c10f19;      // mint(address,uint256)
-const BURN_SELECTOR: u32 = 0x42966c68;      // burn(uint256)
-const BURN_FROM_SELECTOR: u32 = 0x79cc6790; // burnFrom(address,uint256)
-const TOKEN_INFO_SELECTOR: u32 = 0x6c6f676f; // tokenInfo()
 
 @final
 export class BasicToken extends OP20 {
@@ -265,24 +257,6 @@ export class BasicToken extends OP20 {
         writer.writeU256(this.totalSupply());
         writer.writeU256(this.maxSupply());
         return writer;
-    }
-
-    /**
-     * Route method calls to appropriate handlers.
-     */
-    public override execute(method: Selector, calldata: Calldata): BytesWriter {
-        switch (method) {
-            case MINT_SELECTOR:
-                return this.mint(calldata);
-            case BURN_SELECTOR:
-                return this.burn(calldata);
-            case BURN_FROM_SELECTOR:
-                return this.burnFrom(calldata);
-            case TOKEN_INFO_SELECTOR:
-                return this.tokenInfo(calldata);
-            default:
-                return super.execute(method, calldata);
-        }
     }
 }
 ```
@@ -565,19 +539,21 @@ this.emitEvent(new BurnEvent(from, amount));
 
 ### 5. Method Routing
 
-```typescript
-// Define selectors as u32 hex values
-const MINT_SELECTOR: u32 = 0x40c10f19;  // mint(address,uint256)
+Method routing is handled **AUTOMATICALLY** via `@method` decorators. You do NOT need to override the `execute` method:
 
-public override execute(method: Selector, calldata: Calldata): BytesWriter {
-    switch (method) {
-        case MINT_SELECTOR:
-            return this.mint(calldata);
-        // ... other cases
-        default:
-            return super.execute(method, calldata);
-    }
+```typescript
+// CORRECT: Use @method decorator - routing is automatic
+@method(
+    { name: 'to', type: ABIDataTypes.ADDRESS },
+    { name: 'amount', type: ABIDataTypes.UINT256 },
+)
+@emit('Minted')
+public mint(calldata: Calldata): BytesWriter {
+    // Implementation - runtime routes calls automatically
+    return new BytesWriter(0);
 }
+
+// DO NOT manually override execute() - decorators handle this
 ```
 
 ## Solidity Equivalent
@@ -660,7 +636,7 @@ contract BasicToken is ERC20, Ownable {
 | **Msg.sender** | `msg.sender` | `Blockchain.tx.sender` |
 | **Revert** | `require(condition, "message")` or `revert("message")` | `throw new Revert('message')` |
 | **Safe Math** | Built-in (Solidity 0.8+) | `SafeMath.add()`, `SafeMath.sub()`, etc. |
-| **Method Routing** | Automatic via function selectors | Manual `execute()` switch statement |
+| **Method Routing** | Automatic via function selectors | Automatic via `@method` decorators |
 
 ### Structural Differences
 
@@ -707,7 +683,7 @@ public mint(calldata: Calldata): BytesWriter {
 | **Bitcoin Native** | Direct integration with Bitcoin's security model |
 | **Unified Storage Pointers** | Consistent storage access pattern with `Blockchain.nextPointer` |
 | **Predictable Execution** | Bitcoin transaction model provides predictable execution |
-| **Explicit Method Routing** | Full control over method dispatch in `execute()` |
+| **Automatic Method Routing** | `@method` decorators handle selector generation and routing |
 
 ### Initialization Pattern Comparison
 

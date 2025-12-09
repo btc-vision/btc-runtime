@@ -348,15 +348,6 @@ export class Router extends OP_NET {
         super();
     }
 
-    public override execute(method: Selector, calldata: Calldata): BytesWriter {
-        switch (method) {
-            case SWAP_SELECTOR:
-                return this.swap(calldata);
-            default:
-                return super.execute(method, calldata);
-        }
-    }
-
     @method(
         { name: 'token', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },

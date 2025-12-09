@@ -366,34 +366,14 @@ import {
     Address,
     Calldata,
     BytesWriter,
-    Selector,
     SafeMath,
     Revert,
     NetEvent,
     StoredBoolean,
-    StoredU256,
     StoredAddress,
     AddressMemoryMap,
     ABIDataTypes,
-    encodeSelector,
 } from '@btc-vision/btc-runtime/runtime';
-
-// Method selectors (sha256 first 4 bytes of method signature)
-const GRANT_ROLE_SELECTOR: u32 = 0x2f2ff15d;          // grantRole(address,uint256)
-const REVOKE_ROLE_SELECTOR: u32 = 0xd547741f;         // revokeRole(address,uint256)
-const CHECK_HAS_ROLE_SELECTOR: u32 = 0x9acd72f9;      // checkHasRole(address,uint256)
-const CONFIGURE_MINTER_SELECTOR: u32 = 0x4e44d956;    // configureMinter(address,uint256)
-const REMOVE_MINTER_SELECTOR: u32 = 0x3092afd5;       // removeMinter(address)
-const MINT_SELECTOR: u32 = 0x40c10f19;                // mint(address,uint256)
-const BURN_SELECTOR: u32 = 0x42966c68;                // burn(uint256)
-const PAUSE_SELECTOR: u32 = 0x8456cb59;               // pause()
-const UNPAUSE_SELECTOR: u32 = 0x3f4ba83a;             // unpause()
-const BLACKLIST_SELECTOR: u32 = 0xf9f92be4;           // blacklist(address)
-const UNBLACKLIST_SELECTOR: u32 = 0x1a895266;         // unBlacklist(address)
-const IS_PAUSED_SELECTOR: u32 = 0xb187bd26;           // isPaused()
-const IS_BLACKLISTED_SELECTOR: u32 = 0xfe575a87;      // isBlacklisted(address)
-const MINTER_ALLOWANCE_SELECTOR: u32 = 0x8a6db9c3;    // minterAllowance(address)
-const GET_MASTER_MINTER_SELECTOR: u32 = 0xb3f05b97;   // getMasterMinter()
 
 // Role enum - MUST be powers of 2 for bitwise operations
 enum Role {
@@ -821,53 +801,6 @@ export class Stablecoin extends OP20 {
         const writer = new BytesWriter(32);
         writer.writeAddress(this._masterMinter.value);
         return writer;
-    }
-
-    public override execute(method: Selector, calldata: Calldata): BytesWriter {
-        switch (method) {
-            // Role management
-            case GRANT_ROLE_SELECTOR:
-                return this.grantRole(calldata);
-            case REVOKE_ROLE_SELECTOR:
-                return this.revokeRole(calldata);
-            case CHECK_HAS_ROLE_SELECTOR:
-                return this.checkHasRole(calldata);
-
-            // Minting
-            case CONFIGURE_MINTER_SELECTOR:
-                return this.configureMinter(calldata);
-            case REMOVE_MINTER_SELECTOR:
-                return this.removeMinter(calldata);
-            case MINT_SELECTOR:
-                return this.mint(calldata);
-            case BURN_SELECTOR:
-                return this.burn(calldata);
-
-            // Pausable
-            case PAUSE_SELECTOR:
-                return this.pause(calldata);
-            case UNPAUSE_SELECTOR:
-                return this.unpause(calldata);
-
-            // Blacklist
-            case BLACKLIST_SELECTOR:
-                return this.blacklist(calldata);
-            case UNBLACKLIST_SELECTOR:
-                return this.unBlacklist(calldata);
-
-            // Views
-            case IS_PAUSED_SELECTOR:
-                return this.isPaused(calldata);
-            case IS_BLACKLISTED_SELECTOR:
-                return this.isBlacklisted(calldata);
-            case MINTER_ALLOWANCE_SELECTOR:
-                return this.minterAllowance(calldata);
-            case GET_MASTER_MINTER_SELECTOR:
-                return this.getMasterMinter(calldata);
-
-            default:
-                return super.execute(method, calldata);
-        }
     }
 }
 ```

@@ -256,10 +256,6 @@ export class MyToken extends OP20 {
 
         this._mint(deployer, initialSupply);
     }
-
-    public override execute(method: Selector, calldata: Calldata): BytesWriter {
-        return super.execute(method, calldata);
-    }
 }
 ```
 

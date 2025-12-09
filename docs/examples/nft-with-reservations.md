@@ -404,7 +404,6 @@ import {
     Address,
     Calldata,
     BytesWriter,
-    Selector,
     SafeMath,
     Revert,
     StoredU256,
@@ -413,7 +412,6 @@ import {
     StoredU8,
     AddressMemoryMap,
     ABIDataTypes,
-    encodeSelector,
     EMPTY_POINTER,
 } from '@btc-vision/btc-runtime/runtime';
 
@@ -421,22 +419,6 @@ import {
 const PHASE_INACTIVE: u8 = 0;
 const PHASE_WHITELIST: u8 = 1;
 const PHASE_PUBLIC: u8 = 2;
-
-// Define method selectors (sha256 first 4 bytes of method signature)
-const RESERVE_SELECTOR: u32 = 0x819b25ba;                    // reserve(uint256)
-const CLAIM_RESERVED_SELECTOR: u32 = 0x2f65ba75;            // claimReserved()
-const CANCEL_RESERVATION_SELECTOR: u32 = 0x2f0a6f86;        // cancelReservation()
-const WHITELIST_MINT_SELECTOR: u32 = 0x3e81fe0f;            // whitelistMint(uint256)
-const PUBLIC_MINT_SELECTOR: u32 = 0x2db11544;               // publicMint(uint256)
-const START_RESERVATION_SELECTOR: u32 = 0x3f71e9ce;         // startReservation(uint64)
-const SET_SALE_PHASE_SELECTOR: u32 = 0x2cc82655;            // setSalePhase(uint8)
-const SET_WHITELIST_SELECTOR: u32 = 0x8d3f0091;             // setWhitelist(address[],bool)
-const REVEAL_SELECTOR: u32 = 0x4917c680;                    // reveal(string)
-const SET_PRICE_SELECTOR: u32 = 0x91b7f5ed;                 // setPrice(uint256)
-const GET_RESERVATION_SELECTOR: u32 = 0x579eb7e5;           // getReservation(address)
-const IS_WHITELISTED_SELECTOR: u32 = 0x3af32abf;            // isWhitelisted(address)
-const GET_SALE_INFO_SELECTOR: u32 = 0x55018c1e;             // getSaleInfo()
-const GET_MINTED_COUNT_SELECTOR: u32 = 0x4ed32c63;          // getMintedCount(address)
 
 @final
 export class NFTWithReservations extends OP721 {
@@ -810,49 +792,6 @@ export class NFTWithReservations extends OP721 {
         const writer = new BytesWriter(32);
         writer.writeU256(count);
         return writer;
-    }
-
-    public override execute(method: Selector, calldata: Calldata): BytesWriter {
-        switch (method) {
-            // Reservation
-            case RESERVE_SELECTOR:
-                return this.reserve(calldata);
-            case CLAIM_RESERVED_SELECTOR:
-                return this.claimReserved(calldata);
-            case CANCEL_RESERVATION_SELECTOR:
-                return this.cancelReservation(calldata);
-
-            // Minting
-            case WHITELIST_MINT_SELECTOR:
-                return this.whitelistMint(calldata);
-            case PUBLIC_MINT_SELECTOR:
-                return this.publicMint(calldata);
-
-            // Admin
-            case START_RESERVATION_SELECTOR:
-                return this.startReservation(calldata);
-            case SET_SALE_PHASE_SELECTOR:
-                return this.setSalePhase(calldata);
-            case SET_WHITELIST_SELECTOR:
-                return this.setWhitelist(calldata);
-            case REVEAL_SELECTOR:
-                return this.reveal(calldata);
-            case SET_PRICE_SELECTOR:
-                return this.setPrice(calldata);
-
-            // Views
-            case GET_RESERVATION_SELECTOR:
-                return this.getReservation(calldata);
-            case IS_WHITELISTED_SELECTOR:
-                return this.isWhitelisted(calldata);
-            case GET_SALE_INFO_SELECTOR:
-                return this.getSaleInfo(calldata);
-            case GET_MINTED_COUNT_SELECTOR:
-                return this.getMintedCount(calldata);
-
-            default:
-                return super.execute(method, calldata);
-        }
     }
 }
 ```

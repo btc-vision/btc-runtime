@@ -432,18 +432,6 @@ export class MyNFT extends OP721 {
         writer.writeU256(tokenId);
         return writer;
     }
-
-    public override execute(method: Selector, calldata: Calldata): BytesWriter {
-        // Define method selectors
-        const MINT_SELECTOR: u32 = encodeSelector('mint');
-
-        switch (method) {
-            case MINT_SELECTOR:
-                return this.mint(calldata);
-            default:
-                return super.execute(method, calldata);
-        }
-    }
 }
 ```
 
@@ -738,17 +726,6 @@ export class MyNFTCollection extends OP721 {
     // Token URI
     public override tokenURI(tokenId: u256): string {
         return this._baseURI.value + tokenId.toString() + '.json';
-    }
-
-    public override execute(method: Selector, calldata: Calldata): BytesWriter {
-        switch (method) {
-            case MINT_SELECTOR:
-                return this.mint(calldata);
-            case OPEN_MINTING_SELECTOR:
-                return this.openMinting(calldata);
-            default:
-                return super.execute(method, calldata);
-        }
     }
 }
 ```

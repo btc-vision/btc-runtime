@@ -272,31 +272,18 @@ import {
     Address,
     Calldata,
     BytesWriter,
-    Selector,
     SafeMath,
     Revert,
     NetEvent,
     StoredU256,
     StoredU64,
-    StoredAddress,
     StoredU8,
     StoredAddressArray,
     AddressMemoryMap,
     ABIDataTypes,
     sha256,
     encodePointer,
-    encodeSelector,
 } from '@btc-vision/btc-runtime/runtime';
-
-// Define method selectors (sha256 first 4 bytes of method signature)
-const ADD_ORACLE_SELECTOR: u32 = 0x47dda1d6;       // addOracle(address)
-const REMOVE_ORACLE_SELECTOR: u32 = 0xfce589d8;    // removeOracle(address)
-const SUBMIT_PRICE_SELECTOR: u32 = 0x8d6cc56d;     // submitPrice(address,uint256)
-const GET_PRICE_SELECTOR: u32 = 0x41976e09;        // getPrice(address)
-const GET_LATEST_PRICE_SELECTOR: u32 = 0x5cd1a038; // getLatestPrice(address)
-const GET_ORACLES_SELECTOR: u32 = 0xd35f2498;      // getOracles()
-const GET_CONFIG_SELECTOR: u32 = 0xc3f909d4;       // getConfig()
-const CHECK_IS_ORACLE_SELECTOR: u32 = 0x9213c358;  // checkIsOracle(address)
 
 // Events
 class PriceUpdated extends NetEvent {
@@ -708,37 +695,6 @@ export class MultiOracle extends OP_NET {
         const writer = new BytesWriter(1);
         writer.writeBoolean(this.isOracle(oracle));
         return writer;
-    }
-
-    public override execute(method: Selector, calldata: Calldata): BytesWriter {
-        switch (method) {
-            // Oracle management
-            case ADD_ORACLE_SELECTOR:
-                return this.addOracle(calldata);
-            case REMOVE_ORACLE_SELECTOR:
-                return this.removeOracle(calldata);
-
-            // Price submission
-            case SUBMIT_PRICE_SELECTOR:
-                return this.submitPrice(calldata);
-
-            // Price reading
-            case GET_PRICE_SELECTOR:
-                return this.getPrice(calldata);
-            case GET_LATEST_PRICE_SELECTOR:
-                return this.getLatestPrice(calldata);
-
-            // Views
-            case GET_ORACLES_SELECTOR:
-                return this.getOracles(calldata);
-            case GET_CONFIG_SELECTOR:
-                return this.getConfig(calldata);
-            case CHECK_IS_ORACLE_SELECTOR:
-                return this.checkIsOracle(calldata);
-
-            default:
-                return super.execute(method, calldata);
-        }
     }
 }
 ```

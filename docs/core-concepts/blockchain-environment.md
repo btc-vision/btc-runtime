@@ -624,17 +624,13 @@ import { u256 } from '@btc-vision/as-bignum/assembly';
 import {
     OP_NET,
     Blockchain,
-    Address,
     Calldata,
     BytesWriter,
-    encodeSelector,
     StoredU256,
     Revert,
     EMPTY_POINTER,
+    ABIDataTypes,
 } from '@btc-vision/btc-runtime/runtime';
-
-// Define method selectors (sha256 first 4 bytes of method signature)
-const DO_SOMETHING_SELECTOR: u32 = 0x6b9f96ea;  // doSomething()
 
 @final
 export class MyContract extends OP_NET {
@@ -673,15 +669,6 @@ export class MyContract extends OP_NET {
         this.lastUpdate.value = u256.fromU64(currentBlock);
 
         return new BytesWriter(0);
-    }
-
-    public override execute(method: u32, calldata: Calldata): BytesWriter {
-        switch (method) {
-            case DO_SOMETHING_SELECTOR:
-                return this.doSomething(calldata);
-            default:
-                return super.execute(method, calldata);
-        }
     }
 }
 ```

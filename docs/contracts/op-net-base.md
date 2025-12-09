@@ -5,10 +5,7 @@
 ## Overview
 
 ```typescript
-import { OP_NET, Calldata, BytesWriter, Selector, ABIDataTypes, encodeSelector } from '@btc-vision/btc-runtime/runtime';
-
-// Define method selectors (sha256 first 4 bytes of method signature)
-const MY_METHOD_SELECTOR: u32 = encodeSelector('myMethod');
+import { OP_NET, Calldata, BytesWriter, ABIDataTypes } from '@btc-vision/btc-runtime/runtime';
 
 @final
 export class MyContract extends OP_NET {
@@ -20,21 +17,16 @@ export class MyContract extends OP_NET {
         // One-time initialization
     }
 
-    public override execute(method: Selector, calldata: Calldata): BytesWriter {
-        switch (method) {
-            case MY_METHOD_SELECTOR:
-                return this.myMethod(calldata);
-            default:
-                return super.execute(method, calldata);
-        }
-    }
-
-    private myMethod(calldata: Calldata): BytesWriter {
-        // Method implementation
+    @method({ name: 'param', type: ABIDataTypes.UINT256 })
+    @returns({ name: 'result', type: ABIDataTypes.UINT256 })
+    public myMethod(calldata: Calldata): BytesWriter {
+        // Method implementation - routing is AUTOMATIC via @method decorator
         return new BytesWriter(0);
     }
 }
 ```
+
+**Note:** Method routing is handled AUTOMATICALLY by the runtime via `@method` decorators. You do NOT need to override the `execute` method - the decorator system handles selector generation and call routing.
 
 **Solidity Comparison:**
 
@@ -50,9 +42,9 @@ contract MyContract {
     }
 }
 
-// OPNet: Explicit method routing via selectors
+// OPNet: AUTOMATIC method routing via @method decorators
 // - Constructor runs on EVERY call
-// - Manual selector-based dispatch in execute()
+// - Routing is automatic via decorator system
 // - One-time init in onDeployment()
 ```
 
@@ -69,12 +61,12 @@ classDiagram
         Base Contract
         +constructor()
         +onDeployment(calldata: Calldata) void
-        +execute(method: Selector, calldata: Calldata) BytesWriter
         +onExecutionStarted(method: Selector) void
         +onExecutionCompleted(method: Selector) void
         +emitEvent(event: NetEvent) void
         +onlyDeployer(address: Address) void
         #isDeployer(address: Address) bool
+        Note: @method decorator handles routing
     }
 
     class MyContract {
@@ -83,8 +75,8 @@ classDiagram
         -balances: AddressMemoryMap
         +constructor()
         +onDeployment(calldata: Calldata) void
-        +execute(method: Selector, calldata: Calldata) BytesWriter
-        -myMethod(calldata: Calldata) BytesWriter
+        +myMethod(calldata: Calldata) BytesWriter
+        Note: @method decorator handles routing
     }
 
     class OP20 {
@@ -228,30 +220,41 @@ constructor(uint256 initialSupply, string memory tokenName) {
 // Constructor runs every call, onDeployment runs once
 ```
 
-### 3. Method Execution (execute)
+### 3. Method Execution
 
-Routes incoming calls to the appropriate method:
+Methods are automatically routed via `@method` decorators:
 
 ```typescript
-// Define method selectors
-const TRANSFER_SELECTOR: u32 = encodeSelector('transfer');
-const APPROVE_SELECTOR: u32 = encodeSelector('approve');
-const BALANCE_OF_SELECTOR: u32 = encodeSelector('balanceOf');
+@method(
+    { name: 'to', type: ABIDataTypes.ADDRESS },
+    { name: 'amount', type: ABIDataTypes.UINT256 },
+)
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
+public transfer(calldata: Calldata): BytesWriter {
+    const to = calldata.readAddress();
+    const amount = calldata.readU256();
+    // ... implementation
+    return new BytesWriter(1);
+}
 
-public override execute(method: Selector, calldata: Calldata): BytesWriter {
-    switch (method) {
-        case TRANSFER_SELECTOR:
-            return this.transfer(calldata);
-        case APPROVE_SELECTOR:
-            return this.approve(calldata);
-        case BALANCE_OF_SELECTOR:
-            return this.balanceOf(calldata);
-        default:
-            // Let parent handle built-in methods or throw
-            return super.execute(method, calldata);
-    }
+@method({ name: 'spender', type: ABIDataTypes.ADDRESS }, { name: 'amount', type: ABIDataTypes.UINT256 })
+public approve(calldata: Calldata): BytesWriter {
+    // ... implementation
+    return new BytesWriter(0);
+}
+
+@method({ name: 'account', type: ABIDataTypes.ADDRESS })
+@returns({ name: 'balance', type: ABIDataTypes.UINT256 })
+public balanceOf(calldata: Calldata): BytesWriter {
+    const account = calldata.readAddress();
+    // ... implementation
+    const writer = new BytesWriter(32);
+    writer.writeU256(balance);
+    return writer;
 }
 ```
+
+**Note:** The runtime automatically generates selectors and routes calls based on `@method` decorators. You do NOT need to override the `execute` method.
 
 ### Transaction Sequence
 
@@ -336,17 +339,17 @@ sequenceDiagram
 
 ## Method Selectors
 
-Methods are identified by selectors (4-byte identifiers):
+Methods are identified by selectors (4-byte identifiers). The `@method` decorator automatically generates and registers selectors:
 
 ```typescript
-import { Selector, encodeSelector } from '@btc-vision/btc-runtime/runtime';
-
-// Define selector constants (sha256 first 4 bytes of method signature)
-const TRANSFER_SELECTOR: u32 = encodeSelector('transfer');
-
-// Compare in execute()
-if (method === TRANSFER_SELECTOR) {
-    return this.transfer(calldata);
+// Selectors are generated AUTOMATICALLY from @method decorators
+@method(
+    { name: 'to', type: ABIDataTypes.ADDRESS },
+    { name: 'amount', type: ABIDataTypes.UINT256 },
+)
+public transfer(calldata: Calldata): BytesWriter {
+    // Runtime automatically routes calls to this method
+    return new BytesWriter(0);
 }
 ```
 
@@ -357,11 +360,12 @@ if (method === TRANSFER_SELECTOR) {
 function transfer(address to, uint256 amount) public { }
 // Selector: keccak256("transfer(address,uint256)")[:4]
 
-// OPNet: Explicit selector routing
-const TRANSFER_SELECTOR: u32 = encodeSelector('transfer');
-case TRANSFER_SELECTOR:
-    return this.transfer(calldata);
+// OPNet: ALSO automatic via @method decorator
+// @method({ name: 'to', type: ABIDataTypes.ADDRESS }, ...)
+// public transfer(calldata: Calldata): BytesWriter { }
 ```
+
+**Note:** Both Solidity and OPNet handle selector generation automatically. In OPNet, use `@method` decorators and the runtime handles routing.
 
 ## Access Control
 
@@ -527,20 +531,12 @@ import {
     Address,
     Calldata,
     BytesWriter,
-    Selector,
     StoredU256,
-    StoredAddress,
     AddressMemoryMap,
     SafeMath,
     Revert,
     ABIDataTypes,
-    encodeSelector,
 } from '@btc-vision/btc-runtime/runtime';
-
-// Define method selectors (sha256 first 4 bytes of method signature)
-const TRANSFER_SELECTOR: u32 = encodeSelector('transfer');
-const BALANCE_OF_SELECTOR: u32 = encodeSelector('balanceOf');
-const TOTAL_SUPPLY_SELECTOR: u32 = encodeSelector('totalSupply');
 
 @final
 export class SimpleToken extends OP_NET {
@@ -564,20 +560,11 @@ export class SimpleToken extends OP_NET {
         this.balances.set(Blockchain.tx.origin, initialSupply);
     }
 
-    public override execute(method: Selector, calldata: Calldata): BytesWriter {
-        switch (method) {
-            case TRANSFER_SELECTOR:
-                return this.transfer(calldata);
-            case BALANCE_OF_SELECTOR:
-                return this.balanceOfMethod(calldata);
-            case TOTAL_SUPPLY_SELECTOR:
-                return this.totalSupplyMethod(calldata);
-            default:
-                return super.execute(method, calldata);
-        }
-    }
-
-    private transfer(calldata: Calldata): BytesWriter {
+    @method(
+        { name: 'to', type: ABIDataTypes.ADDRESS },
+        { name: 'amount', type: ABIDataTypes.UINT256 },
+    )
+    public transfer(calldata: Calldata): BytesWriter {
         const to = calldata.readAddress();
         const amount = calldata.readU256();
         const from = Blockchain.tx.sender;
@@ -600,7 +587,9 @@ export class SimpleToken extends OP_NET {
         return new BytesWriter(0);
     }
 
-    private balanceOfMethod(calldata: Calldata): BytesWriter {
+    @method({ name: 'account', type: ABIDataTypes.ADDRESS })
+    @returns({ name: 'balance', type: ABIDataTypes.UINT256 })
+    public balanceOf(calldata: Calldata): BytesWriter {
         const address = calldata.readAddress();
         const balance = this.balances.get(address);
 
@@ -609,13 +598,17 @@ export class SimpleToken extends OP_NET {
         return writer;
     }
 
-    private totalSupplyMethod(_calldata: Calldata): BytesWriter {
+    @method()
+    @returns({ name: 'supply', type: ABIDataTypes.UINT256 })
+    public totalSupply(_calldata: Calldata): BytesWriter {
         const writer = new BytesWriter(32);
         writer.writeU256(this._totalSupply.value);
         return writer;
     }
 }
 ```
+
+**Note:** Method routing is handled AUTOMATICALLY via `@method` decorators. No `execute` override is needed.
 
 ## Inheritance
 
@@ -694,16 +687,16 @@ public constructor() {
 }
 ```
 
-### 3. Handle Unknown Methods
+### 3. Use @method Decorators for Public Methods
 
 ```typescript
-public override execute(method: Selector, calldata: Calldata): BytesWriter {
-    switch (method) {
-        // Your methods...
-        default:
-            return super.execute(method, calldata);  // Let parent handle or throw
-    }
+// CORRECT: Use @method decorator for automatic routing
+@method({ name: 'to', type: ABIDataTypes.ADDRESS }, { name: 'amount', type: ABIDataTypes.UINT256 })
+public transfer(calldata: Calldata): BytesWriter {
+    // Implementation...
 }
+
+// DO NOT manually override execute() - routing is automatic
 ```
 
 ### 4. Document Your Methods

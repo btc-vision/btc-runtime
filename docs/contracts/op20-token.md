@@ -370,21 +370,6 @@ export class MyToken extends OP20 {
 
         return new BytesWriter(0);
     }
-
-    public override execute(method: Selector, calldata: Calldata): BytesWriter {
-        // Define method selectors
-        const MINT_SELECTOR: u32 = encodeSelector('mint');
-        const BURN_SELECTOR: u32 = encodeSelector('burn');
-
-        switch (method) {
-            case MINT_SELECTOR:
-                return this.mint(calldata);
-            case BURN_SELECTOR:
-                return this.burn(calldata);
-            default:
-                return super.execute(method, calldata);
-        }
-    }
 }
 ```
 
@@ -563,14 +548,7 @@ import {
     StoredBoolean,
     AddressMemoryMap,
     ABIDataTypes,
-    encodeSelector,
 } from '@btc-vision/btc-runtime/runtime';
-
-// Define method selectors (sha256 first 4 bytes of method signature)
-const MINT_SELECTOR: u32 = encodeSelector('mint');
-const PAUSE_SELECTOR: u32 = encodeSelector('pause');
-const UNPAUSE_SELECTOR: u32 = encodeSelector('unpause');
-const BLACKLIST_SELECTOR: u32 = encodeSelector('blacklist');
 
 @final
 export class AdvancedToken extends OP20 {
@@ -648,21 +626,6 @@ export class AdvancedToken extends OP20 {
     private checkBlacklist(address: Address): void {
         if (this._blacklist.get(address)) {
             throw new Revert('Address is blacklisted');
-        }
-    }
-
-    public override execute(method: Selector, calldata: Calldata): BytesWriter {
-        switch (method) {
-            case MINT_SELECTOR:
-                return this.mint(calldata);
-            case PAUSE_SELECTOR:
-                return this.pause(calldata);
-            case UNPAUSE_SELECTOR:
-                return this.unpause(calldata);
-            case BLACKLIST_SELECTOR:
-                return this.blacklist(calldata);
-            default:
-                return super.execute(method, calldata);
         }
     }
 }
