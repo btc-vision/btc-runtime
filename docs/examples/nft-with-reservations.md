@@ -906,44 +906,9 @@ public reserve(calldata: Calldata): BytesWriter { }
 public getSaleInfo(_calldata: Calldata): BytesWriter { }
 ```
 
-## Solidity Equivalent
+## Solidity Comparison
 
-For developers familiar with Solidity, here is an equivalent ERC721 implementation with reservations and reveal mechanics:
-
-```solidity
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
-
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
-
-contract NFTWithReservations is ERC721, Ownable {
-    using Strings for uint256;
-
-    enum SalePhase { INACTIVE, WHITELIST, PUBLIC }
-
-    // Configuration
-    uint256 public maxSupply;
-    uint256 public price;
-    uint256 public maxPerWallet;
-    string private baseURI_;
-    string private hiddenURI;
-    bool public revealed;
-    SalePhase public salePhase;
-    uint256 private nextTokenId = 1;
-
-    // Reservation system
-    uint256 public reservationEnd;
-    mapping(address => uint256) public reservations;
-
-    // Whitelist
-    mapping(address => bool) public whitelist;
-    mapping(address => uint256) public mintedCount;
-
-    event Reserved(address indexed user, uint256 quantity);
-    event ReservationClaimed(address indexed user, uint256 quantity);
-    event ReservationCancelled(address indexed user, uint256 quantity);
+For Solidity developers, here are the key differences from an ERC721 implementation:
 
     constructor(
         string memory name,
