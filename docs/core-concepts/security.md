@@ -76,137 +76,34 @@ See [SafeMath API](../api-reference/safe-math.md) for complete reference.
 
 ## Reentrancy Protection
 
-### The Problem
+Reentrancy attacks occur when a contract calls back into itself before completing, allowing attackers to drain funds by repeatedly calling withdraw before the balance is updated.
 
-Reentrancy attacks occur when a contract calls back into itself before completing:
-
-```
-1. User calls withdraw()
-2. Contract sends funds to User
-3. User's receive function calls withdraw() again
-4. Contract sends funds again (before updating balance)
-5. Repeat until drained
-```
-
-### Reentrancy Attack Sequence
-
-```mermaid
-sequenceDiagram
-    participant Attacker
-    participant VulnerableContract
-    participant AttackerContract
-
-    Attacker->>VulnerableContract: withdraw()
-    activate VulnerableContract
-
-    Note over VulnerableContract: balance = 100<br/>Check balance 
-
-    VulnerableContract->>AttackerContract: Transfer 100 tokens
-    activate AttackerContract
-
-    Note over AttackerContract: Receive callback triggered
-
-    AttackerContract->>VulnerableContract: withdraw() [RE-ENTER!]
-    activate VulnerableContract
-
-    Note over VulnerableContract: balance still = 100<br/>Check balance [BUG!]
-
-    VulnerableContract->>AttackerContract: Transfer 100 tokens AGAIN
-    deactivate VulnerableContract
-
-    AttackerContract-->>VulnerableContract: Return
-    deactivate AttackerContract
-
-    Note over VulnerableContract: balance = 0<br/>(Too late!)
-
-    VulnerableContract-->>Attacker: Complete
-    deactivate VulnerableContract
-
-    Note over Attacker: Stole 200 tokens!<br/>Expected: 100
-```
-
-### The Solution: ReentrancyGuard
+**Solution:** Extend `ReentrancyGuard` to automatically protect all methods:
 
 ```typescript
 import { ReentrancyGuard, ReentrancyLevel } from '@btc-vision/btc-runtime/runtime';
 
 @final
 export class MyContract extends ReentrancyGuard {
-    // Override the reentrancy level (STANDARD is the default)
     protected override readonly reentrancyLevel: ReentrancyLevel = ReentrancyLevel.STANDARD;
-
-    public constructor() {
-        super();
-    }
 
     @method()
     public withdraw(calldata: Calldata): BytesWriter {
-        // ReentrancyGuard automatically protects this method
+        // Protected automatically - re-entry attempts will revert
         const amount = this.balances.get(Blockchain.tx.sender);
-
-        // Even if external call tries to re-enter, it will fail
         this.balances.set(Blockchain.tx.sender, u256.Zero);
         // ... transfer funds ...
-
         return new BytesWriter(0);
     }
 }
 ```
 
-### ReentrancyGuard Mechanism Flow
+| Mode | Description |
+|------|-------------|
+| `ReentrancyLevel.STANDARD` | Boolean lock (default) |
+| `ReentrancyLevel.CALLBACK` | Depth counter for tracking |
 
-```mermaid
----
-config:
-  theme: dark
----
-flowchart LR
-    Start["Method Called"] --> Check{"Guard Active?"}
-    Check -->|Yes| Revert["REVERT"]
-    Check -->|No| SetGuard["Set Guard Flag"]
-    SetGuard --> Execute["Execute Logic"]
-    Execute --> External{"External Call?"}
-    External -->|Yes| Call["Call External"]
-    Call --> Detect{"Re-enter?"}
-    Detect -->|Yes| Block["REVERT: Blocked"]
-    Detect -->|No| Clear["Clear Guard"]
-    External -->|No| Clear
-    Clear --> Success["Transaction Success"]
-```
-
-### Guard Modes
-
-| Mode | Description | Use Case |
-|------|-------------|----------|
-| `ReentrancyLevel.STANDARD` | Uses boolean lock, strict mutual exclusion | Default for most contracts |
-| `ReentrancyLevel.CALLBACK` | Uses depth counter, still blocks reentrancy | Depth tracking use cases |
-
-```typescript
-// STANDARD: No re-entry allowed, uses boolean lock (default)
-protected override readonly reentrancyLevel: ReentrancyLevel = ReentrancyLevel.STANDARD;
-
-// CALLBACK: No re-entry allowed, uses depth counter for tracking
-protected override readonly reentrancyLevel: ReentrancyLevel = ReentrancyLevel.CALLBACK;
-```
-
-### Guard Mode Decision Tree
-
-```mermaid
----
-config:
-  theme: dark
----
-flowchart LR
-    Start{"External Calls?"}
-    Start -->|No| None["No Guard Needed"]
-    Start -->|Yes| Tracking{"Need Depth Tracking?"}
-    Tracking -->|No| Standard["STANDARD Mode"]
-    Tracking -->|Yes| CallbackMode["CALLBACK Mode"]
-```
-
-Note: Both modes block reentrancy. STANDARD uses a boolean lock; CALLBACK uses a depth counter.
-
-See [ReentrancyGuard](../contracts/reentrancy-guard.md) for detailed usage.
+Both modes block reentrancy. See [ReentrancyGuard](../contracts/reentrancy-guard.md) for detailed explanation, attack diagrams, and advanced usage.
 
 ## Access Control
 
