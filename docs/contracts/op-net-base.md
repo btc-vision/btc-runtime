@@ -36,61 +36,31 @@ export class MyContract extends OP_NET {
 }
 ```
 
+**Solidity Comparison:**
+
+```solidity
+// Solidity: Automatic method routing via ABI
+contract MyContract {
+    constructor() {
+        // Runs once at deployment
+    }
+
+    function myMethod() public returns (bytes memory) {
+        // Method implementation
+    }
+}
+
+// OPNet: Explicit method routing via selectors
+// - Constructor runs on EVERY call
+// - Manual selector-based dispatch in execute()
+// - One-time init in onDeployment()
+```
+
 ## Contract Lifecycle
 
-```mermaid
-flowchart LR
-    subgraph Bitcoin["Bitcoin L1"]
-        A[👤 User submits deployment TX] --> B[Blockchain creates contract]
-    end
+### Inheritance Hierarchy
 
-    subgraph WASM1["WASM Runtime - Deployment Phase (Once)"]
-        B --> C[Contract.constructor runs]
-        C --> D[Initialize storage pointers]
-        D --> E[🗺Create storage map instances]
-        E --> F[onDeployment called]
-        F --> G[Read deployment calldata]
-        G --> H[Set initial state in Storage]
-        H --> I[Emit deployment events]
-        I --> J[Contract Ready]
-    end
-
-    subgraph Execution["Every Transaction - Runs Every Call"]
-        J --> K[👤 User submits transaction]
-
-        subgraph WASM2["WASM Runtime - Execution"]
-            K --> L[Blockchain routes to contract]
-            L --> M[Contract.constructor runs AGAIN]
-            M --> N[🗺Re-initialize storage maps]
-            N --> O[onExecutionStarted hook]
-            O --> P[Read method selector from TX]
-            P --> Q[execute method called]
-            Q --> R{Selector matches?}
-
-            R -->|Match| S[📞 Call method handler]
-            R -->|No match| T[⬆super.execute parent]
-
-            S --> U[Read calldata parameters]
-            U --> V[✔Validate inputs]
-            V --> W{Valid?}
-            W -->|No| X[Revert transaction]
-            W -->|Yes| Y[📚 Read from Storage]
-            Y --> Z[Execute business logic]
-            Z --> AA[Write to Storage]
-            AA --> AB[emitEvent]
-
-            T --> AC{Parent has method?}
-            AC -->|Yes| AD[Execute parent method]
-            AC -->|No| AE[Revert: Unknown selector]
-
-            AD --> AB
-            AB --> AF[🏁 onExecutionCompleted hook]
-            AF --> AG[Return BytesWriter result]
-            AG --> AH[Blockchain commits state]
-            AH --> AI[Transaction complete]
-        end
-    end
-```
+OPNet contracts follow a clear inheritance pattern:
 
 ```mermaid
 classDiagram
@@ -118,7 +88,7 @@ classDiagram
     }
 
     class OP20 {
-        🪙 Fungible Token Standard
+        Fungible Token Standard
         -_totalSupply: StoredU256
         -balanceOfMap: AddressMemoryMap
         +transfer(calldata: Calldata) BytesWriter
@@ -126,7 +96,7 @@ classDiagram
     }
 
     class OP721 {
-        🖼NFT Standard
+        NFT Standard
         -_owners: AddressMemoryMap
         -_balances: AddressMemoryMap
         +transferFrom(calldata: Calldata) BytesWriter
@@ -138,81 +108,62 @@ classDiagram
     OP_NET <|-- OP721 : extends
 ```
 
+### Deployment and Execution Flow
+
+The following diagram shows how contracts are deployed and executed on OPNet:
+
 ```mermaid
-sequenceDiagram
-    participant User as 👤 User Wallet
-    participant Blockchain as Bitcoin L1
-    participant TxPool as 📬 Transaction Pool
-    participant VM as WASM Runtime
-    participant Contract as OP_NET Contract
-    participant Storage as Storage Pointers
-    participant EventLog as Event Log
-
-    User->>TxPool: Submit signed transaction
-    Note over User,TxPool: Contains: contract address,<br/>method selector, calldata
-
-    TxPool->>Blockchain: Transaction confirmed
-    Blockchain->>VM: Route to contract address
-
-    VM->>Contract: Instantiate contract instance
-    activate Contract
-
-    Contract->>Contract: constructor()
-    Note over Contract: Runs EVERY call<br/>Initialize storage maps
-
-    Contract->>Storage: Allocate storage pointers
-    Storage-->>Contract: Pointer addresses
-
-    VM->>Contract: onExecutionStarted(selector)
-    Note over Contract: Pre-execution hook<br/>Can add logging/validation
-
-    VM->>Contract: execute(selector, calldata)
-
-    Contract->>Contract: switch(selector)
-    Note over Contract: Method routing logic
-
-    alt Known Method Selector
-        Contract->>Contract: 📞 methodHandler(calldata)
-
-        Contract->>Contract: calldata.readAddress()
-        Contract->>Contract: calldata.readU256()
-        Note over Contract: Parse parameters
-
-        Contract->>Storage: 📚 Read current state
-        Storage-->>Contract: Current values
-
-        Contract->>Contract: Business logic
-        Note over Contract: SafeMath operations,<br/>validations, state changes
-
-        Contract->>Storage: Write updated state
-        Note over Storage: Persistent storage<br/>committed on success
-
-        Contract->>EventLog: emitEvent(TransferEvent)
-        Note over EventLog: Events for indexing<br/>off-chain systems
-
-    else Unknown Method
-        Contract->>Contract: ⬆super.execute(selector, calldata)
-
-        alt Parent Has Method
-            Note over Contract: OP_NET parent<br/>or OP20/OP721 parent
-            Contract->>Storage: Parent method logic
-            Contract->>EventLog: Parent method events
-        else No Handler
-            Contract->>VM: throw Revert('Unknown method')
-            VM->>User: Transaction reverted
-            Note over User: No state changes,<br/>gas still consumed
-        end
+flowchart LR
+    subgraph Bitcoin["Bitcoin L1"]
+        A[User submits deployment TX] --> B[Blockchain creates contract]
     end
 
-    Contract->>Contract: 🏁 onExecutionCompleted(selector)
-    Note over Contract: Post-execution hook<br/>Cleanup, final checks
+    subgraph WASM1["WASM Runtime - Deployment Phase Once"]
+        B --> C[Contract.constructor runs]
+        C --> D[Initialize storage pointers]
+        D --> E[Create storage map instances]
+        E --> F[onDeployment called]
+        F --> G[Read deployment calldata]
+        G --> H[Set initial state in Storage]
+        H --> I[Emit deployment events]
+        I --> J[Contract Ready]
+    end
 
-    Contract->>VM: Return BytesWriter
-    deactivate Contract
+    subgraph Execution["Every Transaction - Runs Every Call"]
+        J --> K[User submits transaction]
 
-    VM->>Blockchain: Commit state changes
-    Blockchain->>User: Transaction receipt
-    Note over User: Success with events<br/>or revert with error
+        subgraph WASM2["WASM Runtime - Execution"]
+            K --> L[Blockchain routes to contract]
+            L --> M[Contract.constructor runs AGAIN]
+            M --> N[Re-initialize storage maps]
+            N --> O[onExecutionStarted hook]
+            O --> P[Read method selector from TX]
+            P --> Q[execute method called]
+            Q --> R{Selector matches?}
+
+            R -->|Match| S[Call method handler]
+            R -->|No match| T[super.execute parent]
+
+            S --> U[Read calldata parameters]
+            U --> V[Validate inputs]
+            V --> W{Valid?}
+            W -->|No| X[Revert transaction]
+            W -->|Yes| Y[Read from Storage]
+            Y --> Z[Execute business logic]
+            Z --> AA[Write to Storage]
+            AA --> AB[emitEvent]
+
+            T --> AC{Parent has method?}
+            AC -->|Yes| AD[Execute parent method]
+            AC -->|No| AE[Revert: Unknown selector]
+
+            AD --> AB
+            AB --> AF[onExecutionCompleted hook]
+            AF --> AG[Return BytesWriter result]
+            AG --> AH[Blockchain commits state]
+            AH --> AI[Transaction complete]
+        end
+    end
 ```
 
 ### 1. Construction
@@ -256,6 +207,20 @@ public override onDeployment(calldata: Calldata): void {
 }
 ```
 
+**Solidity Comparison:**
+
+```solidity
+// Solidity: One-time init in constructor
+constructor(uint256 initialSupply, string memory tokenName) {
+    _totalSupply = initialSupply;
+    _name = tokenName;
+    _mint(msg.sender, initialSupply);
+}
+
+// OPNet: One-time init in onDeployment()
+// Constructor runs every call, onDeployment runs once
+```
+
 ### 3. Method Execution (execute)
 
 Routes incoming calls to the appropriate method:
@@ -279,6 +244,87 @@ public override execute(method: Selector, calldata: Calldata): BytesWriter {
             return super.execute(method, calldata);
     }
 }
+```
+
+### Transaction Sequence
+
+The following sequence diagram shows the complete flow of a transaction through the system:
+
+```mermaid
+sequenceDiagram
+    participant User as 👤 User Wallet
+    participant Blockchain as Bitcoin L1
+    participant TxPool as Transaction Pool
+    participant VM as WASM Runtime
+    participant Contract as OP_NET Contract
+    participant Storage as Storage Pointers
+    participant EventLog as Event Log
+
+    User->>TxPool: Submit signed transaction
+    Note over User,TxPool: Contains: contract address,<br/>method selector, calldata
+
+    TxPool->>Blockchain: Transaction confirmed
+    Blockchain->>VM: Route to contract address
+
+    VM->>Contract: Instantiate contract instance
+    activate Contract
+
+    Contract->>Contract: constructor()
+    Note over Contract: Runs EVERY call<br/>Initialize storage maps
+
+    Contract->>Storage: Allocate storage pointers
+    Storage-->>Contract: Pointer addresses
+
+    VM->>Contract: onExecutionStarted(selector)
+    Note over Contract: Pre-execution hook<br/>Can add logging/validation
+
+    VM->>Contract: execute(selector, calldata)
+
+    Contract->>Contract: switch(selector)
+    Note over Contract: Method routing logic
+
+    alt Known Method Selector
+        Contract->>Contract: methodHandler(calldata)
+
+        Contract->>Contract: calldata.readAddress()
+        Contract->>Contract: calldata.readU256()
+        Note over Contract: Parse parameters
+
+        Contract->>Storage: Read current state
+        Storage-->>Contract: Current values
+
+        Contract->>Contract: Business logic
+        Note over Contract: SafeMath operations,<br/>validations, state changes
+
+        Contract->>Storage: Write updated state
+        Note over Storage: Persistent storage<br/>committed on success
+
+        Contract->>EventLog: emitEvent(TransferEvent)
+        Note over EventLog: Events for indexing<br/>off-chain systems
+
+    else Unknown Method
+        Contract->>Contract: super.execute(selector, calldata)
+
+        alt Parent Has Method
+            Note over Contract: OP_NET parent<br/>or OP20/OP721 parent
+            Contract->>Storage: Parent method logic
+            Contract->>EventLog: Parent method events
+        else No Handler
+            Contract->>VM: throw Revert Unknown method
+            VM->>User: Transaction reverted
+            Note over User: No state changes,<br/>gas still consumed
+        end
+    end
+
+    Contract->>Contract: onExecutionCompleted(selector)
+    Note over Contract: Post-execution hook<br/>Cleanup, final checks
+
+    Contract->>VM: Return BytesWriter
+    deactivate Contract
+
+    VM->>Blockchain: Commit state changes
+    Blockchain->>User: Transaction receipt
+    Note over User: Success with events<br/>or revert with error
 ```
 
 ## Method Selectors
@@ -326,6 +372,22 @@ public adminFunction(calldata: Calldata): BytesWriter {
 }
 ```
 
+**Solidity Comparison:**
+
+```solidity
+// Solidity: Using OpenZeppelin Ownable
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract MyContract is Ownable {
+    function adminFunction(uint256 parameter) public onlyOwner {
+        // Only owner reaches here
+    }
+}
+
+// OPNet: Built-in onlyDeployer check
+// this.onlyDeployer(Blockchain.tx.sender);
+```
+
 ### Custom Access Control
 
 ```typescript
@@ -345,6 +407,25 @@ public setParameter(calldata: Calldata): BytesWriter {
 }
 ```
 
+**Solidity Comparison:**
+
+```solidity
+// Solidity: Custom access control
+address private admin;
+
+modifier onlyAdmin() {
+    require(msg.sender == admin, "Caller is not admin");
+    _;
+}
+
+function setParameter(uint256 value) public onlyAdmin {
+    // ...
+}
+
+// OPNet: Similar pattern but with explicit method call
+// this.onlyAdmin(); at start of method
+```
+
 ## Event Emission
 
 Emit events to notify off-chain systems:
@@ -357,6 +438,18 @@ this.emitEvent(new TransferEvent(from, to, amount));
 
 // Using custom events
 this.emitEvent(new MyCustomEvent(data1, data2));
+```
+
+**Solidity Comparison:**
+
+```solidity
+// Solidity: Emit keyword
+event Transfer(address indexed from, address indexed to, uint256 value);
+
+emit Transfer(from, to, amount);
+
+// OPNet: emitEvent method
+this.emitEvent(new TransferEvent(from, to, amount));
 ```
 
 ## Storage Patterns
@@ -376,6 +469,21 @@ export class MyContract extends OP_NET {
 }
 ```
 
+**Solidity Comparison:**
+
+```solidity
+// Solidity: Automatic storage slot allocation
+contract MyContract {
+    uint256 private counter;      // slot 0
+    address private owner;        // slot 1
+    bytes private data;           // slot 2
+}
+
+// OPNet: Explicit pointer allocation
+// private counterPointer: u16 = Blockchain.nextPointer;
+// private counter: StoredU256 = new StoredU256(this.counterPointer, EMPTY_POINTER);
+```
+
 ### Storage Maps
 
 ```typescript
@@ -389,6 +497,17 @@ export class MyContract extends OP_NET {
         this.balances = new AddressMemoryMap(this.balancesPointer);
     }
 }
+```
+
+**Solidity Comparison:**
+
+```solidity
+// Solidity: mapping declaration
+mapping(address => uint256) private balances;
+
+// OPNet: AddressMemoryMap with pointer
+// private balancesPointer: u16 = Blockchain.nextPointer;
+// this.balances = new AddressMemoryMap(this.balancesPointer);
 ```
 
 ## Complete Example
@@ -531,6 +650,23 @@ export class MyToken extends Pausable {
         // ...
     }
 }
+```
+
+**Solidity Comparison:**
+
+```solidity
+// Solidity: OpenZeppelin Pausable
+import "@openzeppelin/contracts/security/Pausable.sol";
+
+contract MyToken is ERC20, Pausable {
+    function transfer(address to, uint256 amount) public whenNotPaused {
+        // ...
+    }
+}
+
+// OPNet: Custom Pausable base class
+// export abstract class Pausable extends OP_NET { ... }
+// this.whenNotPaused(); at start of method
 ```
 
 ## Best Practices
