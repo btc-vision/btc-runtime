@@ -39,9 +39,9 @@ const hrpRegtest = Network.hrp(Networks.Regtest);  // "bcrt"
 const chainId = Network.getChainId(Networks.Mainnet);
 ```
 
-## Address Derivation
+## Address Types
 
-### P2PKH Derivation
+### P2PKH (Pay to Public Key Hash)
 
 ```mermaid
 ---
@@ -56,7 +56,7 @@ flowchart LR
     B58 --> ADDR["Address: 1..."]
 ```
 
-### P2SH Derivation
+### P2SH (Pay to Script Hash)
 
 ```mermaid
 ---
@@ -71,7 +71,7 @@ flowchart LR
     B58 --> ADDR["Address: 3..."]
 ```
 
-### P2WPKH Derivation (SegWit)
+### P2WPKH (Pay to Witness Public Key Hash)
 
 ```mermaid
 ---
@@ -86,7 +86,16 @@ flowchart LR
     SEG --> ADDR["Address: bc1q..."]
 ```
 
-### P2TR Derivation (Taproot)
+```typescript
+import { BitcoinAddresses, Segwit } from '@btc-vision/btc-runtime/runtime';
+
+// P2WPKH from compressed public key
+public createP2WPKHAddress(pubkey: Uint8Array, hrp: string): string {
+    return BitcoinAddresses.p2wpkh(pubkey, hrp);
+}
+```
+
+### P2TR (Pay to Taproot)
 
 ```mermaid
 ---
@@ -99,12 +108,6 @@ flowchart LR
     TRK --> SEG["Bech32m Encoding"]
     SEG --> ADDR["Address: bc1p..."]
 ```
-
-## Address Types
-
-### P2TR (Pay to Taproot)
-
-Create Taproot addresses using the `BitcoinAddresses` class:
 
 ```typescript
 import { BitcoinAddresses, Networks, Network } from '@btc-vision/btc-runtime/runtime';
@@ -141,19 +144,6 @@ public createMultisigP2WSH(
     hrp: string
 ): MultisigP2wshResult {
     return BitcoinAddresses.multisigP2wshAddress(m, pubkeys, hrp);
-}
-```
-
-### P2WPKH (Pay to Witness Public Key Hash)
-
-For simple public key payments:
-
-```typescript
-import { BitcoinAddresses, Segwit } from '@btc-vision/btc-runtime/runtime';
-
-// P2WPKH from compressed public key
-public createP2WPKHAddress(pubkey: Uint8Array, hrp: string): string {
-    return BitcoinAddresses.p2wpkh(pubkey, hrp);
 }
 ```
 
@@ -279,6 +269,8 @@ public buildMultisigManual(
 
 ### CSV (CheckSequenceVerify) - Relative Timelock
 
+CSV enables relative timelocks based on block count or time since the UTXO was confirmed:
+
 ```mermaid
 ---
 config:
@@ -295,29 +287,7 @@ flowchart LR
     CSV6 -->|"No"| CSV8["Transaction invalid"]
 ```
 
-### CLTV (CheckLockTimeVerify) - Absolute Timelock
-
-```mermaid
----
-config:
-  theme: dark
----
-flowchart LR
-    CLTV1["Transaction<br/>nLockTime field"] --> CLTV2{"Timelock Type?"}
-    CLTV2 -->|"Block-based"| CLTV3["Block height<br/>Value < 500000000"]
-    CLTV2 -->|"Time-based"| CLTV4["Unix timestamp<br/>Value >= 500000000"]
-    CLTV3 --> CLTV5["OP_CLTV verifies:<br/>nLockTime >= CLTV_VALUE"]
-    CLTV4 --> CLTV5
-    CLTV5 --> CLTV6{"Valid?"}
-    CLTV6 -->|"Yes"| CLTV7["Continue execution"]
-    CLTV6 -->|"No"| CLTV8["Transaction invalid"]
-```
-
-## CSV Timelocks
-
-CheckSequenceVerify (CSV) enables relative timelocks. OPNet provides a built-in method:
-
-### Using BitcoinScript.csvTimelock
+OPNet provides a built-in method for CSV scripts:
 
 ```typescript
 import { BitcoinScript, BitcoinAddresses, Network, Networks } from '@btc-vision/btc-runtime/runtime';
@@ -402,6 +372,26 @@ public buildTimeCSV(pubkey: Uint8Array, seconds: u32): Uint8Array {
 
     return script.getBuffer();
 }
+```
+
+### CLTV (CheckLockTimeVerify) - Absolute Timelock
+
+CLTV enables absolute timelocks based on block height or Unix timestamp:
+
+```mermaid
+---
+config:
+  theme: dark
+---
+flowchart LR
+    CLTV1["Transaction<br/>nLockTime field"] --> CLTV2{"Timelock Type?"}
+    CLTV2 -->|"Block-based"| CLTV3["Block height<br/>Value < 500000000"]
+    CLTV2 -->|"Time-based"| CLTV4["Unix timestamp<br/>Value >= 500000000"]
+    CLTV3 --> CLTV5["OP_CLTV verifies:<br/>nLockTime >= CLTV_VALUE"]
+    CLTV4 --> CLTV5
+    CLTV5 --> CLTV6{"Valid?"}
+    CLTV6 -->|"Yes"| CLTV7["Continue execution"]
+    CLTV6 -->|"No"| CLTV8["Transaction invalid"]
 ```
 
 ## Script Number Encoding
@@ -624,6 +614,74 @@ public buildOpReturnScript(data: Uint8Array): Uint8Array {
 
     return script.getBuffer();
 }
+```
+
+## Solidity Comparison
+
+Bitcoin scripting is fundamentally different from Solidity, as it operates on UTXOs rather than account balances:
+
+| Concept | Solidity/EVM | OPNet Bitcoin Scripts |
+|---------|-------------|----------------------|
+| Address types | Single type (20 bytes) | P2PKH, P2SH, P2WPKH, P2WSH, P2TR |
+| Timelocks | `block.timestamp`, `block.number` | OP_CLTV, OP_CSV |
+| Multi-signature | Custom implementation | Native OP_CHECKMULTISIG |
+| Script execution | Turing-complete EVM | Stack-based Bitcoin Script |
+| Data embedding | Events, storage | OP_RETURN |
+
+### Timelock Comparison
+
+```solidity
+// Solidity - time-based lock
+contract TimeLock {
+    uint256 public unlockTime;
+
+    constructor(uint256 _lockDuration) {
+        unlockTime = block.timestamp + _lockDuration;
+    }
+
+    function withdraw() external {
+        require(block.timestamp >= unlockTime, "Still locked");
+        // ... withdraw logic
+    }
+}
+```
+
+```typescript
+// OPNet - CSV relative timelock
+// 144 blocks = ~1 day
+const csvScript = BitcoinScript.csvTimelock(pubkey, 144);
+const address = BitcoinAddresses.csvP2wshAddress(pubkey, 144, hrp);
+
+// The timelock is enforced by Bitcoin consensus, not contract logic
+```
+
+### Multisig Comparison
+
+```solidity
+// Solidity - custom multisig
+contract MultiSig {
+    mapping(address => bool) public owners;
+    uint256 public required;
+
+    function execute(bytes32 txHash, bytes[] memory signatures) external {
+        uint256 validSigs = 0;
+        for (uint i = 0; i < signatures.length; i++) {
+            address signer = ecrecover(txHash, ...);
+            if (owners[signer]) validSigs++;
+        }
+        require(validSigs >= required, "Not enough signatures");
+        // ... execute
+    }
+}
+```
+
+```typescript
+// OPNet - native Bitcoin multisig
+// 2-of-3 multisig enforced by Bitcoin consensus
+const multisigScript = BitcoinScript.multisig(2, pubkeys);
+const address = BitcoinAddresses.multisigP2wshAddress(2, pubkeys, hrp);
+
+// No custom signature verification needed - Bitcoin handles it
 ```
 
 ## Best Practices

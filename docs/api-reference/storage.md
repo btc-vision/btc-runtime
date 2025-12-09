@@ -58,6 +58,8 @@ import {
 
 ## Storage Type Hierarchy
 
+The following diagram shows the complete hierarchy of storage types available in the runtime:
+
 ```mermaid
 graph LR
     A[Storage Types]
@@ -75,8 +77,8 @@ graph LR
     end
 
     subgraph "Map Types"
-        D1[AddressMemoryMap<br/>Address → u256]
-        D2[StoredMapU256<br/>u256 → u256]
+        D1[AddressMemoryMap<br/>Address -> u256]
+        D2[StoredMapU256<br/>u256 -> u256]
         D3[MapOfMap<br/>Nested maps]
     end
 
@@ -171,6 +173,41 @@ private _balance: StoredU256 = new StoredU256(this.balancePointer, EMPTY_POINTER
 // Usage
 this._balance.value = u256.fromU64(1000);
 const balance = this._balance.value;
+```
+
+The following sequence diagram shows how storage read and write operations work:
+
+```mermaid
+sequenceDiagram
+    participant Contract
+    participant Storage as Storage Object
+    participant Encode as encodePointer
+    participant BC as Blockchain
+
+    Note over Contract,BC: Write Operation
+
+    Contract->>Contract: private balance: StoredU256
+    Contract->>Contract: balance.value = u256.fromU64(1000)
+
+    Storage->>Encode: encodePointer(pointer, subPointer)
+    Encode->>Encode: SHA-256(pointer + subPointer)
+    Encode->>Storage: Return 32-byte hash
+
+    Storage->>Storage: value.toUint8Array(true)
+    Storage->>BC: setStorageAt(hash, bytes)
+    BC->>BC: Write to persistent storage
+
+    Note over Contract,BC: Read Operation
+
+    Contract->>Contract: const amount = balance.value
+
+    Storage->>Encode: encodePointer(pointer, subPointer)
+    Encode->>Storage: Return 32-byte hash
+
+    Storage->>BC: getStorageAt(hash)
+    BC->>Storage: Return 32-byte value
+    Storage->>Storage: u256.fromUint8ArrayBE(bytes)
+    Storage->>Contract: Return u256 value
 ```
 
 ### StoredU64
@@ -295,6 +332,40 @@ const first = this.tokenIds.get(0);  // u256.fromU64(1)
 const len = this.tokenIds.length;    // 2
 ```
 
+The following diagram shows the array operation flow:
+
+```mermaid
+flowchart LR
+    A[StoredU256Array] --> B{Operation<br/>Type}
+
+    subgraph "push Operation"
+        B -->|push| C[Get current length]
+        C --> D[Encode pointer<br/>with index]
+        D --> E[Write value at index]
+        E --> F[Increment length]
+    end
+
+    subgraph "get Operation"
+        B -->|get| G[Validate<br/>index < length]
+        G --> H[Encode pointer<br/>with index]
+        H --> I[Read value<br/>from storage]
+        I --> J[Return u256]
+    end
+
+    subgraph "pop Operation"
+        B -->|pop| K[Validate<br/>length > 0]
+        K --> L[Read last element]
+        L --> M[Decrement length]
+        M --> N[Return value]
+    end
+
+    subgraph "set Operation"
+        B -->|set| O[Validate<br/>index < length]
+        O --> P[Encode pointer<br/>with index]
+        P --> Q[Write new value]
+    end
+```
+
 ### StoredAddressArray
 
 Dynamic array of Address values.
@@ -332,73 +403,6 @@ for (let i: u64 = 0; i < this.oracles.length; i++) {
 - `StoredU8Array`
 - `StoredBooleanArray`
 
-## Storage Read/Write Flow
-
-```mermaid
-sequenceDiagram
-    participant Contract
-    participant Storage as Storage Object
-    participant Encode as encodePointer
-    participant BC as Blockchain
-
-    Note over Contract,BC: Write Operation
-
-    Contract->>Contract: private balance: StoredU256
-    Contract->>Contract: balance.value = u256.fromU64(1000)
-
-    Storage->>Encode: encodePointer(pointer, subPointer)
-    Encode->>Encode: SHA-256(pointer + subPointer)
-    Encode->>Storage: Return 32-byte hash
-
-    Storage->>Storage: value.toUint8Array(true)
-    Storage->>BC: setStorageAt(hash, bytes)
-    BC->>BC: Write to persistent storage
-
-    Note over Contract,BC: Read Operation
-
-    Contract->>Contract: const amount = balance.value
-
-    Storage->>Encode: encodePointer(pointer, subPointer)
-    Encode->>Storage: Return 32-byte hash
-
-    Storage->>BC: getStorageAt(hash)
-    BC->>Storage: Return 32-byte value
-    Storage->>Storage: u256.fromUint8ArrayBE(bytes)
-    Storage->>Contract: Return u256 value
-```
-
-```mermaid
-flowchart LR
-    A[StoredU256Array] --> B{Operation<br/>Type}
-
-    subgraph "push Operation"
-        B -->|push| C[Get current length]
-        C --> D[Encode pointer<br/>with index]
-        D --> E[Write value at index]
-        E --> F[Increment length]
-    end
-
-    subgraph "get Operation"
-        B -->|get| G[Validate<br/>index < length]
-        G --> H[Encode pointer<br/>with index]
-        H --> I[Read value<br/>from storage]
-        I --> J[Return u256]
-    end
-
-    subgraph "pop Operation"
-        B -->|pop| K[Validate<br/>length > 0]
-        K --> L[Read last element]
-        L --> M[Decrement length]
-        M --> N[Return value]
-    end
-
-    subgraph "set Operation"
-        B -->|set| O[Validate<br/>index < length]
-        O --> P[Encode pointer<br/>with index]
-        P --> Q[Write new value]
-    end
-```
-
 ## Map Storage
 
 ### AddressMemoryMap
@@ -412,6 +416,26 @@ class AddressMemoryMap {
     public set(key: Address, value: u256): void
     public has(key: Address): bool
 }
+```
+
+The following diagram shows how map keys are converted to storage hashes:
+
+```mermaid
+flowchart LR
+    subgraph "Key to Hash"
+        A[AddressMemoryMap] --> B[Address Key]
+        B --> C[encodePointer<br/>pointer, address.toBytes]
+        C --> D[32-byte storage hash]
+    end
+
+    subgraph "Operations"
+        D --> E{get or set?}
+        E -->|get| F[Blockchain.getStorageAt<br/>hash]
+        F --> G[Convert to u256]
+        G --> H[Return value<br/>or u256.Zero]
+        E -->|set| I[value.toUint8Array]
+        I --> J[Blockchain.setStorageAt<br/>hash, bytes]
+    end
 ```
 
 #### Usage Example
@@ -431,48 +455,7 @@ const balance = this.balances.get(userAddress);  // Returns u256
 this.balances.set(userAddress, u256.fromU64(1000));
 ```
 
-### StoredMapU256
-
-Maps u256 keys to u256 values.
-
-```typescript
-class StoredMapU256 {
-    constructor(pointer: u16)
-    public get(key: u256): u256
-    public set(key: u256, value: u256): void
-    public has(key: u256): bool
-}
-```
-
-```typescript
-private dataPointer: u16 = Blockchain.nextPointer;
-private data: StoredMapU256 = new StoredMapU256(this.dataPointer);
-
-// Usage
-const key = u256.fromU64(123);
-this.data.set(key, u256.fromU64(456));
-const value = this.data.get(key);
-```
-
-## Map Operation Patterns
-
-```mermaid
-flowchart LR
-    subgraph "Key to Hash"
-        A[AddressMemoryMap] --> B[Address Key]
-        B --> C[encodePointer<br/>pointer, address.toBytes]
-        C --> D[32-byte storage hash]
-    end
-
-    subgraph "Operations"
-        D --> E{get or set?}
-        E -->|get| F[Blockchain.getStorageAt<br/>hash]
-        F --> G[Convert to u256]
-        G --> H[Return value<br/>or u256.Zero]
-        E -->|set| I[value.toUint8Array]
-        I --> J[Blockchain.setStorageAt<br/>hash, bytes]
-    end
-```
+The following sequence diagram shows the complete balance mapping flow:
 
 ```mermaid
 sequenceDiagram
@@ -508,6 +491,29 @@ sequenceDiagram
     Map->>Contract: Return u256.Zero
 ```
 
+### StoredMapU256
+
+Maps u256 keys to u256 values.
+
+```typescript
+class StoredMapU256 {
+    constructor(pointer: u16)
+    public get(key: u256): u256
+    public set(key: u256, value: u256): void
+    public has(key: u256): bool
+}
+```
+
+```typescript
+private dataPointer: u16 = Blockchain.nextPointer;
+private data: StoredMapU256 = new StoredMapU256(this.dataPointer);
+
+// Usage
+const key = u256.fromU64(123);
+this.data.set(key, u256.fromU64(456));
+const value = this.data.get(key);
+```
+
 ### Nested Maps (MapOfMap)
 
 For allowances pattern (owner => spender => amount):
@@ -540,7 +546,7 @@ protected setAllowance(owner: Address, spender: Address, amount: u256): void {
 
 > **Important:** `MapOfMap.get(key)` returns a `Nested<T>` object, not the final value. You must call `.get()` on the nested object to retrieve the actual value.
 
-## MapOfMap Nested Storage
+The following diagram shows the two-level nested storage pattern:
 
 ```mermaid
 flowchart LR
@@ -560,6 +566,8 @@ flowchart LR
         K --> L[allowances.set<br/>owner, nested]
     end
 ```
+
+The following sequence diagram shows the nested allowance operations:
 
 ```mermaid
 sequenceDiagram
@@ -737,9 +745,11 @@ function updateBoth(a: u256, b: u256): void {
 |----------|---------------|
 | `uint256 public value` | `StoredU256` |
 | `mapping(address => uint256)` | `AddressMemoryMap` |
+| `mapping(address => mapping(address => uint256))` | `MapOfMap<u256>` |
 | `uint256[] public array` | `StoredU256Array` |
 | `bool public paused` | `StoredBoolean` |
 | `string public name` | `StoredString` |
+| `address public owner` | `StoredAddress` |
 
 ---
 

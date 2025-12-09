@@ -2,9 +2,39 @@
 
 Plugins extend contract functionality through lifecycle hooks. They allow modular features that can be shared across contracts.
 
+## Overview
+
+```typescript
+import { Plugin, Blockchain, Calldata, Selector } from '@btc-vision/btc-runtime/runtime';
+
+// Create a plugin by extending Plugin class
+class MyPlugin extends Plugin {
+    public override onDeployment(calldata: Calldata): void {
+        // Called during contract deployment
+    }
+
+    public override onExecutionStarted(selector: Selector, calldata: Calldata): void {
+        // Called before each method execution
+    }
+
+    public override onExecutionCompleted(selector: Selector, calldata: Calldata): void {
+        // Called after each successful method execution
+    }
+}
+
+// Register with contract
+Blockchain.registerPlugin(new MyPlugin());
+```
+
 ## Plugin Lifecycle
 
+Plugins are initialized when the contract is deployed and can intercept method calls:
+
 ```mermaid
+---
+config:
+  theme: dark
+---
 sequenceDiagram
     participant Deployer as 👤 Deployer
     participant Contract as Contract
@@ -43,88 +73,51 @@ sequenceDiagram
     Blockchain-->>Deployer: return result
 ```
 
-## Overview
+## Plugin Interface
 
-```typescript
-import { Plugin, Blockchain, Calldata, Selector } from '@btc-vision/btc-runtime/runtime';
-
-// Create a plugin by extending Plugin class
-class MyPlugin extends Plugin {
-    public override onDeployment(calldata: Calldata): void {
-        // Called during contract deployment
-    }
-
-    public override onExecutionStarted(selector: Selector, calldata: Calldata): void {
-        // Called before each method execution
-    }
-
-    public override onExecutionCompleted(selector: Selector, calldata: Calldata): void {
-        // Called after each successful method execution
-    }
-}
-
-// Register with contract
-Blockchain.registerPlugin(new MyPlugin());
-```
-
-## Plugin Class Diagram
+The base Plugin class that all plugins extend:
 
 ```mermaid
+---
+config:
+  theme: dark
+---
 classDiagram
     class Plugin {
         <<abstract>>
-        Base Plugin Lifecycle
         +onDeployment(calldata: Calldata) void
         +onExecutionStarted(selector: Selector, calldata: Calldata) void
         +onExecutionCompleted(selector: Selector, calldata: Calldata) void
     }
 
     class RoleBasedAccessPlugin {
-        Access Control
         -rolesPointer: u16
         -roles: AddressMemoryMap
         +hasRole(account: Address, role: u256) bool
         +grantRole(account: Address, role: u256) void
         +revokeRole(account: Address, role: u256) void
-        -getRequiredRole(selector: Selector) u256
     }
 
     class PausablePlugin {
-        Circuit Breaker
         -pausedPointer: u16
         -_paused: StoredBoolean
         +paused: bool
         +pause() void
         +unpause() void
-        -isViewMethod(selector: Selector) bool
-        -isAdminMethod(selector: Selector) bool
     }
 
     class FeeCollectorPlugin {
-        Fee Management
         -feeRecipientPointer: u16
         -feePercentPointer: u16
-        -_feeRecipient: StoredAddress
-        -_feePercent: StoredU256
         +calculateFee(amount: u256) u256
         +setFeeRecipient(recipient: Address) void
         +setFeePercent(percent: u256) void
     }
 
-    class MetricsPlugin {
-        Analytics
-        -totalCallsPointer: u16
-        -_totalCalls: StoredU256
-        +totalCalls: u256
-    }
-
     Plugin <|-- RoleBasedAccessPlugin
     Plugin <|-- PausablePlugin
     Plugin <|-- FeeCollectorPlugin
-    Plugin <|-- MetricsPlugin
 ```
-
-## Plugin Interface
 
 ### Base Plugin Class
 
@@ -205,9 +198,15 @@ public override onDeployment(calldata: Calldata): void {
 }
 ```
 
-## Role-Based Access Control Flow
+## Role-Based Access Control
+
+This diagram shows how the RBAC plugin intercepts calls and checks permissions:
 
 ```mermaid
+---
+config:
+  theme: dark
+---
 flowchart LR
     subgraph OPNet["OPNet Plugin-Based Access Control"]
         A["👤 User calls method"] --> B["onExecutionStarted"]
@@ -225,7 +224,7 @@ flowchart LR
         D --> J["Method executes"]
         H --> J
 
-        subgraph RoleBits["Role Enum (powers of 2)"]
+        subgraph RoleBits["Role Enum - Powers of 2"]
             R1["Role.ADMIN = 1"]
             R2["Role.MINTER = 2"]
             R3["Role.PAUSER = 4"]
@@ -240,9 +239,7 @@ flowchart LR
     end
 ```
 
-## Use Cases
-
-### Access Control Plugin
+### Access Control Plugin Implementation
 
 Use an enum with bit flags for role management (powers of 2):
 
@@ -341,7 +338,7 @@ class RoleBasedAccessPlugin extends Plugin {
 }
 ```
 
-### Pausable Plugin
+## Pausable Plugin
 
 ```typescript
 import {
@@ -428,7 +425,7 @@ class PausablePlugin extends Plugin {
 }
 ```
 
-### Fee Collector Plugin
+## Fee Collector Plugin
 
 ```typescript
 import { u256 } from '@btc-vision/as-bignum/assembly';
@@ -495,7 +492,7 @@ class FeeCollectorPlugin extends Plugin {
 
 ## Plugin Communication
 
-### Between Plugin and Contract
+### Using Plugins in Contracts
 
 ```typescript
 import { u256 } from '@btc-vision/as-bignum/assembly';
@@ -605,6 +602,98 @@ class MetricsPlugin extends Plugin {
 }
 ```
 
+## Solidity Comparison
+
+OPNet plugins are similar to Solidity modifiers and OpenZeppelin extensions:
+
+| Solidity Pattern | OPNet Plugin Equivalent |
+|-----------------|------------------------|
+| OpenZeppelin `Ownable` | `RoleBasedAccessPlugin` with ADMIN role |
+| OpenZeppelin `Pausable` | `PausablePlugin` |
+| OpenZeppelin `AccessControl` | `RoleBasedAccessPlugin` |
+| `nonReentrant` modifier | Reentrancy guard in `onExecutionStarted` |
+| Function modifiers | `onExecutionStarted` hook |
+
+### Access Control Comparison
+
+```solidity
+// Solidity with OpenZeppelin
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract MyContract is Ownable {
+    function adminOnly() external onlyOwner {
+        // Only owner can call
+    }
+}
+```
+
+```typescript
+// OPNet with Plugin
+@final
+export class MyContract extends OP_NET {
+    private accessPlugin: RoleBasedAccessPlugin;
+
+    public constructor() {
+        super();
+        this.accessPlugin = new RoleBasedAccessPlugin(Blockchain.nextPointer);
+        Blockchain.registerPlugin(this.accessPlugin);
+    }
+
+    @method()
+    public adminOnly(_calldata: Calldata): BytesWriter {
+        // Plugin's onExecutionStarted checks roles automatically
+        // based on selector mapping
+        return new BytesWriter(0);
+    }
+}
+```
+
+### Pausable Comparison
+
+```solidity
+// Solidity with OpenZeppelin
+import "@openzeppelin/contracts/security/Pausable.sol";
+
+contract MyContract is Pausable {
+    function transfer() external whenNotPaused {
+        // Cannot call when paused
+    }
+
+    function pause() external onlyOwner {
+        _pause();
+    }
+}
+```
+
+```typescript
+// OPNet with Plugin
+@final
+export class MyContract extends OP_NET {
+    private pausablePlugin: PausablePlugin;
+
+    public constructor() {
+        super();
+        this.pausablePlugin = new PausablePlugin(Blockchain.nextPointer);
+        Blockchain.registerPlugin(this.pausablePlugin);
+    }
+
+    @method(ABIDataTypes.UINT256)
+    public transfer(calldata: Calldata): BytesWriter {
+        // Plugin's onExecutionStarted checks pause status automatically
+        const amount = calldata.readU256();
+        // ... transfer logic
+        return new BytesWriter(0);
+    }
+
+    @method()
+    public pause(_calldata: Calldata): BytesWriter {
+        // Would need access control check here
+        this.pausablePlugin.pause();
+        return new BytesWriter(0);
+    }
+}
+```
+
 ## Best Practices
 
 ### 1. Single Responsibility
@@ -690,6 +779,15 @@ public override onExecutionStarted(selector: Selector, calldata: Calldata): void
         throw new Revert('Access denied');
     }
 }
+```
+
+### 6. Order Plugins Correctly
+
+```typescript
+// Security checks should come first
+Blockchain.registerPlugin(this.accessControl);  // Check permissions first
+Blockchain.registerPlugin(this.pausable);       // Then pausable
+Blockchain.registerPlugin(this.metrics);        // Metrics last
 ```
 
 ---

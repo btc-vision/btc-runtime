@@ -81,13 +81,9 @@ const remainder = SafeMath.mod(u256.fromU64(100), u256.fromU64(30));  // 10
 
 **Throws:** `Revert` if b is zero
 
-## Overflow Protection Flow
+The following diagram shows the overflow protection logic for each basic operation:
 
 ```mermaid
----
-config:
-  theme: dark
----
 flowchart LR
     subgraph "Addition add"
         A[SafeMath.add a, b] --> B[Compute<br/>result = a + b]
@@ -203,6 +199,57 @@ const inverse = SafeMath.modInverse(value, prime);
 ```
 
 **Throws:** If inverse doesn't exist
+
+The following diagram shows the cryptographic operation flow:
+
+```mermaid
+flowchart LR
+    subgraph "Modular Multiplication mulmod"
+        A[mulmod a, b, modulus] --> B{modulus<br/>== 0?}
+        B -->|Yes| C[Revert]
+        B -->|No| D[Compute<br/>a * b mod modulus]
+        D --> E[Avoid intermediate<br/>overflow]
+        E --> F[Return result]
+    end
+
+    subgraph "Modular Inverse modInverse"
+        G[modInverse a, modulus] --> H{gcd a, modulus<br/>== 1?}
+        H -->|No| I[Revert:<br/>No inverse]
+        H -->|Yes| J[Extended<br/>Euclidean Algorithm]
+        J --> K[Find x:<br/>a * x = 1 mod modulus]
+        K --> L[Return x]
+    end
+```
+
+The following diagram shows the use cases for cryptographic operations:
+
+```mermaid
+graph LR
+    A[Cryptographic Operations]
+
+    subgraph "Elliptic Curve"
+        B[Point multiplication]
+        C[Point addition]
+    end
+
+    subgraph "Modular Arithmetic"
+        D[mulmod<br/>for large numbers]
+        E[modInverse<br/>for division]
+    end
+
+    subgraph "Field Operations"
+        F[Finite field<br/>arithmetic]
+    end
+
+    subgraph "Signature Verification"
+        G[Key derivation]
+    end
+
+    A --> B & C
+    A --> D & E
+    A --> F
+    A --> G
+```
 
 ## Logarithm Operations
 
@@ -339,55 +386,6 @@ const sum = SafeMathI128.add(a, b);  // -50
 const abs = SafeMathI128.abs(a);     // 100
 ```
 
-## Cryptographic Operations Flow
-
-```mermaid
-flowchart LR
-    subgraph "Modular Multiplication mulmod"
-        A[mulmod a, b, modulus] --> B{modulus<br/>== 0?}
-        B -->|Yes| C[Revert]
-        B -->|No| D[Compute<br/>a * b mod modulus]
-        D --> E[Avoid intermediate<br/>overflow]
-        E --> F[Return result]
-    end
-
-    subgraph "Modular Inverse modInverse"
-        G[modInverse a, modulus] --> H{gcd a, modulus<br/>== 1?}
-        H -->|No| I[Revert:<br/>No inverse]
-        H -->|Yes| J[Extended<br/>Euclidean Algorithm]
-        J --> K[Find x:<br/>a * x ≡ 1 mod modulus]
-        K --> L[Return x]
-    end
-```
-
-```mermaid
-graph LR
-    A[Cryptographic Operations]
-
-    subgraph "Elliptic Curve"
-        B[Point multiplication]
-        C[Point addition]
-    end
-
-    subgraph "Modular Arithmetic"
-        D[mulmod<br/>for large numbers]
-        E[modInverse<br/>for division]
-    end
-
-    subgraph "Field Operations"
-        F[Finite field<br/>arithmetic]
-    end
-
-    subgraph "Signature Verification"
-        G[Key derivation]
-    end
-
-    A --> B & C
-    A --> D & E
-    A --> F
-    A --> G
-```
-
 ## Common Patterns
 
 ### Percentage Calculation
@@ -464,6 +462,7 @@ try {
 | `a % b` | `SafeMath.mod(a, b)` |
 | `a ** b` | `SafeMath.pow(a, b)` |
 | `Math.sqrt(a)` | `SafeMath.sqrt(a)` |
+| `mulmod(a, b, m)` | `SafeMath.mulmod(a, b, m)` |
 
 ---
 
