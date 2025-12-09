@@ -5,35 +5,39 @@ Cross-contract calls enable contracts to interact with each other, building comp
 ## Architecture Overview
 
 ```mermaid
+---
+config:
+  theme: dark
+---
 sequenceDiagram
-    participant ContractA as ⚡ Contract A
-    participant Blockchain as 🔐 OPNet Runtime
-    participant ContractB as 📝 Contract B
+    participant ContractA as Contract A
+    participant Blockchain as OPNet Runtime
+    participant ContractB as Contract B
 
-    Note over ContractA: 📝 Prepare calldata
+    Note over ContractA: Prepare calldata
     ContractA->>ContractA: Create BytesWriter
     ContractA->>ContractA: writeSelector(TRANSFER_SELECTOR)
     ContractA->>ContractA: writeAddress(recipient)
     ContractA->>ContractA: writeU256(amount)
 
-    Note over ContractA,Blockchain: ⚡ Make cross-contract call
+    Note over ContractA,Blockchain: Make cross-contract call
     ContractA->>Blockchain: call(ContractB, calldata, stopOnFailure)
 
-    Note over Blockchain: 🔐 Runtime validates and dispatches
+    Note over Blockchain: Runtime validates and dispatches
     Blockchain->>ContractB: execute(selector, calldata)
 
-    Note over ContractB: ⚡ Process method
+    Note over ContractB: Process method
     ContractB->>ContractB: Parse calldata
     ContractB->>ContractB: Execute transfer logic
     ContractB->>ContractB: Create BytesWriter response
 
-    Note over ContractB,Blockchain: 📝 Return result
+    Note over ContractB,Blockchain: Return result
     ContractB-->>Blockchain: BytesWriter response
 
-    Note over Blockchain: 🔐 Wrap in CallResult
+    Note over Blockchain: Wrap in CallResult
     Blockchain-->>ContractA: CallResult{success: true, data: bytes}
 
-    Note over ContractA: ✅ Process response
+    Note over ContractA: Process response
     ContractA->>ContractA: Check result.success
     ContractA->>ContractA: Parse result.data
 ```
@@ -57,20 +61,6 @@ const result: CallResult = Blockchain.call(
 if (result.success) {
     // Process result.data
 }
-```
-
-## Calldata Encoding Flow
-
-```mermaid
-flowchart LR
-    subgraph OPNet["⚡ OPNet Cross-Contract Call Encoding"]
-        A["📝 Method Parameters"] --> B["BytesWriter"]
-        B --> C["writeSelector<br/>4 bytes"]
-        C --> D["writeAddress<br/>32 bytes"]
-        D --> E["writeU256<br/>32 bytes"]
-        E --> F["📦 Encoded Calldata<br/>68 bytes total"]
-        F --> G["🔐 Blockchain.call"]
-    end
 ```
 
 ## Making Calls
