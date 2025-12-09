@@ -713,7 +713,7 @@ const witnessScript = result.witnessScript;
 #### Solidity Approach (Custom Contract)
 
 ```solidity
-// Solidity - custom multisig (complex, gas-intensive)
+// Solidity - custom multisig (complex, resource-intensive)
 contract MultiSig {
     mapping(address => bool) public owners;
     uint256 public required;
@@ -747,7 +747,7 @@ contract MultiSig {
     }
 
     // Limitations:
-    // - High gas costs for storage
+    // - High storage costs
     // - Complex signature verification
     // - Must manually count confirmations
     // - No native Bitcoin integration
@@ -779,7 +779,7 @@ if (recognized.ok) {
 // - No custom signature verification needed
 // - Bitcoin consensus handles signature counting
 // - Works with any Bitcoin wallet supporting multisig
-// - No gas costs for signature storage
+// - No storage costs for signature storage
 // - Native OP_CHECKMULTISIG opcode
 ```
 
@@ -817,7 +817,7 @@ contract DataEmbed {
 
     function storeData(bytes memory data) external {
         emit DataStored(keccak256(data), data);
-        // Gas cost scales with data size
+        // Cost scales with data size
         // Data is not part of UTXO set
     }
 }

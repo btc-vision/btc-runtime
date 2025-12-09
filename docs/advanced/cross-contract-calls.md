@@ -476,7 +476,7 @@ public callExternalContract(calldata: Calldata): BytesWriter {
 
     // Only call trusted contracts
     // Malicious contracts can:
-    // - Consume all gas
+    // - Consume excessive resources
     // - Return malicious data
     // - Re-enter your contract
 

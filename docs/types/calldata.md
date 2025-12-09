@@ -475,7 +475,7 @@ public safeTransferFrom(calldata: Calldata): BytesWriter {
 | Automatic ABI decoding | Manual `read*()` methods |
 | Can access parameters in any order | Must read in sequential order |
 | Type info in function signature | Type determined by read method |
-| `calldata` keyword for gas optimization | All calldata is read-only by default |
+| `calldata` keyword optimization | All calldata is read-only by default |
 | `msg.data` for raw bytes | Calldata object wraps the buffer |
 
 ## Common Patterns

@@ -2,12 +2,30 @@
 
 This guide walks you through setting up your development environment for building OPNet smart contracts.
 
+## Quick Start - Clone Example Project
+
+The fastest way to get started is to clone the official example-tokens repository:
+
+```bash
+git clone https://github.com/btc-vision/example-tokens.git
+cd example-tokens
+npm install
+npm run build:token
+```
+
+This repository contains working examples of:
+- Basic OP20 token
+- Stablecoin with roles and pausability
+- Pegged token
+- Multi-oracle stablecoin
+- NFT (OP721)
+
 ## Prerequisites
 
 Before you begin, ensure you have:
 
 - **Node.js 22+** - [Download Node.js](https://nodejs.org/)
-- **npm** or **yarn** - Comes with Node.js
+- **npm** - Comes with Node.js
 - **Git** - [Download Git](https://git-scm.com/)
 
 Verify your installation:
@@ -17,83 +35,11 @@ node --version  # Should be v22.0.0 or higher
 npm --version   # Should be v9.0.0 or higher
 ```
 
-## Quick Start
+## Manual Setup
 
-### Installation Process Flow
+If you prefer to set up from scratch:
 
-The following diagram shows the complete installation and setup workflow for OPNet smart contract development:
-
-```mermaid
----
-config:
-  theme: dark
----
-flowchart LR
-    A["Install OPNet"] --> B{"Prerequisites?"}
-    B -->|"No"| C["Install Node.js 22+"]
-    B -->|"Yes"| D["Create Project"]
-    C --> D
-    D --> E["npm init"]
-    E --> F["Install Dependencies"]
-    F --> G["Configure AssemblyScript"]
-    G --> H["Build Contract"]
-    H --> I{"Success?"}
-    I -->|"No"| F
-    I -->|"Yes"| J["Complete"]
-```
-
-### Dependency Architecture
-
-This diagram illustrates how the different packages work together in your OPNet project:
-
-```mermaid
----
-config:
-  theme: dark
----
-graph LR
-    subgraph project["Your Contract Project"]
-        Contract["MyToken.ts"]
-        Index["index.ts"]
-        Build["build/release.wasm"]
-    end
-
-    subgraph deps["Core Dependencies"]
-        Runtime["@btc-vision/btc-runtime"]
-        BigNum["@btc-vision/as-bignum"]
-    end
-
-    subgraph devtools["Development Tools"]
-        ASC["assemblyscript"]
-        Pect["@btc-vision/as-pect-cli"]
-    end
-
-    subgraph runtime["Runtime Components"]
-        Contracts["Contract Classes<br/>OP_NET, OP20, OP721"]
-        Storage["Storage Types<br/>StoredU256, StoredMap"]
-        Blockchain["Blockchain Environment<br/>Transaction Context"]
-        Events["Event System<br/>NetEvent"]
-    end
-
-    Contract --> Runtime
-    Contract --> BigNum
-    Index --> Contract
-    ASC --> Build
-    Index --> Build
-
-    Runtime --> Contracts
-    Runtime --> Storage
-    Runtime --> Blockchain
-    Runtime --> Events
-
-    Contract -.->|"uses"| Contracts
-    Contract -.->|"uses"| Storage
-    Contract -.->|"uses"| BigNum
-
-    Pect -.->|"tests"| Contract
-```
-
-### 1. Create a New Project
+### 1. Create Project
 
 ```bash
 mkdir my-opnet-contract
@@ -104,137 +50,211 @@ npm init -y
 ### 2. Install Dependencies
 
 ```bash
-npm install @btc-vision/btc-runtime @btc-vision/as-bignum
-npm install --save-dev assemblyscript @btc-vision/as-pect-cli
+npm install @btc-vision/btc-runtime @btc-vision/as-bignum @btc-vision/opnet-transform
+npm install --save-dev assemblyscript prettier typescript
 ```
 
-### 3. Initialize AssemblyScript
+### 3. Create Configuration Files
 
-```bash
-npx asinit .
-```
-
-This creates the basic AssemblyScript project structure.
-
-### 4. Configure AssemblyScript
-
-Update your `asconfig.json`:
+#### `asconfig.json`
 
 ```json
 {
-  "targets": {
-    "debug": {
-      "outFile": "build/debug.wasm",
-      "textFile": "build/debug.wat",
-      "sourceMap": true,
-      "debug": true
+    "targets": {
+        "token": {
+            "outFile": "build/MyToken.wasm",
+            "use": ["abort=src/token/index/abort"]
+        }
     },
-    "release": {
-      "outFile": "build/release.wasm",
-      "textFile": "build/release.wat",
-      "sourceMap": true,
-      "optimizeLevel": 3,
-      "shrinkLevel": 1
+    "options": {
+        "sourceMap": false,
+        "optimizeLevel": 3,
+        "shrinkLevel": 1,
+        "converge": true,
+        "noAssert": false,
+        "enable": [
+            "sign-extension",
+            "mutable-globals",
+            "nontrapping-f2i",
+            "bulk-memory",
+            "simd",
+            "reference-types",
+            "multi-value"
+        ],
+        "runtime": "stub",
+        "memoryBase": 0,
+        "initialMemory": 1,
+        "exportStart": "start",
+        "transform": "@btc-vision/opnet-transform"
     }
-  },
-  "options": {
-    "bindings": "esm",
-    "runtime": "stub"
-  }
 }
 ```
 
-## Package Dependencies
+#### `package.json`
 
-Here's what each package provides:
-
-| Package | Purpose |
-|---------|---------|
-| `@btc-vision/btc-runtime` | Core runtime - contracts, storage, events |
-| `@btc-vision/as-bignum` | 128-bit and 256-bit integer types |
-| `assemblyscript` | AssemblyScript compiler |
-| `@btc-vision/as-pect-cli` | Testing framework for AssemblyScript |
-
-## Project Structure
-
-After setup, your project should look like:
-
-```
-my-opnet-contract/
-├── assembly/
-│   ├── contracts/        # Your smart contracts
-│   │   └── MyToken.ts
-│   └── index.ts          # Entry point
-├── build/                # Compiled WASM output
-├── tests/                # Test files
-├── asconfig.json         # AssemblyScript configuration
-├── package.json
-└── tsconfig.json
+```json
+{
+    "name": "my-opnet-contract",
+    "version": "1.0.0",
+    "type": "module",
+    "scripts": {
+        "build:token": "asc src/token/index.ts --target token --measure --uncheckedBehavior never"
+    },
+    "dependencies": {
+        "@btc-vision/as-bignum": "^0.0.6",
+        "@btc-vision/btc-runtime": "^1.10.8",
+        "@btc-vision/opnet-transform": "^0.1.12"
+    },
+    "devDependencies": {
+        "assemblyscript": "^0.28.9",
+        "prettier": "^3.7.4"
+    }
+}
 ```
 
-## Build Process Architecture
+#### `tsconfig.json`
 
-This diagram shows how AssemblyScript compiles your contract into WebAssembly:
-
-```mermaid
----
-config:
-  theme: dark
----
-flowchart LR
-    subgraph source["Source Files"]
-        TS1["MyToken.ts"]
-        TS2["Types.ts"]
-        IDX["index.ts"]
-    end
-
-    subgraph compiler["AssemblyScript Compiler"]
-        ASC["asc compiler"]
-        OPT["Optimizer<br/>Level 3"]
-        SHRINK["Shrinker<br/>Level 1"]
-    end
-
-    subgraph output["Output Files"]
-        WASM["release.wasm<br/>Binary Contract"]
-        WAT["release.wat<br/>Text Format"]
-        MAP["Source Maps"]
-    end
-
-    subgraph config["Configuration"]
-        CONFIG["asconfig.json<br/>Compiler Settings"]
-        PKG["package.json<br/>Scripts"]
-    end
-
-    TS1 --> IDX
-    TS2 --> IDX
-    IDX --> ASC
-    CONFIG --> ASC
-    PKG -.->|"defines"| ASC
-
-    ASC --> OPT
-    OPT --> SHRINK
-    SHRINK --> WASM
-    SHRINK --> WAT
-    SHRINK --> MAP
+```json
+{
+    "compilerOptions": {
+        "module": "esnext",
+        "declaration": true,
+        "target": "esnext",
+        "noImplicitAny": true,
+        "removeComments": true,
+        "suppressImplicitAnyIndexErrors": false,
+        "preserveConstEnums": true,
+        "resolveJsonModule": true,
+        "skipLibCheck": false,
+        "sourceMap": false,
+        "moduleDetection": "force",
+        "experimentalDecorators": true,
+        "lib": ["es6"],
+        "strict": true,
+        "strictNullChecks": true,
+        "strictFunctionTypes": true,
+        "strictBindCallApply": true,
+        "strictPropertyInitialization": true,
+        "alwaysStrict": true,
+        "moduleResolution": "node",
+        "allowJs": false,
+        "incremental": true,
+        "allowSyntheticDefaultImports": true,
+        "outDir": "build"
+    },
+    "include": [
+        "./tests/*.ts",
+        "./tests/**/*.ts"
+    ]
+}
 ```
 
-## Verification
+#### `src/tsconfig.json`
 
-Create a simple test contract to verify everything works:
+```json
+{
+    "extends": "@btc-vision/opnet-transform/std/assembly.json",
+    "include": [
+        "./**/*.ts"
+    ]
+}
+```
+
+#### `.prettierrc.json`
+
+```json
+{
+    "printWidth": 100,
+    "trailingComma": "all",
+    "tabWidth": 4,
+    "semi": true,
+    "singleQuote": true,
+    "quoteProps": "as-needed",
+    "bracketSpacing": true,
+    "bracketSameLine": true,
+    "arrowParens": "always",
+    "singleAttributePerLine": true
+}
+```
+
+#### `.vscode/settings.json`
+
+```json
+{
+    "eslint.validate": ["javascript", "typescript"],
+    "prettier.useEditorConfig": false,
+    "prettier.useTabs": false,
+    "prettier.configPath": ".prettierrc.json",
+    "prettier.requireConfig": true,
+    "prettier.tabWidth": 4,
+    "prettier.singleQuote": true,
+    "editor.formatOnSave": true
+}
+```
+
+#### `.gitignore`
+
+```gitignore
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build output
+build/
+debug/
+
+# IDE
+.idea/
+.vs/
+.vscode-test/
+
+# Logs
+*.log
+npm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+
+# Keys
+*.key
+*.wallet
+```
+
+### 4. Create Project Structure
+
+```bash
+mkdir -p src/token
+```
+
+#### `src/token/MyToken.ts`
 
 ```typescript
-// assembly/contracts/TestContract.ts
-import { OP_NET, Calldata, BytesWriter } from '@btc-vision/btc-runtime/runtime';
 import { u256 } from '@btc-vision/as-bignum/assembly';
+import {
+    Address,
+    Blockchain,
+    BytesWriter,
+    Calldata,
+    OP20,
+    OP20InitParameters,
+} from '@btc-vision/btc-runtime/runtime';
 
 @final
-export class TestContract extends OP_NET {
+export class MyToken extends OP20 {
     public constructor() {
-        super();
+        super(new OP20InitParameters('MyToken', 'MTK', u256.fromU32(18)));
     }
 
     public override onDeployment(_calldata: Calldata): void {
-        // Contract deployed successfully
+        // Mint initial supply to deployer
+        const deployer: Address = Blockchain.tx.sender;
+        const initialSupply: u256 = u256.fromU64(1_000_000) * this.decimalBase;
+
+        this._mint(deployer, initialSupply);
     }
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
@@ -243,13 +263,69 @@ export class TestContract extends OP_NET {
 }
 ```
 
-Build the contract:
+#### `src/token/index.ts`
 
-```bash
-npm run build
+```typescript
+import { Blockchain } from '@btc-vision/btc-runtime/runtime';
+import { MyToken } from './MyToken';
+
+export function abort(message: string | null, fileName: string | null, line: u32, column: u32): void {
+    const msg = message ? message : '';
+    const file = fileName ? fileName : '';
+    Blockchain.log(`ABORT: ${msg} at ${file}:${line}:${column}`);
+}
+
+export * from './MyToken';
+Blockchain.contract = new MyToken();
 ```
 
-If successful, you'll see `build/release.wasm` generated.
+### 5. Build
+
+```bash
+npm run build:token
+```
+
+If successful, you'll see `build/MyToken.wasm` generated.
+
+## Adding More Contracts
+
+To add more contracts (e.g., NFT), add a new target to `asconfig.json`:
+
+```json
+{
+    "targets": {
+        "token": {
+            "outFile": "build/MyToken.wasm",
+            "use": ["abort=src/token/index/abort"]
+        },
+        "nft": {
+            "outFile": "build/MyNFT.wasm",
+            "use": ["abort=src/nft/index/abort"]
+        }
+    },
+    ...
+}
+```
+
+And add a build script to `package.json`:
+
+```json
+{
+    "scripts": {
+        "build:token": "asc src/token/index.ts --target token --measure --uncheckedBehavior never",
+        "build:nft": "asc src/nft/index.ts --target nft --measure --uncheckedBehavior never"
+    }
+}
+```
+
+## Package Dependencies
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `@btc-vision/btc-runtime` | ^1.10.8 | Core runtime - contracts, storage, events |
+| `@btc-vision/as-bignum` | ^0.0.6 | 128-bit and 256-bit integer types |
+| `@btc-vision/opnet-transform` | ^0.1.12 | AssemblyScript transform for OPNet |
+| `assemblyscript` | ^0.28.9 | AssemblyScript compiler |
 
 ## Troubleshooting
 
@@ -266,45 +342,24 @@ import { u256 } from '@btc-vision/as-bignum/assembly';
 import { OP_NET } from 'btc-runtime';  // Missing @btc-vision scope
 ```
 
-### Node.js Version Issues
+### Missing `src/tsconfig.json`
 
-OPNet requires Node.js 22+. If you have an older version:
-
-```bash
-# Using nvm (recommended)
-nvm install 22
-nvm use 22
-```
-
-### AssemblyScript Compilation Errors
-
-Ensure you're using compatible versions:
-
-```bash
-npm ls assemblyscript
-# Should show ^0.28.9 or compatible
-```
-
-## IDE Setup
-
-### VS Code
-
-Install these extensions for the best experience:
-
-1. **AssemblyScript** - Syntax highlighting
-2. **ESLint** - Code linting
-3. **Prettier** - Code formatting
-
-Create `.vscode/settings.json`:
+The `src/tsconfig.json` is required and must extend the opnet-transform config:
 
 ```json
 {
-  "editor.formatOnSave": true,
-  "typescript.tsdk": "node_modules/typescript/lib",
-  "[typescript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  }
+    "extends": "@btc-vision/opnet-transform/std/assembly.json",
+    "include": ["./**/*.ts"]
 }
+```
+
+### AssemblyScript Version Mismatch
+
+Ensure you're using AssemblyScript 0.28.9:
+
+```bash
+npm ls assemblyscript
+# Should show ^0.28.9
 ```
 
 ## Next Steps

@@ -716,7 +716,7 @@ contract MyContract is Ownable, AccessControl {
     // Limitations:
     // - Must add modifier to each function
     // - Role checks scattered across contract
-    // - String-based role hashes (gas inefficient)
+    // - String-based role hashes (inefficient)
     // - Complex inheritance hierarchy
 }
 ```

@@ -628,10 +628,10 @@ class OPNetContract extends OP_NET {
 
 ### Cost Comparison
 
-| Operation | Solidity Gas | OPNet Cost | Notes |
-|-----------|--------------|------------|-------|
-| Store ML-DSA public key | ~40,000 gas (1,312 bytes) | 0 | OPNet loads automatically |
-| Store ML-DSA signature | ~76,000 gas (2,420 bytes) | N/A | Not stored, verified |
+| Operation | Solidity | OPNet Cost | Notes |
+|-----------|----------|------------|-------|
+| Store ML-DSA public key | Not practical (1,312 bytes) | 0 | OPNet loads automatically |
+| Store ML-DSA signature | Not practical (2,420 bytes) | N/A | Not stored, verified |
 | Quantum-safe verification | Not possible | Standard | No additional cost |
 | Key migration | Contract redeploy | Consensus-managed | No user action needed |
 

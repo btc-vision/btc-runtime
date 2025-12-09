@@ -706,7 +706,7 @@ public mint(calldata: Calldata): BytesWriter {
 | **u256 Native Support** | First-class 256-bit integer support via `@btc-vision/as-bignum` |
 | **Bitcoin Native** | Direct integration with Bitcoin's security model |
 | **Unified Storage Pointers** | Consistent storage access pattern with `Blockchain.nextPointer` |
-| **No Gas Estimation Issues** | Bitcoin transaction model eliminates EVM gas complexity |
+| **Predictable Execution** | Bitcoin transaction model provides predictable execution |
 | **Explicit Method Routing** | Full control over method dispatch in `execute()` |
 
 ### Initialization Pattern Comparison

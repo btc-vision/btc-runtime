@@ -8,7 +8,7 @@ Unlike Solidity where storage is implicitly managed, OPNet requires explicit poi
 
 - **Deterministic storage locations** via SHA256 hashing
 - **Collision-free addressing** through unique pointer combinations
-- **Gas-efficient access** with optimized read/write patterns
+- **Efficient access** with optimized read/write patterns
 - **Verifiable state proofs** for cross-chain validation
 
 ## How Storage Works
@@ -907,7 +907,7 @@ export class MyContract extends OP_NET {
 }
 ```
 
-### 4. Consider Gas Costs
+### 4. Optimize Storage Access
 
 ```mermaid
 ---

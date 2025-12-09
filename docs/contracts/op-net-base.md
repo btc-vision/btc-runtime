@@ -319,7 +319,7 @@ sequenceDiagram
         else No Handler
             Contract->>VM: throw Revert Unknown method
             VM->>User: Transaction reverted
-            Note over User: No state changes,<br/>gas still consumed
+            Note over User: No state changes,<br/>fees still consumed
         end
     end
 
