@@ -31,19 +31,33 @@ function f(j: u32, x: u32, y: u32, z: u32): u32 {
     }
 }
 
-// Amounts for rotate left in each round:
-const RL1: u8[] = [11, 14, 15, 12, 5, 8, 7, 9, 11, 13, 14, 15, 6, 7, 9, 8];
-const RL2: u8[] = [12, 5, 9, 7, 11, 13, 14, 15, 6, 8, 13, 6, 5, 12, 7, 5];
-const RL3: u8[] = [11, 13, 6, 7, 14, 9, 13, 15, 14, 8, 13, 6, 5, 12, 7, 5];
-const RL4: u8[] = [11, 14, 15, 12, 5, 8, 7, 9, 11, 13, 14, 15, 6, 7, 9, 8];
-const RL5: u8[] = [12, 5, 9, 7, 11, 13, 14, 15, 6, 8, 13, 6, 5, 12, 7, 5];
+// Amounts for rotate left in each round (left path SL):
+const SL1: u8[] = [11, 14, 15, 12, 5, 8, 7, 9, 11, 13, 14, 15, 6, 7, 9, 8];      // Round 0
+const SL2: u8[] = [7, 6, 8, 13, 11, 9, 7, 15, 7, 12, 15, 9, 11, 7, 13, 12];      // Round 1
+const SL3: u8[] = [11, 13, 6, 7, 14, 9, 13, 15, 14, 8, 13, 6, 5, 12, 7, 5];      // Round 2
+const SL4: u8[] = [11, 12, 14, 15, 14, 15, 9, 8, 9, 14, 5, 6, 8, 6, 5, 12];      // Round 3
+const SL5: u8[] = [9, 15, 5, 11, 6, 8, 13, 12, 5, 12, 13, 14, 11, 8, 5, 6];      // Round 4
 
-// Index permutations:
+// Amounts for rotate left in each round (right path SR):
+const SR1: u8[] = [8, 9, 9, 11, 13, 15, 15, 5, 7, 7, 8, 11, 14, 14, 12, 6];      // Round 0
+const SR2: u8[] = [9, 13, 15, 7, 12, 8, 9, 11, 7, 7, 12, 7, 6, 15, 13, 11];      // Round 1
+const SR3: u8[] = [9, 7, 15, 11, 8, 6, 6, 14, 12, 13, 5, 14, 13, 13, 7, 5];      // Round 2
+const SR4: u8[] = [15, 5, 8, 11, 14, 14, 6, 14, 6, 9, 12, 9, 12, 5, 15, 8];      // Round 3
+const SR5: u8[] = [8, 5, 12, 9, 12, 5, 14, 6, 8, 13, 6, 5, 15, 13, 11, 11];      // Round 4
+
+// Index permutations (left path):
 const RL1_I: u8[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 const RL2_I: u8[] = [7, 4, 13, 1, 10, 6, 15, 3, 12, 0, 9, 5, 2, 14, 11, 8];
 const RL3_I: u8[] = [3, 10, 14, 4, 9, 15, 8, 1, 2, 7, 0, 6, 13, 11, 5, 12];
 const RL4_I: u8[] = [1, 9, 11, 10, 0, 8, 12, 4, 13, 3, 7, 15, 14, 5, 6, 2];
 const RL5_I: u8[] = [4, 0, 5, 9, 7, 12, 2, 10, 14, 1, 3, 8, 11, 6, 15, 13];
+
+// Index permutations (right path):
+const RR1_I: u8[] = [5, 14, 7, 0, 9, 2, 11, 4, 13, 6, 15, 8, 1, 10, 3, 12];
+const RR2_I: u8[] = [6, 11, 3, 7, 0, 13, 5, 10, 14, 15, 8, 12, 4, 9, 1, 2];
+const RR3_I: u8[] = [15, 5, 1, 3, 7, 14, 6, 9, 11, 8, 12, 2, 10, 0, 4, 13];
+const RR4_I: u8[] = [8, 6, 4, 1, 3, 11, 15, 0, 5, 12, 2, 13, 9, 7, 10, 14];
+const RR5_I: u8[] = [12, 15, 10, 4, 1, 5, 8, 7, 6, 2, 13, 14, 0, 3, 9, 11];
 
 // The compression function processes 512-bit (64-byte) chunks
 function compress(chunk: Uint8Array, h: Uint32Array): void {
@@ -76,82 +90,90 @@ function compress(chunk: Uint8Array, h: Uint32Array): void {
     for (let j: u32 = 0; j < 80; j++) {
         let s: u32, t: u32;
         if (j < 16) {
-            // left
+            // left path - round 0
             t = al + f(j, bl, cl, dl) + x[RL1_I[j]] + 0x00000000;
-            t = rotl(t, RL1[j % 16]) + el;
+            t = rotl(t, SL1[j % 16]) + el;
             al = el;
             el = dl;
             dl = rotl(cl, 10);
             cl = bl;
             bl = t;
 
-            // right
-            t = ar + f(79 - j, br, cr, dr) + x[RL5_I[j]] + 0x50a28be6;
-            t = rotl(t, RL5[j % 16]) + er;
+            // right path - round 0
+            t = ar + f(79 - j, br, cr, dr) + x[RR1_I[j]] + 0x50a28be6;
+            t = rotl(t, SR1[j % 16]) + er;
             ar = er;
             er = dr;
             dr = rotl(cr, 10);
             cr = br;
             br = t;
         } else if (j < 32) {
+            // left path - round 1
             t = al + f(j, bl, cl, dl) + x[RL2_I[j % 16]] + 0x5a827999;
-            t = rotl(t, RL2[j % 16]) + el;
+            t = rotl(t, SL2[j % 16]) + el;
             al = el;
             el = dl;
             dl = rotl(cl, 10);
             cl = bl;
             bl = t;
 
-            t = ar + f(79 - j, br, cr, dr) + x[RL4_I[j % 16]] + 0x5c4dd124;
-            t = rotl(t, RL4[j % 16]) + er;
+            // right path - round 1
+            t = ar + f(79 - j, br, cr, dr) + x[RR2_I[j % 16]] + 0x5c4dd124;
+            t = rotl(t, SR2[j % 16]) + er;
             ar = er;
             er = dr;
             dr = rotl(cr, 10);
             cr = br;
             br = t;
         } else if (j < 48) {
+            // left path - round 2
             t = al + f(j, bl, cl, dl) + x[RL3_I[j % 16]] + 0x6ed9eba1;
-            t = rotl(t, RL3[j % 16]) + el;
+            t = rotl(t, SL3[j % 16]) + el;
             al = el;
             el = dl;
             dl = rotl(cl, 10);
             cl = bl;
             bl = t;
 
-            t = ar + f(79 - j, br, cr, dr) + x[RL3_I[j % 16]] + 0x6d703ef3;
-            t = rotl(t, RL3[j % 16]) + er;
+            // right path - round 2
+            t = ar + f(79 - j, br, cr, dr) + x[RR3_I[j % 16]] + 0x6d703ef3;
+            t = rotl(t, SR3[j % 16]) + er;
             ar = er;
             er = dr;
             dr = rotl(cr, 10);
             cr = br;
             br = t;
         } else if (j < 64) {
+            // left path - round 3
             t = al + f(j, bl, cl, dl) + x[RL4_I[j % 16]] + 0x8f1bbcdc;
-            t = rotl(t, RL4[j % 16]) + el;
+            t = rotl(t, SL4[j % 16]) + el;
             al = el;
             el = dl;
             dl = rotl(cl, 10);
             cl = bl;
             bl = t;
 
-            t = ar + f(79 - j, br, cr, dr) + x[RL2_I[j % 16]] + 0x7a6d76e9;
-            t = rotl(t, RL2[j % 16]) + er;
+            // right path - round 3
+            t = ar + f(79 - j, br, cr, dr) + x[RR4_I[j % 16]] + 0x7a6d76e9;
+            t = rotl(t, SR4[j % 16]) + er;
             ar = er;
             er = dr;
             dr = rotl(cr, 10);
             cr = br;
             br = t;
         } else {
+            // left path - round 4
             t = al + f(j, bl, cl, dl) + x[RL5_I[j % 16]] + 0xa953fd4e;
-            t = rotl(t, RL5[j % 16]) + el;
+            t = rotl(t, SL5[j % 16]) + el;
             al = el;
             el = dl;
             dl = rotl(cl, 10);
             cl = bl;
             bl = t;
 
-            t = ar + f(79 - j, br, cr, dr) + x[RL1_I[j % 16]] + 0x00000000;
-            t = rotl(t, RL1[j % 16]) + er;
+            // right path - round 4
+            t = ar + f(79 - j, br, cr, dr) + x[RR5_I[j % 16]] + 0x00000000;
+            t = rotl(t, SR5[j % 16]) + er;
             ar = er;
             er = dr;
             dr = rotl(cr, 10);
