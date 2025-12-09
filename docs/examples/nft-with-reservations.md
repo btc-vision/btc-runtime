@@ -1264,6 +1264,8 @@ const PHASE_PUBLIC: u8 = 2;
 private _salePhase: StoredU8;
 
 @method({ name: 'phase', type: ABIDataTypes.UINT8 })
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
+@emit('SalePhaseChanged')
 public setSalePhase(calldata: Calldata): BytesWriter {
     this.onlyDeployer(Blockchain.tx.sender);
 
@@ -1364,6 +1366,8 @@ function cancelReservation() external {
 // Refund logic would involve different mechanisms
 
 @method()
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
+@emit('ReservationCancelled')
 public cancelReservation(_calldata: Calldata): BytesWriter {
     const sender = Blockchain.tx.sender;
 

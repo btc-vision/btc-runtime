@@ -573,10 +573,14 @@ export class MyContract extends ReentrancyGuard {
         super();
     }
 
+    @method()
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     public withdraw(calldata: Calldata): BytesWriter {
         // Protected automatically
     }
 
+    @method({ name: 'amount', type: ABIDataTypes.UINT256 })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     public deposit(calldata: Calldata): BytesWriter {
         // Also protected automatically
     }
@@ -608,6 +612,8 @@ protected readonly reentrancyLevel: ReentrancyLevel = ReentrancyLevel.CALLBACK;
 Even with ReentrancyGuard, use this pattern:
 
 ```typescript
+@method({ name: 'amount', type: ABIDataTypes.UINT256 })
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
 public withdraw(calldata: Calldata): BytesWriter {
     const amount = calldata.readU256();
 
@@ -657,6 +663,13 @@ protected override isExcludedFromReentrancy(selector: Selector): bool {
 // CALLBACK mode allows controlled re-entry
 // Make sure the callback pattern is safe
 
+@method(
+    { name: 'from', type: ABIDataTypes.ADDRESS },
+    { name: 'to', type: ABIDataTypes.ADDRESS },
+    { name: 'tokenId', type: ABIDataTypes.UINT256 },
+)
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
+@emit('Transfer')
 public safeTransfer(calldata: Calldata): BytesWriter {
     // Update state BEFORE callback
     this._transfer(from, to, tokenId);
@@ -722,6 +735,8 @@ export class AttackerContract extends OP_NET {
     private targetContract: Address;
     private attackCount: u32 = 0;
 
+    @method({ name: 'target', type: ABIDataTypes.ADDRESS })
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     public attack(calldata: Calldata): BytesWriter {
         this.targetContract = calldata.readAddress();
 

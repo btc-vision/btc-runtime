@@ -435,6 +435,7 @@ See [Quantum Resistance](../advanced/quantum-resistance.md) for details.
     { name: 'deadline', type: ABIDataTypes.UINT64 },
     { name: 'signature', type: ABIDataTypes.BYTES },
 )
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
 @emit('Approval')
 public permit(calldata: Calldata): BytesWriter {
     const owner = calldata.readAddress();
@@ -516,6 +517,7 @@ await contract.transferFrom(user, recipient, amount);
     { name: 'deadline', type: ABIDataTypes.UINT64 },
     { name: 'signature', type: ABIDataTypes.BYTES },
 )
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
 @emit('Deposit')
 public depositWithPermit(calldata: Calldata): BytesWriter {
     // Read permit params
@@ -543,6 +545,7 @@ public depositWithPermit(calldata: Calldata): BytesWriter {
     { name: 'permitSig', type: ABIDataTypes.BYTES },
     { name: 'actionSig', type: ABIDataTypes.BYTES },
 )
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
 public executeMetaTx(calldata: Calldata): BytesWriter {
     const user = calldata.readAddress();
     const permitSig = calldata.readBytes();
