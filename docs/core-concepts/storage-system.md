@@ -195,38 +195,7 @@ flowchart LR
     end
 ```
 
-## CRITICAL: Map Implementation Warning
-
-> **DO NOT USE AssemblyScript's Built-in Map**
->
-> When creating custom map implementations or extending map functionality, you **MUST** use the Map class from `@btc-vision/btc-runtime/runtime`, NOT the built-in AssemblyScript Map.
->
-> **Why the AssemblyScript Map is broken for blockchain:**
-> - NOT optimized for blockchain storage patterns
-> - Does NOT handle Uint8Array buffers as keys correctly
-> - Does NOT work properly with Address key comparisons
-> - Will cause silent data corruption or key collisions
->
-> **CORRECT:**
-> ```typescript
-> import { Map } from '@btc-vision/btc-runtime/runtime';
->
-> export class MyCustomMap<V> extends Map<Address, V> {
->     // Your implementation
-> }
-> ```
->
-> **WRONG:**
-> ```typescript
-> // DO NOT DO THIS - will break!
-> const map = new Map<Uint8Array, u256>();  // AssemblyScript Map
-> ```
->
-> The btc-runtime Map is specifically designed to:
-> - Handle Address and Uint8Array key comparisons correctly
-> - Optimize for blockchain storage access patterns
-> - Support proper serialization for persistent storage
-> - Prevent key collisions with custom equality logic
+> **Important:** Do NOT use AssemblyScript's built-in Map for blockchain storage. See [CRITICAL: Map Implementation Warning](../storage/stored-maps.md#critical-map-implementation-warning) for details.
 
 ## Pointer Allocation
 

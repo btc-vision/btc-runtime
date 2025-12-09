@@ -102,14 +102,7 @@ classDiagram
 
 ## Storage Key Generation
 
-Each stored primitive computes its storage key by combining the pointer and subPointer:
-
-```mermaid
-flowchart LR
-    A["pointer: u16<br/>subPointer: u256"] --> B["32-byte buffer<br/>[0-1] = pointer<br/>[2-31] = subPointer"]
-    B --> C["SHA256"]
-    C --> D["Storage Key<br/>(32 bytes)"]
-```
+Each stored primitive computes its storage key using `SHA256(pointer || subPointer)`. See [Pointers](../core-concepts/pointers.md#encodepointer-function-flow) for the detailed flow diagram.
 
 ## Usage
 

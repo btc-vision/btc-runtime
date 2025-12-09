@@ -21,38 +21,7 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 ```
 
-## CRITICAL: Map Implementation Warning
-
-> **DO NOT USE AssemblyScript's Built-in Map**
->
-> When creating custom map implementations or extending map functionality, you **MUST** use the Map class from `@btc-vision/btc-runtime/runtime`, NOT the built-in AssemblyScript Map.
->
-> **Why the AssemblyScript Map is broken for blockchain:**
-> - NOT optimized for blockchain storage patterns
-> - Does NOT handle Uint8Array buffers as keys correctly
-> - Does NOT work properly with Address key comparisons
-> - Will cause silent data corruption or key collisions
->
-> **CORRECT:**
-> ```typescript
-> import { Map } from '@btc-vision/btc-runtime/runtime';
->
-> export class MyCustomMap<V> extends Map<Address, V> {
->     // Your implementation
-> }
-> ```
->
-> **WRONG:**
-> ```typescript
-> // DO NOT DO THIS - will break!
-> const map = new Map<Uint8Array, u256>();  // AssemblyScript Map
-> ```
->
-> The btc-runtime Map is specifically designed to:
-> - Handle Address and Uint8Array key comparisons correctly
-> - Optimize for blockchain storage access patterns
-> - Support proper serialization for persistent storage
-> - Prevent key collisions with custom equality logic
+> **Important:** Do NOT use AssemblyScript's built-in Map for blockchain storage. See [CRITICAL: Map Implementation Warning](../storage/stored-maps.md#critical-map-implementation-warning) for details.
 
 ## Storage Type Hierarchy
 
@@ -609,87 +578,9 @@ class Nested<T> {
 }
 ```
 
-```typescript
-import { MapOfMap, Nested } from '@btc-vision/btc-runtime/runtime';
-
-// mapping(address => mapping(address => uint256))
-private allowancesPointer: u16 = Blockchain.nextPointer;
-private allowances: MapOfMap<u256>;
-
-constructor() {
-    super();
-    this.allowances = new MapOfMap<u256>(this.allowancesPointer);
-}
-
-// Get nested value - two-step process
-protected getAllowance(owner: Address, spender: Address): u256 {
-    const ownerMap = this.allowances.get(owner);  // Returns Nested<u256>
-    return ownerMap.get(spender);                  // Returns u256
-}
-
-// Set nested value - get, modify, commit back
-protected setAllowance(owner: Address, spender: Address, amount: u256): void {
-    const ownerMap = this.allowances.get(owner);  // Get the nested map
-    ownerMap.set(spender, amount);                 // Modify it
-    this.allowances.set(owner, ownerMap);          // Commit back
-}
-```
-
 > **Important:** `MapOfMap.get(key)` returns a `Nested<T>` object, not the final value. You must call `.get()` on the nested object to retrieve the actual value.
 
-The following diagram shows the two-level nested storage pattern:
-
-```mermaid
-flowchart LR
-    subgraph "Read Path - Two-Level Mapping"
-        A[MapOfMap allowances] --> B[First Level:<br/>Owner Address]
-        B --> C[allowances.get owner]
-        C --> D[Returns Nested<br/>u256 Map]
-        D --> E[Second Level:<br/>Spender Address]
-        E --> F[nested.get spender]
-        F --> G[Returns u256<br/>allowance]
-    end
-
-    subgraph "Write Path - Set Allowance"
-        H[Set Allowance] --> I[Get owner's<br/>nested map]
-        I --> J[nested.set<br/>spender, amount]
-        J --> K[Commit back<br/>to MapOfMap]
-        K --> L[allowances.set<br/>owner, nested]
-    end
-```
-
-The following sequence diagram shows the nested allowance operations:
-
-```mermaid
-sequenceDiagram
-    participant Contract
-    participant MapOfMap as allowances MapOfMap
-    participant Nested as Nested Map
-    participant BC as Blockchain
-
-    Note over Contract,BC: Get Nested Allowance
-
-    Contract->>MapOfMap: allowances.get(owner)
-    MapOfMap->>MapOfMap: Compute owner's map hash
-    MapOfMap->>Contract: Return Nested~u256~ map
-
-    Contract->>Nested: nested.get(spender)
-    Nested->>Nested: Compute spender hash within owner's space
-    Nested->>BC: getStorageAt(combined_hash)
-    BC->>Nested: Return allowance bytes
-    Nested->>Contract: Return u256 allowance
-
-    Note over Contract,BC: Set Nested Allowance
-
-    Contract->>MapOfMap: allowances.get(owner)
-    MapOfMap->>Contract: Return Nested map
-
-    Contract->>Nested: nested.set(spender, new_amount)
-    Nested->>BC: setStorageAt(combined_hash, new_amount)
-
-    Contract->>MapOfMap: allowances.set(owner, nested)
-    Note over Contract: Commit nested map changes
-```
+See [Stored Maps - MapOfMap](../storage/stored-maps.md#mapofmap) for detailed usage patterns and diagrams.
 
 ## Storage Patterns
 
