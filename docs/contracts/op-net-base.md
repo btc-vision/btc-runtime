@@ -113,57 +113,64 @@ classDiagram
 The following diagram shows how contracts are deployed and executed on OPNet:
 
 ```mermaid
-flowchart LR
-    subgraph Bitcoin["Bitcoin L1"]
-        A[User submits deployment TX] --> B[Blockchain creates contract]
-    end
+---
+config:
+  theme: dark
+---
+sequenceDiagram
+    participant User as User
+    participant Bitcoin as Bitcoin L1
+    participant WASM as WASM Runtime
+    participant Contract as Contract
+    participant Storage as Storage
 
-    subgraph WASM1["WASM Runtime - Deployment Phase Once"]
-        B --> C[Contract.constructor runs]
-        C --> D[Initialize storage pointers]
-        D --> E[Create storage map instances]
-        E --> F[onDeployment called]
-        F --> G[Read deployment calldata]
-        G --> H[Set initial state in Storage]
-        H --> I[Emit deployment events]
-        I --> J[Contract Ready]
-    end
+    Note over User,Storage: Deployment Phase (Once)
+    User->>Bitcoin: Submit deployment TX
+    Bitcoin->>WASM: Create contract
+    WASM->>Contract: constructor()
+    Contract->>Contract: Initialize storage pointers
+    Contract->>Contract: Create storage map instances
+    WASM->>Contract: onDeployment(calldata)
+    Contract->>Contract: Read deployment calldata
+    Contract->>Storage: Set initial state
+    Contract->>WASM: Emit deployment events
+    Note over Contract: Contract Ready
 
-    subgraph Execution["Every Transaction - Runs Every Call"]
-        J --> K[User submits transaction]
+    Note over User,Storage: Execution Phase (Every Transaction)
+    User->>Bitcoin: Submit transaction
+    Bitcoin->>WASM: Route to contract
+    WASM->>Contract: constructor() runs AGAIN
+    Contract->>Contract: Re-initialize storage maps
+    WASM->>Contract: onExecutionStarted(selector)
+    Contract->>Contract: Read method selector from TX
+    WASM->>Contract: execute(method, calldata)
 
-        subgraph WASM2["WASM Runtime - Execution"]
-            K --> L[Blockchain routes to contract]
-            L --> M[Contract.constructor runs AGAIN]
-            M --> N[Re-initialize storage maps]
-            N --> O[onExecutionStarted hook]
-            O --> P[Read method selector from TX]
-            P --> Q[execute method called]
-            Q --> R{Selector matches?}
-
-            R -->|Match| S[Call method handler]
-            R -->|No match| T[super.execute parent]
-
-            S --> U[Read calldata parameters]
-            U --> V[Validate inputs]
-            V --> W{Valid?}
-            W -->|No| X[Revert transaction]
-            W -->|Yes| Y[Read from Storage]
-            Y --> Z[Execute business logic]
-            Z --> AA[Write to Storage]
-            AA --> AB[emitEvent]
-
-            T --> AC{Parent has method?}
-            AC -->|Yes| AD[Execute parent method]
-            AC -->|No| AE[Revert: Unknown selector]
-
-            AD --> AB
-            AB --> AF[onExecutionCompleted hook]
-            AF --> AG[Return BytesWriter result]
-            AG --> AH[Blockchain commits state]
-            AH --> AI[Transaction complete]
+    alt Selector matches
+        Contract->>Contract: Call method handler
+        Contract->>Contract: Read calldata parameters
+        Contract->>Contract: Validate inputs
+        alt Valid inputs
+            Contract->>Storage: Read current state
+            Contract->>Contract: Execute business logic
+            Contract->>Storage: Write updated state
+            Contract->>WASM: emitEvent()
+        else Invalid inputs
+            Contract->>WASM: Revert transaction
+        end
+    else No match
+        Contract->>Contract: super.execute(parent)
+        alt Parent has method
+            Contract->>Storage: Execute parent method
+            Contract->>WASM: emitEvent()
+        else No handler
+            Contract->>WASM: Revert: Unknown selector
         end
     end
+
+    WASM->>Contract: onExecutionCompleted(selector)
+    Contract->>WASM: Return BytesWriter result
+    WASM->>Bitcoin: Commit state changes
+    Bitcoin->>User: Transaction complete
 ```
 
 ### 1. Construction

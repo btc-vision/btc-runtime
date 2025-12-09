@@ -437,17 +437,7 @@ if (result.data.length > 0) {
 }
 ```
 
-### 3. Gas Considerations
-
-```typescript
-// External calls consume gas
-// Be careful with loops
-for (let i = 0; i < 1000; i++) {
-    Blockchain.call(contracts[i], data, true);  // Could run out of gas
-}
-```
-
-### 4. Trust Assumptions
+### 3. Trust Assumptions
 
 ```typescript
 @method({ name: 'target', type: ABIDataTypes.ADDRESS })

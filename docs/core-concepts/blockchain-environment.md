@@ -154,58 +154,44 @@ This distinction is critical for security:
 config:
   theme: dark
 ---
-flowchart LR
-    subgraph Transaction["Transaction Initiation"]
-        User["👤 User/EOA<br/>Signs Transaction"]
-        TX["Transaction Broadcast"]
-        User --> TX
+sequenceDiagram
+    participant User as User/EOA
+    participant TX as Transaction Broadcast
+    participant VM as OPNet VM
+    participant ContractA as Target Contract
+    participant ContractB as External Contract
+    participant Storage as Storage
+
+    Note over User,Storage: Transaction Initiation
+    User->>TX: Sign transaction
+    TX->>VM: Broadcast transaction
+
+    Note over User,Storage: OPNet Runtime Initialization
+    VM->>VM: Initialize Blockchain Context
+    VM->>VM: Set tx.origin = User Address
+    VM->>VM: Set tx.sender = User Address
+
+    Note over User,Storage: Contract Loading
+    VM->>ContractA: Load Target Contract
+    VM->>VM: Set contractAddress
+    VM->>VM: Set contractDeployer
+    VM->>ContractA: Execute Contract Method
+
+    Note over User,Storage: Cross-Contract Calls (if any)
+    alt Makes Cross-Contract Call
+        ContractA->>VM: Request external call
+        VM->>VM: Update tx.sender to ContractA
+        VM->>ContractB: Call External Contract
+        ContractB->>VM: Return result
+        VM->>VM: Restore tx.sender
+        VM->>ContractA: Return result
     end
 
-    subgraph Runtime["OPNet Runtime"]
-        VM["OPNet VM"]
-        Init["Initialize Blockchain Context"]
-        SetOrigin["Set tx.origin = User Address"]
-        SetSender["Set tx.sender = User Address"]
-        VM --> Init
-        Init --> SetOrigin
-        SetOrigin --> SetSender
-    end
-
-    subgraph Contract["Contract Loading"]
-        LoadContract["Load Target Contract"]
-        SetContractAddr["Set contractAddress"]
-        SetDeployer["Set contractDeployer"]
-        Execute["Execute Contract Method"]
-        LoadContract --> SetContractAddr
-        SetContractAddr --> SetDeployer
-        SetDeployer --> Execute
-    end
-
-    subgraph CrossCall["Cross-Contract Calls"]
-        CheckCrossCall{"Makes Cross-<br/>Contract Call?"}
-        UpdateSender["Update tx.sender<br/>to current contract"]
-        CallExternal["Call External Contract"]
-        RestoreSender["Restore tx.sender"]
-        CheckCrossCall -->|Yes| UpdateSender
-        UpdateSender --> CallExternal
-        CallExternal --> RestoreSender
-    end
-
-    subgraph Finalization["Transaction Finalization"]
-        Complete["Complete Execution"]
-        Commit["Commit Storage Changes"]
-        EmitEvents["Emit Events"]
-        End["Transaction Complete"]
-        Complete --> Commit
-        Commit --> EmitEvents
-        EmitEvents --> End
-    end
-
-    TX --> VM
-    SetSender --> LoadContract
-    Execute --> CheckCrossCall
-    CheckCrossCall -->|No| Complete
-    RestoreSender --> Complete
+    Note over User,Storage: Transaction Finalization
+    ContractA->>VM: Complete Execution
+    VM->>Storage: Commit Storage Changes
+    VM->>VM: Emit Events
+    VM->>User: Transaction Complete
 ```
 
 ### Security Warning

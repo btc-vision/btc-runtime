@@ -317,30 +317,35 @@ OPNet manages a phased transition from classical to quantum-resistant signatures
 config:
   theme: dark
 ---
-flowchart LR
-    subgraph OPNet["OPNet Quantum Transition Roadmap"]
-        subgraph Phase1["Phase 1: Transition Period - Current"]
-            P1A["Both Schnorr and ML-DSA accepted"]
-            P1B["UNSAFE_QUANTUM_SIGNATURES_ALLOWED = true"]
-            P1C["Addresses contain both keys"]
-        end
+sequenceDiagram
+    participant User as User/Wallet
+    participant Network as OPNet Network
+    participant Consensus as Consensus Rules
 
-        subgraph Phase2["Phase 2: Warning Period"]
-            P2A["Schnorr signatures still accepted"]
-            P2B["Warnings logged for Schnorr use"]
-            P2C["Encourage migration to ML-DSA"]
-        end
+    Note over User,Consensus: Phase 1: Transition Period (Current)
+    User->>Network: Submit Schnorr signature
+    Network->>Consensus: Check UNSAFE_QUANTUM_SIGNATURES_ALLOWED
+    Consensus-->>Network: Flag = true
+    Network-->>User: Signature accepted
+    User->>Network: Submit ML-DSA signature
+    Network-->>User: Signature accepted
+    Note over Network: Both signature types valid
 
-        subgraph Phase3["Phase 3: Quantum-Safe Only"]
-            P3A["Only ML-DSA signatures accepted"]
-            P3B["UNSAFE_QUANTUM_SIGNATURES_ALLOWED = false"]
-            P3C["Schnorr signatures rejected"]
-        end
+    Note over User,Consensus: Phase 2: Warning Period
+    User->>Network: Submit Schnorr signature
+    Network->>Consensus: Check signature type
+    Consensus-->>Network: Log deprecation warning
+    Network-->>User: Signature accepted (with warning)
+    Note over User: Encouraged to migrate to ML-DSA
 
-        P1A --> P1B --> P1C --> P2A
-        P2A --> P2B --> P2C --> P3A
-        P3A --> P3B --> P3C
-    end
+    Note over User,Consensus: Phase 3: Quantum-Safe Only
+    User->>Network: Submit Schnorr signature
+    Network->>Consensus: Check UNSAFE_QUANTUM_SIGNATURES_ALLOWED
+    Consensus-->>Network: Flag = false
+    Network-->>User: Signature REJECTED
+    User->>Network: Submit ML-DSA signature
+    Network-->>User: Signature accepted
+    Note over Network: Only ML-DSA signatures valid
 ```
 
 The `UNSAFE_QUANTUM_SIGNATURES_ALLOWED` consensus flag controls whether Schnorr signatures are still permitted. When disabled, only ML-DSA signatures will be valid.
@@ -472,33 +477,13 @@ public verify(calldata: Calldata): BytesWriter {
 
 ## Best Practices
 
-### 1. Use Address.mldsaPublicKey
+1. **Use `Address.mldsaPublicKey`** - Don't store ML-DSA keys manually; the Address class handles key loading and caching automatically (see [The Address Class](#the-address-class))
 
-Don't store ML-DSA keys yourself - the Address class handles this:
+2. **Force ML-DSA for high-security operations** - Set `forceMLDSA = true` in `Blockchain.verifySignature()` for critical operations (see [Signature Verification](#signature-verification))
 
-```typescript
-// Good - use built-in property
-const key = sender.mldsaPublicKey;
+3. **Use consensus-aware verification for general use** - Set `forceMLDSA = false` to let the network decide which algorithm to use during the transition period
 
-// Unnecessary - don't store keys manually
-// AddressMemoryMap only stores u256 values anyway
-```
-
-### 2. Force ML-DSA for High-Security Operations
-
-```typescript
-// For critical operations, always force quantum-resistant verification
-Blockchain.verifySignature(signer, signature, hash, true);
-```
-
-### 3. Use Consensus-Aware Verification for General Use
-
-```typescript
-// For general use, let consensus decide
-Blockchain.verifySignature(signer, signature, hash, false);
-```
-
-### 4. Document Security Level
+4. **Document security level** - When using quantum-resistant signatures, document the ML-DSA level in your contract comments:
 
 ```typescript
 /**

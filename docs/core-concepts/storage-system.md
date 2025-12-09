@@ -257,7 +257,7 @@ The following diagram shows how storage fits into the overall OPNet architecture
 config:
   theme: dark
 ---
-flowchart LR
+flowchart TD
     subgraph UserLayer["User Layer"]
         USER[("👤 User")]
     end
@@ -521,51 +521,34 @@ private userActives: StoredMapU256 = new StoredMapU256(this.userActivePointer);
 config:
   theme: dark
 ---
-flowchart LR
-    subgraph Transaction["Bitcoin Transaction"]
-        TX_IN["TX Input<br/>(User Signs)"]
-        TX_OUT["TX Outputs<br/>(UTXOs)"]
-    end
+sequenceDiagram
+    participant TX as Bitcoin Transaction
+    participant Contract as Contract
+    participant Logic as Business Logic
+    participant Storage as Storage System
+    participant Buffer as Memory Buffer
+    participant State as Persistent State
 
-    subgraph Contract["Contract Execution"]
-        CALL["Method Call"]
-        LOGIC["Business Logic"]
-    end
+    Note over TX,State: Read Operation
+    TX->>Contract: TX Input (User Signs)
+    Contract->>Logic: Method Call
+    Logic->>Storage: Get pointer + subPointer
+    Storage->>Storage: Compute SHA256 key
+    Storage->>Storage: Blockchain.getStorageAt
+    Storage-->>Logic: Decode to typed value
 
-    subgraph ReadFlow["Read Flow"]
-        R1["Get pointer + subPointer"]
-        R2["Compute SHA256 key"]
-        R3["Blockchain.getStorageAt"]
-        R4["Decode to typed value"]
-        R1 --> R2 --> R3 --> R4
-    end
+    Note over TX,State: Write Operation
+    Logic->>Storage: Get pointer + subPointer
+    Storage->>Storage: Compute SHA256 key
+    Storage->>Storage: Encode typed value
+    Storage->>Buffer: Buffer in memory
 
-    subgraph WriteFlow["Write Flow"]
-        W1["Get pointer + subPointer"]
-        W2["Compute SHA256 key"]
-        W3["Encode typed value"]
-        W4["Buffer in memory"]
-        W5["Commit on TX complete"]
-        W1 --> W2 --> W3 --> W4 --> W5
-    end
-
-    subgraph StateCommit["State Commitment"]
-        BUFFER["Memory Buffer"]
-        STATE["Persistent State"]
-        CHECKSUM["State Checksum"]
-        EPOCH["Epoch Root"]
-    end
-
-    TX_IN -->|"Triggers"| CALL
-    CALL --> LOGIC
-    LOGIC -->|"Reads"| ReadFlow
-    LOGIC -->|"Writes"| WriteFlow
-    LOGIC -->|"Verifies"| TX_OUT
-
-    W5 --> BUFFER
-    BUFFER -->|"TX Success"| STATE
-    STATE --> CHECKSUM
-    CHECKSUM -->|"Every 20 blocks"| EPOCH
+    Note over TX,State: Verification & Commit
+    Logic->>TX: Verify TX Outputs (UTXOs)
+    TX-->>Contract: TX Complete
+    Buffer->>State: Commit on TX Success
+    State->>State: Update State Checksum
+    Note over State: Every 20 blocks: Epoch Root
 ```
 
 ### Read Operations
@@ -698,14 +681,14 @@ export class MyContract extends OP_NET {
 config:
   theme: dark
 ---
-flowchart LR
+flowchart TD
     subgraph Bad["Expensive: Multiple Storage Reads"]
         LOOP1["for (i = 0; i < 100; i++)"]
         LOOP1 --> READ1["Storage Read #1"]
         LOOP1 --> READ2["Storage Read #2"]
         LOOP1 --> READ3["Storage Read #..."]
         LOOP1 --> READ100["Storage Read #100"]
-        READ1 --> COST1["100x Storage I/O Cost"]
+        READ1 --> COST1["100x Storage I/O"]
         READ2 --> COST1
         READ3 --> COST1
         READ100 --> COST1
@@ -725,7 +708,7 @@ flowchart LR
 ```typescript
 import { SafeMath } from '@btc-vision/btc-runtime/runtime';
 
-// Expensive: Reading same value multiple times
+// Inefficient: Reading same value multiple times
 for (let i = 0; i < 100; i++) {
     const balance = this.balanceOf.get(address);  // Storage read each time
     // ...

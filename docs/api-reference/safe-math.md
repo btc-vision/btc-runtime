@@ -81,41 +81,6 @@ const remainder = SafeMath.mod(u256.fromU64(100), u256.fromU64(30));  // 10
 
 **Throws:** `Revert` if b is zero
 
-The following diagram shows the overflow protection logic for each basic operation:
-
-```mermaid
-flowchart LR
-    subgraph "Addition add"
-        A[SafeMath.add a, b] --> B[Compute<br/>result = a + b]
-        B --> C{result < a?}
-        C -->|Yes Overflow| D[Revert]
-        C -->|No Valid| E[Return result]
-    end
-
-    subgraph "Subtraction sub"
-        F[SafeMath.sub a, b] --> G{b > a?}
-        G -->|Yes Underflow| H[Revert]
-        G -->|No Valid| I[Compute<br/>result = a - b]
-        I --> J[Return result]
-    end
-
-    subgraph "Multiplication mul"
-        K[SafeMath.mul a, b] --> L{a == 0<br/>OR b == 0?}
-        L -->|Yes| M[Return 0]
-        L -->|No| N[Compute<br/>result = a * b]
-        N --> O{result / a<br/>!= b?}
-        O -->|Yes Overflow| P[Revert]
-        O -->|No Valid| Q[Return result]
-    end
-
-    subgraph "Division div"
-        R[SafeMath.div a, b] --> S{b == 0?}
-        S -->|Yes| T[Revert:<br/>Division by zero]
-        S -->|No| U[Compute<br/>result = a / b]
-        U --> V[Return result]
-    end
-```
-
 ## Advanced Operations
 
 ### pow
@@ -199,57 +164,6 @@ const inverse = SafeMath.modInverse(value, prime);
 ```
 
 **Throws:** If inverse doesn't exist
-
-The following diagram shows the cryptographic operation flow:
-
-```mermaid
-flowchart LR
-    subgraph "Modular Multiplication mulmod"
-        A[mulmod a, b, modulus] --> B{modulus<br/>== 0?}
-        B -->|Yes| C[Revert]
-        B -->|No| D[Compute<br/>a * b mod modulus]
-        D --> E[Avoid intermediate<br/>overflow]
-        E --> F[Return result]
-    end
-
-    subgraph "Modular Inverse modInverse"
-        G[modInverse a, modulus] --> H{gcd a, modulus<br/>== 1?}
-        H -->|No| I[Revert:<br/>No inverse]
-        H -->|Yes| J[Extended<br/>Euclidean Algorithm]
-        J --> K[Find x:<br/>a * x = 1 mod modulus]
-        K --> L[Return x]
-    end
-```
-
-The following diagram shows the use cases for cryptographic operations:
-
-```mermaid
-graph LR
-    A[Cryptographic Operations]
-
-    subgraph "Elliptic Curve"
-        B[Point multiplication]
-        C[Point addition]
-    end
-
-    subgraph "Modular Arithmetic"
-        D[mulmod<br/>for large numbers]
-        E[modInverse<br/>for division]
-    end
-
-    subgraph "Field Operations"
-        F[Finite field<br/>arithmetic]
-    end
-
-    subgraph "Signature Verification"
-        G[Key derivation]
-    end
-
-    A --> B & C
-    A --> D & E
-    A --> F
-    A --> G
-```
 
 ## Logarithm Operations
 

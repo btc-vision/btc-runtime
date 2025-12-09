@@ -91,47 +91,6 @@ if (Blockchain.network === Networks.Mainnet) {
 |----------|-------|
 | `block.chainid` | `Blockchain.chainId` |
 
-### Blockchain Context Hierarchy
-
-The following diagram shows the complete hierarchy of context information available through the Blockchain singleton:
-
-```mermaid
-graph LR
-    BC[Blockchain Singleton]
-
-    subgraph "Block Context"
-        B1[block.number<br/>Block height]
-        B2[block.hash<br/>32-byte hash]
-        B3[block.medianTime<br/>Timestamp]
-    end
-
-    subgraph "Transaction Context"
-        T1[tx.sender<br/>Immediate Caller]
-        T2[tx.origin<br/>Original Signer]
-        T3[tx.id<br/>Transaction ID]
-        T4[tx.hash<br/>TX Hash]
-        T5[tx.consensus<br/>Consensus flags]
-    end
-
-    subgraph "Contract Context"
-        C1[contractAddress<br/>This contract]
-        C2[contractDeployer<br/>Deployer address]
-        C3[contract<br/>Instance]
-    end
-
-    subgraph "Network Context"
-        N1[network<br/>Mainnet/Testnet]
-        N2[chainId<br/>32 bytes]
-        N3[protocolId<br/>32 bytes]
-        N4[DEAD_ADDRESS<br/>Burn address]
-    end
-
-    BC --> B1 & B2 & B3
-    BC --> T1 & T2 & T3 & T4 & T5
-    BC --> C1 & C2 & C3
-    BC --> N1 & N2 & N3 & N4
-```
-
 ## Storage Architecture
 
 ### Storage Pointers
