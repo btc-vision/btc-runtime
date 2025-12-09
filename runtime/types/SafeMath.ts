@@ -1250,26 +1250,6 @@ export class SafeMath {
     }
 
     /**
-     * @internal
-     * Modular addition helper that prevents overflow.
-     * Pre-condition: 0 <= x,y < m
-     */
-    private static addModNoCarry(x: u256, y: u256, m: u256): u256 {
-        const mMinusY = u256.sub(m, y);
-        return u256.ge(x, mMinusY) ? u256.sub(x, mMinusY) : u256.add(x, y);
-    }
-
-    /**
-     * @internal
-     * Modular doubling helper that prevents overflow.
-     * Pre-condition: 0 <= x < m
-     */
-    private static doubleModNoCarry(x: u256, m: u256): u256 {
-        const mMinusX = u256.sub(m, x);
-        return u256.ge(x, mMinusX) ? u256.sub(x, mMinusX) : u256.add(x, x);
-    }
-
-    /**
      * Calculate ln(a/b) with precision, avoiding bit-length mismatch issues.
      * Returns the result scaled by 1e6 (i.e., ln(a/b) * 1,000,000)
      *
@@ -1281,7 +1261,7 @@ export class SafeMath {
      * @param b - Denominator (must be > 0)
      * @returns ln(a/b) * 1,000,000
      */
-    public preciseLogRatio(a: u256, b: u256): u256 {
+    public static preciseLogRatio(a: u256, b: u256): u256 {
         if (a.isZero() || b.isZero()) {
             return u256.Zero;
         }
@@ -1353,6 +1333,26 @@ export class SafeMath {
         return SafeMath.add(base, lnNormalized);
     }
 
+    /**
+     * @internal
+     * Modular addition helper that prevents overflow.
+     * Pre-condition: 0 <= x,y < m
+     */
+    private static addModNoCarry(x: u256, y: u256, m: u256): u256 {
+        const mMinusY = u256.sub(m, y);
+        return u256.ge(x, mMinusY) ? u256.sub(x, mMinusY) : u256.add(x, y);
+    }
+
+    /**
+     * @internal
+     * Modular doubling helper that prevents overflow.
+     * Pre-condition: 0 <= x < m
+     */
+    private static doubleModNoCarry(x: u256, m: u256): u256 {
+        const mMinusX = u256.sub(m, x);
+        return u256.ge(x, mMinusX) ? u256.sub(x, mMinusX) : u256.add(x, x);
+    }
+
     // ==================== Internal Helper Functions ====================
 
     /**
@@ -1362,7 +1362,7 @@ export class SafeMath {
      * Uses Taylor series: ln(1+x) ≈ x - x²/2 + x³/3 - x⁴/4 + x⁵/5
      * Valid for 0 <= x <= 1 (i.e., xScaled <= scale)
      */
-    private calculateLnOnePlusFraction(xScaled: u256, scale: u256): u256 {
+    private static calculateLnOnePlusFraction(xScaled: u256, scale: u256): u256 {
         if (xScaled.isZero()) {
             return u256.Zero;
         }
