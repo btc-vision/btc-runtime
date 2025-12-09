@@ -688,7 +688,7 @@ config:
   theme: dark
 ---
 flowchart TD
-    subgraph Bad["❌ Expensive: Multiple Storage Reads"]
+    subgraph Bad["Expensive: Multiple Storage Reads"]
         LOOP1["for (i = 0; i < 100; i++)"]
         LOOP1 --> READ1["Storage Read #1"]
         LOOP1 --> READ2["Storage Read #2"]
@@ -700,7 +700,7 @@ flowchart TD
         READ100 --> COST1
     end
 
-    subgraph Good["✅ Optimized: Cache and Batch"]
+    subgraph Good["Optimized: Cache and Batch"]
         CACHE["Single Storage Read"]
         CACHE --> MEM["Cache in Memory"]
         MEM --> LOOP2["for (i = 0; i < 100; i++)<br/>Use cached value"]

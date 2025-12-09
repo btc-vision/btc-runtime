@@ -93,24 +93,24 @@ const result = Blockchain.call(tokenContract, writer, true);
 
 ```mermaid
 flowchart TD
-    subgraph OPNet["⚡ OPNet Cross-Contract Call Flow"]
-        A["🔐 Blockchain.call<br/>target, data, stopOnFailure"] --> B{"stopOnFailure?"}
+    subgraph OPNet["OPNet Cross-Contract Call Flow"]
+        A["Blockchain.call<br/>target, data, stopOnFailure"] --> B{"stopOnFailure?"}
 
-        B -->|"true"| C["⚡ Execute call"]
-        B -->|"false"| D["⚡ Execute call"]
+        B -->|"true"| C["Execute call"]
+        B -->|"false"| D["Execute call"]
 
-        C --> E{"🔐 Call successful?"}
-        D --> F{"🔐 Call successful?"}
+        C --> E{"Call successful?"}
+        D --> F{"Call successful?"}
 
-        E -->|"Yes"| G["✅ Return CallResult<br/>success: true<br/>data: response"]
-        E -->|"No"| H["❌ REVERT ENTIRE TX<br/>Execution stops here"]
+        E -->|"Yes"| G["Return CallResult<br/>success: true<br/>data: response"]
+        E -->|"No"| H["REVERT ENTIRE TX<br/>Execution stops here"]
 
-        F -->|"Yes"| I["✅ Return CallResult<br/>success: true<br/>data: response"]
-        F -->|"No"| J["⚠️ Return CallResult<br/>success: false<br/>data: empty"]
+        F -->|"Yes"| I["Return CallResult<br/>success: true<br/>data: response"]
+        F -->|"No"| J["Return CallResult<br/>success: false<br/>data: empty"]
 
-        G --> K["📝 Continue execution"]
-        I --> L["📝 Continue execution"]
-        J --> M["📝 Continue execution<br/>Check result.success"]
+        G --> K["Continue execution"]
+        I --> L["Continue execution"]
+        J --> M["Continue execution<br/>Check result.success"]
     end
 ```
 
