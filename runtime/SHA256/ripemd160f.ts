@@ -242,7 +242,7 @@ function compress(data: Uint8Array, offset: i32, h: Uint32Array): void {
     h[0] = t;
 }
 
-export function ripemd160(data: Uint8Array): Uint8Array {
+export function ripemd160f(data: Uint8Array): Uint8Array {
     const h = new Uint32Array(5);
     h[0] = INIT0;
     h[1] = INIT1;
