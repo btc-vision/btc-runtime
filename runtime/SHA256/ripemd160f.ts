@@ -38,15 +38,15 @@ function f4(x: u32, y: u32, z: u32): u32 {
     return x ^ (y | ~z);
 }
 
-function compress(msg: Uint8Array, blockOffset: i32, h: Uint32Array): void {
+function compress(data: Uint8Array, offset: i32, h: Uint32Array): void {
     const x = new Uint32Array(16);
     for (let i = 0; i < 16; i++) {
-        const j = blockOffset + (i << 2);
+        const j = offset + (i << 2);
         x[i] = <u32>(
-            msg[j] |
-            (msg[j + 1] << 8) |
-            (msg[j + 2] << 16) |
-            (msg[j + 3] << 24)
+            data[j] |
+            (data[j + 1] << 8) |
+            (data[j + 2] << 16) |
+            (data[j + 3] << 24)
         );
     }
 
@@ -242,7 +242,7 @@ function compress(msg: Uint8Array, blockOffset: i32, h: Uint32Array): void {
     h[0] = t;
 }
 
-export function ripemd160f(data: Uint8Array): Uint8Array {
+export function ripemd160(data: Uint8Array): Uint8Array {
     const h = new Uint32Array(5);
     h[0] = INIT0;
     h[1] = INIT1;
@@ -271,11 +271,11 @@ export function ripemd160f(data: Uint8Array): Uint8Array {
     msg[totalLength - 2] = <u8>((bitLenHigh >>> 16) & 0xff);
     msg[totalLength - 1] = <u8>((bitLenHigh >>> 24) & 0xff);
 
-    for (let i = 0; i < totalLength; i += BLOCK_SIZE) {
+    for (let i = 0; i < totalLength; i += <i32>BLOCK_SIZE) {
         compress(msg, i, h);
     }
 
-    const out = new Uint8Array(HASH_SIZE);
+    const out = new Uint8Array(<i32>HASH_SIZE);
     for (let i = 0; i < 5; i++) {
         const val = h[i];
         const j = i << 2;
