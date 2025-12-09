@@ -45,7 +45,7 @@ flowchart TB
         SUBPTR["SubPointer (u256)<br/>mapping keys"]
         HASH["SHA256(ptr || subPtr)"]
         STORAGE[("Persistent State<br/>Key-Value Store")]
-        
+
         PTR --> HASH
         SUBPTR --> HASH
         HASH --> STORAGE
@@ -61,11 +61,11 @@ flowchart TB
     LOGIC -->|"Allocates"| PTR_ALLOC
     PTR_ALLOC -->|"Returns u16"| PTR
     LOGIC -->|"Read/Write"| STORAGE
-    
+
     INDEXER -->|"Every 20 blocks"| EPOCH
     EPOCH -->|"Produces"| CHECKPOINT
     CHECKPOINT -->|"Anchors to"| BTC_BLOCK
-    
+
     VERIFY -->|"Validates"| UTXO
     BTC_TX -->|"Creates/Spends"| UTXO
 ```
@@ -78,7 +78,7 @@ flowchart TB
         direction TB
         S_USER[("👤 User")] -->|"Sends ETH + calldata"| S_TX["Ethereum Transaction"]
         S_TX -->|"EVM executes"| S_CONTRACT["Smart Contract"]
-        
+
         subgraph S_Storage["Storage (Implicit)"]
             S_COMPILER["Compiler assigns slots<br/>at compile time"]
             S_SLOT0["Slot 0: totalSupply"]
@@ -88,7 +88,7 @@ flowchart TB
             S_COMPILER -.->|"Hidden from dev"| S_SLOT1
             S_COMPILER -.->|"Hidden from dev"| S_SLOT2
         end
-        
+
         S_CONTRACT -->|"keccak256(slot.key)"| S_Storage
         S_CONTRACT -->|"CAN hold ETH"| S_CUSTODY["Contract Custody<br/>address(this).balance"]
     end
@@ -97,7 +97,7 @@ flowchart TB
         direction TB
         O_USER[("👤 User")] -->|"Signs Bitcoin TX"| O_TX["Bitcoin Transaction"]
         O_TX -->|"WASM executes"| O_CONTRACT["Smart Contract"]
-        
+
         subgraph O_Storage["Storage (Explicit)"]
             O_RUNTIME["Runtime allocates ptrs<br/>at execution time"]
             O_PTR0["Pointer 0: totalSupplyPointer"]
@@ -107,7 +107,7 @@ flowchart TB
             O_RUNTIME -->|"Dev controls"| O_PTR1
             O_RUNTIME -->|"Dev controls"| O_PTR2
         end
-        
+
         O_CONTRACT -->|"SHA256(ptr || subPtr)"| O_Storage
         O_CONTRACT -->|"CANNOT hold BTC"| O_VERIFY["Verify-Only Pattern<br/>blockchain.tx.outputs"]
         O_VERIFY -->|"Validates"| O_TX
@@ -135,68 +135,11 @@ Where:
 - `pointer` is a `u16` (0-65535) identifying the storage slot type
 - `subPointer` is a `u256` for sub-indexing (e.g., addresses in a mapping)
 
-### Storage Key Structure
-
-```mermaid
-flowchart LR
-    A["Pointer (u16)<br/>2 bytes"] --> C["Concatenate<br/>(||)"]
-    B["SubPointer (u256)<br/>30 bytes"] --> C
-    C --> D["SHA256<br/>Hash Function"]
-    D --> E["Storage Key<br/>32 bytes"]
-
-    style A fill:#e1f5fe
-    style B fill:#e1f5fe
-    style C fill:#fff9c4
-    style D fill:#f8bbd0
-    style E fill:#c8e6c9
-```
-
 ```typescript
 // Example: Balance storage for address 0xABC...
 pointer = 3              // balances mapping pointer
 subPointer = 0xABC...    // the address
 storageKey = SHA256(3 || 0xABC...)
-```
-
-### Pointer Encoding Process
-
-```mermaid
-flowchart TD
-    Start([Contract Needs Storage]) --> Alloc[Allocate Pointer with<br/>Blockchain.nextPointer]
-    Alloc --> Create[Create StoredU256/StoredString/etc]
-    Create --> Access{Access Type?}
-
-    Access -->|Read| ReadPath[Get pointer + subPointer]
-    Access -->|Write| WritePath[Get pointer + subPointer]
-
-    ReadPath --> Encode1[Call encodePointer]
-    WritePath --> Encode2[Call encodePointer]
-
-    Encode1 --> Hash1["SHA256(pointer || subPointer)"]
-    Encode2 --> Hash2["SHA256(pointer || subPointer)"]
-
-    Hash1 --> GetStorage[Blockchain.getStorageAt]
-    Hash2 --> SetStorage[Blockchain.setStorageAt]
-
-    GetStorage --> Decode[Decode to u256/string/etc]
-    SetStorage --> Persist[Data persisted to L1]
-
-    Decode --> End1([Return Value])
-    Persist --> End2([Storage Updated])
-
-    style Start fill:#e1f5fe
-    style Alloc fill:#c8e6c9
-    style Create fill:#c8e6c9
-    style Access fill:#fff9c4
-    style Encode1 fill:#f8bbd0
-    style Encode2 fill:#f8bbd0
-    style Hash1 fill:#f8bbd0
-    style Hash2 fill:#f8bbd0
-    style GetStorage fill:#ce93d8
-    style SetStorage fill:#ce93d8
-    style Persist fill:#a5d6a7
-    style End1 fill:#a5d6a7
-    style End2 fill:#a5d6a7
 ```
 
 ### Storage Key Derivation Flow
@@ -243,20 +186,6 @@ flowchart LR
 
 ### Storage Layout
 
-```
-Contract Storage
-├── Pointer 0: totalSupply
-├── Pointer 1: name
-├── Pointer 2: symbol
-├── Pointer 3: balances[address] → u256
-│   ├── subPointer 0xAAA... → balance of 0xAAA
-│   ├── subPointer 0xBBB... → balance of 0xBBB
-│   └── ...
-├── Pointer 4: allowances[owner][spender] → u256
-│   └── ...
-└── ...
-```
-
 ```mermaid
 flowchart TD
     CS[Contract Storage] --> P0["Pointer 0: totalSupply"]
@@ -264,11 +193,11 @@ flowchart TD
     CS --> P2["Pointer 2: symbol"]
     CS --> P3["Pointer 3: balances mapping"]
     CS --> P4["Pointer 4: allowances mapping"]
-    
+
     P3 --> S1["subPointer 0xAAA → balance"]
     P3 --> S2["subPointer 0xBBB → balance"]
     P3 --> S3["..."]
-    
+
     P4 --> N1["owner+spender hash → allowance"]
 ```
 
@@ -509,6 +438,8 @@ public setBalance(address: Address, amount: u256): void {
 
 ### Nested Mapping (address => address => uint256)
 
+For nested mappings like allowances, use `MapOfMap<T>` which provides a two-step get/set pattern:
+
 ```typescript
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import {
@@ -565,43 +496,6 @@ private userActives: StoredMapU256 = new StoredMapU256(this.userActivePointer);
 
 ## Reading and Writing
 
-### Read/Write Operation Sequence
-
-```mermaid
-sequenceDiagram
-    participant C as Contract Method
-    participant S as StoredU256
-    participant E as encodePointer()
-    participant B as Blockchain
-    participant L1 as Bitcoin L1
-
-    Note over C,L1: READ OPERATION
-    C->>S: Get value property
-    S->>E: Pass pointer + subPointer
-    E->>E: SHA256(pointer || subPointer)
-    E->>B: getStorageAt(hash)
-    B->>L1: Read from storage
-    L1-->>B: Raw bytes (32 bytes)
-    B-->>S: Return Uint8Array
-    S->>S: Decode to u256
-    S-->>C: Return value
-
-    Note over C,L1: WRITE OPERATION
-    C->>S: Set value property
-    S->>S: Encode u256 to bytes
-    S->>E: Pass pointer + subPointer
-    E->>E: SHA256(pointer || subPointer)
-    E->>B: setStorageAt(hash, bytes)
-    B->>L1: Write to storage
-    L1-->>B: Confirm write
-    B-->>S: Success
-    S-->>C: Value updated
-
-    Note over C,L1: All changes persist on Bitcoin L1
-```
-
-### Read/Write Flow Diagram
-
 ```mermaid
 flowchart TD
     subgraph Transaction["Bitcoin Transaction"]
@@ -643,7 +537,7 @@ flowchart TD
     LOGIC -->|"Reads"| ReadFlow
     LOGIC -->|"Writes"| WriteFlow
     LOGIC -->|"Verifies"| TX_OUT
-    
+
     W5 --> BUFFER
     BUFFER -->|"TX Success"| STATE
     STATE --> CHECKSUM
@@ -777,7 +671,7 @@ export class MyContract extends OP_NET {
 
 ```mermaid
 flowchart TD
-    subgraph Bad["Expensive: Multiple Storage Reads"]
+    subgraph Bad["❌ Expensive: Multiple Storage Reads"]
         LOOP1["for (i = 0; i < 100; i++)"]
         LOOP1 --> READ1["Storage Read #1"]
         LOOP1 --> READ2["Storage Read #2"]
@@ -789,7 +683,7 @@ flowchart TD
         READ100 --> COST1
     end
 
-    subgraph Good["Optimized: Cache and Batch"]
+    subgraph Good["✅ Optimized: Cache and Batch"]
         CACHE["Single Storage Read"]
         CACHE --> MEM["Cache in Memory"]
         MEM --> LOOP2["for (i = 0; i < 100; i++)<br/>Use cached value"]
