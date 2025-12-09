@@ -8,7 +8,7 @@ Unlike Solidity where storage is implicitly managed, OPNet requires explicit poi
 
 - **Deterministic storage locations** via SHA256 hashing
 - **Collision-free addressing** through unique pointer combinations
-- **Gas-efficient access** with optimized read/write patterns
+- **Efficient access** with optimized read/write patterns
 - **Verifiable state proofs** for cross-chain validation
 
 ## System Architecture
@@ -680,41 +680,14 @@ export class MyContract extends OP_NET {
 }
 ```
 
-### 4. Consider Gas Costs
+### 4. Optimize Storage Reads
 
-```mermaid
----
-config:
-  theme: dark
----
-flowchart TD
-    subgraph Bad["Expensive: Multiple Storage Reads"]
-        LOOP1["for (i = 0; i < 100; i++)"]
-        LOOP1 --> READ1["Storage Read #1"]
-        LOOP1 --> READ2["Storage Read #2"]
-        LOOP1 --> READ3["Storage Read #..."]
-        LOOP1 --> READ100["Storage Read #100"]
-        READ1 --> COST1["100x Storage I/O Cost"]
-        READ2 --> COST1
-        READ3 --> COST1
-        READ100 --> COST1
-    end
-
-    subgraph Good["Optimized: Cache and Batch"]
-        CACHE["Single Storage Read"]
-        CACHE --> MEM["Cache in Memory"]
-        MEM --> LOOP2["for (i = 0; i < 100; i++)<br/>Use cached value"]
-        LOOP2 --> WRITE["Single Storage Write"]
-        WRITE --> COST2["1x Read + 1x Write"]
-    end
-
-    COST1 -->|"vs"| COST2
-```
+Cache storage values in memory when using them multiple times:
 
 ```typescript
 import { SafeMath } from '@btc-vision/btc-runtime/runtime';
 
-// Expensive: Reading same value multiple times
+// Inefficient: Reading same value multiple times
 for (let i = 0; i < 100; i++) {
     const balance = this.balanceOf.get(address);  // Storage read each time
     // ...

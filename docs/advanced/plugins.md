@@ -208,37 +208,39 @@ public override onDeployment(calldata: Calldata): void {
 ## Role-Based Access Control Flow
 
 ```mermaid
-flowchart TD
-    subgraph OPNet["OPNet Plugin-Based Access Control"]
-        A["👤 User calls method"] --> B["onExecutionStarted"]
-        B --> C{"Method requires role?"}
-
-        C -->|"No"| D["Allow execution"]
-
-        C -->|"Yes"| E["Get required role for selector"]
-        E --> F["Load user's roles from storage"]
-        F --> G{"User has role?<br/>Bitwise AND check"}
-
-        G -->|"Yes"| H["Allow execution"]
-        G -->|"No"| I["Revert: Missing required role"]
-
-        D --> J["Method executes"]
-        H --> J
-
-        subgraph RoleBits["Role Enum (powers of 2)"]
-            R1["Role.ADMIN = 1"]
-            R2["Role.MINTER = 2"]
-            R3["Role.PAUSER = 4"]
-            R4["Role.OPERATOR = 8"]
-        end
-
-        subgraph BitwiseOps["Bitwise Operations"]
-            B1["Grant: currentRoles OR role"]
-            B2["Check: currentRoles AND role != 0"]
-            B3["Revoke: currentRoles AND NOT role"]
-        end
-    end
+---
+config:
+  theme: dark
+---
+flowchart LR
+    A["👤 User calls method"] --> B["onExecutionStarted"]
+    B --> C{"Requires role?"}
+    C -->|"No"| D["Execute"]
+    C -->|"Yes"| E["Get required role"]
+    E --> F["Load user roles"]
+    F --> G{"Has role?"}
+    G -->|"Yes"| D
+    G -->|"No"| H["Revert"]
 ```
+
+### Role Enum Pattern
+
+Use bit flags (powers of 2) for role management:
+
+| Role | Value | Binary |
+|------|-------|--------|
+| ADMIN | 1 | 0001 |
+| MINTER | 2 | 0010 |
+| PAUSER | 4 | 0100 |
+| OPERATOR | 8 | 1000 |
+
+### Bitwise Operations
+
+| Operation | Expression | Description |
+|-----------|------------|-------------|
+| Grant | `currentRoles OR role` | Set role bit |
+| Check | `currentRoles AND role != 0` | Test if bit set |
+| Revoke | `currentRoles AND NOT role` | Clear role bit |
 
 ## Use Cases
 
