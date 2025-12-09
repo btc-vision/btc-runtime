@@ -604,68 +604,204 @@ class MetricsPlugin extends Plugin {
 }
 ```
 
-## Solidity Comparison
+## Solidity vs OPNet: Plugin System Comparison
 
-OPNet plugins are similar to Solidity modifiers and OpenZeppelin extensions:
+OPNet plugins provide a more flexible and powerful alternative to Solidity's inheritance and modifier patterns. They enable cross-cutting concerns without tight coupling.
 
-| Solidity Pattern | OPNet Plugin Equivalent |
-|-----------------|------------------------|
-| OpenZeppelin `Ownable` | `RoleBasedAccessPlugin` with ADMIN role |
-| OpenZeppelin `Pausable` | `PausablePlugin` |
-| OpenZeppelin `AccessControl` | `RoleBasedAccessPlugin` |
-| `nonReentrant` modifier | Reentrancy guard in `onExecutionStarted` |
-| Function modifiers | `onExecutionStarted` hook |
+### Feature Comparison Table
+
+| Feature | Solidity/EVM | OPNet | OPNet Advantage |
+|---------|--------------|-------|-----------------|
+| **Code Reuse Pattern** | Inheritance | Composition (Plugins) | Flexible, no diamond problem |
+| **Pre-Execution Hooks** | Modifiers | `onExecutionStarted` | Centralized, selector-aware |
+| **Post-Execution Hooks** | Limited (manual) | `onExecutionCompleted` | Automatic after success |
+| **Deployment Hooks** | Constructor only | `onDeployment` per plugin | Modular initialization |
+| **Method Interception** | Modifier per function | Selector-based routing | One plugin, all methods |
+| **Multiple Behaviors** | Multiple inheritance | Multiple plugins | No conflicts |
+| **Dynamic Registration** | Not possible | Runtime registration | Conditional features |
+| **Execution Order** | Modifier stack | Plugin registration order | Explicit control |
+
+### Pattern Mapping Table
+
+| Solidity Pattern | OPNet Plugin Equivalent | Improvement |
+|-----------------|------------------------|-------------|
+| OpenZeppelin `Ownable` | `RoleBasedAccessPlugin` with ADMIN role | Multi-role support |
+| OpenZeppelin `Pausable` | `PausablePlugin` | Selector-specific pausing |
+| OpenZeppelin `AccessControl` | `RoleBasedAccessPlugin` | Bit-flag roles, efficient storage |
+| `nonReentrant` modifier | Reentrancy guard in `onExecutionStarted` | Global protection |
+| Function modifiers | `onExecutionStarted` hook | Centralized logic |
+| `Initializable` | `onDeployment` hook | Per-plugin initialization |
+| OpenZeppelin `ERC20Snapshot` | Metrics plugin pattern | Flexible tracking |
+
+### Capability Matrix
+
+| Capability | Solidity | OPNet |
+|------------|:--------:|:-----:|
+| Pre-execution hooks | Modifiers (per-function) | Plugins (centralized) |
+| Post-execution hooks | Manual | Built-in |
+| Deployment initialization | Constructor | Per-plugin onDeployment |
+| Selector-based routing | Manual switch | Built-in selector parameter |
+| Dynamic feature toggles | Storage + modifiers | Conditional plugin registration |
+| Cross-cutting logging | Manual in each function | Single metrics plugin |
+| Role-based access | Multiple modifiers | Single plugin, bitwise roles |
+| Pausable with exceptions | Complex modifiers | Selector whitelist |
+
+### Inheritance vs Composition
+
+```mermaid
+---
+config:
+  theme: dark
+---
+flowchart TB
+    subgraph Solidity["Solidity - Inheritance Chain"]
+        S1["Contract"] --> S2["Ownable"]
+        S1 --> S3["Pausable"]
+        S1 --> S4["AccessControl"]
+        S2 --> S5["Context"]
+        S3 --> S5
+        S4 --> S5
+        S6["Diamond Problem Risk"]
+    end
+
+    subgraph OPNet["OPNet - Plugin Composition"]
+        O1["Contract"] --> O2["OP_NET base"]
+        O3["AccessPlugin"] -.->|"registered"| O1
+        O4["PausablePlugin"] -.->|"registered"| O1
+        O5["FeePlugin"] -.->|"registered"| O1
+        O6["No Inheritance Conflicts"]
+    end
+```
+
+### Code Complexity Comparison
+
+| Aspect | Solidity | OPNet |
+|--------|----------|-------|
+| Adding access control | Import + inherit + add modifiers | Register plugin |
+| Adding pausable | Import + inherit + add modifiers | Register plugin |
+| Combining both | Multiple inheritance + modifier stacking | Register both plugins |
+| Method-specific rules | Separate modifier per method | Selector switch in plugin |
+| Adding new role | Modify contract, redeploy | Update plugin role mapping |
 
 ### Access Control Comparison
 
-```solidity
-// Solidity with OpenZeppelin
-import "@openzeppelin/contracts/access/Ownable.sol";
+#### Solidity: OpenZeppelin Inheritance
 
-contract MyContract is Ownable {
-    function adminOnly() external onlyOwner {
-        // Only owner can call
+```solidity
+// Solidity with OpenZeppelin - Inheritance-based
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
+contract MyContract is Ownable, AccessControl {
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+
+    constructor() {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
+
+    // Must add modifier to EVERY protected function
+    function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
+        // ...
+    }
+
+    function pause() external onlyRole(PAUSER_ROLE) {
+        // ...
+    }
+
+    function adminOnly() external onlyOwner {
+        // ...
+    }
+
+    // Limitations:
+    // - Must add modifier to each function
+    // - Role checks scattered across contract
+    // - String-based role hashes (gas inefficient)
+    // - Complex inheritance hierarchy
 }
 ```
 
+#### OPNet: Plugin-Based Composition
+
 ```typescript
-// OPNet with Plugin
+// OPNet with Plugin - Composition-based
 @final
 export class MyContract extends OP_NET {
     private accessPlugin: RoleBasedAccessPlugin;
 
     public constructor() {
         super();
+        // Single plugin handles ALL access control
         this.accessPlugin = new RoleBasedAccessPlugin(Blockchain.nextPointer);
         Blockchain.registerPlugin(this.accessPlugin);
     }
 
     @method()
-    public adminOnly(_calldata: Calldata): BytesWriter {
-        // Plugin's onExecutionStarted checks roles automatically
-        // based on selector mapping
+    public mint(_calldata: Calldata): BytesWriter {
+        // Plugin automatically checks MINTER role
+        // based on selector mapping - no modifier needed!
         return new BytesWriter(0);
     }
+
+    @method()
+    public pause(_calldata: Calldata): BytesWriter {
+        // Plugin automatically checks PAUSER role
+        return new BytesWriter(0);
+    }
+
+    @method()
+    public adminOnly(_calldata: Calldata): BytesWriter {
+        // Plugin automatically checks ADMIN role
+        return new BytesWriter(0);
+    }
+
+    // Advantages:
+    // - No modifiers on individual functions
+    // - Centralized access control logic
+    // - Bitwise roles (efficient storage)
+    // - Role-to-selector mapping in one place
 }
 ```
 
 ### Pausable Comparison
+
+#### Solidity: Modifier Per Function
 
 ```solidity
 // Solidity with OpenZeppelin
 import "@openzeppelin/contracts/security/Pausable.sol";
 
 contract MyContract is Pausable {
-    function transfer() external whenNotPaused {
-        // Cannot call when paused
+    // Must add whenNotPaused to EVERY pausable function
+    function transfer(address to, uint256 amount) external whenNotPaused {
+        // ...
+    }
+
+    function approve(address spender, uint256 amount) external whenNotPaused {
+        // ...
+    }
+
+    // View functions don't need modifier (manual decision)
+    function balanceOf(address owner) external view returns (uint256) {
+        // ...
     }
 
     function pause() external onlyOwner {
         _pause();
     }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
+    // Limitations:
+    // - Must remember to add modifier to each function
+    // - Easy to forget on new functions
+    // - No automatic view function detection
 }
 ```
+
+#### OPNet: Automatic Selector-Based Pausing
 
 ```typescript
 // OPNet with Plugin
@@ -681,20 +817,91 @@ export class MyContract extends OP_NET {
 
     @method(ABIDataTypes.UINT256)
     public transfer(calldata: Calldata): BytesWriter {
-        // Plugin's onExecutionStarted checks pause status automatically
+        // Plugin automatically checks pause status
+        // No modifier needed!
         const amount = calldata.readU256();
-        // ... transfer logic
         return new BytesWriter(0);
+    }
+
+    @method(ABIDataTypes.ADDRESS)
+    public balanceOf(calldata: Calldata): BytesWriter {
+        // Plugin knows this is a view method (via selector)
+        // Automatically skips pause check
+        return new BytesWriter(32);
     }
 
     @method()
     public pause(_calldata: Calldata): BytesWriter {
-        // Would need access control check here
+        // Admin methods also whitelisted automatically
         this.pausablePlugin.pause();
         return new BytesWriter(0);
     }
+
+    // Advantages:
+    // - No modifiers needed on individual functions
+    // - View methods automatically detected via selector
+    // - Admin methods automatically whitelisted
+    // - Cannot forget to protect a function
 }
 ```
+
+### Multiple Plugins Example
+
+```typescript
+// OPNet - Composing multiple plugins (no inheritance conflicts)
+@final
+export class CompleteContract extends OP_NET {
+    private accessPlugin: RoleBasedAccessPlugin;
+    private pausablePlugin: PausablePlugin;
+    private feePlugin: FeeCollectorPlugin;
+    private metricsPlugin: MetricsPlugin;
+
+    public constructor() {
+        super();
+
+        // Order matters - security checks first!
+        this.accessPlugin = new RoleBasedAccessPlugin(Blockchain.nextPointer);
+        Blockchain.registerPlugin(this.accessPlugin);  // 1. Check permissions
+
+        this.pausablePlugin = new PausablePlugin(Blockchain.nextPointer);
+        Blockchain.registerPlugin(this.pausablePlugin);  // 2. Check pause status
+
+        this.feePlugin = new FeeCollectorPlugin(
+            Blockchain.nextPointer,
+            Blockchain.nextPointer
+        );
+        Blockchain.registerPlugin(this.feePlugin);  // 3. Fee calculations
+
+        this.metricsPlugin = new MetricsPlugin(Blockchain.nextPointer);
+        Blockchain.registerPlugin(this.metricsPlugin);  // 4. Track metrics
+    }
+
+    // All plugins execute their hooks automatically
+    // Execution order: access -> pausable -> fee -> metrics -> method
+}
+```
+
+### Lifecycle Hook Comparison
+
+| Lifecycle Event | Solidity | OPNet |
+|-----------------|----------|-------|
+| Contract deployment | Single constructor | `onDeployment` per plugin + contract |
+| Before method call | Modifiers (manual per function) | `onExecutionStarted` (automatic) |
+| After method call | No built-in hook | `onExecutionCompleted` (automatic) |
+| Error handling | try/catch (limited) | Revert in any hook |
+
+### Why OPNet Plugins?
+
+| Solidity Limitation | OPNet Solution |
+|---------------------|----------------|
+| Modifier on every function | Centralized selector-based routing |
+| Multiple inheritance complexity | Simple composition |
+| Diamond problem risk | No inheritance conflicts |
+| String-based role hashes | Efficient bitwise roles |
+| Manual post-execution hooks | Built-in `onExecutionCompleted` |
+| Constructor-only initialization | Per-plugin `onDeployment` |
+| Static feature set | Dynamic plugin registration |
+| Scattered access logic | Centralized in plugins |
 
 ## Best Practices
 
