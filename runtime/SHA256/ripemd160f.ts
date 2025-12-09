@@ -42,12 +42,11 @@ function compress(data: Uint8Array, offset: i32, h: Uint32Array): void {
     const x = new Uint32Array(16);
     for (let i = 0; i < 16; i++) {
         const j = offset + (i << 2);
-        x[i] = <u32>(
-            data[j] |
-            (data[j + 1] << 8) |
-            (data[j + 2] << 16) |
-            (data[j + 3] << 24)
-        );
+        x[i] =
+            <u32>data[j] |
+            (<u32>data[j + 1] << 8) |
+            (<u32>data[j + 2] << 16) |
+            (<u32>data[j + 3] << 24);
     }
 
     let al: u32 = h[0], bl: u32 = h[1], cl: u32 = h[2], dl: u32 = h[3], el: u32 = h[4];
