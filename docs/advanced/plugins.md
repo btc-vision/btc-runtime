@@ -225,11 +225,11 @@ flowchart TD
         D --> J["Method executes"]
         H --> J
 
-        subgraph RoleBits["Role Bit Flags (powers of 2)"]
-            R1["ROLE_ADMIN: 1 = 2^0"]
-            R2["ROLE_MINTER: 2 = 2^1"]
-            R3["ROLE_PAUSER: 4 = 2^2"]
-            R4["ROLE_OPERATOR: 8 = 2^3"]
+        subgraph RoleBits["Role Enum (powers of 2)"]
+            R1["Role.ADMIN = 1"]
+            R2["Role.MINTER = 2"]
+            R3["Role.PAUSER = 4"]
+            R4["Role.OPERATOR = 8"]
         end
 
         subgraph BitwiseOps["Bitwise Operations"]
@@ -244,7 +244,7 @@ flowchart TD
 
 ### Access Control Plugin
 
-Use u256 bit flags for role management (powers of 2):
+Use an enum with bit flags for role management (powers of 2):
 
 ```typescript
 import { u256 } from '@btc-vision/as-bignum/assembly';
@@ -267,11 +267,13 @@ const PAUSE_SELECTOR: u32 = 0x8456cb59;          // pause()
 const UNPAUSE_SELECTOR: u32 = 0x3f4ba83a;        // unpause()
 const SET_OPERATOR_SELECTOR: u32 = 0xb3ab15fb;   // setOperator(address)
 
-// Role bit flags (must be powers of 2)
-const ROLE_ADMIN: u256 = u256.One;           // 1 = 2^0
-const ROLE_MINTER: u256 = u256.fromU64(2);   // 2 = 2^1
-const ROLE_PAUSER: u256 = u256.fromU64(4);   // 4 = 2^2
-const ROLE_OPERATOR: u256 = u256.fromU64(8); // 8 = 2^3
+// Role enum (bit flags - must be powers of 2)
+enum Role {
+    ADMIN = 1,      // 2^0
+    MINTER = 2,     // 2^1
+    PAUSER = 4,     // 2^2
+    OPERATOR = 8    // 2^3
+}
 
 class RoleBasedAccessPlugin extends Plugin {
     private rolesPointer: u16;
@@ -286,7 +288,7 @@ class RoleBasedAccessPlugin extends Plugin {
     public override onDeployment(calldata: Calldata): void {
         // Grant admin role to deployer
         const deployer = Blockchain.tx.origin;
-        this.grantRole(deployer, ROLE_ADMIN);
+        this.grantRole(deployer, u256.fromU64(Role.ADMIN));
     }
 
     public override onExecutionStarted(selector: Selector, calldata: Calldata): void {
@@ -326,12 +328,12 @@ class RoleBasedAccessPlugin extends Plugin {
         // Map methods to required roles
         switch (selector) {
             case MINT_SELECTOR:
-                return ROLE_MINTER;
+                return u256.fromU64(Role.MINTER);
             case PAUSE_SELECTOR:
             case UNPAUSE_SELECTOR:
-                return ROLE_PAUSER;
+                return u256.fromU64(Role.PAUSER);
             case SET_OPERATOR_SELECTOR:
-                return ROLE_ADMIN;
+                return u256.fromU64(Role.ADMIN);
             default:
                 return u256.Zero;  // No role required
         }
@@ -659,16 +661,21 @@ class BadPlugin extends Plugin {
 }
 ```
 
-### 4. Use Role Bit Flags
+### 4. Use Role Enum with Bit Flags
 
 ```typescript
-// Good: Use bit flags for roles (powers of 2)
-const ROLE_ADMIN: u256 = u256.One;       // 1 = 2^0
-const ROLE_MINTER: u256 = u256.fromU64(2);  // 2 = 2^1
-const ROLE_PAUSER: u256 = u256.fromU64(4);  // 4 = 2^2
+// Good: Use enum with bit flags for roles (powers of 2)
+enum Role {
+    ADMIN = 1,      // 2^0
+    MINTER = 2,     // 2^1
+    PAUSER = 4      // 2^2
+}
+
+// Convert enum to u256 for storage/comparison
+const adminRole: u256 = u256.fromU64(Role.ADMIN);
 
 // Check role with bitwise AND
-const hasRole = !SafeMath.and(userRoles, requiredRole).isZero();
+const hasRole = !SafeMath.and(userRoles, u256.fromU64(Role.MINTER)).isZero();
 
 // Bad: String-based roles
 // const roles = new Map<string, Set<Address>>();  // Don't do this!

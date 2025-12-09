@@ -290,44 +290,10 @@ Blockchain.setStorageAt(pointerHash, value.toUint8Array(true));
 ### encodePointer() Function Flow
 
 ```mermaid
-flowchart TD
-    subgraph Input["Function Input"]
-        Start["encodePointer call"]
-        InputParams["Input:<br/>pointer: u16<br/>subPointer: u256"]
-        Start --> InputParams
-    end
-
-    subgraph BufferConstruction["Buffer Construction"]
-        CreateBuffer["Create 32-byte buffer"]
-        WritePointer["Write pointer to bytes [0-1]<br/>(big-endian u16)"]
-        WriteSubPointer["Write subPointer to bytes [2-31]<br/>(30 bytes from u256)"]
-        InputParams --> CreateBuffer
-        CreateBuffer --> WritePointer
-        WritePointer --> WriteSubPointer
-    end
-
-    subgraph Hashing["SHA256 Hashing"]
-        SHA256["Apply SHA256 hash<br/>to 32-byte buffer"]
-        Output["Output:<br/>32-byte storage key<br/>(Uint8Array)"]
-        WriteSubPointer --> SHA256
-        SHA256 --> Output
-    end
-
-    subgraph Usage["Storage Operations"]
-        UsageDecision{"How is it used?"}
-        GetStorage["Blockchain.getStorageAt(key)<br/>Read Operation"]
-        SetStorage["Blockchain.setStorageAt(key, value)<br/>Write Operation"]
-        Output --> UsageDecision
-        UsageDecision -->|Read| GetStorage
-        UsageDecision -->|Write| SetStorage
-    end
-
-    subgraph Result["Final Result"]
-        Return["Return stored value"]
-        Persist["Persist to Bitcoin L1"]
-        GetStorage --> Return
-        SetStorage --> Persist
-    end
+flowchart LR
+    A["pointer: u16<br/>subPointer: u256"] --> B["32-byte buffer<br/>[0-1] = pointer<br/>[2-31] = subPointer"]
+    B --> C["SHA256"]
+    C --> D["Storage Key<br/>(32 bytes)"]
 ```
 
 ## Collision Prevention
