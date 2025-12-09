@@ -14,6 +14,10 @@ Unlike Solidity where storage is implicitly managed, OPNet requires explicit poi
 ## System Architecture
 
 ```mermaid
+---
+config:
+  theme: dark
+---
 flowchart TB
     subgraph UserLayer["User Layer"]
         USER[("👤 User")]
@@ -73,6 +77,10 @@ flowchart TB
 ## Solidity vs OPNet Storage Model
 
 ```mermaid
+---
+config:
+  theme: dark
+---
 flowchart TB
     subgraph SolidityFlow["Solidity (Ethereum)"]
         direction TB
@@ -180,6 +188,10 @@ flowchart LR
 ### Storage Layout
 
 ```mermaid
+---
+config:
+  theme: dark
+---
 flowchart TD
     CS[Contract Storage] --> P0["Pointer 0: totalSupply"]
     CS --> P1["Pointer 1: name"]
@@ -249,6 +261,10 @@ export class MyContract extends OP_NET {
 ```
 
 ```mermaid
+---
+config:
+  theme: dark
+---
 sequenceDiagram
     participant User
     participant Bitcoin as Bitcoin L1
@@ -490,6 +506,10 @@ private userActives: StoredMapU256 = new StoredMapU256(this.userActivePointer);
 ## Reading and Writing
 
 ```mermaid
+---
+config:
+  theme: dark
+---
 flowchart TD
     subgraph Transaction["Bitcoin Transaction"]
         TX_IN["TX Input<br/>(User Signs)"]
@@ -663,6 +683,10 @@ export class MyContract extends OP_NET {
 ### 4. Consider Gas Costs
 
 ```mermaid
+---
+config:
+  theme: dark
+---
 flowchart TD
     subgraph Bad["❌ Expensive: Multiple Storage Reads"]
         LOOP1["for (i = 0; i < 100; i++)"]
