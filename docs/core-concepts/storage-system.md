@@ -11,18 +11,113 @@ Unlike Solidity where storage is implicitly managed, OPNet requires explicit poi
 - **Gas-efficient access** with optimized read/write patterns
 - **Verifiable state proofs** for cross-chain validation
 
+## System Architecture
+
 ```mermaid
 flowchart TB
-    subgraph Solidity["Solidity (Implicit)"]
-        SOL1["uint256 totalSupply"] --> SLOT0["Slot 0 implicit"]
-        SOL2["mapping balances"] --> SLOT1["Slot 1 implicit"]
-        SOL3["mapping allowances"] --> SLOT2["Slot 2 implicit"]
+    subgraph UserLayer["User Layer"]
+        USER[("👤 User")]
     end
+
+    subgraph BitcoinL1["Bitcoin L1"]
+        BTC_TX["Bitcoin Transaction"]
+        BTC_BLOCK["Bitcoin Block"]
+        UTXO["UTXOs"]
+    end
+
+    subgraph OPNetConsensus["OPNet Consensus Layer"]
+        INDEXER["OPNet Nodes"]
+        WASM["WASM Runtime"]
+        EPOCH["Epoch Mining<br/>SHA1 PoW"]
+        CHECKPOINT["State Checksum<br/>Root Hash"]
+    end
+
+    subgraph Contract["Smart Contract"]
+        ENTRY["Contract Entry Point"]
+        LOGIC["Business Logic"]
+        VERIFY["Output Verification<br/>blockchain.tx.outputs"]
+        PTR_ALLOC["Pointer Allocation<br/>Blockchain.nextPointer"]
+    end
+
+    subgraph StorageSystem["Storage System"]
+        direction TB
+        PTR["Pointer (u16)<br/>0-65535 slots"]
+        SUBPTR["SubPointer (u256)<br/>mapping keys"]
+        HASH["SHA256(ptr || subPtr)"]
+        STORAGE[("Persistent State<br/>Key-Value Store")]
+        
+        PTR --> HASH
+        SUBPTR --> HASH
+        HASH --> STORAGE
+    end
+
+    USER -->|"Signs & Broadcasts"| BTC_TX
+    BTC_TX -->|"Included in"| BTC_BLOCK
+    BTC_BLOCK -->|"Parsed by"| INDEXER
+    INDEXER -->|"Executes in"| WASM
+    WASM -->|"Runs"| ENTRY
+    ENTRY --> LOGIC
+    LOGIC -->|"Non-custodial verify"| VERIFY
+    LOGIC -->|"Allocates"| PTR_ALLOC
+    PTR_ALLOC -->|"Returns u16"| PTR
+    LOGIC -->|"Read/Write"| STORAGE
     
-    subgraph OPNet["OPNet (Explicit)"]
-        OP1["totalSupplyPointer = nextPointer"] --> PTR0["Pointer 0 explicit"]
-        OP2["balancesPointer = nextPointer"] --> PTR1["Pointer 1 explicit"]
-        OP3["allowancesPointer = nextPointer"] --> PTR2["Pointer 2 explicit"]
+    INDEXER -->|"Every 20 blocks"| EPOCH
+    EPOCH -->|"Produces"| CHECKPOINT
+    CHECKPOINT -->|"Anchors to"| BTC_BLOCK
+    
+    VERIFY -->|"Validates"| UTXO
+    BTC_TX -->|"Creates/Spends"| UTXO
+```
+
+## Solidity vs OPNet Storage Model
+
+```mermaid
+flowchart TB
+    subgraph SolidityFlow["Solidity (Ethereum)"]
+        direction TB
+        S_USER[("👤 User")] -->|"Sends ETH + calldata"| S_TX["Ethereum Transaction"]
+        S_TX -->|"EVM executes"| S_CONTRACT["Smart Contract"]
+        
+        subgraph S_Storage["Storage (Implicit)"]
+            S_COMPILER["Compiler assigns slots<br/>at compile time"]
+            S_SLOT0["Slot 0: totalSupply"]
+            S_SLOT1["Slot 1: balances"]
+            S_SLOT2["Slot 2: allowances"]
+            S_COMPILER -.->|"Hidden from dev"| S_SLOT0
+            S_COMPILER -.->|"Hidden from dev"| S_SLOT1
+            S_COMPILER -.->|"Hidden from dev"| S_SLOT2
+        end
+        
+        S_CONTRACT -->|"keccak256(slot.key)"| S_Storage
+        S_CONTRACT -->|"CAN hold ETH"| S_CUSTODY["Contract Custody<br/>address(this).balance"]
+    end
+
+    subgraph OPNetFlow["OPNet (Bitcoin L1)"]
+        direction TB
+        O_USER[("👤 User")] -->|"Signs Bitcoin TX"| O_TX["Bitcoin Transaction"]
+        O_TX -->|"WASM executes"| O_CONTRACT["Smart Contract"]
+        
+        subgraph O_Storage["Storage (Explicit)"]
+            O_RUNTIME["Runtime allocates ptrs<br/>at execution time"]
+            O_PTR0["Pointer 0: totalSupplyPointer"]
+            O_PTR1["Pointer 1: balancesPointer"]
+            O_PTR2["Pointer 2: allowancesPointer"]
+            O_RUNTIME -->|"Dev controls"| O_PTR0
+            O_RUNTIME -->|"Dev controls"| O_PTR1
+            O_RUNTIME -->|"Dev controls"| O_PTR2
+        end
+        
+        O_CONTRACT -->|"SHA256(ptr || subPtr)"| O_Storage
+        O_CONTRACT -->|"CANNOT hold BTC"| O_VERIFY["Verify-Only Pattern<br/>blockchain.tx.outputs"]
+        O_VERIFY -->|"Validates"| O_TX
+    end
+
+    subgraph KeyDiff["Critical Differences"]
+        DIFF1["Custody: Solidity holds funds,<br/>OPNet verifies outputs"]
+        DIFF2["Storage: Solidity implicit slots,<br/>OPNet explicit pointers"]
+        DIFF3["Hash: Solidity keccak256,<br/>OPNet SHA256"]
+        DIFF4["Execution: Solidity EVM,<br/>OPNet WASM"]
     end
 ```
 
@@ -40,22 +135,53 @@ Where:
 - `pointer` is a `u16` (0-65535) identifying the storage slot type
 - `subPointer` is a `u256` for sub-indexing (e.g., addresses in a mapping)
 
-```mermaid
-flowchart LR
-    A[pointer u16] --> C[SHA256]
-    B[subPointer u256] --> C
-    C --> D[StorageKey]
-    
-    E["pointer = 3"] --> G["SHA256(3 || 0xABC...)"]
-    F["subPointer = 0xABC..."] --> G
-    G --> H["Unique Storage Location"]
-```
-
 ```typescript
 // Example: Balance storage for address 0xABC...
 pointer = 3              // balances mapping pointer
 subPointer = 0xABC...    // the address
 storageKey = SHA256(3 || 0xABC...)
+```
+
+### Storage Key Derivation Flow
+
+```mermaid
+flowchart LR
+    subgraph Input["Developer Input"]
+        DEV["Contract Code"]
+        DEV -->|"Declares"| VAR1["totalSupplyPointer: u16"]
+        DEV -->|"Declares"| VAR2["balancesPointer: u16"]
+    end
+
+    subgraph Allocation["Runtime Allocation"]
+        BC["Blockchain.nextPointer"]
+        VAR1 -->|"Calls"| BC
+        VAR2 -->|"Calls"| BC
+        BC -->|"Returns 0"| P0["Pointer 0"]
+        BC -->|"Returns 1"| P1["Pointer 1"]
+    end
+
+    subgraph SimpleKey["Simple Value Key"]
+        P0 --> EMPTY["EMPTY_POINTER<br/>(u256.Zero)"]
+        EMPTY --> HASH1["SHA256(0 || 0x00...00)"]
+        HASH1 --> KEY1[("Storage Key<br/>for totalSupply")]
+    end
+
+    subgraph MappingKey["Mapping Key (balances)"]
+        P1 --> ADDR["User Address<br/>0xABC..."]
+        ADDR --> HASH2["SHA256(1 || 0xABC...)"]
+        HASH2 --> KEY2[("Storage Key<br/>for balances[0xABC]")]
+    end
+
+    subgraph NestedKey["Nested Mapping (allowances)"]
+        P2["Pointer 2"] --> OWNER["Owner: 0xAAA..."]
+        P2 --> SPENDER["Spender: 0xBBB..."]
+        OWNER --> CONCAT["Concatenate 64 bytes"]
+        SPENDER --> CONCAT
+        CONCAT --> INNER["SHA256(owner || spender)"]
+        INNER --> SUBPTR["SubPointer (u256)"]
+        SUBPTR --> HASH3["SHA256(2 || subPtr)"]
+        HASH3 --> KEY3[("Storage Key<br/>for allowances[owner][spender]")]
+    end
 ```
 
 ### Storage Layout
@@ -98,9 +224,18 @@ export class MyContract extends OP_NET {
 
 ```mermaid
 sequenceDiagram
+    participant User
+    participant Bitcoin as Bitcoin L1
+    participant OPNet as OPNet Node
+    participant WASM as WASM Runtime
     participant Contract
-    participant Blockchain
-    
+    participant Blockchain as Blockchain API
+    participant Storage as Storage System
+
+    User->>Bitcoin: Broadcast Transaction
+    Bitcoin->>OPNet: New Block with TX
+    OPNet->>WASM: Execute Contract
+    WASM->>Contract: Instantiate
     Contract->>Blockchain: nextPointer
     Blockchain-->>Contract: 0 (totalSupply)
     Contract->>Blockchain: nextPointer
@@ -109,6 +244,11 @@ sequenceDiagram
     Blockchain-->>Contract: 2 (balances)
     Contract->>Blockchain: nextPointer
     Blockchain-->>Contract: 3 (allowances)
+    Contract->>Storage: Read/Write with pointers
+    Storage-->>Contract: Data
+    Contract-->>WASM: Execution Result
+    WASM-->>OPNet: State Changes
+    OPNet->>OPNet: Update State Root
 ```
 
 ### Solidity Comparison
@@ -267,17 +407,6 @@ public setBalance(address: Address, amount: u256): void {
 
 For nested mappings like allowances, you need to derive a composite key by hashing both addresses together.
 
-```mermaid
-flowchart LR
-    O[owner address 32 bytes] --> C[Concatenate]
-    S[spender address 32 bytes] --> C
-    C --> H["SHA256(owner || spender)"]
-    H --> SP[subPointer u256]
-    P[allowancesPointer u16] --> E["encodePointer(ptr, subPtr)"]
-    SP --> E
-    E --> F[Final Storage Key]
-```
-
 ```typescript
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import {
@@ -332,18 +461,50 @@ private userActives: StoredMapU256 = new StoredMapU256(this.userActivePointer);
 
 ```mermaid
 flowchart TD
-    subgraph Read
-        R1[Get pointer + subPointer] --> R2[Compute SHA256 key]
-        R2 --> R3[Blockchain.getStorageAt]
-        R3 --> R4[Decode to typed value]
+    subgraph Transaction["Bitcoin Transaction"]
+        TX_IN["TX Input<br/>(User Signs)"]
+        TX_OUT["TX Outputs<br/>(UTXOs)"]
     end
+
+    subgraph Contract["Contract Execution"]
+        CALL["Method Call"]
+        LOGIC["Business Logic"]
+    end
+
+    subgraph ReadFlow["Read Flow"]
+        R1["Get pointer + subPointer"]
+        R2["Compute SHA256 key"]
+        R3["Blockchain.getStorageAt"]
+        R4["Decode to typed value"]
+        R1 --> R2 --> R3 --> R4
+    end
+
+    subgraph WriteFlow["Write Flow"]
+        W1["Get pointer + subPointer"]
+        W2["Compute SHA256 key"]
+        W3["Encode typed value"]
+        W4["Buffer in memory"]
+        W5["Commit on TX complete"]
+        W1 --> W2 --> W3 --> W4 --> W5
+    end
+
+    subgraph StateCommit["State Commitment"]
+        BUFFER["Memory Buffer"]
+        STATE["Persistent State"]
+        CHECKSUM["State Checksum"]
+        EPOCH["Epoch Root"]
+    end
+
+    TX_IN -->|"Triggers"| CALL
+    CALL --> LOGIC
+    LOGIC -->|"Reads"| ReadFlow
+    LOGIC -->|"Writes"| WriteFlow
+    LOGIC -->|"Verifies"| TX_OUT
     
-    subgraph Write
-        W1[Get pointer + subPointer] --> W2[Compute SHA256 key]
-        W2 --> W3[Encode typed value]
-        W3 --> W4[Buffer in memory]
-        W4 --> W5[Commit on tx complete]
-    end
+    W5 --> BUFFER
+    BUFFER -->|"TX Success"| STATE
+    STATE --> CHECKSUM
+    CHECKSUM -->|"Every 20 blocks"| EPOCH
 ```
 
 ### Read Operations
@@ -473,17 +634,27 @@ export class MyContract extends OP_NET {
 
 ```mermaid
 flowchart TD
-    subgraph Bad["Expensive: Multiple Reads"]
-        B1[Loop iteration 1] --> BR1[Storage read]
-        B2[Loop iteration 2] --> BR2[Storage read]
-        B3[Loop iteration N] --> BR3[Storage read]
+    subgraph Bad["Expensive: Multiple Storage Reads"]
+        LOOP1["for (i = 0; i < 100; i++)"]
+        LOOP1 --> READ1["Storage Read #1"]
+        LOOP1 --> READ2["Storage Read #2"]
+        LOOP1 --> READ3["Storage Read #..."]
+        LOOP1 --> READ100["Storage Read #100"]
+        READ1 --> COST1["100x Storage I/O Cost"]
+        READ2 --> COST1
+        READ3 --> COST1
+        READ100 --> COST1
     end
-    
-    subgraph Good["Optimized: Cache Once"]
-        G1[Single storage read] --> G2[Cache in memory]
-        G2 --> G3[Loop uses cached value]
-        G3 --> G4[Single write if needed]
+
+    subgraph Good["Optimized: Cache and Batch"]
+        CACHE["Single Storage Read"]
+        CACHE --> MEM["Cache in Memory"]
+        MEM --> LOOP2["for (i = 0; i < 100; i++)<br/>Use cached value"]
+        LOOP2 --> WRITE["Single Storage Write"]
+        WRITE --> COST2["1x Read + 1x Write"]
     end
+
+    COST1 -->|"vs"| COST2
 ```
 
 ```typescript
@@ -514,6 +685,43 @@ For temporary data that doesn't persist between transactions:
 ```
 
 See [Advanced Storage](../storage/stored-primitives.md) for transient storage details.
+
+## State Finality and Security
+
+```mermaid
+flowchart TB
+    subgraph Execution["Transaction Execution"]
+        TX["Bitcoin Transaction"]
+        EXEC["WASM Execution"]
+        STATE["State Changes"]
+        TX --> EXEC --> STATE
+    end
+
+    subgraph Consensus["OPNet Consensus"]
+        NODES["OPNet Nodes"]
+        VERIFY["Verify Execution"]
+        CHECKSUM["Compute State Checksum"]
+        NODES --> VERIFY --> CHECKSUM
+    end
+
+    subgraph Finality["State Finality"]
+        EPOCH["Epoch (20 blocks)"]
+        SHA1["SHA1 Mining"]
+        ROOT["Epoch Root Hash"]
+        ANCHOR["Anchored to Bitcoin"]
+        EPOCH --> SHA1 --> ROOT --> ANCHOR
+    end
+
+    subgraph Security["Security Properties"]
+        S1["Single bit change =<br/>Complete checksum change"]
+        S2["After 20 blocks =<br/>Rewrite requires millions $/hr"]
+        S3["State proofs =<br/>Cryptographically verifiable"]
+    end
+
+    STATE --> NODES
+    CHECKSUM --> EPOCH
+    ANCHOR --> Security
+```
 
 ---
 
