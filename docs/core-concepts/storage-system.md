@@ -723,43 +723,6 @@ For temporary data that doesn't persist between transactions:
 
 See [Advanced Storage](../storage/stored-primitives.md) for transient storage details.
 
-## State Finality and Security
-
-```mermaid
-flowchart TB
-    subgraph Execution["Transaction Execution"]
-        TX["Bitcoin Transaction"]
-        EXEC["WASM Execution"]
-        STATE["State Changes"]
-        TX --> EXEC --> STATE
-    end
-
-    subgraph Consensus["OPNet Consensus"]
-        NODES["OPNet Nodes"]
-        VERIFY["Verify Execution"]
-        CHECKSUM["Compute State Checksum"]
-        NODES --> VERIFY --> CHECKSUM
-    end
-
-    subgraph Finality["State Finality"]
-        EPOCH["Epoch (20 blocks)"]
-        SHA1["SHA1 Mining"]
-        ROOT["Epoch Root Hash"]
-        ANCHOR["Anchored to Bitcoin"]
-        EPOCH --> SHA1 --> ROOT --> ANCHOR
-    end
-
-    subgraph Security["Security Properties"]
-        S1["Single bit change =<br/>Complete checksum change"]
-        S2["After 20 blocks =<br/>Rewrite requires millions $/hr"]
-        S3["State proofs =<br/>Cryptographically verifiable"]
-    end
-
-    STATE --> NODES
-    CHECKSUM --> EPOCH
-    ANCHOR --> Security
-```
-
 ---
 
 **Navigation:**

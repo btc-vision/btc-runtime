@@ -12,64 +12,46 @@ import { u256 } from '@btc-vision/as-bignum/assembly';
 ## SafeMath Overview
 
 ```mermaid
----
-config:
-  theme: default
-  look: classic
----
 graph TB
-    subgraph "SafeMath Operations"
-        A[SafeMath Library]
+    A[SafeMath Library]
 
-        subgraph "Basic Arithmetic"
-            B1[add - Addition]
-            B2[sub - Subtraction]
-            B3[mul - Multiplication]
-            B4[div - Division]
-            B5[mod - Modulus]
-        end
-
-        subgraph "Advanced Math"
-            C1[pow - Exponentiation]
-            C2[sqrt - Square Root]
-            C3[log2 - Logarithm Base 2]
-            C4[log10 - Logarithm Base 10]
-            C5[logN - Logarithm Base N]
-        end
-
-        subgraph "Cryptographic"
-            D1[mulmod - Modular Multiplication]
-            D2[modInverse - Modular Inverse]
-        end
-
-        subgraph "Bitwise"
-            E1[shl - Shift Left]
-            E2[shr - Shift Right]
-        end
-
-        subgraph "Comparison"
-            F1[eq - Equal]
-            F2[gt - Greater Than]
-            F3[gte - Greater or Equal]
-            F4[lt - Less Than]
-            F5[lte - Less or Equal]
-            F6[min - Minimum]
-            F7[max - Maximum]
-        end
-
-        A --> B1 & B2 & B3 & B4 & B5
-        A --> C1 & C2 & C3 & C4 & C5
-        A --> D1 & D2
-        A --> E1 & E2
-        A --> F1 & F2 & F3 & F4 & F5 & F6 & F7
+    subgraph "Basic Arithmetic"
+        B1[add<br/>Addition]
+        B2[sub<br/>Subtraction]
+        B3[mul<br/>Multiplication]
+        B4[div<br/>Division]
+        B5[mod<br/>Modulus]
     end
 
-    style A fill:#e1f5fe,stroke:#01579b,stroke-width:3px
-    style B1 fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
-    style B2 fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
-    style B3 fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
-    style D1 fill:#fff9c4,stroke:#f57f17,stroke-width:2px
-    style D2 fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    subgraph "Advanced Math"
+        C1[pow<br/>Exponentiation]
+        C2[sqrt<br/>Square Root]
+        C3[log2<br/>Logarithm Base 2]
+        C4[log10<br/>Logarithm Base 10]
+        C5[logN<br/>Logarithm Base N]
+    end
+
+    subgraph "Cryptographic"
+        D1[mulmod<br/>Modular Multiplication]
+        D2[modInverse<br/>Modular Inverse]
+    end
+
+    subgraph "Bitwise"
+        E1[shl<br/>Shift Left]
+        E2[shr<br/>Shift Right]
+    end
+
+    subgraph "Comparison"
+        F1[eq / gt / gte]
+        F2[lt / lte]
+        F3[min / max]
+    end
+
+    A --> B1 & B2 & B3 & B4 & B5
+    A --> C1 & C2 & C3 & C4 & C5
+    A --> D1 & D2
+    A --> E1 & E2
+    A --> F1 & F2 & F3
 ```
 
 ## Basic Operations
@@ -147,58 +129,39 @@ const remainder = SafeMath.mod(u256.fromU64(100), u256.fromU64(30));  // 10
 ## Overflow Protection Flow
 
 ```mermaid
----
-config:
-  theme: neutral
-  look: classic
----
 flowchart TB
-    subgraph "SafeMath.add Example"
-        A[SafeMath.add a, b] --> B[Compute result = a + b]
+    subgraph "Addition add"
+        A[SafeMath.add a, b] --> B[Compute<br/>result = a + b]
         B --> C{result < a?}
-        C -->|Yes - Overflow| D[throw Revert 'Overflow']
-        C -->|No - Valid| E[Return result]
+        C -->|Yes Overflow| D[Revert]
+        C -->|No Valid| E[Return result]
     end
 
-    subgraph "SafeMath.sub Example"
+    subgraph "Subtraction sub"
         F[SafeMath.sub a, b] --> G{b > a?}
-        G -->|Yes - Underflow| H[throw Revert 'Underflow']
-        G -->|No - Valid| I[Compute result = a - b]
+        G -->|Yes Underflow| H[Revert]
+        G -->|No Valid| I[Compute<br/>result = a - b]
         I --> J[Return result]
     end
 
-    subgraph "SafeMath.mul Example"
-        K[SafeMath.mul a, b] --> L{a == 0 OR b == 0?}
+    subgraph "Multiplication mul"
+        K[SafeMath.mul a, b] --> L{a == 0<br/>OR b == 0?}
         L -->|Yes| M[Return 0]
-        L -->|No| N[Compute result = a * b]
-        N --> O{result / a != b?}
-        O -->|Yes - Overflow| P[throw Revert 'Overflow']
-        O -->|No - Valid| Q[Return result]
+        L -->|No| N[Compute<br/>result = a * b]
+        N --> O{result / a<br/>!= b?}
+        O -->|Yes Overflow| P[Revert]
+        O -->|No Valid| Q[Return result]
     end
 
-    subgraph "SafeMath.div Example"
+    subgraph "Division div"
         R[SafeMath.div a, b] --> S{b == 0?}
-        S -->|Yes| T[throw Revert 'Division by zero']
-        S -->|No| U[Compute result = a / b]
+        S -->|Yes| T[Revert:<br/>Division by zero]
+        S -->|No| U[Compute<br/>result = a / b]
         U --> V[Return result]
     end
-
-    style D fill:#ffcdd2,stroke:#c62828,stroke-width:2px
-    style H fill:#ffcdd2,stroke:#c62828,stroke-width:2px
-    style P fill:#ffcdd2,stroke:#c62828,stroke-width:2px
-    style T fill:#ffcdd2,stroke:#c62828,stroke-width:2px
-    style E fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
-    style J fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
-    style Q fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
-    style V fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
 ```
 
 ```mermaid
----
-config:
-  theme: default
-  look: classic
----
 sequenceDiagram
     participant Contract
     participant SafeMath
@@ -452,69 +415,50 @@ const abs = SafeMathI128.abs(a);     // 100
 ## Cryptographic Operations Flow
 
 ```mermaid
----
-config:
-  theme: neutral
-  look: classic
----
 flowchart TB
     subgraph "Modular Multiplication mulmod"
-        A[mulmod a, b, modulus] --> B{modulus == 0?}
-        B -->|Yes| C[throw Revert]
-        B -->|No| D[Compute a * b mod modulus]
-        D --> E{Avoid intermediate overflow}
+        A[mulmod a, b, modulus] --> B{modulus<br/>== 0?}
+        B -->|Yes| C[Revert]
+        B -->|No| D[Compute<br/>a * b mod modulus]
+        D --> E[Avoid intermediate<br/>overflow]
         E --> F[Return result]
     end
 
     subgraph "Modular Inverse modInverse"
-        G[modInverse a, modulus] --> H{gcd a, modulus == 1?}
-        H -->|No| I[throw Revert 'No inverse']
-        H -->|Yes| J[Extended Euclidean Algorithm]
-        J --> K[Find x: a * x ≡ 1 mod modulus]
+        G[modInverse a, modulus] --> H{gcd a, modulus<br/>== 1?}
+        H -->|No| I[Revert:<br/>No inverse]
+        H -->|Yes| J[Extended<br/>Euclidean Algorithm]
+        J --> K[Find x:<br/>a * x ≡ 1 mod modulus]
         K --> L[Return x]
     end
-
-    style C fill:#ffcdd2,stroke:#c62828,stroke-width:2px
-    style I fill:#ffcdd2,stroke:#c62828,stroke-width:2px
-    style F fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
-    style L fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
-    style D fill:#fff9c4,stroke:#f57f17,stroke-width:2px
-    style J fill:#fff9c4,stroke:#f57f17,stroke-width:2px
 ```
 
 ```mermaid
----
-config:
-  theme: default
-  look: classic
----
-graph LR
-    subgraph "Use Cases for Cryptographic Math"
-        A[Cryptographic Operations]
+graph TB
+    A[Cryptographic Operations]
 
-        B[Elliptic Curve Operations]
-        C[Modular Arithmetic]
-        D[Field Operations]
-        E[Signature Verification]
-
-        A --> B
-        A --> C
-        A --> D
-        A --> E
-
-        B --> F[Point multiplication]
-        B --> G[Point addition]
-
-        C --> H[mulmod for large numbers]
-        C --> I[modInverse for division]
-
-        D --> J[Finite field arithmetic]
-        E --> K[Key derivation]
+    subgraph "Elliptic Curve"
+        B[Point multiplication]
+        C[Point addition]
     end
 
-    style A fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    style H fill:#fff9c4,stroke:#f57f17,stroke-width:2px
-    style I fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    subgraph "Modular Arithmetic"
+        D[mulmod<br/>for large numbers]
+        E[modInverse<br/>for division]
+    end
+
+    subgraph "Field Operations"
+        F[Finite field<br/>arithmetic]
+    end
+
+    subgraph "Signature Verification"
+        G[Key derivation]
+    end
+
+    A --> B & C
+    A --> D & E
+    A --> F
+    A --> G
 ```
 
 ## Common Patterns
