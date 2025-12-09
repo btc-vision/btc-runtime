@@ -61,6 +61,36 @@ OPNet's pointer system provides:
 | **Verifiability** | Storage proofs can be validated off-chain |
 | **Explicitness** | Storage layout is explicit and auditable |
 
+## Solidity Comparison
+
+In Solidity, storage slots are assigned implicitly by the compiler. In OPNet, you explicitly allocate pointers at runtime:
+
+```solidity
+// Solidity - Implicit slot assignment
+contract Token {
+    uint256 public totalSupply;              // slot 0 (assigned by compiler)
+    string public name;                       // slot 1 (assigned by compiler)
+    mapping(address => uint256) balances;    // slot 2 (assigned by compiler)
+}
+```
+
+```typescript
+// OPNet - Explicit pointer allocation
+export class Token extends OP_NET {
+    private totalSupplyPointer: u16 = Blockchain.nextPointer;  // ~0 (allocated at runtime)
+    private namePointer: u16 = Blockchain.nextPointer;          // ~1 (allocated at runtime)
+    private balancesPointer: u16 = Blockchain.nextPointer;      // ~2 (allocated at runtime)
+}
+```
+
+### Storage Key Hashing Comparison
+
+| Solidity | OPNet |
+|----------|-------|
+| Automatic slot assignment | Explicit pointer allocation |
+| Slot 0, 1, 2, ... | `Blockchain.nextPointer` |
+| `keccak256(key . slot)` | `SHA256(pointer \|\| subPointer)` |
+
 ## Allocating Pointers
 
 ### Basic Allocation
@@ -121,21 +151,21 @@ const key = SHA256(balancesPointer || addressAsU256);
 
 ```
 Contract Storage
-│
-├── Pointer 0 (totalSupply)
-│   └── SubPointer 0 → u256 value
-│
-├── Pointer 1 (name)
-│   └── SubPointer 0 → string value
-│
-├── Pointer 2 (balances mapping)
-│   ├── SubPointer 0xAAA... → balance of 0xAAA
-│   ├── SubPointer 0xBBB... → balance of 0xBBB
-│   └── SubPointer 0xCCC... → balance of 0xCCC
-│
-└── Pointer 3 (allowances nested mapping)
-    ├── SubPointer hash(0xAAA, 0xBBB) → allowance[AAA][BBB]
-    └── SubPointer hash(0xAAA, 0xCCC) → allowance[AAA][CCC]
+|
++-- Pointer 0 (totalSupply)
+|   +-- SubPointer 0 -> u256 value
+|
++-- Pointer 1 (name)
+|   +-- SubPointer 0 -> string value
+|
++-- Pointer 2 (balances mapping)
+|   +-- SubPointer 0xAAA... -> balance of 0xAAA
+|   +-- SubPointer 0xBBB... -> balance of 0xBBB
+|   +-- SubPointer 0xCCC... -> balance of 0xCCC
+|
++-- Pointer 3 (allowances nested mapping)
+    +-- SubPointer hash(0xAAA, 0xBBB) -> allowance[AAA][BBB]
+    +-- SubPointer hash(0xAAA, 0xCCC) -> allowance[AAA][CCC]
 ```
 
 ### Multiple Storage Variables Example
@@ -239,36 +269,6 @@ private holders: StoredU256Array = new StoredU256Array(this.holdersPointer);
 // Storage key: SHA256(holdersPointer || MAX_U256)  // Special length slot
 ```
 
-## Solidity Comparison
-
-### Storage Layout
-
-| Solidity | OPNet |
-|----------|-------|
-| Automatic slot assignment | Explicit pointer allocation |
-| Slot 0, 1, 2, ... | `Blockchain.nextPointer` |
-| `keccak256(key . slot)` | `SHA256(pointer \|\| subPointer)` |
-
-### Example Comparison
-
-```solidity
-// Solidity
-contract Token {
-    uint256 public totalSupply;              // slot 0
-    string public name;                       // slot 1
-    mapping(address => uint256) balances;    // slot 2
-}
-```
-
-```typescript
-// OPNet
-export class Token extends OP_NET {
-    private totalSupplyPointer: u16 = Blockchain.nextPointer;  // ~0
-    private namePointer: u16 = Blockchain.nextPointer;          // ~1
-    private balancesPointer: u16 = Blockchain.nextPointer;      // ~2
-}
-```
-
 ## Advanced: Manual Key Calculation
 
 For advanced use cases, you can calculate storage keys manually:
@@ -302,13 +302,13 @@ The SHA256 hashing ensures collision resistance:
 
 ```typescript
 // Different pointers = different keys
-SHA256(0 || 0xABC) ≠ SHA256(1 || 0xABC)
+SHA256(0 || 0xABC) != SHA256(1 || 0xABC)
 
 // Different sub-pointers = different keys
-SHA256(0 || 0xABC) ≠ SHA256(0 || 0xDEF)
+SHA256(0 || 0xABC) != SHA256(0 || 0xDEF)
 
 // Even with same total bits
-SHA256(0x0001 || 0x00...00) ≠ SHA256(0x0000 || 0x00...01)
+SHA256(0x0001 || 0x00...00) != SHA256(0x0000 || 0x00...01)
 ```
 
 ## Best Practices

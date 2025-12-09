@@ -11,124 +11,6 @@ Unlike Solidity where storage is implicitly managed, OPNet requires explicit poi
 - **Gas-efficient access** with optimized read/write patterns
 - **Verifiable state proofs** for cross-chain validation
 
-## System Architecture
-
-```mermaid
----
-config:
-  theme: dark
----
-flowchart LR
-    subgraph UserLayer["User Layer"]
-        USER[("👤 User")]
-    end
-
-    subgraph BitcoinL1["Bitcoin L1"]
-        BTC_TX["Bitcoin Transaction"]
-        BTC_BLOCK["Bitcoin Block"]
-        UTXO["UTXOs"]
-    end
-
-    subgraph OPNetConsensus["OPNet Consensus Layer"]
-        INDEXER["OPNet Nodes"]
-        WASM["WASM Runtime"]
-        EPOCH["Epoch Mining<br/>SHA1 PoW"]
-        CHECKPOINT["State Checksum<br/>Root Hash"]
-    end
-
-    subgraph Contract["Smart Contract"]
-        ENTRY["Contract Entry Point"]
-        LOGIC["Business Logic"]
-        VERIFY["Output Verification<br/>blockchain.tx.outputs"]
-        PTR_ALLOC["Pointer Allocation<br/>Blockchain.nextPointer"]
-    end
-
-    subgraph StorageSystem["Storage System"]
-        direction TB
-        PTR["Pointer (u16)<br/>0-65535 slots"]
-        SUBPTR["SubPointer (u256)<br/>mapping keys"]
-        HASH["SHA256(ptr || subPtr)"]
-        STORAGE[("Persistent State<br/>Key-Value Store")]
-
-        PTR --> HASH
-        SUBPTR --> HASH
-        HASH --> STORAGE
-    end
-
-    USER -->|"Signs & Broadcasts"| BTC_TX
-    BTC_TX -->|"Included in"| BTC_BLOCK
-    BTC_BLOCK -->|"Parsed by"| INDEXER
-    INDEXER -->|"Executes in"| WASM
-    WASM -->|"Runs"| ENTRY
-    ENTRY --> LOGIC
-    LOGIC -->|"Non-custodial verify"| VERIFY
-    LOGIC -->|"Allocates"| PTR_ALLOC
-    PTR_ALLOC -->|"Returns u16"| PTR
-    LOGIC -->|"Read/Write"| STORAGE
-
-    INDEXER -->|"Every 20 blocks"| EPOCH
-    EPOCH -->|"Produces"| CHECKPOINT
-    CHECKPOINT -->|"Anchors to"| BTC_BLOCK
-
-    VERIFY -->|"Validates"| UTXO
-    BTC_TX -->|"Creates/Spends"| UTXO
-```
-
-## Solidity vs OPNet Storage Model
-
-```mermaid
----
-config:
-  theme: dark
----
-flowchart LR
-    subgraph SolidityFlow["Solidity (Ethereum)"]
-        direction TB
-        S_USER[("👤 User")] -->|"Sends ETH + calldata"| S_TX["Ethereum Transaction"]
-        S_TX -->|"EVM executes"| S_CONTRACT["Smart Contract"]
-
-        subgraph S_Storage["Storage (Implicit)"]
-            S_COMPILER["Compiler assigns slots<br/>at compile time"]
-            S_SLOT0["Slot 0: totalSupply"]
-            S_SLOT1["Slot 1: balances"]
-            S_SLOT2["Slot 2: allowances"]
-            S_COMPILER -.->|"Hidden from dev"| S_SLOT0
-            S_COMPILER -.->|"Hidden from dev"| S_SLOT1
-            S_COMPILER -.->|"Hidden from dev"| S_SLOT2
-        end
-
-        S_CONTRACT -->|"keccak256(slot.key)"| S_Storage
-        S_CONTRACT -->|"CAN hold ETH"| S_CUSTODY["Contract Custody<br/>address(this).balance"]
-    end
-
-    subgraph OPNetFlow["OPNet (Bitcoin L1)"]
-        direction TB
-        O_USER[("👤 User")] -->|"Signs Bitcoin TX"| O_TX["Bitcoin Transaction"]
-        O_TX -->|"WASM executes"| O_CONTRACT["Smart Contract"]
-
-        subgraph O_Storage["Storage (Explicit)"]
-            O_RUNTIME["Runtime allocates ptrs<br/>at execution time"]
-            O_PTR0["Pointer 0: totalSupplyPointer"]
-            O_PTR1["Pointer 1: balancesPointer"]
-            O_PTR2["Pointer 2: allowancesPointer"]
-            O_RUNTIME -->|"Dev controls"| O_PTR0
-            O_RUNTIME -->|"Dev controls"| O_PTR1
-            O_RUNTIME -->|"Dev controls"| O_PTR2
-        end
-
-        O_CONTRACT -->|"SHA256(ptr || subPtr)"| O_Storage
-        O_CONTRACT -->|"CANNOT hold BTC"| O_VERIFY["Verify-Only Pattern<br/>blockchain.tx.outputs"]
-        O_VERIFY -->|"Validates"| O_TX
-    end
-
-    subgraph KeyDiff["Critical Differences"]
-        DIFF1["Custody: Solidity holds funds,<br/>OPNet verifies outputs"]
-        DIFF2["Storage: Solidity implicit slots,<br/>OPNet explicit pointers"]
-        DIFF3["Hash: Solidity keccak256,<br/>OPNet SHA256"]
-        DIFF4["Execution: Solidity EVM,<br/>OPNet WASM"]
-    end
-```
-
 ## How Storage Works
 
 ### Storage Keys
@@ -199,11 +81,84 @@ flowchart LR
     CS --> P3["Pointer 3: balances mapping"]
     CS --> P4["Pointer 4: allowances mapping"]
 
-    P3 --> S1["subPointer 0xAAA → balance"]
-    P3 --> S2["subPointer 0xBBB → balance"]
+    P3 --> S1["subPointer 0xAAA -> balance"]
+    P3 --> S2["subPointer 0xBBB -> balance"]
     P3 --> S3["..."]
 
-    P4 --> N1["owner+spender hash → allowance"]
+    P4 --> N1["owner+spender hash -> allowance"]
+```
+
+## Solidity vs OPNet Storage Model
+
+In Solidity, storage slots are assigned implicitly by the compiler. In OPNet, you explicitly allocate pointers at runtime:
+
+```solidity
+// Solidity - Implicit slot assignment
+contract Token {
+    uint256 public totalSupply;              // slot 0 (assigned by compiler)
+    string public name;                       // slot 1 (assigned by compiler)
+    mapping(address => uint256) balances;    // slot 2 (assigned by compiler)
+}
+```
+
+```typescript
+// OPNet - Explicit pointer allocation
+export class Token extends OP_NET {
+    private totalSupplyPointer: u16 = Blockchain.nextPointer;  // ~0 (allocated at runtime)
+    private namePointer: u16 = Blockchain.nextPointer;          // ~1 (allocated at runtime)
+    private balancesPointer: u16 = Blockchain.nextPointer;      // ~2 (allocated at runtime)
+}
+```
+
+```mermaid
+---
+config:
+  theme: dark
+---
+flowchart LR
+    subgraph SolidityFlow["Solidity (Ethereum)"]
+        S_USER[("👤 User")] -->|"Sends ETH + calldata"| S_TX["Ethereum Transaction"]
+        S_TX -->|"EVM executes"| S_CONTRACT["Smart Contract"]
+
+        subgraph S_Storage["Storage (Implicit)"]
+            S_COMPILER["Compiler assigns slots<br/>at compile time"]
+            S_SLOT0["Slot 0: totalSupply"]
+            S_SLOT1["Slot 1: balances"]
+            S_SLOT2["Slot 2: allowances"]
+            S_COMPILER -.->|"Hidden from dev"| S_SLOT0
+            S_COMPILER -.->|"Hidden from dev"| S_SLOT1
+            S_COMPILER -.->|"Hidden from dev"| S_SLOT2
+        end
+
+        S_CONTRACT -->|"keccak256(slot.key)"| S_Storage
+        S_CONTRACT -->|"CAN hold ETH"| S_CUSTODY["Contract Custody<br/>address(this).balance"]
+    end
+
+    subgraph OPNetFlow["OPNet (Bitcoin L1)"]
+        O_USER[("👤 User")] -->|"Signs Bitcoin TX"| O_TX["Bitcoin Transaction"]
+        O_TX -->|"WASM executes"| O_CONTRACT["Smart Contract"]
+
+        subgraph O_Storage["Storage (Explicit)"]
+            O_RUNTIME["Runtime allocates ptrs<br/>at execution time"]
+            O_PTR0["Pointer 0: totalSupplyPointer"]
+            O_PTR1["Pointer 1: balancesPointer"]
+            O_PTR2["Pointer 2: allowancesPointer"]
+            O_RUNTIME -->|"Dev controls"| O_PTR0
+            O_RUNTIME -->|"Dev controls"| O_PTR1
+            O_RUNTIME -->|"Dev controls"| O_PTR2
+        end
+
+        O_CONTRACT -->|"SHA256(ptr || subPtr)"| O_Storage
+        O_CONTRACT -->|"CANNOT hold BTC"| O_VERIFY["Verify-Only Pattern<br/>blockchain.tx.outputs"]
+        O_VERIFY -->|"Validates"| O_TX
+    end
+
+    subgraph KeyDiff["Critical Differences"]
+        DIFF1["Custody: Solidity holds funds,<br/>OPNet verifies outputs"]
+        DIFF2["Storage: Solidity implicit slots,<br/>OPNet explicit pointers"]
+        DIFF3["Hash: Solidity keccak256,<br/>OPNet SHA256"]
+        DIFF4["Execution: Solidity EVM,<br/>OPNet WASM"]
+    end
 ```
 
 ## CRITICAL: Map Implementation Warning
@@ -293,13 +248,69 @@ sequenceDiagram
     OPNet->>OPNet: Update State Root
 ```
 
-### Solidity Comparison
+## System Architecture
 
-| Solidity | OPNet |
-|----------|-------|
-| Implicit slot numbers | Explicit pointer allocation |
-| `uint256 public totalSupply;` (slot 0) | `totalSupplyPointer: u16 = Blockchain.nextPointer;` |
-| `mapping(address => uint256) balances;` (slot 1) | `balancesPointer: u16 = Blockchain.nextPointer;` |
+The following diagram shows how storage fits into the overall OPNet architecture:
+
+```mermaid
+---
+config:
+  theme: dark
+---
+flowchart LR
+    subgraph UserLayer["User Layer"]
+        USER[("👤 User")]
+    end
+
+    subgraph BitcoinL1["Bitcoin L1"]
+        BTC_TX["Bitcoin Transaction"]
+        BTC_BLOCK["Bitcoin Block"]
+        UTXO["UTXOs"]
+    end
+
+    subgraph OPNetConsensus["OPNet Consensus Layer"]
+        INDEXER["OPNet Nodes"]
+        WASM["WASM Runtime"]
+        EPOCH["Epoch Mining<br/>SHA1 PoW"]
+        CHECKPOINT["State Checksum<br/>Root Hash"]
+    end
+
+    subgraph Contract["Smart Contract"]
+        ENTRY["Contract Entry Point"]
+        LOGIC["Business Logic"]
+        VERIFY["Output Verification<br/>blockchain.tx.outputs"]
+        PTR_ALLOC["Pointer Allocation<br/>Blockchain.nextPointer"]
+    end
+
+    subgraph StorageSystem["Storage System"]
+        PTR["Pointer (u16)<br/>0-65535 slots"]
+        SUBPTR["SubPointer (u256)<br/>mapping keys"]
+        HASH["SHA256(ptr || subPtr)"]
+        STORAGE[("Persistent State<br/>Key-Value Store")]
+
+        PTR --> HASH
+        SUBPTR --> HASH
+        HASH --> STORAGE
+    end
+
+    USER -->|"Signs & Broadcasts"| BTC_TX
+    BTC_TX -->|"Included in"| BTC_BLOCK
+    BTC_BLOCK -->|"Parsed by"| INDEXER
+    INDEXER -->|"Executes in"| WASM
+    WASM -->|"Runs"| ENTRY
+    ENTRY --> LOGIC
+    LOGIC -->|"Non-custodial verify"| VERIFY
+    LOGIC -->|"Allocates"| PTR_ALLOC
+    PTR_ALLOC -->|"Returns u16"| PTR
+    LOGIC -->|"Read/Write"| STORAGE
+
+    INDEXER -->|"Every 20 blocks"| EPOCH
+    EPOCH -->|"Produces"| CHECKPOINT
+    CHECKPOINT -->|"Anchors to"| BTC_BLOCK
+
+    VERIFY -->|"Validates"| UTXO
+    BTC_TX -->|"Creates/Spends"| UTXO
+```
 
 ## Storage Types
 

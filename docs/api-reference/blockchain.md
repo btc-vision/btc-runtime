@@ -24,6 +24,12 @@ const blockNum = Blockchain.block.number;
 const timestamp = Blockchain.block.medianTime;
 ```
 
+**Solidity Comparison:**
+| Solidity | OPNet |
+|----------|-------|
+| `block.number` | `Blockchain.block.number` |
+| `block.timestamp` | `Blockchain.block.medianTime` |
+
 ### Transaction Context
 
 | Property | Type | Description |
@@ -41,6 +47,12 @@ const signer = Blockchain.tx.origin;      // Original signer
 const unsafeAllowed = Blockchain.tx.consensus.unsafeSignaturesAllowed();
 ```
 
+**Solidity Comparison:**
+| Solidity | OPNet |
+|----------|-------|
+| `msg.sender` | `Blockchain.tx.sender` |
+| `tx.origin` | `Blockchain.tx.origin` |
+
 ### Contract Context
 
 | Property | Type | Description |
@@ -53,6 +65,11 @@ const unsafeAllowed = Blockchain.tx.consensus.unsafeSignaturesAllowed();
 const self = Blockchain.contractAddress;
 const deployer = Blockchain.contractDeployer;
 ```
+
+**Solidity Comparison:**
+| Solidity | OPNet |
+|----------|-------|
+| `address(this)` | `Blockchain.contractAddress` |
 
 ### Network Context
 
@@ -69,6 +86,54 @@ if (Blockchain.network === Networks.Mainnet) {
 }
 ```
 
+**Solidity Comparison:**
+| Solidity | OPNet |
+|----------|-------|
+| `block.chainid` | `Blockchain.chainId` |
+
+### Blockchain Context Hierarchy
+
+The following diagram shows the complete hierarchy of context information available through the Blockchain singleton:
+
+```mermaid
+graph LR
+    BC[Blockchain Singleton]
+
+    subgraph "Block Context"
+        B1[block.number<br/>Block height]
+        B2[block.hash<br/>32-byte hash]
+        B3[block.medianTime<br/>Timestamp]
+    end
+
+    subgraph "Transaction Context"
+        T1[tx.sender<br/>Immediate Caller]
+        T2[tx.origin<br/>Original Signer]
+        T3[tx.id<br/>Transaction ID]
+        T4[tx.hash<br/>TX Hash]
+        T5[tx.consensus<br/>Consensus flags]
+    end
+
+    subgraph "Contract Context"
+        C1[contractAddress<br/>This contract]
+        C2[contractDeployer<br/>Deployer address]
+        C3[contract<br/>Instance]
+    end
+
+    subgraph "Network Context"
+        N1[network<br/>Mainnet/Testnet]
+        N2[chainId<br/>32 bytes]
+        N3[protocolId<br/>32 bytes]
+        N4[DEAD_ADDRESS<br/>Burn address]
+    end
+
+    BC --> B1 & B2 & B3
+    BC --> T1 & T2 & T3 & T4 & T5
+    BC --> C1 & C2 & C3
+    BC --> N1 & N2 & N3 & N4
+```
+
+## Storage Architecture
+
 ### Storage Pointers
 
 | Property | Type | Description |
@@ -79,7 +144,7 @@ if (Blockchain.network === Networks.Mainnet) {
 private myPointer: u16 = Blockchain.nextPointer;
 ```
 
-## Storage Architecture
+The storage system uses a pointer-based architecture where each storage slot is identified by a unique hash:
 
 ```mermaid
 graph LR
@@ -103,32 +168,6 @@ graph LR
     H --> K[Persistent Storage]
     I --> K
     J --> K
-```
-
-```mermaid
-sequenceDiagram
-    participant C as Contract
-    participant B as Blockchain
-    participant S as Storage Layer
-
-    Note over C,S: Storage Pointer Allocation
-    C->>B: Blockchain.nextPointer
-    B->>C: Returns u16 (e.g., 5)
-
-    Note over C,S: Write Operation
-    C->>C: address.toBytes() → subPointer
-    C->>B: encodePointer(5, subPointer)
-    B->>B: SHA-256(pointer + subPointer)
-    B->>C: Returns 32-byte hash
-    C->>B: setStorageAt(hash, value)
-    B->>S: Persist to storage
-
-    Note over C,S: Read Operation
-    C->>B: encodePointer(5, subPointer)
-    B->>C: Returns 32-byte hash
-    C->>B: getStorageAt(hash)
-    S->>B: Retrieve value
-    B->>C: Returns 32-byte value
 ```
 
 ## Storage Methods
@@ -219,6 +258,36 @@ if (Blockchain.hasStorageAt(pointerHash)) {
 }
 ```
 
+### Storage Flow
+
+The following sequence diagram illustrates the complete flow of storage operations:
+
+```mermaid
+sequenceDiagram
+    participant C as Contract
+    participant B as Blockchain
+    participant S as Storage Layer
+
+    Note over C,S: Storage Pointer Allocation
+    C->>B: Blockchain.nextPointer
+    B->>C: Returns u16 (e.g., 5)
+
+    Note over C,S: Write Operation
+    C->>C: address.toBytes() -> subPointer
+    C->>B: encodePointer(5, subPointer)
+    B->>B: SHA-256(pointer + subPointer)
+    B->>C: Returns 32-byte hash
+    C->>B: setStorageAt(hash, value)
+    B->>S: Persist to storage
+
+    Note over C,S: Read Operation
+    C->>B: encodePointer(5, subPointer)
+    B->>C: Returns 32-byte hash
+    C->>B: getStorageAt(hash)
+    S->>B: Retrieve value
+    B->>C: Returns 32-byte value
+```
+
 ### Storage Pattern Example
 
 Complete example showing the correct pattern:
@@ -248,6 +317,13 @@ private getBalance(address: Address): u256 {
 }
 ```
 
+**Solidity Comparison:**
+| Solidity | OPNet |
+|----------|-------|
+| `mapping(address => uint256) balances` | `AddressMemoryMap` with pointer |
+| `balances[addr] = value` | `Blockchain.setStorageAt(pointerHash, value)` |
+| `balances[addr]` | `Blockchain.getStorageAt(pointerHash)` |
+
 ### Transient Storage (Experimental)
 
 > **Warning:** Transient storage is NOT enabled in production. Only available in testing.
@@ -259,6 +335,58 @@ hasTransientStorageAt(pointerHash: Uint8Array): bool
 ```
 
 ## Cross-Contract Calls
+
+### call
+
+Calls another contract.
+
+```typescript
+call(
+    destinationContract: Address,
+    calldata: BytesWriter,
+    stopExecutionOnFailure: boolean = true
+): CallResult
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `destinationContract` | `Address` | Target contract |
+| `calldata` | `BytesWriter` | Encoded call data |
+| `stopExecutionOnFailure` | `boolean` | Revert on failure (default: true) |
+| **Returns** | `CallResult` | Success flag and response data |
+
+The following diagram shows the two call patterns - standard calls that revert on failure, and try-catch style calls that handle failures gracefully:
+
+```mermaid
+flowchart LR
+    subgraph StdPattern["stopOnFailure = true"]
+        A1["Call"] --> B1{"Success?"}
+        B1 -->|"Yes"| C1["Continue"]
+        B1 -->|"No"| D1["REVERT TX"]
+    end
+
+    subgraph TryPattern["stopOnFailure = false"]
+        A2["Call"] --> B2{"Success?"}
+        B2 -->|"Yes"| C2["Continue"]
+        B2 -->|"No"| D2["Handle error"]
+    end
+```
+
+```typescript
+// Standard call - reverts on failure
+const result = Blockchain.call(tokenAddress, calldata);
+const balance = result.data.readU256();
+
+// Try-catch pattern - handles failure gracefully
+const result = Blockchain.call(tokenAddress, calldata, false);
+if (result.success) {
+    // Process response
+} else {
+    // Handle failure without reverting
+}
+```
+
+The complete call flow with both success and failure scenarios:
 
 ```mermaid
 sequenceDiagram
@@ -298,57 +426,12 @@ sequenceDiagram
     end
 ```
 
-```mermaid
----
-config:
-  theme: dark
----
-flowchart LR
-    subgraph StdPattern["stopOnFailure = true"]
-        A1["Call"] --> B1{"Success?"}
-        B1 -->|"Yes"| C1["Continue"]
-        B1 -->|"No"| D1["REVERT TX"]
-    end
-
-    subgraph TryPattern["stopOnFailure = false"]
-        A2["Call"] --> B2{"Success?"}
-        B2 -->|"Yes"| C2["Continue"]
-        B2 -->|"No"| D2["Handle error"]
-    end
-```
-
-### call
-
-Calls another contract.
-
-```typescript
-call(
-    destinationContract: Address,
-    calldata: BytesWriter,
-    stopExecutionOnFailure: boolean = true
-): CallResult
-```
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `destinationContract` | `Address` | Target contract |
-| `calldata` | `BytesWriter` | Encoded call data |
-| `stopExecutionOnFailure` | `boolean` | Revert on failure (default: true) |
-| **Returns** | `CallResult` | Success flag and response data |
-
-```typescript
-// Standard call - reverts on failure
-const result = Blockchain.call(tokenAddress, calldata);
-const balance = result.data.readU256();
-
-// Try-catch pattern - handles failure gracefully
-const result = Blockchain.call(tokenAddress, calldata, false);
-if (result.success) {
-    // Process response
-} else {
-    // Handle failure without reverting
-}
-```
+**Solidity Comparison:**
+| Solidity | OPNet |
+|----------|-------|
+| `target.call(data)` | `Blockchain.call(target, calldata, false)` |
+| `target.functionCall(args)` | `Blockchain.call(target, calldata, true)` |
+| `try target.call() { } catch { }` | `Blockchain.call(target, calldata, false)` + check `result.success` |
 
 ### CallResult
 
@@ -415,6 +498,29 @@ const txHash = Blockchain.hash256(txData);  // 32 bytes
 
 ## Signature Verification
 
+### verifySignature
+
+Verifies signature based on current consensus rules.
+
+```typescript
+verifySignature(
+    address: ExtendedAddress,
+    signature: Uint8Array,
+    hash: Uint8Array,
+    forceMLDSA: boolean = false
+): boolean
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `address` | `ExtendedAddress` | Signer's address |
+| `signature` | `Uint8Array` | Signature bytes (64 for Schnorr, 2420+ for ML-DSA) |
+| `hash` | `Uint8Array` | 32-byte message hash |
+| `forceMLDSA` | `boolean` | Force ML-DSA verification |
+| **Returns** | `boolean` | True if valid |
+
+The signature verification automatically detects the signature type based on length and applies the appropriate verification algorithm:
+
 ```mermaid
 flowchart LR
     subgraph "Signature Type Detection"
@@ -445,6 +551,19 @@ flowchart LR
     SchnorrResult -->|No| Fail
     Invalid --> Fail
 ```
+
+```typescript
+const isValid = Blockchain.verifySignature(
+    signerAddress,
+    signatureBytes,
+    messageHash
+);
+if (!isValid) {
+    throw new Revert('Invalid signature');
+}
+```
+
+The complete EIP-712 style signature verification flow:
 
 ```mermaid
 sequenceDiagram
@@ -481,38 +600,6 @@ sequenceDiagram
     end
 
     BC->>C: Return boolean
-```
-
-### verifySignature
-
-Verifies signature based on current consensus rules.
-
-```typescript
-verifySignature(
-    address: ExtendedAddress,
-    signature: Uint8Array,
-    hash: Uint8Array,
-    forceMLDSA: boolean = false
-): boolean
-```
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `address` | `ExtendedAddress` | Signer's address |
-| `signature` | `Uint8Array` | Signature bytes (64 for Schnorr, 2420+ for ML-DSA) |
-| `hash` | `Uint8Array` | 32-byte message hash |
-| `forceMLDSA` | `boolean` | Force ML-DSA verification |
-| **Returns** | `boolean` | True if valid |
-
-```typescript
-const isValid = Blockchain.verifySignature(
-    signerAddress,
-    signatureBytes,
-    messageHash
-);
-if (!isValid) {
-    throw new Revert('Invalid signature');
-}
 ```
 
 ### verifyMLDSASignature
@@ -589,6 +676,11 @@ if (Blockchain.isContract(targetAddress)) {
 }
 ```
 
+**Solidity Comparison:**
+| Solidity | OPNet |
+|----------|-------|
+| `address.code.length > 0` | `Blockchain.isContract(address)` |
+
 ### getAccountType
 
 Gets account type code.
@@ -616,44 +708,10 @@ const hash = Blockchain.getBlockHash(Blockchain.block.number - 10);
 
 > **Warning:** Only ~256 recent blocks available. Older blocks return zeros.
 
-## Blockchain Context Hierarchy
-
-```mermaid
-graph LR
-    BC[Blockchain Singleton]
-
-    subgraph "Block Context"
-        B1[block.number<br/>Block height]
-        B2[block.hash<br/>32-byte hash]
-        B3[block.medianTime<br/>Timestamp]
-    end
-
-    subgraph "Transaction Context"
-        T1[tx.sender<br/>Immediate Caller]
-        T2[tx.origin<br/>Original Signer]
-        T3[tx.id<br/>Transaction ID]
-        T4[tx.hash<br/>TX Hash]
-        T5[tx.consensus<br/>Consensus flags]
-    end
-
-    subgraph "Contract Context"
-        C1[contractAddress<br/>This contract]
-        C2[contractDeployer<br/>Deployer address]
-        C3[contract<br/>Instance]
-    end
-
-    subgraph "Network Context"
-        N1[network<br/>Mainnet/Testnet]
-        N2[chainId<br/>32 bytes]
-        N3[protocolId<br/>32 bytes]
-        N4[DEAD_ADDRESS<br/>Burn address]
-    end
-
-    BC --> B1 & B2 & B3
-    BC --> T1 & T2 & T3 & T4 & T5
-    BC --> C1 & C2 & C3
-    BC --> N1 & N2 & N3 & N4
-```
+**Solidity Comparison:**
+| Solidity | OPNet |
+|----------|-------|
+| `blockhash(blockNumber)` | `Blockchain.getBlockHash(blockNumber)` |
 
 ## Event Methods
 
@@ -668,6 +726,11 @@ emit(event: NetEvent): void
 ```typescript
 Blockchain.emit(new TransferEvent(from, to, amount));
 ```
+
+**Solidity Comparison:**
+| Solidity | OPNet |
+|----------|-------|
+| `emit Transfer(from, to, amount)` | `Blockchain.emit(new TransferEvent(from, to, amount))` |
 
 ### log
 
