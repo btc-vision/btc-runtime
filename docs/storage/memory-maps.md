@@ -202,50 +202,7 @@ flowchart LR
 | `transfer(to, amount)` | `balances[msg.sender] -= amount; balances[to] += amount;` | `this.balances.set(sender, SafeMath.sub(...)); this.balances.set(to, SafeMath.add(...));` |
 | `approve(spender, amount)` | `allowances[msg.sender][spender] = amount;` | Use `MapOfMap<u256>` for nested mapping |
 
-### Full Comparison Example
-
-```solidity
-// Solidity
-contract Token {
-    mapping(address => uint256) public balances;
-
-    function transfer(address to, uint256 amount) external {
-        require(balances[msg.sender] >= amount, "Insufficient");
-        balances[msg.sender] -= amount;
-        balances[to] += amount;
-    }
-}
-```
-
-```typescript
-// OPNet
-@final
-export class Token extends OP_NET {
-    private balancesPointer: u16 = Blockchain.nextPointer;
-    private balances: AddressMemoryMap;
-
-    constructor() {
-        super();
-        this.balances = new AddressMemoryMap(this.balancesPointer);
-    }
-
-    public transfer(calldata: Calldata): BytesWriter {
-        const to = calldata.readAddress();
-        const amount = calldata.readU256();
-        const sender = Blockchain.tx.sender;
-
-        const senderBalance = this.balances.get(sender);
-        if (senderBalance < amount) {
-            throw new Revert('Insufficient balance');
-        }
-
-        this.balances.set(sender, SafeMath.sub(senderBalance, amount));
-        this.balances.set(to, SafeMath.add(this.balances.get(to), amount));
-
-        return new BytesWriter(0);
-    }
-}
-```
+For a complete token implementation using AddressMemoryMap, see [Basic Token Example](../examples/basic-token.md).
 
 ## Side-by-Side Code Examples
 

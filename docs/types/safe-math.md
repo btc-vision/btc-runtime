@@ -236,52 +236,9 @@ const approxLn = SafeMath.approxLog(value);  // Approximate ln(x) * 1e6
 const bits = SafeMath.bitLength256(value);  // Returns u32
 ```
 
-## Operations for Other Integer Sizes
+## Other Integer Sizes
 
-SafeMath provides variants for u128 and u64 for more efficient operations when u256 is not needed:
-
-### u128 Operations
-
-```typescript
-import { u128 } from '@btc-vision/as-bignum/assembly';
-
-const a = u128.fromU64(100);
-const b = u128.fromU64(50);
-
-SafeMath.add128(a, b);    // Addition
-SafeMath.sub128(a, b);    // Subtraction
-SafeMath.mul128(a, b);    // Multiplication
-SafeMath.div128(a, b);    // Division
-SafeMath.min128(a, b);    // Minimum
-SafeMath.max128(a, b);    // Maximum
-SafeMath.shl128(a, 10);   // Left shift
-```
-
-### u64 Operations
-
-```typescript
-const x: u64 = 100;
-const y: u64 = 50;
-
-SafeMath.add64(x, y);     // Addition
-SafeMath.sub64(x, y);     // Subtraction
-SafeMath.mul64(x, y);     // Multiplication
-SafeMath.div64(x, y);     // Division
-SafeMath.min64(x, y);     // Minimum
-SafeMath.max64(x, y);     // Maximum
-```
-
-## Solidity Comparison
-
-| Solidity | SafeMath |
-|----------|----------|
-| `a + b` (checked) | `SafeMath.add(a, b)` |
-| `a - b` (checked) | `SafeMath.sub(a, b)` |
-| `a * b` (checked) | `SafeMath.mul(a, b)` |
-| `a / b` | `SafeMath.div(a, b)` |
-| `a % b` | `SafeMath.mod(a, b)` |
-| `a ** b` | `SafeMath.pow(a, b)` |
-| `mulmod(a, b, n)` | `SafeMath.mulmod(a, b, n)` |
+SafeMath also provides u128 and u64 variants. See [SafeMath API Reference](../api-reference/safe-math.md#u128-operations) for the complete list.
 
 ## SafeMathI128
 

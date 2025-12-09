@@ -316,47 +316,7 @@ public override onDeployment(calldata: Calldata): void {
 | `bool public paused = false;` | `private pausedPtr: u16 = Blockchain.nextPointer;`<br>`private _paused: StoredBoolean = new StoredBoolean(this.pausedPtr, false);` |
 | `address public owner;` | `private ownerPtr: u16 = Blockchain.nextPointer;`<br>`private _owner: StoredAddress = new StoredAddress(this.ownerPtr);` |
 
-### Full Example Comparison
-
-```solidity
-// Solidity
-contract Token {
-    string public name;       // slot 0
-    uint256 public supply;    // slot 1
-    bool public paused;       // slot 2 (packed)
-
-    constructor(string memory _name, uint256 _supply) {
-        name = _name;
-        supply = _supply;
-    }
-}
-```
-
-```typescript
-// OPNet
-@final
-export class Token extends OP_NET {
-    private namePointer: u16 = Blockchain.nextPointer;
-    private supplyPointer: u16 = Blockchain.nextPointer;
-    private pausedPointer: u16 = Blockchain.nextPointer;
-
-    private _name: StoredString = new StoredString(this.namePointer, 0);
-    private _supply: StoredU256 = new StoredU256(this.supplyPointer, EMPTY_POINTER);
-    private _paused: StoredBoolean = new StoredBoolean(this.pausedPointer, false);
-
-    public override onDeployment(calldata: Calldata): void {
-        this._name.value = calldata.readString();
-        this._supply.value = calldata.readU256();
-    }
-
-    // Manual getter
-    public name(_calldata: Calldata): BytesWriter {
-        const writer = new BytesWriter(256);
-        writer.writeString(this._name.value);
-        return writer;
-    }
-}
-```
+For complete token examples using stored primitives, see [Basic Token Example](../examples/basic-token.md).
 
 ## Side-by-Side Code Examples
 

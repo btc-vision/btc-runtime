@@ -238,71 +238,7 @@ if (this.holders.getLength() === 0) {
 | Get last element | `arr[arr.length - 1]` | `arr.get(arr.getLength() - 1)` |
 | Initialize with values | `arr = [1, 2, 3];` | Multiple `arr.push()` calls in `onDeployment`, then `arr.save()` |
 
-### Full Example Comparison
-
-```solidity
-// Solidity
-contract Registry {
-    address[] public members;
-
-    function addMember(address member) external {
-        members.push(member);
-    }
-
-    function removeMember(uint256 index) external {
-        members[index] = members[members.length - 1];
-        members.pop();
-    }
-
-    function getMemberCount() external view returns (uint256) {
-        return members.length;
-    }
-}
-```
-
-```typescript
-// OPNet
-@final
-export class Registry extends OP_NET {
-    private membersPointer: u16 = Blockchain.nextPointer;
-    private members: StoredAddressArray;
-
-    constructor() {
-        super();
-        this.members = new StoredAddressArray(this.membersPointer, EMPTY_POINTER);
-    }
-
-    public addMember(calldata: Calldata): BytesWriter {
-        const member = calldata.readAddress();
-        this.members.push(member);
-        this.members.save();
-        return new BytesWriter(0);
-    }
-
-    public removeMember(calldata: Calldata): BytesWriter {
-        const index = calldata.readU32();
-        const length = this.members.getLength();
-
-        if (index >= length) {
-            throw new Revert('Index out of bounds');
-        }
-
-        if (index < length - 1) {
-            this.members.set(index, this.members.get(length - 1));
-        }
-        this.members.deleteLast();
-        this.members.save();
-
-        return new BytesWriter(0);
-    }
-
-    public getMemberCount(_calldata: Calldata): BytesWriter {
-        const writer = new BytesWriter(4);
-        writer.writeU32(this.members.getLength());
-        return writer;
-    }
-}
-```
+For complete contract examples using stored arrays, see the [Examples](../examples/) section.
 
 ## Side-by-Side Code Examples
 
