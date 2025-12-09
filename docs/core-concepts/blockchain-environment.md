@@ -148,19 +148,58 @@ User (EOA) --> Contract A --> Contract B
 config:
   theme: dark
 ---
-flowchart LR
-    User["👤 User"] --> TX["Sign Transaction"]
-    TX --> VM["OPNet VM"]
-    VM --> Init["Initialize Context"]
-    Init --> Load["Load Contract"]
-    Load --> Execute["Execute Method"]
-    Execute --> Cross{"Cross-Call?"}
-    Cross -->|Yes| Update["Update tx.sender"]
-    Update --> External["Call External"]
-    External --> Restore["Restore Context"]
-    Restore --> Commit["Commit Changes"]
-    Cross -->|No| Commit
-    Commit --> Complete["Transaction Complete"]
+flowchart TD
+    subgraph Transaction["Transaction Initiation"]
+        User["User/EOA<br/>Signs Transaction"]
+        TX["Transaction Broadcast"]
+        User --> TX
+    end
+
+    subgraph Runtime["OPNet Runtime"]
+        VM["OPNet VM"]
+        Init["Initialize Blockchain Context"]
+        SetOrigin["Set tx.origin = User Address"]
+        SetSender["Set tx.sender = User Address"]
+        VM --> Init
+        Init --> SetOrigin
+        SetOrigin --> SetSender
+    end
+
+    subgraph Contract["Contract Loading"]
+        LoadContract["Load Target Contract"]
+        SetContractAddr["Set contract.address"]
+        SetDeployer["Set contract.deployer"]
+        Execute["Execute Contract Method"]
+        LoadContract --> SetContractAddr
+        SetContractAddr --> SetDeployer
+        SetDeployer --> Execute
+    end
+
+    subgraph CrossCall["Cross-Contract Calls"]
+        CheckCrossCall{"Makes Cross-<br/>Contract Call?"}
+        UpdateSender["Update tx.sender<br/>to current contract"]
+        CallExternal["Call External Contract"]
+        RestoreSender["Restore tx.sender"]
+        CheckCrossCall -->|Yes| UpdateSender
+        UpdateSender --> CallExternal
+        CallExternal --> RestoreSender
+    end
+
+    subgraph Finalization["Transaction Finalization"]
+        Complete["Complete Execution"]
+        Commit["Commit Storage Changes"]
+        EmitEvents["Emit Events"]
+        End["Transaction Complete"]
+        Complete --> Commit
+        Commit --> EmitEvents
+        EmitEvents --> End
+    end
+
+    TX --> VM
+    SetSender --> LoadContract
+    Execute --> CheckCrossCall
+    CheckCrossCall -->|No| Complete
+    RestoreSender --> Complete
 ```
 
 ### Solidity Comparison

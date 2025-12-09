@@ -13,15 +13,19 @@ Storage Key = SHA256(pointer || subPointer)
 ### Pointer Structure Visualization
 
 ```mermaid
----
-config:
-  theme: dark
----
-flowchart LR
-    A["Pointer (u16)"] --> Concat["Concatenate"]
-    B["SubPointer (u256)"] --> Concat
-    Concat --> Hash["SHA256"]
-    Hash --> Key["Storage Key (32 bytes)"]
+flowchart TD
+    subgraph Construction["32-Byte Storage Key Construction"]
+        A["Pointer<br/>(u16, 2 bytes)<br/>0x0003"]
+        B["SubPointer<br/>(u256, 30 bytes)<br/>0x00...ABC123"]
+        Concat["Concatenation (||)"]
+        Hash["SHA256 Hash"]
+        Key["Storage Key<br/>(32 bytes)<br/>0x7F3E...9A2D"]
+
+        A --> Concat
+        B --> Concat
+        Concat --> Hash
+        Hash --> Key
+    end
 ```
 
 ### Pointer Byte Layout
@@ -137,18 +141,49 @@ Contract Storage
 ### Multiple Storage Variables Example
 
 ```mermaid
----
-config:
-  theme: dark
----
-flowchart LR
-    Contract["Token Contract"] --> P0["Pointer 0: totalSupply"]
-    Contract --> P1["Pointer 1: name"]
-    Contract --> P2["Pointer 2: balances"]
-    P0 --> V0["Value: u256"]
-    P1 --> V1["Value: string"]
-    P2 --> V2A["balances[0xAAA]"]
-    P2 --> V2B["balances[0xBBB]"]
+flowchart TD
+    subgraph Contract["Token Contract"]
+        Root["Contract Root"]
+    end
+
+    subgraph SimpleValues["Simple Storage (Single Values)"]
+        P0["Pointer 0: totalSupply<br/>StoredU256"]
+        P1["Pointer 1: name<br/>StoredString"]
+        P2["Pointer 2: symbol<br/>StoredString"]
+
+        K0["Key: SHA256(0 || 0)<br/>Value: u256"]
+        K1["Key: SHA256(1 || 0)<br/>Value: 'MyToken'"]
+        K2["Key: SHA256(2 || 0)<br/>Value: 'MTK'"]
+
+        P0 --> K0
+        P1 --> K1
+        P2 --> K2
+    end
+
+    subgraph Mappings["Mappings (Multiple Values)"]
+        P3["Pointer 3: balances<br/>AddressMemoryMap"]
+        P4["Pointer 4: allowances<br/>MapOfMap"]
+
+        K3A["Key: SHA256(3 || 0xAAA...)<br/>Value: 1000"]
+        K3B["Key: SHA256(3 || 0xBBB...)<br/>Value: 500"]
+        K3C["Key: SHA256(3 || 0xCCC...)<br/>Value: 250"]
+
+        K4A["Key: SHA256(4 || hash(owner,spender1))<br/>Value: 100"]
+        K4B["Key: SHA256(4 || hash(owner,spender2))<br/>Value: 200"]
+
+        P3 --> K3A
+        P3 --> K3B
+        P3 --> K3C
+
+        P4 --> K4A
+        P4 --> K4B
+    end
+
+    Root --> P0
+    Root --> P1
+    Root --> P2
+    Root --> P3
+    Root --> P4
 ```
 
 ## Pointer Patterns
