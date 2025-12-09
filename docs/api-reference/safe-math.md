@@ -9,51 +9,6 @@ import { SafeMath } from '@btc-vision/btc-runtime/runtime';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 ```
 
-## SafeMath Overview
-
-```mermaid
-graph TB
-    A[SafeMath Library]
-
-    subgraph "Basic Arithmetic"
-        B1[add<br/>Addition]
-        B2[sub<br/>Subtraction]
-        B3[mul<br/>Multiplication]
-        B4[div<br/>Division]
-        B5[mod<br/>Modulus]
-    end
-
-    subgraph "Advanced Math"
-        C1[pow<br/>Exponentiation]
-        C2[sqrt<br/>Square Root]
-        C3[log2<br/>Logarithm Base 2]
-        C4[log10<br/>Logarithm Base 10]
-        C5[logN<br/>Logarithm Base N]
-    end
-
-    subgraph "Cryptographic"
-        D1[mulmod<br/>Modular Multiplication]
-        D2[modInverse<br/>Modular Inverse]
-    end
-
-    subgraph "Bitwise"
-        E1[shl<br/>Shift Left]
-        E2[shr<br/>Shift Right]
-    end
-
-    subgraph "Comparison"
-        F1[eq / gt / gte]
-        F2[lt / lte]
-        F3[min / max]
-    end
-
-    A --> B1 & B2 & B3 & B4 & B5
-    A --> C1 & C2 & C3 & C4 & C5
-    A --> D1 & D2
-    A --> E1 & E2
-    A --> F1 & F2 & F3
-```
-
 ## Basic Operations
 
 ### add
@@ -129,6 +84,10 @@ const remainder = SafeMath.mod(u256.fromU64(100), u256.fromU64(30));  // 10
 ## Overflow Protection Flow
 
 ```mermaid
+---
+config:
+  theme: dark
+---
 flowchart TB
     subgraph "Addition add"
         A[SafeMath.add a, b] --> B[Compute<br/>result = a + b]
@@ -159,38 +118,6 @@ flowchart TB
         S -->|No| U[Compute<br/>result = a / b]
         U --> V[Return result]
     end
-```
-
-```mermaid
-sequenceDiagram
-    participant Contract
-    participant SafeMath
-    participant Revert
-
-    Note over Contract,Revert: Safe Addition
-
-    Contract->>SafeMath: add(u256.Max, u256.One)
-    SafeMath->>SafeMath: result = u256.Max + u256.One
-    SafeMath->>SafeMath: Check: result < u256.Max?
-    SafeMath->>SafeMath: Yes, overflow detected
-    SafeMath->>Revert: throw Revert('Overflow')
-    Revert->>Contract: Transaction reverted
-
-    Note over Contract,Revert: Safe Subtraction
-
-    Contract->>SafeMath: sub(u256.fromU64(100), u256.fromU64(200))
-    SafeMath->>SafeMath: Check: 200 > 100?
-    SafeMath->>SafeMath: Yes, underflow
-    SafeMath->>Revert: throw Revert('Underflow')
-    Revert->>Contract: Transaction reverted
-
-    Note over Contract,Revert: Successful Operation
-
-    Contract->>SafeMath: add(u256.fromU64(100), u256.fromU64(50))
-    SafeMath->>SafeMath: result = 100 + 50 = 150
-    SafeMath->>SafeMath: Check overflow: 150 < 100?
-    SafeMath->>SafeMath: No, valid result
-    SafeMath->>Contract: Return u256.fromU64(150)
 ```
 
 ## Advanced Operations

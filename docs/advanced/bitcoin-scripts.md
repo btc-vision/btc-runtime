@@ -2,36 +2,6 @@
 
 OPNet provides utilities for working with Bitcoin scripts, addresses, and timelocks. This enables contracts to interact with Bitcoin's native scripting capabilities.
 
-## Bitcoin Script Structure
-
-```mermaid
-flowchart TB
-    subgraph OPNet["⚡ OPNet Bitcoin Script Architecture"]
-        direction TB
-
-        subgraph ScriptComponents["📜 Script Components"]
-            OP["⚙️ Opcodes<br/>OP_DUP, OP_HASH160, etc."]
-            DATA["📦 Data Pushes<br/>Public keys, hashes, etc."]
-            CTRL["🔀 Control Flow<br/>OP_IF, OP_ELSE, OP_ENDIF"]
-        end
-
-        subgraph CommonTypes["🔑 Common Script Types"]
-            P2PKH["P2PKH<br/>OP_DUP OP_HASH160 &lt;hash&gt;<br/>OP_EQUALVERIFY OP_CHECKSIG"]
-            P2SH["P2SH<br/>OP_HASH160 &lt;hash&gt;<br/>OP_EQUAL"]
-            P2WPKH["P2WPKH<br/>OP_0 &lt;20-byte hash&gt;"]
-            P2WSH["P2WSH<br/>OP_0 &lt;32-byte hash&gt;"]
-            P2TR["✨ P2TR (Taproot)<br/>OP_1 &lt;32-byte key&gt;"]
-        end
-    end
-
-    OP --> P2PKH
-    OP --> P2SH
-    DATA --> P2PKH
-    DATA --> P2WPKH
-    DATA --> P2WSH
-    DATA --> P2TR
-```
-
 ## Overview
 
 ```typescript
@@ -69,44 +39,65 @@ const hrpRegtest = Network.hrp(Networks.Regtest);  // "bcrt"
 const chainId = Network.getChainId(Networks.Mainnet);
 ```
 
-## Address Derivation Flow
+## Address Derivation
+
+### P2PKH Derivation
 
 ```mermaid
-flowchart TB
-    subgraph OPNet["⚡ OPNet Address Derivation"]
-        direction TB
+---
+config:
+  theme: dark
+---
+flowchart LR
+    PK["Public Key<br/>33 bytes compressed"] --> H1["SHA256"]
+    H1 --> H2["RIPEMD160"]
+    H2 --> PKH["20-byte hash"]
+    PKH --> B58["Base58Check Encoding"]
+    B58 --> ADDR["Address: 1..."]
+```
 
-        subgraph P2PKHPath["🔐 P2PKH Derivation"]
-            PK1["🔑 Public Key<br/>33 bytes compressed"] --> H1["SHA256"]
-            H1 --> H2["RIPEMD160"]
-            H2 --> PKH["20-byte hash"]
-            PKH --> B58["Base58Check<br/>Encoding"]
-            B58 --> A1["📍 Address: 1..."]
-        end
+### P2SH Derivation
 
-        subgraph P2SHPath["📝 P2SH Derivation"]
-            SC["📜 Redeem Script"] --> SH1["SHA256"]
-            SH1 --> SH2["RIPEMD160"]
-            SH2 --> SHH["20-byte hash"]
-            SHH --> B58_2["Base58Check<br/>Encoding"]
-            B58_2 --> A2["📍 Address: 3..."]
-        end
+```mermaid
+---
+config:
+  theme: dark
+---
+flowchart LR
+    SC["Redeem Script"] --> SH1["SHA256"]
+    SH1 --> SH2["RIPEMD160"]
+    SH2 --> SHH["20-byte hash"]
+    SHH --> B58["Base58Check Encoding"]
+    B58 --> ADDR["Address: 3..."]
+```
 
-        subgraph P2WPKHPath["⚡ P2WPKH Derivation (SegWit)"]
-            PK2["🔑 Public Key<br/>33 bytes"] --> WH1["SHA256"]
-            WH1 --> WH2["RIPEMD160"]
-            WH2 --> WPH["20-byte hash"]
-            WPH --> SEG1["Bech32<br/>Encoding"]
-            SEG1 --> A3["📍 Address: bc1q..."]
-        end
+### P2WPKH Derivation (SegWit)
 
-        subgraph P2TRPath["✨ P2TR Derivation (Taproot)"]
-            PK3["🔑 x-only Public Key<br/>32 bytes"] --> TR1["Tweak key"]
-            TR1 --> TRK["Tweaked key<br/>32 bytes"]
-            TRK --> SEG2["Bech32m<br/>Encoding"]
-            SEG2 --> A4["📍 Address: bc1p..."]
-        end
-    end
+```mermaid
+---
+config:
+  theme: dark
+---
+flowchart LR
+    PK["Public Key<br/>33 bytes"] --> H1["SHA256"]
+    H1 --> H2["RIPEMD160"]
+    H2 --> WPH["20-byte hash"]
+    WPH --> SEG["Bech32 Encoding"]
+    SEG --> ADDR["Address: bc1q..."]
+```
+
+### P2TR Derivation (Taproot)
+
+```mermaid
+---
+config:
+  theme: dark
+---
+flowchart LR
+    PK["x-only Public Key<br/>32 bytes"] --> TR["Tweak key"]
+    TR --> TRK["Tweaked key<br/>32 bytes"]
+    TRK --> SEG["Bech32m Encoding"]
+    SEG --> ADDR["Address: bc1p..."]
 ```
 
 ## Address Types
@@ -284,68 +275,42 @@ public buildMultisigManual(
 }
 ```
 
-## Timelock Script Flow
+## Timelock Scripts
+
+### CSV (CheckSequenceVerify) - Relative Timelock
 
 ```mermaid
-flowchart TB
-    subgraph OPNet["📝 OPNet Bitcoin Timelock Scripts"]
-        direction TB
-
-        subgraph CSVFlow["⏱️ CSV (CheckSequenceVerify) - Relative Timelock"]
-            CSV1["🔒 Transaction Input<br/>nSequence field"] --> CSV2{"Timelock Type?"}
-            CSV2 -->|"Block-based"| CSV3["⏱️ Blocks since confirmation<br/>Value = block count"]
-            CSV2 -->|"Time-based"| CSV4["⏰ Time since confirmation<br/>Value = 512-second units + FLAG"]
-
-            CSV3 --> CSV5["⚡ OP_CSV verifies:<br/>nSequence >= CSV_VALUE"]
-            CSV4 --> CSV5
-            CSV5 --> CSV6{"🔐 Valid?"}
-            CSV6 -->|"Yes"| CSV7["✅ Continue execution"]
-            CSV6 -->|"No"| CSV8["❌ Transaction invalid"]
-        end
-
-        subgraph CLTVFlow["⏰ CLTV (CheckLockTimeVerify) - Absolute Timelock"]
-            CLTV1["🔒 Transaction<br/>nLockTime field"] --> CLTV2{"Timelock Type?"}
-            CLTV2 -->|"Block-based"| CLTV3["⏱️ Block height<br/>Value &lt; 500000000"]
-            CLTV2 -->|"Time-based"| CLTV4["⏰ Unix timestamp<br/>Value >= 500000000"]
-
-            CLTV3 --> CLTV5["⚡ OP_CLTV verifies:<br/>nLockTime >= CLTV_VALUE"]
-            CLTV4 --> CLTV5
-            CLTV5 --> CLTV6{"🔐 Valid?"}
-            CLTV6 -->|"Yes"| CLTV7["✅ Continue execution"]
-            CLTV6 -->|"No"| CLTV8["❌ Transaction invalid"]
-        end
-    end
+---
+config:
+  theme: dark
+---
+flowchart TD
+    CSV1["Transaction Input<br/>nSequence field"] --> CSV2{"Timelock Type?"}
+    CSV2 -->|"Block-based"| CSV3["Blocks since confirmation"]
+    CSV2 -->|"Time-based"| CSV4["512-second units + FLAG"]
+    CSV3 --> CSV5["OP_CSV verifies:<br/>nSequence >= CSV_VALUE"]
+    CSV4 --> CSV5
+    CSV5 --> CSV6{"Valid?"}
+    CSV6 -->|"Yes"| CSV7["Continue execution"]
+    CSV6 -->|"No"| CSV8["Transaction invalid"]
 ```
 
-## CSV Script Execution Stack
+### CLTV (CheckLockTimeVerify) - Absolute Timelock
 
 ```mermaid
-sequenceDiagram
-    participant Script as 📝 Bitcoin Script
-    participant Stack as ⚡ Execution Stack
-    participant Blockchain as 🔐 Bitcoin Opcodes
-
-    Note over Script,Blockchain: CSV Timelock Script Execution
-
-    Script->>Stack: Push CSV value (144 blocks)
-    Note over Stack: [144]
-
-    Script->>Stack: OP_CHECKSEQUENCEVERIFY
-    Stack->>Blockchain: Check nSequence >= 144
-    Blockchain-->>Stack: ✅ Valid
-
-    Script->>Stack: OP_DROP
-    Note over Stack: []
-
-    Script->>Stack: Push public key (33 bytes)
-    Note over Stack: [pubkey]
-
-    Script->>Stack: OP_CHECKSIG
-    Stack->>Blockchain: 🔐 Verify signature
-    Blockchain-->>Stack: ✅ Valid
-
-    Note over Stack: [true]
-    Stack-->>Script: ⚡ Script succeeds
+---
+config:
+  theme: dark
+---
+flowchart TD
+    CLTV1["Transaction<br/>nLockTime field"] --> CLTV2{"Timelock Type?"}
+    CLTV2 -->|"Block-based"| CLTV3["Block height<br/>Value < 500000000"]
+    CLTV2 -->|"Time-based"| CLTV4["Unix timestamp<br/>Value >= 500000000"]
+    CLTV3 --> CLTV5["OP_CLTV verifies:<br/>nLockTime >= CLTV_VALUE"]
+    CLTV4 --> CLTV5
+    CLTV5 --> CLTV6{"Valid?"}
+    CLTV6 -->|"Yes"| CLTV7["Continue execution"]
+    CLTV6 -->|"No"| CLTV8["Transaction invalid"]
 ```
 
 ## CSV Timelocks
