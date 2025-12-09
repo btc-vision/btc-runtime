@@ -1,0 +1,483 @@
+# Quantum Resistance
+
+OPNet includes built-in quantum-resistant cryptography through ML-DSA (Module-Lattice Digital Signature Algorithm). The `Address` class provides automatic access to ML-DSA public keys without requiring any custom storage.
+
+## ML-DSA Signature Structure
+
+```mermaid
+---
+config:
+  theme: dark
+---
+graph LR
+    subgraph OPNet["OPNet Quantum-Resistant Signatures"]
+        subgraph MLDSA["ML-DSA-44 (Level2) - Default"]
+            direction TB
+            PK["Public Key<br/>1,312 bytes"]
+            SIG["Signature<br/>2,420 bytes"]
+            SK["Private Key<br/>2,560 bytes"]
+
+            subgraph PKComp["Public Key Components"]
+                PK1["ρ: seed"]
+                PK2["t1: compressed hint"]
+            end
+
+            subgraph SigComp["Signature Components"]
+                SIG1["c̃: commitment hash"]
+                SIG2["z: response vector"]
+                SIG3["h: hint"]
+            end
+        end
+
+        subgraph SecLevels["Security Levels"]
+            L2["Level2: ML-DSA-44<br/>~AES-128<br/>NIST Category 2"]
+            L3["Level3: ML-DSA-65<br/>~AES-192<br/>NIST Category 3"]
+            L5["Level5: ML-DSA-87<br/>~AES-256<br/>NIST Category 5"]
+        end
+    end
+```
+
+## Overview
+
+Quantum computers pose a threat to traditional cryptographic schemes:
+
+| Algorithm | Quantum Threat | OPNet Status |
+|-----------|---------------|--------------|
+| ECDSA | Vulnerable (Shor's algorithm) | Not used |
+| Schnorr | Vulnerable (Shor's algorithm) | Supported, with transition plan |
+| ML-DSA | Quantum-resistant | **Fully supported** |
+
+## Quick Start
+
+```typescript
+import { Blockchain, sha256 } from '@btc-vision/btc-runtime/runtime';
+
+// Verify a signature with quantum resistance
+const message = new BytesWriter(32);
+message.writeString('Sign this message');
+const messageHash = sha256(message.getBuffer());
+
+// forceMLDSA = true ensures quantum-resistant verification
+const isValid = Blockchain.verifySignature(
+    Blockchain.tx.origin,  // Signer's address
+    signature,              // Signature bytes
+    messageHash,            // Message hash
+    true                    // Force ML-DSA (quantum-resistant)
+);
+```
+
+## Security Level Comparison
+
+```mermaid
+---
+config:
+  theme: dark
+---
+graph LR
+    subgraph OPNet["OPNet Security Architecture"]
+        subgraph Classical["Classical Security"]
+            C1["Schnorr<br/>256-bit<br/>Classical: Strong<br/>Quantum: Broken"]
+        end
+
+        subgraph PostQuantum["Post-Quantum Security Levels"]
+            Q1["ML-DSA-44<br/>Level2<br/>~AES-128<br/>Quantum: Strong"]
+            Q2["ML-DSA-65<br/>Level3<br/>~AES-192<br/>Quantum: Stronger"]
+            Q3["ML-DSA-87<br/>Level5<br/>~AES-256<br/>Quantum: Strongest"]
+        end
+
+        QC["Quantum Computer<br/>4000+ qubits"]
+
+        QC -.->|"Breaks in hours"| C1
+        QC -.->|"Cannot break"| Q1
+        QC -.->|"Cannot break"| Q2
+        QC -.->|"Cannot break"| Q3
+    end
+```
+
+## Migration Path: Schnorr to ML-DSA
+
+```mermaid
+flowchart LR
+    subgraph OPNet["OPNet Quantum Transition Roadmap"]
+        subgraph Phase1["Phase 1: Transition Period (Current)"]
+            P1A["Both Schnorr and ML-DSA accepted"]
+            P1B["UNSAFE_QUANTUM_SIGNATURES_ALLOWED = true"]
+            P1C["Addresses contain both keys"]
+        end
+
+        subgraph Phase2["Phase 2: Warning Period"]
+            P2A["Schnorr signatures still accepted"]
+            P2B["Warnings logged for Schnorr use"]
+            P2C["Encourage migration to ML-DSA"]
+        end
+
+        subgraph Phase3["Phase 3: Quantum-Safe Only"]
+            P3A["Only ML-DSA signatures accepted"]
+            P3B["UNSAFE_QUANTUM_SIGNATURES_ALLOWED = false"]
+            P3C["Schnorr signatures rejected"]
+        end
+
+        P1A --> P1B --> P1C --> P2A
+        P2A --> P2B --> P2C --> P3A
+        P3A --> P3B --> P3C
+    end
+```
+
+## Why Quantum Resistance?
+
+### The Threat
+
+- **Public keys are exposed** when addresses send transactions
+- Quantum computers with ~4000 qubits could derive private keys
+- Existing signatures remain safe (retroactive attack impossible)
+- Future transactions from exposed addresses are at risk
+
+### OPNet's Approach
+
+1. **Dual signature support** - Both Schnorr and ML-DSA signatures
+2. **Extended addresses** - Store both Schnorr (taproot) and ML-DSA key references
+3. **Built-in key access** - `Address.mldsaPublicKey` property loads keys automatically
+4. **Consensus-managed transition** - Automatic migration from Schnorr to ML-DSA
+
+## ML-DSA Key Generation and Verification Flow
+
+```mermaid
+sequenceDiagram
+    participant User as 👤 User
+    participant Wallet as Wallet
+    participant Blockchain as OPNet Runtime
+    participant Contract as Contract
+
+    Note over User,Blockchain: Key Generation (Off-chain)
+    User->>Wallet: Generate ML-DSA keypair
+    Wallet->>Wallet: Generate random seed
+    Wallet->>Wallet: Expand seed to matrix A
+    Wallet->>Wallet: Sample secret vectors s1, s2
+    Wallet->>Wallet: Compute t = As1 + s2
+    Wallet->>Wallet: Public key = (ρ, t1)
+    Wallet->>Wallet: Private key = (ρ, K, tr, s1, s2, t0)
+
+    Note over User,Blockchain: Address Creation
+    Wallet->>Wallet: Hash ML-DSA public key (SHA256)
+    Wallet->>Wallet: Store 32-byte hash as Address
+    Wallet->>Blockchain: Register address with full public key
+
+    Note over User,Contract: Signature Verification
+    User->>Contract: call method(signature, message)
+    Contract->>Contract: Get sender address (32-byte hash)
+    Contract->>Blockchain: verifySignature(address, sig, hash, true)
+    Blockchain->>Blockchain: Load cached ML-DSA public key
+    Note over Blockchain: If not cached, load from storage
+    Blockchain->>Blockchain: Verify ML-DSA signature
+    Blockchain->>Blockchain: Decode signature (c̃, z, h)
+    Blockchain->>Blockchain: Reconstruct commitment w'
+    Blockchain->>Blockchain: Verify ||z|| < γ1 - β
+    Blockchain->>Blockchain: Verify high-order bits match
+    Blockchain-->>Contract: valid: bool
+```
+
+## The Address Class
+
+### Automatic ML-DSA Key Access
+
+Every `Address` in OPNet stores the SHA256 hash of an ML-DSA public key. The full public key is automatically loaded on demand:
+
+```typescript
+import { Address, Blockchain } from '@btc-vision/btc-runtime/runtime';
+
+// Any address can access its ML-DSA public key
+const sender: Address = Blockchain.tx.sender;
+
+// Get the ML-DSA public key (loaded automatically from the blockchain)
+const mldsaKey: Uint8Array = sender.mldsaPublicKey;
+
+// The key is cached after first access for efficiency
+const sameKey: Uint8Array = sender.mldsaPublicKey;  // Returns cached key
+```
+
+**Key points:**
+- No custom storage needed - the runtime handles key storage
+- Keys are lazily loaded on first access and cached
+- The address itself is the SHA256 hash of the ML-DSA public key
+
+### How It Works Internally
+
+```typescript
+// Address stores 32-byte SHA256 hash of ML-DSA public key
+class Address extends Uint8Array {
+    protected _mldsaPublicKey: Uint8Array | null = null;
+
+    // Getter loads key from blockchain on demand
+    public get mldsaPublicKey(): Uint8Array {
+        if (!this._mldsaPublicKey) {
+            this._mldsaPublicKey = loadMLDSAPublicKey(this, MLDSASecurityLevel.Level2);
+        }
+        return this._mldsaPublicKey;
+    }
+}
+```
+
+## Extended Address
+
+`ExtendedAddress` supports dual-key addresses for the quantum transition:
+
+```typescript
+import { ExtendedAddress } from '@btc-vision/btc-runtime/runtime';
+
+// Create from both key components
+const extAddr = ExtendedAddress.fromStringPair(
+    '0x' + 'aa'.repeat(32),  // Tweaked Schnorr key (taproot)
+    '0x' + 'bb'.repeat(32)   // ML-DSA key hash
+);
+
+// Access the tweaked Schnorr key (for taproot/P2TR)
+const schnorrKey: Uint8Array = extAddr.tweakedPublicKey;  // 32 bytes
+
+// Access the ML-DSA public key (inherited from Address)
+const mldsaKey: Uint8Array = extAddr.mldsaPublicKey;  // 1312 bytes (ML-DSA-44)
+
+// Generate Bitcoin addresses
+const p2trAddress: string = extAddr.p2tr();  // "bc1p..." or "tb1p..."
+```
+
+### Dual Key Structure
+
+```
+ExtendedAddress (64 bytes reference)
+├── tweakedPublicKey: Uint8Array[32]  ─→ Schnorr (taproot)
+└── Address bytes: Uint8Array[32]      ─→ SHA256(ML-DSA public key)
+                                            └─→ .mldsaPublicKey loads full key
+```
+
+## Signature Verification
+
+### The Simple Way (Recommended)
+
+Just use `Blockchain.verifySignature()` - it handles everything:
+
+```typescript
+import { Blockchain, sha256 } from '@btc-vision/btc-runtime/runtime';
+
+@method(ABIDataTypes.BYTES)
+@returns({ name: 'valid', type: ABIDataTypes.BOOL })
+public verifySignature(calldata: Calldata): BytesWriter {
+    const signature = calldata.readBytesWithLength();
+
+    // Create message hash
+    const message = new BytesWriter(55);
+    message.writeString('Hello, world! This is a test message for MLDSA signing.');
+    const messageHash = sha256(message.getBuffer());
+
+    // Verify with quantum resistance (forceMLDSA = true)
+    const isValid = Blockchain.verifySignature(
+        Blockchain.tx.origin,
+        signature,
+        messageHash,
+        true  // Force ML-DSA
+    );
+
+    const writer = new BytesWriter(1);
+    writer.writeBoolean(isValid);
+    return writer;
+}
+```
+
+### Consensus-Aware Verification
+
+Let the consensus decide which algorithm to use:
+
+```typescript
+// During transition: uses Schnorr if allowed, ML-DSA otherwise
+// After transition: always uses ML-DSA
+const isValid = Blockchain.verifySignature(
+    signer,
+    signature,
+    messageHash,
+    false  // Let consensus decide
+);
+```
+
+### Direct ML-DSA Verification
+
+For cases where you need explicit control:
+
+```typescript
+import { MLDSASecurityLevel } from '@btc-vision/btc-runtime/runtime';
+
+const isValid = Blockchain.verifyMLDSASignature(
+    MLDSASecurityLevel.Level2,  // Security level
+    signer.mldsaPublicKey,       // Auto-loaded from address
+    signature,                    // 2420-byte signature
+    messageHash                   // 32-byte message hash
+);
+```
+
+## ML-DSA Security Levels
+
+OPNet supports three ML-DSA security levels:
+
+| Level | Name | Public Key | Signature | Private Key | NIST Category |
+|-------|------|------------|-----------|-------------|---------------|
+| Level2 | ML-DSA-44 | 1,312 bytes | 2,420 bytes | 2,560 bytes | Category 2 (~AES-128) |
+| Level3 | ML-DSA-65 | 1,952 bytes | 3,309 bytes | 4,032 bytes | Category 3 (~AES-192) |
+| Level5 | ML-DSA-87 | 2,592 bytes | 4,627 bytes | 4,896 bytes | Category 5 (~AES-256) |
+
+**OPNet uses ML-DSA-44 (Level2) by default**, balancing security and performance.
+
+### Level Constants
+
+```typescript
+import {
+    MLDSASecurityLevel,
+    MLDSA44_PUBLIC_KEY_LEN,   // 1312
+    MLDSA44_SIGNATURE_LEN,     // 2420
+    MLDSA65_PUBLIC_KEY_LEN,   // 1952
+    MLDSA65_SIGNATURE_LEN,     // 3309
+    MLDSA87_PUBLIC_KEY_LEN,   // 2592
+    MLDSA87_SIGNATURE_LEN      // 4627
+} from '@btc-vision/btc-runtime/runtime';
+```
+
+## Complete Contract Example
+
+```typescript
+import {
+    OP_NET,
+    Blockchain,
+    Calldata,
+    BytesWriter,
+    Revert,
+    sha256,
+    ABIDataTypes
+} from '@btc-vision/btc-runtime/runtime';
+
+@final
+class QuantumSecureContract extends OP_NET {
+
+    @method(
+        { name: 'message', type: ABIDataTypes.BYTES },
+        { name: 'signature', type: ABIDataTypes.BYTES },
+    )
+    @returns({ name: 'valid', type: ABIDataTypes.BOOL })
+    public verifyQuantum(calldata: Calldata): BytesWriter {
+        const message = calldata.readBytesWithLength();
+        const signature = calldata.readBytesWithLength();
+
+        const messageHash = sha256(message);
+
+        // Always use quantum-resistant verification
+        const isValid = Blockchain.verifySignature(
+            Blockchain.tx.origin,
+            signature,
+            messageHash,
+            true  // Force ML-DSA
+        );
+
+        const writer = new BytesWriter(1);
+        writer.writeBoolean(isValid);
+        return writer;
+    }
+
+    @method(
+        { name: 'signer', type: ABIDataTypes.ADDRESS },
+        { name: 'message', type: ABIDataTypes.BYTES },
+        { name: 'signature', type: ABIDataTypes.BYTES },
+    )
+    @returns({ name: 'valid', type: ABIDataTypes.BOOL })
+    public verifyForAddress(calldata: Calldata): BytesWriter {
+        const signer = calldata.readAddress();
+        const message = calldata.readBytesWithLength();
+        const signature = calldata.readBytesWithLength();
+
+        const messageHash = sha256(message);
+
+        // Verify for a specific address
+        const isValid = Blockchain.verifySignature(
+            signer,
+            signature,
+            messageHash,
+            true
+        );
+
+        const writer = new BytesWriter(1);
+        writer.writeBoolean(isValid);
+        return writer;
+    }
+
+    @method({ name: 'owner', type: ABIDataTypes.ADDRESS })
+    @returns({ name: 'keyLength', type: ABIDataTypes.UINT32 })
+    public getMLDSAKeyLength(calldata: Calldata): BytesWriter {
+        const owner = calldata.readAddress();
+
+        // Access ML-DSA public key - automatically loaded
+        const mldsaKey = owner.mldsaPublicKey;
+
+        const writer = new BytesWriter(4);
+        writer.writeU32(mldsaKey.length);  // 1312 for Level2
+        return writer;
+    }
+}
+```
+
+## Solidity Comparison
+
+| Concept | Solidity/EVM | OPNet |
+|---------|-------------|-------|
+| Signature verification | `ecrecover()` (ECDSA only) | `Blockchain.verifySignature()` (Schnorr + ML-DSA) |
+| Public key access | Must store or derive | `address.mldsaPublicKey` (automatic) |
+| Quantum resistance | Not available | Built-in ML-DSA support |
+| Key sizes | 33/65 bytes (secp256k1) | 1,312+ bytes (ML-DSA) |
+
+## Consensus Transition
+
+The OPNet consensus manages the transition from Schnorr to ML-DSA:
+
+1. **Current**: Both Schnorr and ML-DSA accepted
+2. **Transition**: Warning flags for Schnorr-only operations
+3. **Future**: ML-DSA required for high-value operations
+
+The `UNSAFE_QUANTUM_SIGNATURES_ALLOWED` consensus flag controls whether Schnorr signatures are still permitted. When disabled, only ML-DSA signatures will be valid.
+
+## Best Practices
+
+### 1. Use Address.mldsaPublicKey
+
+Don't store ML-DSA keys yourself - the Address class handles this:
+
+```typescript
+// Good - use built-in property
+const key = sender.mldsaPublicKey;
+
+// Unnecessary - don't store keys manually
+// AddressMemoryMap only stores u256 values anyway
+```
+
+### 2. Force ML-DSA for High-Security Operations
+
+```typescript
+// For critical operations, always force quantum-resistant verification
+Blockchain.verifySignature(signer, signature, hash, true);
+```
+
+### 3. Use Consensus-Aware Verification for General Use
+
+```typescript
+// For general use, let consensus decide
+Blockchain.verifySignature(signer, signature, hash, false);
+```
+
+### 4. Document Security Level
+
+```typescript
+/**
+ * Security Note: This contract uses ML-DSA-44 for quantum resistance.
+ * ML-DSA-44 provides NIST Category 2 security (~AES-128 equivalent).
+ * For higher security requirements, ML-DSA-65 or ML-DSA-87 may be used.
+ */
+```
+
+---
+
+**Navigation:**
+- Previous: [Signature Verification](./signature-verification.md)
+- Next: [Bitcoin Scripts](./bitcoin-scripts.md)
