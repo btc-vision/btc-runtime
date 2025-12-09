@@ -1303,12 +1303,14 @@ export class SafeMath {
         // fractionScaled = scaledRatio - SCALE represents fraction * SCALE
         const fractionScaled = SafeMath.sub(scaledRatio, SCALE);
 
-        // For small fractions (a/b <= 2, i.e., fractionScaled <= SCALE), use Taylor series
-        if (u256.le(fractionScaled, SCALE)) {
+        // For small fractions (a/b < 2, i.e., fractionScaled < SCALE), use Taylor series
+        // Note: Use strict less-than to ensure ratio = 2 uses the k*ln(2) decomposition
+        // This ensures continuity at the boundary - both paths give ln(2) for ratio = 2
+        if (u256.lt(fractionScaled, SCALE)) {
             return this.calculateLnOnePlusFraction(fractionScaled, SCALE);
         }
 
-        // For larger ratios, use the decomposition:
+        // For ratios >= 2, use the decomposition:
         // ln(a/b) = k * ln(2) + ln(normalized)
         // where normalized = (a/b) / 2^k is in range [1, 2)
 
