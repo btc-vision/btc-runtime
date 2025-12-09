@@ -268,7 +268,7 @@ export class BasicToken extends OP20 {
     }
 
     /**
-     * Route method calls.
+     * Route method calls to appropriate handlers.
      */
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
         switch (method) {
@@ -573,7 +573,7 @@ public override execute(method: Selector, calldata: Calldata): BytesWriter {
     switch (method) {
         case MINT_SELECTOR:
             return this.mint(calldata);
-        // ...
+        // ... other cases
         default:
             return super.execute(method, calldata);
     }
@@ -582,17 +582,20 @@ public override execute(method: Selector, calldata: Calldata): BytesWriter {
 
 ## Solidity Equivalent
 
-For developers familiar with Solidity, here is the equivalent implementation:
+For developers familiar with Solidity, here is the equivalent ERC20 implementation using OpenZeppelin:
 
 ```solidity
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract BasicToken is ERC20, Ownable {
     uint256 public maxSupply;
+
+    event Minted(address indexed to, uint256 amount);
+    event Burned(address indexed from, uint256 amount);
 
     constructor(
         string memory name,
@@ -603,34 +606,152 @@ contract BasicToken is ERC20, Ownable {
     ) ERC20(name, symbol) Ownable(msg.sender) {
         maxSupply = _maxSupply;
         if (initialMintAmount > 0 && initialMintTo != address(0)) {
+            require(initialMintAmount <= _maxSupply, "Initial mint exceeds max supply");
             _mint(initialMintTo, initialMintAmount);
         }
     }
 
     function mint(address to, uint256 amount) external onlyOwner {
-        require(totalSupply() + amount <= maxSupply, "Exceeds max supply");
+        require(to != address(0), "Cannot mint to zero address");
+        require(amount > 0, "Mint amount must be positive");
+        require(totalSupply() + amount <= maxSupply, "Mint would exceed max supply");
         _mint(to, amount);
+        emit Minted(to, amount);
     }
 
     function burn(uint256 amount) external {
+        require(amount > 0, "Burn amount must be positive");
         _burn(msg.sender, amount);
+        emit Burned(msg.sender, amount);
     }
 
     function burnFrom(address from, uint256 amount) external {
         _spendAllowance(from, msg.sender, amount);
         _burn(from, amount);
+        emit Burned(from, amount);
+    }
+
+    function tokenInfo() external view returns (
+        string memory name_,
+        string memory symbol_,
+        uint8 decimals_,
+        uint256 totalSupply_,
+        uint256 maxSupply_
+    ) {
+        return (name(), symbol(), decimals(), totalSupply(), maxSupply);
     }
 }
 ```
 
-## OPNet vs Solidity Comparison
+## Solidity vs OPNet Comparison
 
-| Solidity | OPNet |
-|----------|-------|
-| `function mint(address to, uint256 amount)` | `@method({ name: 'to', type: ABIDataTypes.ADDRESS }, { name: 'amount', type: ABIDataTypes.UINT256 })` |
-| `event Minted(address to, uint256 amount)` | `@emit('Minted')` + `this.emitEvent(new MintEvent(...))` |
-| `returns (uint256)` | `@returns({ name: 'value', type: ABIDataTypes.UINT256 })` |
-| `onlyOwner` modifier | `this.onlyDeployer(Blockchain.tx.sender)` |
+### Key Differences Table
+
+| Aspect | Solidity (ERC20) | OPNet (OP20) |
+|--------|------------------|--------------|
+| **Inheritance** | `contract MyToken is ERC20, Ownable` | `class MyToken extends OP20` |
+| **Constructor** | `constructor() ERC20("Name", "SYM")` | `onDeployment()` + `this.instantiate(new OP20InitParameters(...))` |
+| **Mint** | `_mint(to, amount)` | `this._mint(to, amount)` |
+| **Burn** | `_burn(from, amount)` | `this._burn(from, amount)` |
+| **Access Control** | `modifier onlyOwner()` | `this.onlyDeployer(Blockchain.tx.sender)` |
+| **Events** | `event Minted(...); emit Minted(...)` | `@emit('Minted')` + `this.emitEvent(new MintEvent(...))` |
+| **Function Declaration** | `function mint(address to, uint256 amount) external` | `@method({ name: 'to', type: ABIDataTypes.ADDRESS }, ...)` |
+| **Return Values** | `returns (uint256)` | `@returns({ name: 'value', type: ABIDataTypes.UINT256 })` |
+| **Msg.sender** | `msg.sender` | `Blockchain.tx.sender` |
+| **Revert** | `require(condition, "message")` or `revert("message")` | `throw new Revert('message')` |
+| **Safe Math** | Built-in (Solidity 0.8+) | `SafeMath.add()`, `SafeMath.sub()`, etc. |
+| **Method Routing** | Automatic via function selectors | Manual `execute()` switch statement |
+
+### Structural Differences
+
+**Solidity:**
+```solidity
+// Function with modifier
+function mint(address to, uint256 amount) external onlyOwner {
+    require(to != address(0), "Cannot mint to zero address");
+    _mint(to, amount);
+    emit Minted(to, amount);
+}
+```
+
+**OPNet:**
+```typescript
+// Method with decorators
+@method(
+    { name: 'to', type: ABIDataTypes.ADDRESS },
+    { name: 'amount', type: ABIDataTypes.UINT256 },
+)
+@emit('Minted')
+public mint(calldata: Calldata): BytesWriter {
+    this.onlyDeployer(Blockchain.tx.sender);
+    const to = calldata.readAddress();
+    const amount = calldata.readU256();
+
+    if (to.equals(Address.zero())) {
+        throw new Revert('Cannot mint to zero address');
+    }
+
+    this._mint(to, amount);
+    this.emitEvent(new MintEvent(to, amount));
+    return new BytesWriter(0);
+}
+```
+
+### Advantages of OPNet Approach
+
+| Feature | Benefit |
+|---------|---------|
+| **TypeScript/AssemblyScript** | Familiar syntax for web developers, strong typing |
+| **Explicit ABI via Decorators** | Self-documenting code, automatic ABI generation |
+| **u256 Native Support** | First-class 256-bit integer support via `@btc-vision/as-bignum` |
+| **Bitcoin Native** | Direct integration with Bitcoin's security model |
+| **Unified Storage Pointers** | Consistent storage access pattern with `Blockchain.nextPointer` |
+| **No Gas Estimation Issues** | Bitcoin transaction model eliminates EVM gas complexity |
+| **Explicit Method Routing** | Full control over method dispatch in `execute()` |
+
+### Initialization Pattern Comparison
+
+**Solidity (constructor runs once at deployment):**
+```solidity
+constructor(string memory name, string memory symbol) ERC20(name, symbol) {
+    // Initialize state
+}
+```
+
+**OPNet (onDeployment called during contract deployment):**
+```typescript
+public override onDeployment(calldata: Calldata): void {
+    const name = calldata.readString();
+    const symbol = calldata.readString();
+    this.instantiate(new OP20InitParameters(maxSupply, decimals, name, symbol));
+}
+```
+
+### Event Emission Comparison
+
+**Solidity:**
+```solidity
+event Minted(address indexed to, uint256 amount);
+// Later in code:
+emit Minted(to, amount);
+```
+
+**OPNet:**
+```typescript
+// Event class definition
+class MintEvent extends NetEvent {
+    constructor(public to: Address, public amount: u256) {
+        super('Minted');
+    }
+    protected override encodeData(writer: BytesWriter): void {
+        writer.writeAddress(this.to);
+        writer.writeU256(this.amount);
+    }
+}
+
+// Later in code:
+this.emitEvent(new MintEvent(to, amount));
+```
 
 ---
 

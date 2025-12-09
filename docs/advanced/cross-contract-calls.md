@@ -85,9 +85,9 @@ const result = Blockchain.call(tokenContract, writer, true);
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `target` | `Address` | Contract address to call |
+| `destinationContract` | `Address` | Contract address to call |
 | `calldata` | `BytesWriter` | Encoded method + parameters |
-| `stopOnFailure` | `bool` | If true, revert on call failure |
+| `stopExecutionOnFailure` | `boolean` | If true, revert on call failure (default: `true`) |
 
 ### stopOnFailure Behavior
 
@@ -132,9 +132,9 @@ if (!result.success) {
 ### CallResult Structure
 
 ```typescript
-interface CallResult {
-    success: bool;        // Did the call succeed?
-    data: Uint8Array;     // Return data from call
+class CallResult {
+    public readonly success: boolean;   // Did the call succeed?
+    public readonly data: BytesReader;  // Return data reader for parsing response
 }
 ```
 
@@ -144,9 +144,8 @@ interface CallResult {
 // Make call
 const result = Blockchain.call(tokenContract, getBalanceCalldata, true);
 
-// Parse return data
-const reader = new BytesReader(result.data);
-const balance: u256 = reader.readU256();
+// Parse return data (result.data is already a BytesReader)
+const balance: u256 = result.data.readU256();
 ```
 
 ### Error Handling
@@ -160,7 +159,7 @@ const result = Blockchain.call(target, data, true);
 const result = Blockchain.call(target, data, false);
 if (!result.success) {
     // Log, emit event, try fallback, etc.
-    this.emitEvent(new CallFailedEvent(target));
+    Blockchain.emit(new CallFailedEvent(target));
     throw new Revert('External call failed');
 }
 ```
@@ -178,6 +177,7 @@ const TRANSFER_SELECTOR: u32 = 0xa9059cbb;  // transfer(address,uint256)
     { name: 'to', type: ABIDataTypes.ADDRESS },
     { name: 'amount', type: ABIDataTypes.UINT256 },
 )
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
 public transferToken(calldata: Calldata): BytesWriter {
     const token = calldata.readAddress();
     const to = calldata.readAddress();
@@ -193,15 +193,17 @@ public transferToken(calldata: Calldata): BytesWriter {
     const result = Blockchain.call(token, writer, true);
 
     // Parse result (transfer returns bool in many implementations)
-    if (result.data.length > 0) {
-        const reader = new BytesReader(result.data);
-        const success = reader.readBoolean();
+    // result.data is already a BytesReader
+    if (result.data.byteLength > 0) {
+        const success = result.data.readBoolean();
         if (!success) {
             throw new Revert('Token transfer failed');
         }
     }
 
-    return new BytesWriter(0);
+    const response = new BytesWriter(1);
+    response.writeBoolean(true);
+    return response;
 }
 ```
 
@@ -216,6 +218,7 @@ const TRANSFER_FROM_SELECTOR: u32 = 0x23b872dd;  // transferFrom(address,address
     { name: 'from', type: ABIDataTypes.ADDRESS },
     { name: 'amount', type: ABIDataTypes.UINT256 },
 )
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
 public pullTokens(calldata: Calldata): BytesWriter {
     const token = calldata.readAddress();
     const from = calldata.readAddress();
@@ -230,15 +233,16 @@ public pullTokens(calldata: Calldata): BytesWriter {
 
     const result = Blockchain.call(token, writer, true);
 
-    // Verify success
-    if (result.data.length > 0) {
-        const reader = new BytesReader(result.data);
-        if (!reader.readBoolean()) {
+    // Verify success - result.data is already a BytesReader
+    if (result.data.byteLength > 0) {
+        if (!result.data.readBoolean()) {
             throw new Revert('TransferFrom failed');
         }
     }
 
-    return new BytesWriter(0);
+    const response = new BytesWriter(1);
+    response.writeBoolean(true);
+    return response;
 }
 ```
 
@@ -264,8 +268,8 @@ public getExternalBalance(calldata: Calldata): BytesWriter {
 
     const result = Blockchain.call(token, writer, true);
 
-    const reader = new BytesReader(result.data);
-    const balance = reader.readU256();
+    // result.data is already a BytesReader
+    const balance = result.data.readU256();
 
     const response = new BytesWriter(32);
     response.writeU256(balance);
@@ -284,12 +288,13 @@ const TRANSFER_SELECTOR: u32 = 0xa9059cbb;  // transfer(address,uint256)
     { name: 'recipients', type: ABIDataTypes.ADDRESS_ARRAY },
     { name: 'amounts', type: ABIDataTypes.UINT256_ARRAY },
 )
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
 public batchTransfer(calldata: Calldata): BytesWriter {
     const tokens = calldata.readAddressArray();
     const recipients = calldata.readAddressArray();
     const amounts = calldata.readU256Array();
 
-    for (let i = 0; i < tokens.length; i++) {
+    for (let i: i32 = 0; i < tokens.length; i++) {
         // Encode transfer(address,uint256)
         const writer = new BytesWriter(68);
         writer.writeSelector(TRANSFER_SELECTOR);
@@ -299,7 +304,9 @@ public batchTransfer(calldata: Calldata): BytesWriter {
         Blockchain.call(tokens[i], writer, true);
     }
 
-    return new BytesWriter(0);
+    const response = new BytesWriter(1);
+    response.writeBoolean(true);
+    return response;
 }
 ```
 
@@ -327,16 +334,34 @@ contract Router {
 
 ```typescript
 // OPNet
+import { OP_NET, Blockchain, Address, Calldata, BytesWriter, Selector, encodeSelector, ABIDataTypes } from '@btc-vision/btc-runtime/runtime';
+import { u256 } from '@btc-vision/as-bignum/assembly';
+
 // Define method selectors at the top
+const SWAP_SELECTOR: u32 = encodeSelector('swap');
 const TRANSFER_SELECTOR: u32 = 0xa9059cbb;       // transfer(address,uint256)
 const TRANSFER_FROM_SELECTOR: u32 = 0x23b872dd;  // transferFrom(address,address,uint256)
 
 @final
 export class Router extends OP_NET {
+    public constructor() {
+        super();
+    }
+
+    public override execute(method: Selector, calldata: Calldata): BytesWriter {
+        switch (method) {
+            case SWAP_SELECTOR:
+                return this.swap(calldata);
+            default:
+                return super.execute(method, calldata);
+        }
+    }
+
     @method(
         { name: 'token', type: ABIDataTypes.ADDRESS },
         { name: 'amount', type: ABIDataTypes.UINT256 },
     )
+    @returns({ name: 'success', type: ABIDataTypes.BOOL })
     public swap(calldata: Calldata): BytesWriter {
         const token = calldata.readAddress();
         const amount = calldata.readU256();
@@ -349,7 +374,9 @@ export class Router extends OP_NET {
         // Send output
         this.transferToken(outputToken, Blockchain.tx.sender, outputAmount);
 
-        return new BytesWriter(0);
+        const response = new BytesWriter(1);
+        response.writeBoolean(true);
+        return response;
     }
 
     private pullTokens(token: Address, from: Address, amount: u256): void {
@@ -385,6 +412,7 @@ const TRANSFER_SELECTOR: u32 = 0xa9059cbb;  // transfer(address,uint256)
 
 // VULNERABLE
 @method()
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
 public withdraw(_calldata: Calldata): BytesWriter {
     const sender = Blockchain.tx.sender;
     const amount = balances.get(sender);
@@ -403,6 +431,7 @@ public withdraw(_calldata: Calldata): BytesWriter {
 
 // SAFE: Update state before call
 @method()
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
 public withdraw(_calldata: Calldata): BytesWriter {
     const sender = Blockchain.tx.sender;
     const amount = balances.get(sender);
@@ -428,9 +457,9 @@ public withdraw(_calldata: Calldata): BytesWriter {
 const result = Blockchain.call(token, data, true);
 
 // Don't assume success based only on not reverting
-if (result.data.length > 0) {
-    const reader = new BytesReader(result.data);
-    const success = reader.readBoolean();
+// result.data is a BytesReader with byteLength property
+if (result.data.byteLength > 0) {
+    const success = result.data.readBoolean();
     if (!success) {
         throw new Revert('Call returned false');
     }
@@ -441,6 +470,7 @@ if (result.data.length > 0) {
 
 ```typescript
 @method({ name: 'target', type: ABIDataTypes.ADDRESS })
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
 public callExternalContract(calldata: Calldata): BytesWriter {
     const target = calldata.readAddress();
 
@@ -487,7 +517,8 @@ class TokenInterface {
         writer.writeAddress(account);
 
         const result = Blockchain.call(this.address, writer, true);
-        return new BytesReader(result.data).readU256();
+        // result.data is already a BytesReader
+        return result.data.readU256();
     }
 }
 
@@ -509,6 +540,7 @@ const ON_TOKEN_RECEIVED_SELECTOR: u32 = 0x150b7a02;  // onTokenReceived(address,
     { name: 'amount', type: ABIDataTypes.UINT256 },
     { name: 'data', type: ABIDataTypes.BYTES },
 )
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
 public onTokenReceived(calldata: Calldata): BytesWriter {
     const from = calldata.readAddress();
     const amount = calldata.readU256();
@@ -526,6 +558,7 @@ public onTokenReceived(calldata: Calldata): BytesWriter {
     { name: 'tokenId', type: ABIDataTypes.UINT256 },
     { name: 'data', type: ABIDataTypes.BYTES },
 )
+@returns({ name: 'success', type: ABIDataTypes.BOOL })
 public safeTransfer(calldata: Calldata): BytesWriter {
     const to = calldata.readAddress();
     const tokenId = calldata.readU256();

@@ -266,6 +266,34 @@ flowchart LR
 
 ## Guard Modes
 
+The following state diagram shows how the reentrancy lock transitions between states:
+
+```mermaid
+---
+config:
+  theme: dark
+---
+stateDiagram-v2
+    [*] --> Unlocked: Contract idle
+
+    state "STANDARD Mode" as Standard {
+        Unlocked --> Locked: onExecutionStarted
+        Locked --> Unlocked: onExecutionCompleted
+        Locked --> Reverted: Reentry attempt
+        Reverted --> [*]: Transaction fails
+    }
+
+    state "CALLBACK Mode" as Callback {
+        [*] --> Depth0
+        Depth0 --> Depth1: First call
+        Depth1 --> Depth2: Callback reentry
+        Depth2 --> Reverted2: Second reentry
+        Reverted2 --> [*]: Transaction fails
+        Depth2 --> Depth1: Callback completes
+        Depth1 --> Depth0: First call completes
+    }
+```
+
 ### STANDARD Mode
 
 Strict mutual exclusion - no re-entry allowed at all.
@@ -332,6 +360,38 @@ export class TokenWithCallbacks extends ReentrancyGuard {
 ## How It Works
 
 ### Internal State
+
+The reentrancy guard uses a depth counter stored in transient storage:
+
+```mermaid
+---
+config:
+  theme: dark
+---
+stateDiagram-v2
+    [*] --> depth_0: Transaction starts
+
+    depth_0 --> depth_1: Method entry
+
+    state depth_1 {
+        [*] --> Executing
+        Executing --> ExternalCall: Call other contract
+        ExternalCall --> CallbackCheck: Contract calls back
+    }
+
+    depth_1 --> depth_0: Method exit (success)
+    depth_1 --> Revert: Method exit (error)
+
+    state "Callback Handling" as CallbackHandling {
+        CallbackCheck --> depth_2: CALLBACK mode allows
+        CallbackCheck --> Blocked: STANDARD mode blocks
+        Blocked --> Revert
+    }
+
+    depth_2 --> depth_1: Callback completes
+    depth_0 --> [*]: Transaction ends
+    Revert --> [*]: Transaction reverted
+```
 
 ```typescript
 // ReentrancyGuard uses transient storage for the lock

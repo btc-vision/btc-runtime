@@ -616,73 +616,248 @@ public buildOpReturnScript(data: Uint8Array): Uint8Array {
 }
 ```
 
-## Solidity Comparison
+## Solidity vs OPNet: Bitcoin Scripts Comparison
 
-Bitcoin scripting is fundamentally different from Solidity, as it operates on UTXOs rather than account balances:
+Bitcoin scripting is fundamentally different from Solidity, as it operates on UTXOs rather than account balances. OPNet uniquely bridges smart contract functionality with native Bitcoin scripting capabilities.
 
-| Concept | Solidity/EVM | OPNet Bitcoin Scripts |
-|---------|-------------|----------------------|
-| Address types | Single type (20 bytes) | P2PKH, P2SH, P2WPKH, P2WSH, P2TR |
-| Timelocks | `block.timestamp`, `block.number` | OP_CLTV, OP_CSV |
-| Multi-signature | Custom implementation | Native OP_CHECKMULTISIG |
-| Script execution | Turing-complete EVM | Stack-based Bitcoin Script |
-| Data embedding | Events, storage | OP_RETURN |
+### Feature Comparison Table
+
+| Feature | Solidity/EVM | OPNet | OPNet Advantage |
+|---------|--------------|-------|-----------------|
+| **Bitcoin Script Support** | Not supported | Full support via `BitcoinOpcodes` | Native Bitcoin integration |
+| **Address Types** | Single type (20 bytes) | P2PKH, P2SH, P2WPKH, P2WSH, P2TR | Full Bitcoin address compatibility |
+| **Native Timelocks** | Custom implementation required | OP_CLTV, OP_CSV built-in | Consensus-enforced timelocks |
+| **Multi-signature** | Custom contract logic | Native OP_CHECKMULTISIG | Bitcoin-native security |
+| **Script Execution Model** | Turing-complete EVM | Stack-based Bitcoin Script | Predictable, secure execution |
+| **Data Embedding** | Events, storage (expensive) | OP_RETURN (80 bytes) | Immutable on-chain data |
+| **Taproot Support** | Not applicable | Full P2TR support | Schnorr-based privacy |
+| **Witness Scripts** | Not applicable | P2WSH, SegWit support | Lower transaction fees |
+| **Network Awareness** | Chain ID only | Mainnet/Testnet/Regtest support | Full Bitcoin network support |
+| **UTXO Introspection** | Not possible | Full transaction input/output access | Bitcoin transaction analysis |
+
+### Capability Matrix
+
+| Capability | Solidity | OPNet |
+|------------|:--------:|:-----:|
+| Create P2PKH addresses | No | Yes |
+| Create P2SH addresses | No | Yes |
+| Create P2WPKH (SegWit) addresses | No | Yes |
+| Create P2WSH (Witness Script) addresses | No | Yes |
+| Create P2TR (Taproot) addresses | No | Yes |
+| Build multisig scripts | No | Yes |
+| Build timelock scripts (CSV) | No | Yes |
+| Build absolute timelock scripts (CLTV) | No | Yes |
+| Parse/recognize Bitcoin scripts | No | Yes |
+| Access transaction inputs | No | Yes |
+| Access transaction outputs | No | Yes |
+| Verify Bitcoin script patterns | No | Yes |
+| Create OP_RETURN data | No | Yes |
 
 ### Timelock Comparison
 
+#### Solidity Approach (Custom Implementation)
+
 ```solidity
-// Solidity - time-based lock
+// Solidity - time-based lock (requires custom implementation)
 contract TimeLock {
     uint256 public unlockTime;
+    mapping(address => uint256) public deposits;
 
     constructor(uint256 _lockDuration) {
         unlockTime = block.timestamp + _lockDuration;
     }
 
+    function deposit() external payable {
+        deposits[msg.sender] += msg.value;
+    }
+
     function withdraw() external {
         require(block.timestamp >= unlockTime, "Still locked");
-        // ... withdraw logic
+        uint256 amount = deposits[msg.sender];
+        deposits[msg.sender] = 0;
+        payable(msg.sender).transfer(amount);
     }
+
+    // Limitations:
+    // - Relies on block.timestamp (can be manipulated by miners)
+    // - No relative timelocks
+    // - Must implement custom logic
+    // - No Bitcoin script compatibility
 }
 ```
 
-```typescript
-// OPNet - CSV relative timelock
-// 144 blocks = ~1 day
-const csvScript = BitcoinScript.csvTimelock(pubkey, 144);
-const address = BitcoinAddresses.csvP2wshAddress(pubkey, 144, hrp);
+#### OPNet Approach (Consensus-Enforced)
 
-// The timelock is enforced by Bitcoin consensus, not contract logic
+```typescript
+// OPNet - CSV relative timelock (consensus-enforced)
+import { BitcoinScript, BitcoinAddresses, Network, Networks } from '@btc-vision/btc-runtime/runtime';
+
+// Create a timelock script - 144 blocks = ~1 day
+const csvScript = BitcoinScript.csvTimelock(pubkey, 144);
+
+// Create P2WSH address with CSV timelock
+const result = BitcoinAddresses.csvP2wshAddress(pubkey, 144, Network.hrp(Networks.Mainnet));
+const address = result.address;
+const witnessScript = result.witnessScript;
+
+// Advantages:
+// - Enforced by Bitcoin consensus (not contract logic)
+// - Cannot be manipulated by miners
+// - Supports both relative (CSV) and absolute (CLTV) timelocks
+// - Native to Bitcoin - no custom implementation needed
+// - Works with any Bitcoin wallet
 ```
 
 ### Multisig Comparison
 
+#### Solidity Approach (Custom Contract)
+
 ```solidity
-// Solidity - custom multisig
+// Solidity - custom multisig (complex, gas-intensive)
 contract MultiSig {
     mapping(address => bool) public owners;
     uint256 public required;
+    uint256 public transactionCount;
 
-    function execute(bytes32 txHash, bytes[] memory signatures) external {
-        uint256 validSigs = 0;
-        for (uint i = 0; i < signatures.length; i++) {
-            address signer = ecrecover(txHash, ...);
-            if (owners[signer]) validSigs++;
-        }
-        require(validSigs >= required, "Not enough signatures");
-        // ... execute
+    struct Transaction {
+        address to;
+        uint256 value;
+        bytes data;
+        bool executed;
+        uint256 confirmations;
+    }
+
+    mapping(uint256 => Transaction) public transactions;
+    mapping(uint256 => mapping(address => bool)) public confirmations;
+
+    function submitTransaction(address to, uint256 value, bytes memory data) public returns (uint256) {
+        // ... complex submission logic
+    }
+
+    function confirmTransaction(uint256 transactionId) public {
+        require(owners[msg.sender], "Not owner");
+        confirmations[transactionId][msg.sender] = true;
+        // ... confirmation logic
+    }
+
+    function executeTransaction(uint256 transactionId) public {
+        Transaction storage txn = transactions[transactionId];
+        require(txn.confirmations >= required, "Not enough confirmations");
+        // ... execution logic
+    }
+
+    // Limitations:
+    // - High gas costs for storage
+    // - Complex signature verification
+    // - Must manually count confirmations
+    // - No native Bitcoin integration
+}
+```
+
+#### OPNet Approach (Native Bitcoin Multisig)
+
+```typescript
+// OPNet - native Bitcoin multisig (simple, consensus-enforced)
+import { BitcoinScript, BitcoinAddresses, Network, Networks } from '@btc-vision/btc-runtime/runtime';
+
+// Build a 2-of-3 multisig script - one line of code!
+const multisigScript = BitcoinScript.multisig(2, [pubkey1, pubkey2, pubkey3]);
+
+// Create P2WSH address for the multisig
+const result = BitcoinAddresses.multisigP2wshAddress(2, [pubkey1, pubkey2, pubkey3], Network.hrp(Networks.Mainnet));
+const address = result.address;
+
+// Verify and parse existing multisig scripts
+const recognized = BitcoinScript.recognizeMultisig(someScript);
+if (recognized.ok) {
+    const requiredSigs = recognized.m;  // e.g., 2
+    const totalKeys = recognized.n;      // e.g., 3
+    const publicKeys = recognized.pubkeys;
+}
+
+// Advantages:
+// - No custom signature verification needed
+// - Bitcoin consensus handles signature counting
+// - Works with any Bitcoin wallet supporting multisig
+// - No gas costs for signature storage
+// - Native OP_CHECKMULTISIG opcode
+```
+
+### Script Building Comparison
+
+| Task | Solidity | OPNet |
+|------|----------|-------|
+| Build P2PKH script | Not possible | `buildP2PKHScript(pubkeyHash)` |
+| Build multisig script | Custom contract | `BitcoinScript.multisig(m, pubkeys)` |
+| Build CSV timelock | Custom logic | `BitcoinScript.csvTimelock(pubkey, blocks)` |
+| Create witness address | Not possible | `Segwit.p2wsh(hrp, script)` |
+| Parse script patterns | Not possible | `BitcoinScript.recognizeCsvTimelock(script)` |
+| Encode script numbers | Not needed | `ScriptNumber.encode(value)` |
+| Access Bitcoin opcodes | Not available | All opcodes via `BitcoinOpcodes` |
+
+### Transaction Introspection
+
+| Feature | Solidity | OPNet |
+|---------|----------|-------|
+| Access tx outputs | `msg.value` only | `Blockchain.tx.outputs` (full array) |
+| Access tx inputs | Not possible | `Blockchain.tx.inputs` (full array) |
+| Get output value | Limited | `output.value` (satoshis) |
+| Get output script | Not possible | `output.script` (full script bytes) |
+| Get input txid | Not possible | `input.txid` |
+| Get input vout | Not possible | `input.vout` |
+| Get witness data | Not possible | `input.witness` |
+| Parse script type | Not possible | Pattern matching on script bytes |
+
+### Data Embedding Comparison
+
+```solidity
+// Solidity - Events (expensive, not part of state)
+contract DataEmbed {
+    event DataStored(bytes32 indexed hash, bytes data);
+
+    function storeData(bytes memory data) external {
+        emit DataStored(keccak256(data), data);
+        // Gas cost scales with data size
+        // Data is not part of UTXO set
     }
 }
 ```
 
 ```typescript
-// OPNet - native Bitcoin multisig
-// 2-of-3 multisig enforced by Bitcoin consensus
-const multisigScript = BitcoinScript.multisig(2, pubkeys);
-const address = BitcoinAddresses.multisigP2wshAddress(2, pubkeys, hrp);
+// OPNet - OP_RETURN (native Bitcoin, permanent)
+import { BytesWriter, BitcoinOpcodes } from '@btc-vision/btc-runtime/runtime';
 
-// No custom signature verification needed - Bitcoin handles it
+function buildOpReturnScript(data: Uint8Array): Uint8Array {
+    if (data.length > 80) {
+        throw new Revert('OP_RETURN data too large');
+    }
+
+    const script = new BytesWriter(data.length + 2);
+    script.writeU8(BitcoinOpcodes.OP_RETURN);
+    script.writeU8(u8(data.length));
+    script.writeBytes(data);
+
+    return script.getBuffer();
+}
+
+// Advantages:
+// - Standard Bitcoin OP_RETURN
+// - Permanent, immutable storage
+// - Recognized by all Bitcoin explorers
+// - No complex event parsing needed
 ```
+
+### Why OPNet for Bitcoin Integration?
+
+| Solidity Limitation | OPNet Solution |
+|---------------------|----------------|
+| Cannot interact with Bitcoin | Full Bitcoin script support |
+| No UTXO awareness | Complete transaction introspection |
+| Single address format | All Bitcoin address types |
+| No native timelocks | CSV and CLTV support |
+| Custom multisig required | Native OP_CHECKMULTISIG |
+| No Taproot support | Full P2TR integration |
+| EVM-only execution | Bitcoin consensus enforcement |
 
 ## Best Practices
 

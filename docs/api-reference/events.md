@@ -21,10 +21,10 @@ All events extend the `NetEvent` base class.
 
 ```typescript
 abstract class NetEvent {
-    constructor(eventType: string)
-    protected abstract encodeData(writer: BytesWriter): void
+    protected constructor(eventType: string, data: BytesWriter)
     public getEventData(): Uint8Array
-    public get eventType(): string
+    public get length(): u32
+    public readonly eventType: string
 }
 ```
 
@@ -35,57 +35,52 @@ classDiagram
     class NetEvent {
         <<abstract>>
         +string eventType
-        -BytesWriter data
+        #BytesWriter data
         -Uint8Array buffer
-        +constructor(eventType: string)
-        +encodeData(writer: BytesWriter)* abstract
+        #constructor(eventType: string, data: BytesWriter)
         +getEventData() Uint8Array
         +get length() u32
     }
 
-    class TransferEvent {
+    class TransferredEvent {
+        +Address operator
         +Address from
         +Address to
         +u256 amount
-        +constructor(from, to, amount)
-        +encodeData(writer) void
+        +constructor(operator, from, to, amount)
     }
 
-    class ApprovalEvent {
+    class ApprovedEvent {
         +Address owner
         +Address spender
         +u256 amount
         +constructor(owner, spender, amount)
-        +encodeData(writer) void
     }
 
-    class MintEvent {
+    class MintedEvent {
         +Address to
         +u256 amount
         +constructor(to, amount)
-        +encodeData(writer) void
     }
 
-    class BurnEvent {
+    class BurnedEvent {
         +Address from
         +u256 amount
         +constructor(from, amount)
-        +encodeData(writer) void
     }
 
     class CustomEvent {
         +Custom fields...
         +constructor(...)
-        +encodeData(writer) void
     }
 
-    NetEvent <|-- TransferEvent
-    NetEvent <|-- ApprovalEvent
-    NetEvent <|-- MintEvent
-    NetEvent <|-- BurnEvent
+    NetEvent <|-- TransferredEvent
+    NetEvent <|-- ApprovedEvent
+    NetEvent <|-- MintedEvent
+    NetEvent <|-- BurnedEvent
     NetEvent <|-- CustomEvent
 
-    note for NetEvent "All events must extend NetEvent\nand implement encodeData()"
+    note for NetEvent "All events must extend NetEvent\nand build data in constructor"
     note for CustomEvent "User-defined events\nfor custom contract logic"
 ```
 
@@ -94,13 +89,12 @@ classDiagram
 ### Basic Event
 
 ```typescript
+@final
 class MyEvent extends NetEvent {
-    constructor(public readonly value: u256) {
-        super('MyEvent');
-    }
-
-    protected override encodeData(writer: BytesWriter): void {
-        writer.writeU256(this.value);
+    constructor(value: u256) {
+        const data = new BytesWriter(32);
+        data.writeU256(value);
+        super('MyEvent', data);
     }
 }
 
@@ -136,19 +130,16 @@ graph LR
 ### Multi-Field Event
 
 ```typescript
-class TransferEvent extends NetEvent {
-    constructor(
-        public readonly from: Address,
-        public readonly to: Address,
-        public readonly amount: u256
-    ) {
-        super('Transfer');
-    }
+import { ADDRESS_BYTE_LENGTH, U256_BYTE_LENGTH } from '@btc-vision/btc-runtime/runtime';
 
-    protected override encodeData(writer: BytesWriter): void {
-        writer.writeAddress(this.from);
-        writer.writeAddress(this.to);
-        writer.writeU256(this.amount);
+@final
+class TransferEvent extends NetEvent {
+    constructor(from: Address, to: Address, amount: u256) {
+        const data = new BytesWriter(ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH);
+        data.writeAddress(from);
+        data.writeAddress(to);
+        data.writeU256(amount);
+        super('Transfer', data);
     }
 }
 ```
@@ -156,34 +147,29 @@ class TransferEvent extends NetEvent {
 ### Event with Data Constructor
 
 ```typescript
+@final
 class ComplexEvent extends NetEvent {
-    constructor(
-        public readonly user: Address,
-        public readonly action: u8,
-        public readonly timestamp: u64,
-        public readonly data: u256
-    ) {
-        super('ComplexEvent');
-    }
-
-    protected override encodeData(writer: BytesWriter): void {
-        writer.writeAddress(this.user);
-        writer.writeU8(this.action);
-        writer.writeU64(this.timestamp);
-        writer.writeU256(this.data);
+    constructor(user: Address, action: u8, timestamp: u64, value: u256) {
+        const data = new BytesWriter(ADDRESS_BYTE_LENGTH + 1 + 8 + U256_BYTE_LENGTH);
+        data.writeAddress(user);
+        data.writeU8(action);
+        data.writeU64(timestamp);
+        data.writeU256(value);
+        super('ComplexEvent', data);
     }
 }
 ```
 
 ## Predefined Events
 
-### TransferEvent
+### TransferredEvent
 
-Standard token transfer event.
+Standard token transfer event. Note: OP20 transfers include an operator field.
 
 ```typescript
-class TransferEvent extends NetEvent {
+class TransferredEvent extends NetEvent {
     constructor(
+        operator: Address,
         from: Address,
         to: Address,
         amount: u256
@@ -192,15 +178,15 @@ class TransferEvent extends NetEvent {
 ```
 
 ```typescript
-this.emitEvent(new TransferEvent(sender, recipient, amount));
+this.emitEvent(new TransferredEvent(Blockchain.tx.sender, sender, recipient, amount));
 ```
 
-### ApprovalEvent
+### ApprovedEvent
 
 Standard approval event.
 
 ```typescript
-class ApprovalEvent extends NetEvent {
+class ApprovedEvent extends NetEvent {
     constructor(
         owner: Address,
         spender: Address,
@@ -210,15 +196,15 @@ class ApprovalEvent extends NetEvent {
 ```
 
 ```typescript
-this.emitEvent(new ApprovalEvent(owner, spender, allowance));
+this.emitEvent(new ApprovedEvent(owner, spender, allowance));
 ```
 
-### MintEvent
+### MintedEvent
 
 Token minting event.
 
 ```typescript
-class MintEvent extends NetEvent {
+class MintedEvent extends NetEvent {
     constructor(
         to: Address,
         amount: u256
@@ -227,15 +213,15 @@ class MintEvent extends NetEvent {
 ```
 
 ```typescript
-this.emitEvent(new MintEvent(recipient, mintAmount));
+this.emitEvent(new MintedEvent(recipient, mintAmount));
 ```
 
-### BurnEvent
+### BurnedEvent
 
 Token burning event.
 
 ```typescript
-class BurnEvent extends NetEvent {
+class BurnedEvent extends NetEvent {
     constructor(
         from: Address,
         amount: u256
@@ -244,7 +230,7 @@ class BurnEvent extends NetEvent {
 ```
 
 ```typescript
-this.emitEvent(new BurnEvent(burner, burnAmount));
+this.emitEvent(new BurnedEvent(burner, burnAmount));
 ```
 
 ## Event Lifecycle
@@ -260,12 +246,13 @@ sequenceDiagram
 
     Note over C,R: Event Lifecycle
 
-    C->>E: new TransferEvent(from, to, amount)
-    E->>E: super('Transfer')
-    E->>E: encodeData(writer)
+    C->>E: new TransferredEvent(operator, from, to, amount)
+    E->>E: Create BytesWriter with size
+    E->>E: writer.writeAddress(operator)
     E->>E: writer.writeAddress(from)
     E->>E: writer.writeAddress(to)
     E->>E: writer.writeU256(amount)
+    E->>E: super('Transferred', data)
 
     E->>E: Validate length <= 352 bytes
 
@@ -289,7 +276,7 @@ The following diagram shows how events are encoded into binary format:
 flowchart LR
     subgraph "Event Construction"
         A[Event Instance] --> B[Constructor<br/>Parameters]
-        B --> C[encodeData<br/>method]
+        B --> C[Create BytesWriter<br/>in constructor]
     end
 
     subgraph "BytesWriter Encoding"
@@ -304,7 +291,7 @@ flowchart LR
     subgraph "Validation"
         E & F & G & H & I --> J[Combined Buffer]
         J --> K{Size Check}
-        K -->|352 bytes| L[Valid Event]
+        K -->|<= 352 bytes| L[Valid Event]
         K -->|> 352 bytes| M[Revert]
     end
 
@@ -351,15 +338,15 @@ Use `emitEvent` from the contract:
 ```typescript
 // In contract method
 public transfer(calldata: Calldata): BytesWriter {
-    const to = calldata.readAddress();
-    const amount = calldata.readU256();
-    const from = Blockchain.tx.sender;
+    const to: Address = calldata.readAddress();
+    const amount: u256 = calldata.readU256();
+    const from: Address = Blockchain.tx.sender;
 
     // Perform transfer
     this._transfer(from, to, amount);
 
     // Emit event
-    this.emitEvent(new TransferEvent(from, to, amount));
+    this.emitEvent(new TransferredEvent(Blockchain.tx.sender, from, to, amount));
 
     return new BytesWriter(1);
 }
@@ -368,7 +355,7 @@ public transfer(calldata: Calldata): BytesWriter {
 Or use `Blockchain.emit`:
 
 ```typescript
-Blockchain.emit(new TransferEvent(from, to, amount));
+Blockchain.emit(new TransferredEvent(Blockchain.tx.sender, from, to, amount));
 ```
 
 ## Event Encoding Format
@@ -387,17 +374,13 @@ Events are encoded as:
 ### State Change Events
 
 ```typescript
+@final
 class OwnershipTransferred extends NetEvent {
-    constructor(
-        public readonly previousOwner: Address,
-        public readonly newOwner: Address
-    ) {
-        super('OwnershipTransferred');
-    }
-
-    protected override encodeData(writer: BytesWriter): void {
-        writer.writeAddress(this.previousOwner);
-        writer.writeAddress(this.newOwner);
+    constructor(previousOwner: Address, newOwner: Address) {
+        const data = new BytesWriter(ADDRESS_BYTE_LENGTH * 2);
+        data.writeAddress(previousOwner);
+        data.writeAddress(newOwner);
+        super('OwnershipTransferred', data);
     }
 }
 ```
@@ -405,23 +388,21 @@ class OwnershipTransferred extends NetEvent {
 ### Action Events
 
 ```typescript
+@final
 class Paused extends NetEvent {
-    constructor(public readonly account: Address) {
-        super('Paused');
-    }
-
-    protected override encodeData(writer: BytesWriter): void {
-        writer.writeAddress(this.account);
+    constructor(account: Address) {
+        const data = new BytesWriter(ADDRESS_BYTE_LENGTH);
+        data.writeAddress(account);
+        super('Paused', data);
     }
 }
 
+@final
 class Unpaused extends NetEvent {
-    constructor(public readonly account: Address) {
-        super('Unpaused');
-    }
-
-    protected override encodeData(writer: BytesWriter): void {
-        writer.writeAddress(this.account);
+    constructor(account: Address) {
+        const data = new BytesWriter(ADDRESS_BYTE_LENGTH);
+        data.writeAddress(account);
+        super('Unpaused', data);
     }
 }
 ```
@@ -431,24 +412,23 @@ class Unpaused extends NetEvent {
 While OPNet doesn't have Solidity's indexed parameters, you can structure events for efficient filtering:
 
 ```typescript
+@final
 class OrderFilled extends NetEvent {
     constructor(
-        public readonly orderId: u256,
-        public readonly maker: Address,
-        public readonly taker: Address,
-        public readonly amount: u256,
-        public readonly price: u256
+        orderId: u256,
+        maker: Address,
+        taker: Address,
+        amount: u256,
+        price: u256
     ) {
-        super('OrderFilled');
-    }
-
-    protected override encodeData(writer: BytesWriter): void {
+        const data = new BytesWriter(U256_BYTE_LENGTH * 3 + ADDRESS_BYTE_LENGTH * 2);
         // Put "indexed" fields first for consistent offset
-        writer.writeU256(this.orderId);
-        writer.writeAddress(this.maker);
-        writer.writeAddress(this.taker);
-        writer.writeU256(this.amount);
-        writer.writeU256(this.price);
+        data.writeU256(orderId);
+        data.writeAddress(maker);
+        data.writeAddress(taker);
+        data.writeU256(amount);
+        data.writeU256(price);
+        super('OrderFilled', data);
     }
 }
 ```
@@ -470,33 +450,47 @@ this._balances.set(to, newBalance);  // Could fail
 ### 2. Use Descriptive Event Names
 
 ```typescript
-// Good
-class TokensMinted extends NetEvent { ... }
-class LiquidityAdded extends NetEvent { ... }
-class StakeWithdrawn extends NetEvent { ... }
+// Good - clear event names
+@final class TokensMinted extends NetEvent { ... }
+@final class LiquidityAdded extends NetEvent { ... }
+@final class StakeWithdrawn extends NetEvent { ... }
 
 // Less clear
-class Action1 extends NetEvent { ... }
-class Update extends NetEvent { ... }
+@final class Action1 extends NetEvent { ... }
+@final class Update extends NetEvent { ... }
 ```
 
 ### 3. Include Relevant Context
 
 ```typescript
 // Good - includes all relevant data
+@final
 class Swap extends NetEvent {
     constructor(
-        public readonly user: Address,
-        public readonly tokenIn: Address,
-        public readonly tokenOut: Address,
-        public readonly amountIn: u256,
-        public readonly amountOut: u256
-    ) { ... }
+        user: Address,
+        tokenIn: Address,
+        tokenOut: Address,
+        amountIn: u256,
+        amountOut: u256
+    ) {
+        const data = new BytesWriter(ADDRESS_BYTE_LENGTH * 3 + U256_BYTE_LENGTH * 2);
+        data.writeAddress(user);
+        data.writeAddress(tokenIn);
+        data.writeAddress(tokenOut);
+        data.writeU256(amountIn);
+        data.writeU256(amountOut);
+        super('Swap', data);
+    }
 }
 
 // Less useful - missing context
+@final
 class Swap extends NetEvent {
-    constructor(public readonly amount: u256) { ... }
+    constructor(amount: u256) {
+        const data = new BytesWriter(U256_BYTE_LENGTH);
+        data.writeU256(amount);
+        super('Swap', data);
+    }
 }
 ```
 
@@ -504,12 +498,26 @@ class Swap extends NetEvent {
 
 ```typescript
 // Use consistent field ordering across similar events
+@final
 class Deposit extends NetEvent {
-    constructor(user: Address, token: Address, amount: u256) { ... }
+    constructor(user: Address, token: Address, amount: u256) {
+        const data = new BytesWriter(ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH);
+        data.writeAddress(user);
+        data.writeAddress(token);
+        data.writeU256(amount);
+        super('Deposit', data);
+    }
 }
 
+@final
 class Withdraw extends NetEvent {
-    constructor(user: Address, token: Address, amount: u256) { ... }  // Same order
+    constructor(user: Address, token: Address, amount: u256) {  // Same order
+        const data = new BytesWriter(ADDRESS_BYTE_LENGTH * 2 + U256_BYTE_LENGTH);
+        data.writeAddress(user);
+        data.writeAddress(token);
+        data.writeU256(amount);
+        super('Withdraw', data);
+    }
 }
 ```
 
@@ -517,8 +525,8 @@ class Withdraw extends NetEvent {
 
 | Solidity | OPNet |
 |----------|-------|
-| `event Transfer(address indexed from, address indexed to, uint256 value)` | `class TransferEvent extends NetEvent` |
-| `emit Transfer(from, to, value)` | `emitEvent(new TransferEvent(from, to, value))` |
+| `event Transfer(address indexed from, address indexed to, uint256 value)` | `class TransferredEvent extends NetEvent` |
+| `emit Transfer(from, to, value)` | `emitEvent(new TransferredEvent(operator, from, to, value))` |
 | Indexed parameters | Structure data with important fields first |
 | Anonymous events | Not supported |
 

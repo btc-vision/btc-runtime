@@ -90,7 +90,44 @@ flowchart LR
 
 ## Solidity vs OPNet Storage Model
 
-In Solidity, storage slots are assigned implicitly by the compiler. In OPNet, you explicitly allocate pointers at runtime:
+In Solidity, storage slots are assigned implicitly by the compiler. In OPNet, you explicitly allocate pointers at runtime.
+
+### Quick Reference Table
+
+| Feature | Solidity | OPNet |
+|---------|----------|-------|
+| Storage slot assignment | Implicit (compiler) | Explicit (`Blockchain.nextPointer`) |
+| Hash function | keccak256 | SHA256 |
+| Mapping type | `mapping(K => V)` | `StoredMapU256`, `AddressMemoryMap`, `MapOfMap<T>` |
+| Array type | `T[]` | `StoredU256Array`, `StoredAddressArray`, etc. |
+| Simple value | `uint256 public x;` | `StoredU256` |
+| String storage | `string public s;` | `StoredString` |
+| Boolean storage | `bool public b;` | `StoredBoolean` |
+| Address storage | `address public a;` | `StoredAddress` |
+| Nested mapping | `mapping(a => mapping(b => c))` | `MapOfMap<T>` |
+| Default uint value | `0` | `u256.Zero` |
+| Maximum slots/pointers | ~2^256 | 65,535 (`u16`) |
+
+### Type Mapping Reference
+
+| Solidity Type | OPNet Equivalent | Notes |
+|---------------|------------------|-------|
+| `uint256` | `StoredU256` | 32 bytes |
+| `uint128` | `StoredU128` | 16 bytes |
+| `uint64` | `StoredU64` | 8 bytes |
+| `uint32` | `StoredU32` | 4 bytes |
+| `uint16` | `StoredU16` | 2 bytes |
+| `uint8` | `StoredU8` | 1 byte |
+| `bool` | `StoredBoolean` | 1 byte |
+| `string` | `StoredString` | Variable length |
+| `address` | `StoredAddress` | 32 bytes |
+| `uint256[]` | `StoredU256Array` | Max 65,535 elements |
+| `address[]` | `StoredAddressArray` | Max 65,535 elements |
+| `mapping(address => uint256)` | `AddressMemoryMap` | Address-keyed |
+| `mapping(uint256 => uint256)` | `StoredMapU256` | u256-keyed |
+| `mapping(address => mapping(address => uint256))` | `MapOfMap<u256>` | Two-level nesting |
+
+### Side-by-Side Code Comparison
 
 ```solidity
 // Solidity - Implicit slot assignment
@@ -104,9 +141,9 @@ contract Token {
 ```typescript
 // OPNet - Explicit pointer allocation
 export class Token extends OP_NET {
-    private totalSupplyPointer: u16 = Blockchain.nextPointer;  // ~0 (allocated at runtime)
-    private namePointer: u16 = Blockchain.nextPointer;          // ~1 (allocated at runtime)
-    private balancesPointer: u16 = Blockchain.nextPointer;      // ~2 (allocated at runtime)
+    private readonly totalSupplyPointer: u16 = Blockchain.nextPointer;  // ~0 (allocated at runtime)
+    private readonly namePointer: u16 = Blockchain.nextPointer;          // ~1 (allocated at runtime)
+    private readonly balancesPointer: u16 = Blockchain.nextPointer;      // ~2 (allocated at runtime)
 }
 ```
 
@@ -206,10 +243,10 @@ import { Blockchain } from '@btc-vision/btc-runtime/runtime';
 @final
 export class MyContract extends OP_NET {
     // Each call to nextPointer returns a unique u16
-    private totalSupplyPointer: u16 = Blockchain.nextPointer;
-    private namePointer: u16 = Blockchain.nextPointer;
-    private balancesPointer: u16 = Blockchain.nextPointer;
-    private allowancesPointer: u16 = Blockchain.nextPointer;
+    private readonly totalSupplyPointer: u16 = Blockchain.nextPointer;
+    private readonly namePointer: u16 = Blockchain.nextPointer;
+    private readonly balancesPointer: u16 = Blockchain.nextPointer;
+    private readonly allowancesPointer: u16 = Blockchain.nextPointer;
 
     // ...
 }
@@ -333,8 +370,8 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 
 // Usage
-private totalSupplyPointer: u16 = Blockchain.nextPointer;
-private _totalSupply: StoredU256 = new StoredU256(
+private readonly totalSupplyPointer: u16 = Blockchain.nextPointer;
+private readonly _totalSupply: StoredU256 = new StoredU256(
     this.totalSupplyPointer,
     EMPTY_POINTER
 );
@@ -360,8 +397,8 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 
 // Usage
-private holdersPointer: u16 = Blockchain.nextPointer;
-private holders: StoredAddressArray = new StoredAddressArray(this.holdersPointer);
+private readonly holdersPointer: u16 = Blockchain.nextPointer;
+private readonly holders: StoredAddressArray = new StoredAddressArray(this.holdersPointer);
 
 // Operations
 @method({ name: 'holder', type: ABIDataTypes.ADDRESS })
@@ -387,11 +424,11 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 
 // Simple mapping
-private balancesPointer: u16 = Blockchain.nextPointer;
-private balances: StoredMapU256 = new StoredMapU256(this.balancesPointer);
+private readonly balancesPointer: u16 = Blockchain.nextPointer;
+private readonly balances: StoredMapU256 = new StoredMapU256(this.balancesPointer);
 
 // Address-keyed mapping (default value is u256.Zero)
-private balanceMap: AddressMemoryMap;
+private readonly balanceMap: AddressMemoryMap;
 
 public constructor() {
     super();
@@ -400,6 +437,24 @@ public constructor() {
 ```
 
 ## Storage Patterns
+
+### Common Patterns Comparison
+
+| Pattern | Solidity | OPNet |
+|---------|----------|-------|
+| Increment counter | `counter++;` | `counter.value = SafeMath.add(counter.value, u256.One);` |
+| Read balance | `balances[addr]` | `balanceOf.get(addr)` |
+| Write balance | `balances[addr] = x` | `balanceOf.set(addr, x)` |
+| Check approval | `allowances[owner][spender]` | `allowances.get(owner).get(spender)` |
+| Set approval | `allowances[owner][spender] = x` | `ownerMap = allowances.get(owner); ownerMap.set(spender, x); allowances.set(owner, ownerMap);` |
+| Array push | `arr.push(x)` | `arr.push(x)` |
+| Array length | `arr.length` | `arr.length` |
+| Array access | `arr[i]` | `arr.get(i)` |
+| Require/revert | `require(cond, "msg")` | `if (!cond) throw new Revert("msg")` |
+| Get sender | `msg.sender` | `Blockchain.tx.sender` |
+| Get origin | `tx.origin` | `Blockchain.tx.origin` |
+| Block number | `block.number` | `Blockchain.block.number` |
+| Block timestamp | `block.timestamp` | `Blockchain.block.medianTime` |
 
 ### Simple Value
 
@@ -412,8 +467,8 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 
 // Solidity: uint256 public counter;
-private counterPointer: u16 = Blockchain.nextPointer;
-private counter: StoredU256 = new StoredU256(this.counterPointer, EMPTY_POINTER);
+private readonly counterPointer: u16 = Blockchain.nextPointer;
+private readonly counter: StoredU256 = new StoredU256(this.counterPointer, EMPTY_POINTER);
 
 // Increment
 this.counter.value = SafeMath.add(this.counter.value, u256.One);
@@ -431,8 +486,8 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 
 // Solidity: mapping(address => uint256) public balances;
-private balancesPointer: u16 = Blockchain.nextPointer;
-private balanceOf: AddressMemoryMap;
+private readonly balancesPointer: u16 = Blockchain.nextPointer;
+private readonly balanceOf: AddressMemoryMap;
 
 public constructor() {
     super();
@@ -470,10 +525,10 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 
 // Solidity: mapping(address => mapping(address => uint256)) public allowances;
-private allowancesPointer: u16 = Blockchain.nextPointer;
-private allowances: MapOfMap<u256>;
+private readonly allowancesPointer: u16 = Blockchain.nextPointer;
+private readonly allowances: MapOfMap<u256>;
 
-constructor() {
+public constructor() {
     super();
     this.allowances = new MapOfMap<u256>(this.allowancesPointer);
 }
@@ -505,13 +560,191 @@ protected setAllowance(owner: Address, spender: Address, amount: u256): void {
 // mapping(uint256 => User) public users;
 
 // OPNet: Use multiple pointers or encode into u256
-private userAddressPointer: u16 = Blockchain.nextPointer;
-private userBalancePointer: u16 = Blockchain.nextPointer;
-private userActivePointer: u16 = Blockchain.nextPointer;
+private readonly userAddressPointer: u16 = Blockchain.nextPointer;
+private readonly userBalancePointer: u16 = Blockchain.nextPointer;
+private readonly userActivePointer: u16 = Blockchain.nextPointer;
 
-private userAddresses: StoredMapU256 = new StoredMapU256(this.userAddressPointer);
-private userBalances: StoredMapU256 = new StoredMapU256(this.userBalancePointer);
-private userActives: StoredMapU256 = new StoredMapU256(this.userActivePointer);
+private readonly userAddresses: StoredMapU256 = new StoredMapU256(this.userAddressPointer);
+private readonly userBalances: StoredMapU256 = new StoredMapU256(this.userBalancePointer);
+private readonly userActives: StoredMapU256 = new StoredMapU256(this.userActivePointer);
+```
+
+### Complete ERC-20 Style Comparison
+
+Here's a side-by-side comparison of a complete token contract:
+
+**Solidity:**
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract SimpleToken {
+    string public name;
+    string public symbol;
+    uint8 public decimals = 18;
+    uint256 public totalSupply;
+
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
+
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+
+    constructor(string memory _name, string memory _symbol, uint256 _initialSupply) {
+        name = _name;
+        symbol = _symbol;
+        totalSupply = _initialSupply;
+        balanceOf[msg.sender] = _initialSupply;
+    }
+
+    function transfer(address to, uint256 amount) external returns (bool) {
+        require(balanceOf[msg.sender] >= amount, "Insufficient balance");
+        balanceOf[msg.sender] -= amount;
+        balanceOf[to] += amount;
+        emit Transfer(msg.sender, to, amount);
+        return true;
+    }
+
+    function approve(address spender, uint256 amount) external returns (bool) {
+        allowance[msg.sender][spender] = amount;
+        emit Approval(msg.sender, spender, amount);
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 amount) external returns (bool) {
+        require(allowance[from][msg.sender] >= amount, "Insufficient allowance");
+        require(balanceOf[from] >= amount, "Insufficient balance");
+        allowance[from][msg.sender] -= amount;
+        balanceOf[from] -= amount;
+        balanceOf[to] += amount;
+        emit Transfer(from, to, amount);
+        return true;
+    }
+}
+```
+
+**OPNet:**
+```typescript
+import { u256 } from '@btc-vision/as-bignum/assembly';
+import {
+    Address,
+    AddressMemoryMap,
+    Blockchain,
+    BytesWriter,
+    Calldata,
+    MapOfMap,
+    OP_NET,
+    Revert,
+    SafeMath,
+    StoredString,
+    StoredU256,
+    StoredU8,
+    EMPTY_POINTER,
+} from '@btc-vision/btc-runtime/runtime';
+
+@final
+export class SimpleToken extends OP_NET {
+    // Pointer allocation (equivalent to slot assignment)
+    private readonly namePointer: u16 = Blockchain.nextPointer;
+    private readonly symbolPointer: u16 = Blockchain.nextPointer;
+    private readonly decimalsPointer: u16 = Blockchain.nextPointer;
+    private readonly totalSupplyPointer: u16 = Blockchain.nextPointer;
+    private readonly balancesPointer: u16 = Blockchain.nextPointer;
+    private readonly allowancesPointer: u16 = Blockchain.nextPointer;
+
+    // Storage variables
+    private readonly _name: StoredString = new StoredString(this.namePointer, 0);
+    private readonly _symbol: StoredString = new StoredString(this.symbolPointer, 0);
+    private readonly _decimals: StoredU8 = new StoredU8(this.decimalsPointer, 18);
+    private readonly _totalSupply: StoredU256 = new StoredU256(this.totalSupplyPointer, EMPTY_POINTER);
+    private readonly _balanceOf: AddressMemoryMap;
+    private readonly _allowance: MapOfMap<u256>;
+
+    public constructor() {
+        super();
+        this._balanceOf = new AddressMemoryMap(this.balancesPointer);
+        this._allowance = new MapOfMap<u256>(this.allowancesPointer);
+    }
+
+    // Equivalent to Solidity constructor
+    public override onDeployment(calldata: Calldata): void {
+        this._name.value = calldata.readString();
+        this._symbol.value = calldata.readString();
+        const initialSupply = calldata.readU256();
+        this._totalSupply.value = initialSupply;
+        this._balanceOf.set(Blockchain.tx.origin, initialSupply);
+    }
+
+    // function transfer(address to, uint256 amount) external returns (bool)
+    public transfer(calldata: Calldata): BytesWriter {
+        const to = calldata.readAddress();
+        const amount = calldata.readU256();
+        const sender = Blockchain.tx.sender;
+
+        const senderBalance = this._balanceOf.get(sender);
+        if (senderBalance < amount) {
+            throw new Revert('Insufficient balance');
+        }
+
+        this._balanceOf.set(sender, SafeMath.sub(senderBalance, amount));
+        this._balanceOf.set(to, SafeMath.add(this._balanceOf.get(to), amount));
+
+        // Emit Transfer event (implementation depends on event system)
+
+        const writer = new BytesWriter(1);
+        writer.writeBoolean(true);
+        return writer;
+    }
+
+    // function approve(address spender, uint256 amount) external returns (bool)
+    public approve(calldata: Calldata): BytesWriter {
+        const spender = calldata.readAddress();
+        const amount = calldata.readU256();
+        const sender = Blockchain.tx.sender;
+
+        // MapOfMap pattern: get nested, modify, commit back
+        const senderAllowances = this._allowance.get(sender);
+        senderAllowances.set(spender, amount);
+        this._allowance.set(sender, senderAllowances);
+
+        const writer = new BytesWriter(1);
+        writer.writeBoolean(true);
+        return writer;
+    }
+
+    // function transferFrom(address from, address to, uint256 amount) external returns (bool)
+    public transferFrom(calldata: Calldata): BytesWriter {
+        const from = calldata.readAddress();
+        const to = calldata.readAddress();
+        const amount = calldata.readU256();
+        const sender = Blockchain.tx.sender;
+
+        // Check allowance
+        const fromAllowances = this._allowance.get(from);
+        const currentAllowance = fromAllowances.get(sender);
+        if (currentAllowance < amount) {
+            throw new Revert('Insufficient allowance');
+        }
+
+        // Check balance
+        const fromBalance = this._balanceOf.get(from);
+        if (fromBalance < amount) {
+            throw new Revert('Insufficient balance');
+        }
+
+        // Update allowance
+        fromAllowances.set(sender, SafeMath.sub(currentAllowance, amount));
+        this._allowance.set(from, fromAllowances);
+
+        // Update balances
+        this._balanceOf.set(from, SafeMath.sub(fromBalance, amount));
+        this._balanceOf.set(to, SafeMath.add(this._balanceOf.get(to), amount));
+
+        const writer = new BytesWriter(1);
+        writer.writeBoolean(true);
+        return writer;
+    }
+}
 ```
 
 ## Reading and Writing
@@ -658,8 +891,8 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 
 export class MyContract extends OP_NET {
-    private balancesPointer: u16 = Blockchain.nextPointer;
-    private balanceOf: AddressMemoryMap;
+    private readonly balancesPointer: u16 = Blockchain.nextPointer;
+    private readonly balanceOf: AddressMemoryMap;
 
     public constructor() {
         super();

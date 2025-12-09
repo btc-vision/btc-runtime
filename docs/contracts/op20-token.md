@@ -433,6 +433,31 @@ ApprovalEvent(owner: Address, spender: Address, amount: u256)
 
 ## Approval Patterns
 
+The following state diagram shows how an allowance transitions between different states:
+
+```mermaid
+---
+config:
+  theme: dark
+---
+stateDiagram-v2
+    [*] --> NoAllowance
+
+    NoAllowance --> LimitedAllowance: approve(amount)
+    NoAllowance --> UnlimitedAllowance: approve(u256.Max)
+
+    LimitedAllowance --> LimitedAllowance: increaseAllowance(delta)
+    LimitedAllowance --> LimitedAllowance: decreaseAllowance(delta)
+    LimitedAllowance --> LimitedAllowance: transferFrom (decrements)
+    LimitedAllowance --> NoAllowance: transferFrom (exhausted)
+    LimitedAllowance --> NoAllowance: approve(0)
+    LimitedAllowance --> UnlimitedAllowance: approve(u256.Max)
+
+    UnlimitedAllowance --> UnlimitedAllowance: transferFrom (no change)
+    UnlimitedAllowance --> LimitedAllowance: approve(amount)
+    UnlimitedAllowance --> NoAllowance: approve(0)
+```
+
 ### Standard Approval
 
 ```typescript
@@ -465,6 +490,31 @@ decreaseAllowance(spender, 50);   // Remove 50 from current allowance
 ```
 
 ## Edge Cases
+
+The following state diagram shows how token balances transition for an individual address:
+
+```mermaid
+---
+config:
+  theme: dark
+---
+stateDiagram-v2
+    [*] --> ZeroBalance
+
+    ZeroBalance --> HasBalance: receive tokens
+
+    HasBalance --> HasBalance: transfer (partial)
+    HasBalance --> HasBalance: receive more
+    HasBalance --> ZeroBalance: transfer (all)
+    HasBalance --> ZeroBalance: burn (all)
+
+    note right of HasBalance
+        Balance can increase via:
+        - _mint()
+        - transfer()
+        - transferFrom()
+    end note
+```
 
 ### Zero Address
 

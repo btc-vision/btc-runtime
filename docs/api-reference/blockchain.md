@@ -263,13 +263,13 @@ import {
 private balancesPointer: u16 = Blockchain.nextPointer;
 
 // Write balance
-private setBalance(address: Address, amount: u256): void {
+public setBalance(address: Address, amount: u256): void {
     const pointerHash = encodePointer(this.balancesPointer, address.toBytes());
     Blockchain.setStorageAt(pointerHash, amount.toUint8Array(true));
 }
 
 // Read balance
-private getBalance(address: Address): u256 {
+public getBalance(address: Address): u256 {
     const pointerHash = encodePointer(this.balancesPointer, address.toBytes());
     const stored = Blockchain.getStorageAt(pointerHash);
     return u256.fromUint8ArrayBE(stored);

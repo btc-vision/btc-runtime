@@ -319,16 +319,113 @@ class SignatureContract extends OP_NET {
 }
 ```
 
-## Solidity Comparison
+## Solidity vs OPNet: Signature Verification Comparison
 
-| Solidity | OPNet |
-|----------|-------|
-| `ecrecover(hash, v, r, s)` | `Blockchain.verifySignature(addr, sig, hash)` |
-| ECDSA signatures | Schnorr + ML-DSA signatures |
-| OpenZeppelin ECDSA | Built-in verification |
-| No quantum resistance | ML-DSA quantum-resistant option |
+OPNet provides significant advantages over Solidity for signature verification, including quantum-resistant signatures, native Schnorr support, and simplified APIs.
 
-### EIP-2612 Permit Comparison
+### Feature Comparison Table
+
+| Feature | Solidity/EVM | OPNet | OPNet Advantage |
+|---------|--------------|-------|-----------------|
+| **Primary Signature Scheme** | ECDSA (secp256k1) | Schnorr + ML-DSA | Quantum-resistant option |
+| **Quantum Resistance** | Not supported | ML-DSA (FIPS 204) | Future-proof security |
+| **Signature Recovery** | `ecrecover()` returns address | Direct verification | Cleaner API |
+| **Public Key Access** | Must be stored/derived | Automatic via `Address` | No custom storage needed |
+| **Verification Function** | Multiple parameters (v, r, s) | Single signature bytes | Simpler interface |
+| **EIP-712 Support** | Manual implementation | Built-in domain separation | Type-safe messages |
+| **Batch Verification** | Not native | Supported | Better performance |
+| **Key Sizes** | 33/65 bytes (secp256k1) | 32 bytes (Schnorr) / 1,312+ bytes (ML-DSA) | Flexible security |
+
+### Signature Scheme Comparison
+
+| Aspect | Solidity (ECDSA) | OPNet (Schnorr) | OPNet (ML-DSA) |
+|--------|------------------|-----------------|----------------|
+| Algorithm | secp256k1 ECDSA | BIP340 Schnorr | FIPS 204 Lattice |
+| Public Key Size | 33 or 65 bytes | 32 bytes | 1,312+ bytes |
+| Signature Size | 65 bytes (v, r, s) | 64 bytes | 2,420+ bytes |
+| Quantum Safe | No | No | **Yes** |
+| Bitcoin Native | No | Yes | Yes |
+| Batch Verification | No | Yes | Yes |
+| Signature Malleability | Yes (fixable) | No | No |
+
+### Capability Matrix
+
+| Capability | Solidity | OPNet |
+|------------|:--------:|:-----:|
+| ECDSA verification | Yes | No (not needed) |
+| Schnorr verification | No | Yes |
+| ML-DSA (quantum-safe) verification | No | Yes |
+| Automatic public key loading | No | Yes |
+| Consensus-aware algorithm selection | No | Yes |
+| EIP-712 domain separation | Manual | Built-in pattern |
+| Nonce management | Manual | Manual (with helpers) |
+| Multi-signature verification | Custom | Built-in loop support |
+| Signature deadline enforcement | Manual | `Blockchain.block.medianTime` |
+
+### API Comparison
+
+#### Solidity: ecrecover
+
+```solidity
+// Solidity - ecrecover (complex, error-prone)
+function verifySignature(
+    bytes32 hash,
+    uint8 v,
+    bytes32 r,
+    bytes32 s,
+    address expectedSigner
+) public pure returns (bool) {
+    // Must handle v value normalization
+    if (v < 27) {
+        v += 27;
+    }
+
+    // ecrecover returns address(0) on failure (no error thrown!)
+    address recovered = ecrecover(hash, v, r, s);
+
+    // Must explicitly check for zero address
+    require(recovered != address(0), "Invalid signature");
+
+    return recovered == expectedSigner;
+
+    // Limitations:
+    // - Returns address(0) on invalid signature (silent failure)
+    // - v, r, s must be extracted from signature bytes
+    // - No quantum resistance
+    // - Signature malleability issues
+}
+```
+
+#### OPNet: verifySignature
+
+```typescript
+// OPNet - verifySignature (simple, safe)
+function verifySignature(
+    signer: Address,
+    signature: Uint8Array,
+    hash: Uint8Array
+): bool {
+    // Single function call - handles everything
+    const isValid = Blockchain.verifySignature(
+        signer,      // Address contains public key reference
+        signature,   // Full signature bytes
+        hash,        // Message hash
+        true         // Force quantum-resistant ML-DSA
+    );
+
+    // Returns false on invalid (never throws for invalid sig)
+    return isValid;
+
+    // Advantages:
+    // - Single function call
+    // - No signature parsing needed
+    // - Automatic public key loading
+    // - Quantum-resistant option
+    // - No malleability issues
+}
+```
+
+### EIP-712 / EIP-2612 Permit Comparison
 
 ```solidity
 // Solidity (EIP-2612)
@@ -387,6 +484,62 @@ public permit(calldata: Calldata): BytesWriter {
     return new BytesWriter(0);
 }
 ```
+
+### Security Comparison
+
+| Security Aspect | Solidity | OPNet |
+|-----------------|----------|-------|
+| Signature Malleability | Vulnerable (requires OpenZeppelin) | Not vulnerable |
+| Replay Attack Protection | Manual nonce tracking | Built-in patterns |
+| Cross-Chain Replay | EIP-712 chain ID (manual) | Network-aware domain |
+| Zero Address Recovery | Silent failure | Clean boolean return |
+| Quantum Computer Attack | **Vulnerable** | **Protected (ML-DSA)** |
+| Key Compromise Recovery | No built-in support | Dual-key architecture |
+
+### Implementation Complexity
+
+| Task | Solidity Lines of Code | OPNet Lines of Code |
+|------|:----------------------:|:-------------------:|
+| Basic signature verification | ~15 | ~5 |
+| EIP-712 domain separator | ~20 | ~15 |
+| Permit implementation | ~30 | ~20 |
+| Multi-sig verification | ~50+ | ~15 |
+| Quantum-safe verification | Not possible | ~5 (same as basic) |
+
+### Error Handling Comparison
+
+```solidity
+// Solidity - Silent failure with ecrecover
+function verify(bytes32 hash, uint8 v, bytes32 r, bytes32 s) public view returns (address) {
+    address recovered = ecrecover(hash, v, r, s);
+    // DANGER: recovered can be address(0) on failure!
+    // DANGER: No error thrown, must check explicitly
+    require(recovered != address(0), "Invalid signature");
+    return recovered;
+}
+```
+
+```typescript
+// OPNet - Clear boolean result
+function verify(hash: Uint8Array, signature: Uint8Array, signer: Address): bool {
+    // Returns false on invalid signature - no silent failures
+    // Returns false on malformed input - no exceptions
+    return Blockchain.verifySignature(signer, signature, hash, true);
+}
+```
+
+### Why OPNet for Signature Verification?
+
+| Solidity Limitation | OPNet Solution |
+|---------------------|----------------|
+| ECDSA only | Schnorr + ML-DSA support |
+| No quantum resistance | Built-in ML-DSA (FIPS 204) |
+| Complex v, r, s handling | Single signature bytes parameter |
+| Must store/derive public keys | Automatic key loading from Address |
+| Silent ecrecover failures | Clean boolean returns |
+| Signature malleability | BIP340 Schnorr (no malleability) |
+| Manual EIP-712 implementation | Built-in domain separation patterns |
+| No consensus-aware selection | Automatic algorithm selection |
 
 ## Common Patterns
 

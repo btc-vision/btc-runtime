@@ -128,12 +128,15 @@ sequenceDiagram
 ### The Solution: ReentrancyGuard
 
 ```typescript
-import { ReentrancyGuard, ReentrancyGuardMode } from '@btc-vision/btc-runtime/runtime';
+import { ReentrancyGuard, ReentrancyLevel } from '@btc-vision/btc-runtime/runtime';
 
 @final
 export class MyContract extends ReentrancyGuard {
+    // Override the reentrancy level (STANDARD is the default)
+    protected override readonly reentrancyLevel: ReentrancyLevel = ReentrancyLevel.STANDARD;
+
     public constructor() {
-        super(ReentrancyGuardMode.STANDARD);
+        super();
     }
 
     @method()
@@ -175,15 +178,15 @@ flowchart LR
 
 | Mode | Description | Use Case |
 |------|-------------|----------|
-| `STANDARD` | Strict mutual exclusion | Default for most contracts |
-| `CALLBACK` | Allows one level of re-entry | Safe transfer callbacks |
+| `ReentrancyLevel.STANDARD` | Strict mutual exclusion | Default for most contracts |
+| `ReentrancyLevel.CALLBACK` | Allows one level of re-entry | Safe transfer callbacks |
 
 ```typescript
-// STANDARD: No re-entry allowed
-super(ReentrancyGuardMode.STANDARD);
+// STANDARD: No re-entry allowed (default)
+protected override readonly reentrancyLevel: ReentrancyLevel = ReentrancyLevel.STANDARD;
 
 // CALLBACK: Allows controlled re-entry for callbacks
-super(ReentrancyGuardMode.CALLBACK);
+protected override readonly reentrancyLevel: ReentrancyLevel = ReentrancyLevel.CALLBACK;
 ```
 
 ### Guard Mode Decision Tree
@@ -210,7 +213,12 @@ See [ReentrancyGuard](../contracts/reentrancy-guard.md) for detailed usage.
 ### onlyDeployer Pattern
 
 ```typescript
+@final
 export class MyContract extends OP_NET {
+    public constructor() {
+        super();
+    }
+
     @method()
     public adminFunction(calldata: Calldata): BytesWriter {
         // Only deployer can call
@@ -244,14 +252,15 @@ protected onlyOwner(): void {
 ### Custom Roles
 
 ```typescript
+@final
 export class MyContract extends OP_NET {
-    private adminPointer: u16 = Blockchain.nextPointer;
-    private admin: StoredAddress = new StoredAddress(this.adminPointer, Address.zero());
+    private readonly adminPointer: u16 = Blockchain.nextPointer;
+    private readonly admin: StoredAddress = new StoredAddress(this.adminPointer, Address.zero());
 
-    private mintersPointer: u16 = Blockchain.nextPointer;
-    private minters: AddressMemoryMap;
+    private readonly mintersPointer: u16 = Blockchain.nextPointer;
+    private readonly minters: AddressMemoryMap;
 
-    constructor() {
+    public constructor() {
         super();
         this.minters = new AddressMemoryMap(this.mintersPointer);
     }
@@ -272,6 +281,7 @@ export class MyContract extends OP_NET {
     public mint(calldata: Calldata): BytesWriter {
         this.onlyMinter();
         // ...
+        return new BytesWriter(0);
     }
 
     @method()

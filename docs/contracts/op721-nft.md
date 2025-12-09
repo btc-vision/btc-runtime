@@ -234,6 +234,48 @@ stateDiagram-v2
     Burned --> [*]
 ```
 
+## Token Existence States
+
+The following state diagram shows the complete lifecycle of an NFT token:
+
+```mermaid
+---
+config:
+  theme: dark
+---
+stateDiagram-v2
+    [*] --> NonExistent: Token ID available
+
+    NonExistent --> Owned: _mint(to, tokenId)
+
+    state Owned {
+        [*] --> Active
+        Active --> Active: transfer
+        Active --> Active: safeTransfer
+
+        state "Approval Status" as ApprovalStatus {
+            [*] --> Unapproved
+            Unapproved --> SingleApproval: approve(spender)
+            SingleApproval --> Unapproved: transfer clears
+            Unapproved --> OperatorApproved: setApprovalForAll
+            OperatorApproved --> Unapproved: revoke operator
+        }
+    }
+
+    Owned --> Burned: _burn(tokenId)
+    Burned --> [*]: Token destroyed
+
+    note right of NonExistent
+        ownerOf() reverts
+        tokenURI() reverts
+    end note
+
+    note right of Burned
+        Token ID can never
+        be reused
+    end note
+```
+
 ## Built-in Methods
 
 ### Query Methods
@@ -530,6 +572,32 @@ ApprovalForAllEvent(owner: Address, operator: Address, approved: bool)
 ```
 
 ## Edge Cases
+
+The following state diagram shows how ownership transitions work for a specific token:
+
+```mermaid
+---
+config:
+  theme: dark
+---
+stateDiagram-v2
+    [*] --> Unminted
+
+    Unminted --> OwnedBy_A: mint to A
+
+    OwnedBy_A --> OwnedBy_B: A transfers to B
+    OwnedBy_A --> OwnedBy_B: Approved transfers to B
+    OwnedBy_A --> OwnedBy_B: Operator transfers to B
+
+    OwnedBy_B --> OwnedBy_A: B transfers to A
+    OwnedBy_B --> OwnedBy_C: B transfers to C
+
+    OwnedBy_C --> Burned: Owner burns
+    OwnedBy_A --> Burned: Owner burns
+    OwnedBy_B --> Burned: Owner burns
+
+    Burned --> [*]
+```
 
 ### Token ID Uniqueness
 

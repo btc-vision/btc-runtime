@@ -436,7 +436,8 @@ import {
     Address,
     SafeMath,
     StoredAddress,
-    StoredU256
+    StoredU256,
+    EMPTY_POINTER
 } from '@btc-vision/btc-runtime/runtime';
 
 class FeeCollectorPlugin extends Plugin {
@@ -569,7 +570,8 @@ import {
     Calldata,
     Selector,
     StoredU256,
-    SafeMath
+    SafeMath,
+    EMPTY_POINTER
 } from '@btc-vision/btc-runtime/runtime';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 

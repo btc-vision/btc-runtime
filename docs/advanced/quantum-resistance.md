@@ -431,24 +431,114 @@ class QuantumSecureContract extends OP_NET {
 }
 ```
 
-## Solidity Comparison
+## Solidity vs OPNet: Quantum Resistance Comparison
 
-| Concept | Solidity/EVM | OPNet |
-|---------|-------------|-------|
-| Signature verification | `ecrecover()` (ECDSA only) | `Blockchain.verifySignature()` (Schnorr + ML-DSA) |
-| Public key access | Must store or derive | `address.mldsaPublicKey` (automatic) |
-| Quantum resistance | Not available | Built-in ML-DSA support |
-| Key sizes | 33/65 bytes (secp256k1) | 1,312+ bytes (ML-DSA) |
+OPNet is the first smart contract platform with built-in quantum-resistant cryptography. Solidity and the EVM have no quantum resistance capabilities.
+
+### Feature Comparison Table
+
+| Feature | Solidity/EVM | OPNet | OPNet Advantage |
+|---------|--------------|-------|-----------------|
+| **Quantum-Safe Signatures** | Not supported | ML-DSA (FIPS 204) | Future-proof security |
+| **Post-Quantum Algorithm** | None | ML-DSA-44/65/87 | NIST standardized |
+| **Dual-Key Architecture** | Not available | Schnorr + ML-DSA | Smooth transition |
+| **Key Loading** | Manual storage/derivation | Automatic via `Address` | Zero setup required |
+| **Consensus Migration** | Not applicable | Built-in transition plan | Network-coordinated |
+| **Security Levels** | ECDSA only | 3 ML-DSA levels | Flexible security |
+| **Algorithm Selection** | Fixed (ECDSA) | Consensus-aware | Automatic switching |
+
+### Quantum Threat Analysis
+
+| Algorithm | Shor's Algorithm Impact | Grover's Algorithm Impact | Status in OPNet |
+|-----------|------------------------|---------------------------|-----------------|
+| ECDSA (Solidity) | **Broken** (polynomial time) | Weakened | Not used |
+| Schnorr (OPNet) | **Broken** (polynomial time) | Weakened | Transition only |
+| ML-DSA (OPNet) | **Secure** | Minimal impact | **Recommended** |
+
+### Security Level Comparison
+
+| Security Level | Solidity | OPNet ML-DSA | NIST Category | Quantum Security |
+|----------------|----------|--------------|---------------|------------------|
+| ~AES-128 equivalent | ECDSA (broken by quantum) | ML-DSA-44 (Level2) | Category 2 | **Secure** |
+| ~AES-192 equivalent | Not available | ML-DSA-65 (Level3) | Category 3 | **Secure** |
+| ~AES-256 equivalent | Not available | ML-DSA-87 (Level5) | Category 5 | **Secure** |
+
+### Key and Signature Size Comparison
+
+| Metric | Solidity (ECDSA) | OPNet (Schnorr) | OPNet (ML-DSA-44) | OPNet (ML-DSA-87) |
+|--------|------------------|-----------------|-------------------|-------------------|
+| Public Key Size | 33/65 bytes | 32 bytes | 1,312 bytes | 2,592 bytes |
+| Signature Size | 65 bytes | 64 bytes | 2,420 bytes | 4,627 bytes |
+| Private Key Size | 32 bytes | 32 bytes | 2,560 bytes | 4,896 bytes |
+| Quantum Safe | **No** | **No** | **Yes** | **Yes** |
+
+### Capability Matrix
+
+| Capability | Solidity | OPNet |
+|------------|:--------:|:-----:|
+| ECDSA verification | Yes | No (deprecated) |
+| Schnorr verification | No | Yes |
+| ML-DSA-44 verification | No | Yes |
+| ML-DSA-65 verification | No | Yes |
+| ML-DSA-87 verification | No | Yes |
+| Automatic public key loading | No | Yes |
+| Quantum-resistant addresses | No | Yes |
+| Dual-key addresses | No | Yes |
+| Consensus-aware algorithm | No | Yes |
+| Phased migration support | No | Yes |
+
+### Timeline: Quantum Threat vs Platform Readiness
+
+| Timeframe | Quantum Computer Status | Solidity Status | OPNet Status |
+|-----------|------------------------|-----------------|--------------|
+| **2024-2025** | Early NISQ era (~1000 qubits) | Vulnerable (no plan) | ML-DSA ready |
+| **2026-2030** | Scaling (~4000+ qubits possible) | **Critical risk** | Dual-key transition |
+| **2030+** | Cryptographically relevant | **Funds at risk** | ML-DSA only (secure) |
+
+### Migration Path Comparison
+
+```mermaid
+---
+config:
+  theme: dark
+---
+flowchart LR
+    subgraph Solidity["Solidity/EVM - No Migration Path"]
+        S1["ECDSA Only"] --> S2["No quantum option"]
+        S2 --> S3["Fork required?"]
+        S3 --> S4["Funds at risk"]
+    end
+
+    subgraph OPNet["OPNet - Built-in Migration"]
+        O1["Schnorr (current)"] --> O2["Dual-key period"]
+        O2 --> O3["ML-DSA only"]
+        O3 --> O4["Quantum secure"]
+    end
+```
 
 ### Signature Verification Comparison
 
+#### Solidity: No Quantum Protection
+
 ```solidity
-// Solidity - No quantum resistance
+// Solidity - Vulnerable to quantum attacks
+// There is NO way to add quantum resistance to Solidity/EVM
 function verify(bytes32 hash, uint8 v, bytes32 r, bytes32 s) external view returns (bool) {
     address recovered = ecrecover(hash, v, r, s);
     return recovered == expectedSigner;
+
+    // CRITICAL VULNERABILITIES:
+    // - ECDSA is broken by Shor's algorithm
+    // - No upgrade path to quantum-safe algorithms
+    // - All funds signed with exposed public keys at risk
+    // - No way to add ML-DSA or other PQC algorithms
 }
+
+// Even with precompiles, no quantum-safe option exists
+// EIP proposals for PQC have not been implemented
 ```
+
+#### OPNet: Built-in Quantum Resistance
 
 ```typescript
 // OPNet - Quantum-resistant
@@ -462,18 +552,88 @@ public verify(calldata: Calldata): BytesWriter {
     const signature = calldata.readBytesWithLength();
 
     // ML-DSA provides quantum resistance
+    // FIPS 204 standardized algorithm
+    // Public key loaded automatically from address
     const valid = Blockchain.verifySignature(
         this.expectedSigner.value,
         signature,
         hash,
-        true  // Force quantum-resistant
+        true  // Force quantum-resistant ML-DSA
     );
 
     const writer = new BytesWriter(1);
     writer.writeBoolean(valid);
     return writer;
 }
+
+// Advantages:
+// - ML-DSA is quantum-resistant (lattice-based)
+// - NIST standardized (FIPS 204)
+// - Automatic key loading from address
+// - Consensus-managed transition
+// - No code changes needed for migration
 ```
+
+### Public Key Access Comparison
+
+```solidity
+// Solidity - Must store or derive public key
+contract SolidityContract {
+    // Must manually store public keys
+    mapping(address => bytes) public publicKeys;
+
+    function registerKey(bytes calldata pubkey) external {
+        // Verify key matches address
+        require(address(uint160(uint256(keccak256(pubkey)))) == msg.sender);
+        publicKeys[msg.sender] = pubkey;
+    }
+
+    // No way to store/use ML-DSA keys (1,312+ bytes each!)
+    // Storage costs would be prohibitive
+}
+```
+
+```typescript
+// OPNet - Automatic key access
+@final
+class OPNetContract extends OP_NET {
+
+    public getPublicKey(calldata: Calldata): BytesWriter {
+        const user = calldata.readAddress();
+
+        // ML-DSA public key loaded automatically!
+        // No storage needed - runtime handles it
+        const mldsaKey = user.mldsaPublicKey;  // 1,312 bytes
+
+        // Key is cached after first access
+        const writer = new BytesWriter(4);
+        writer.writeU32(mldsaKey.length);
+        return writer;
+    }
+}
+```
+
+### Why OPNet for Quantum Security?
+
+| Solidity Limitation | OPNet Solution |
+|---------------------|----------------|
+| ECDSA only (quantum vulnerable) | ML-DSA (quantum resistant) |
+| No upgrade path | Built-in consensus migration |
+| Must store large keys manually | Automatic key loading |
+| No NIST PQC algorithms | FIPS 204 ML-DSA |
+| Single key per address | Dual-key architecture |
+| Fixed algorithm forever | Consensus-aware selection |
+| Fork required for PQC | Smooth transition built-in |
+| All funds at risk | Protected from day one |
+
+### Cost Comparison
+
+| Operation | Solidity Gas | OPNet Cost | Notes |
+|-----------|--------------|------------|-------|
+| Store ML-DSA public key | ~40,000 gas (1,312 bytes) | 0 | OPNet loads automatically |
+| Store ML-DSA signature | ~76,000 gas (2,420 bytes) | N/A | Not stored, verified |
+| Quantum-safe verification | Not possible | Standard | No additional cost |
+| Key migration | Contract redeploy | Consensus-managed | No user action needed |
 
 ## Best Practices
 

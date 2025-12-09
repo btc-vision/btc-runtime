@@ -638,9 +638,9 @@ const DO_SOMETHING_SELECTOR: u32 = 0x6b9f96ea;  // doSomething()
 
 @final
 export class MyContract extends OP_NET {
-    // Storage
-    private lastUpdatePointer: u16 = Blockchain.nextPointer;
-    private lastUpdate: StoredU256 = new StoredU256(
+    // Storage pointer declaration
+    private readonly lastUpdatePointer: u16 = Blockchain.nextPointer;
+    private readonly lastUpdate: StoredU256 = new StoredU256(
         this.lastUpdatePointer,
         EMPTY_POINTER
     );

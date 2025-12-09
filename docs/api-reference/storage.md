@@ -212,19 +212,28 @@ sequenceDiagram
 
 ### StoredU64
 
-Stores a 64-bit unsigned integer.
+Stores up to four 64-bit unsigned integers within a single u256 storage slot.
 
 ```typescript
 class StoredU64 {
-    constructor(pointer: u16, defaultValue: u64)
-    public get value(): u64
-    public set value(v: u64)
+    constructor(pointer: u16, subPointer: Uint8Array)
+    public get(index: u8): u64
+    public set(index: u8, value: u64): void
+    public save(): void
+    public getAll(): u64[]
 }
 ```
 
 ```typescript
 private timestampPointer: u16 = Blockchain.nextPointer;
-private _timestamp: StoredU64 = new StoredU64(this.timestampPointer, 0);
+private _timestamps: StoredU64 = new StoredU64(this.timestampPointer, EMPTY_POINTER);
+
+// Usage - stores up to 4 u64 values in one storage slot
+this._timestamps.set(0, Blockchain.block.medianTime);  // First u64
+this._timestamps.set(1, someOtherTimestamp);           // Second u64
+this._timestamps.save();                                // Commit to storage
+
+const firstTimestamp = this._timestamps.get(0);
 ```
 
 ### StoredU32 / StoredU16 / StoredU8
@@ -285,19 +294,20 @@ const name = this._name.value;
 
 ### StoredAddress
 
-Stores an Address value.
+Stores an Address value. Default value is Address.zero().
 
 ```typescript
 class StoredAddress {
-    constructor(pointer: u16, defaultValue: Address)
+    constructor(pointer: u16)
     public get value(): Address
     public set value(v: Address)
+    public isDead(): bool
 }
 ```
 
 ```typescript
 private ownerPointer: u16 = Blockchain.nextPointer;
-private _owner: StoredAddress = new StoredAddress(this.ownerPointer, Address.zero());
+private _owner: StoredAddress = new StoredAddress(this.ownerPointer);
 
 // Usage
 this._owner.value = Blockchain.tx.origin;
@@ -312,24 +322,27 @@ Dynamic array of u256 values.
 
 ```typescript
 class StoredU256Array {
-    constructor(pointer: u16)
-    public get length(): u64
+    constructor(pointer: u16, subPointer: Uint8Array, maxLength: u32 = DEFAULT_MAX_LENGTH)
+    public getLength(): u32
     public push(value: u256): void
-    public pop(): u256
-    public get(index: u64): u256
-    public set(index: u64, value: u256): void
+    public deleteLast(): void
+    public get(index: u32): u256
+    public set(index: u32, value: u256): void
+    public save(): void
 }
 ```
 
 ```typescript
 private tokenIdsPointer: u16 = Blockchain.nextPointer;
-private tokenIds: StoredU256Array = new StoredU256Array(this.tokenIdsPointer);
+private tokenIds: StoredU256Array = new StoredU256Array(this.tokenIdsPointer, EMPTY_POINTER);
 
 // Usage
 this.tokenIds.push(u256.fromU64(1));
 this.tokenIds.push(u256.fromU64(2));
-const first = this.tokenIds.get(0);  // u256.fromU64(1)
-const len = this.tokenIds.length;    // 2
+this.tokenIds.save();                  // Commit changes to storage
+
+const first = this.tokenIds.get(0);    // u256.fromU64(1)
+const len = this.tokenIds.getLength(); // 2
 ```
 
 The following diagram shows the array operation flow:
@@ -372,24 +385,26 @@ Dynamic array of Address values.
 
 ```typescript
 class StoredAddressArray {
-    constructor(pointer: u16)
-    public get length(): u64
+    constructor(pointer: u16, subPointer: Uint8Array, maxLength: u32 = DEFAULT_MAX_LENGTH)
+    public getLength(): u32
     public push(value: Address): void
-    public pop(): Address
-    public get(index: u64): Address
-    public set(index: u64, value: Address): void
+    public deleteLast(): void
+    public get(index: u32): Address
+    public set(index: u32, value: Address): void
+    public save(): void
 }
 ```
 
 ```typescript
 private oraclesPointer: u16 = Blockchain.nextPointer;
-private oracles: StoredAddressArray = new StoredAddressArray(this.oraclesPointer);
+private oracles: StoredAddressArray = new StoredAddressArray(this.oraclesPointer, EMPTY_POINTER);
 
 // Add oracle
 this.oracles.push(oracleAddress);
+this.oracles.save();  // Commit changes
 
 // Iterate
-for (let i: u64 = 0; i < this.oracles.length; i++) {
+for (let i: u32 = 0; i < this.oracles.getLength(); i++) {
     const oracle = this.oracles.get(i);
     // Process oracle
 }
@@ -497,10 +512,10 @@ Maps u256 keys to u256 values.
 
 ```typescript
 class StoredMapU256 {
-    constructor(pointer: u16)
+    constructor(pointer: u16, subPointer: Uint8Array = new Uint8Array(30))
     public get(key: u256): u256
     public set(key: u256, value: u256): void
-    public has(key: u256): bool
+    public delete(key: u256): void
 }
 ```
 
@@ -702,7 +717,7 @@ class MyContract extends OP_NET {
     private _value1: StoredU256;
     private _value2: StoredBoolean;
 
-    constructor() {
+    public constructor() {
         super();
         this._value1 = new StoredU256(this.ptr1, EMPTY_POINTER);
         this._value2 = new StoredBoolean(this.ptr2, false);
@@ -724,7 +739,7 @@ private _count: StoredU256;  // Uses more storage
 
 ```typescript
 // Multiple related updates in one call
-function updateBoth(a: u256, b: u256): void {
+public updateBoth(a: u256, b: u256): void {
     this._valueA.value = a;
     this._valueB.value = b;
 }
