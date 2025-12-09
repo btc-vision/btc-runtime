@@ -38,15 +38,15 @@ function f4(x: u32, y: u32, z: u32): u32 {
     return x ^ (y | ~z);
 }
 
-function compress(chunk: Uint8Array, h: Uint32Array): void {
+function compress(msg: Uint8Array, blockOffset: i32, h: Uint32Array): void {
     const x = new Uint32Array(16);
     for (let i = 0; i < 16; i++) {
-        const j = i << 2;
+        const j = blockOffset + (i << 2);
         x[i] = <u32>(
-            chunk[j] |
-            (chunk[j + 1] << 8) |
-            (chunk[j + 2] << 16) |
-            (chunk[j + 3] << 24)
+            msg[j] |
+            (msg[j + 1] << 8) |
+            (msg[j + 2] << 16) |
+            (msg[j + 3] << 24)
         );
     }
 
@@ -272,7 +272,7 @@ export function ripemd160f(data: Uint8Array): Uint8Array {
     msg[totalLength - 1] = <u8>((bitLenHigh >>> 24) & 0xff);
 
     for (let i = 0; i < totalLength; i += BLOCK_SIZE) {
-        compress(msg.subarray(i, i + BLOCK_SIZE), h);
+        compress(msg, i, h);
     }
 
     const out = new Uint8Array(HASH_SIZE);
