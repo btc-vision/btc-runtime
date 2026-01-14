@@ -26,23 +26,7 @@ export class AddressMap<V> implements IMap<Address, V> {
     }
 
     public set(key: Address, value: V): this {
-        let index = -1;
-
-        // Check Cache (Fastest)
-        if (this._lastIndex !== -1) {
-            const cachedKey = unchecked(this._keys[this._lastIndex]);
-            // Check length first, then full content equality
-            if (cachedKey.length === key.length) {
-                if (memory.compare(cachedKey.dataStart, key.dataStart, key.length) === 0) {
-                    index = this._lastIndex;
-                }
-            }
-        }
-
-        // Full Scan if cache missed
-        if (index === -1) {
-            index = this.indexOf(key);
-        }
+        const index = this.indexOf(key);
 
         if (index === -1) {
             this._keys.push(key);
@@ -50,7 +34,7 @@ export class AddressMap<V> implements IMap<Address, V> {
             this._lastIndex = this._keys.length - 1;
         } else {
             unchecked((this._values[index] = value));
-            // Cache is already pointing to this index (from indexOf or the check above)
+            // Cache is already pointing to this index (from indexOf)
             this._lastIndex = index;
         }
 
@@ -63,6 +47,10 @@ export class AddressMap<V> implements IMap<Address, V> {
      * Uses a "Prefix Filter" to skip expensive memory comparisons.
      */
     public indexOf(pointerHash: Address): i32 {
+        if (this.isLastIndex(pointerHash)) {
+            return this._lastIndex;
+        }
+
         const len = this._keys.length;
         if (len === 0) return -1;
 
@@ -109,6 +97,20 @@ export class AddressMap<V> implements IMap<Address, V> {
         }
 
         return -1;
+    }
+
+    private isLastIndex(key: Uint8Array): bool {
+        if (this._lastIndex !== -1) {
+            const cachedKey = unchecked(this._keys[this._lastIndex]);
+            // Check length first, then full content equality
+            if (cachedKey.length === key.length) {
+                if (memory.compare(cachedKey.dataStart, key.dataStart, key.length) === 0) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     @inline
