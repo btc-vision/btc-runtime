@@ -1246,7 +1246,10 @@ export class SafeMath {
 
         // Sum and apply final scaling
         const atanhSum: u64 = wScaled + t3 + t5 + t7 + t9;
-        return atanhSum << 1; // Multiply by 2 using bit shift
+        const result: u64 = atanhSum << 1; // Multiply by 2 using bit shift
+
+        // Preserve monotonicity for tiny positive inputs that would round to zero
+        return result == 0 ? 1 : result;
     }
 
     /**
