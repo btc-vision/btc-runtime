@@ -967,6 +967,7 @@ export class SafeMath {
      *
      * @param x - The input value
      * @returns floor(log2(x)) as u256
+     * @throws {Revert} When x is zero (log of zero)
      *
      * @example
      * ```typescript
@@ -974,11 +975,6 @@ export class SafeMath {
      * const log_10 = SafeMath.approximateLog2(u256.fromU32(10));  // Returns 3 (floor of 3.32...)
      * const log_1000 = SafeMath.approximateLog2(u256.fromU32(1000)); // Returns 9 (floor of 9.97...)
      * ```
-     *
-     * @warning Returns 0 for both input 0 and input 1. While log2(0) is mathematically
-     * undefined and log2(1) = 0, this implementation returns 0 for both cases
-     * to avoid reverts and maintain gas efficiency in smart contracts. Callers
-     * requiring mathematical precision should handle these edge cases explicitly.
      *
      * @security Extensively tested for monotonicity and consistency. Critical for:
      * - Binary search algorithms in sorted data structures
@@ -996,7 +992,7 @@ export class SafeMath {
      */
     public static approximateLog2(x: u256): u256 {
         const bitLen = SafeMath.bitLength256(x);
-        if (bitLen == 0) return u256.Zero;
+        if (bitLen === 0) throw new Revert('SafeMath: log of zero');
         return u256.fromU32(bitLen - 1);
     }
 
@@ -1005,6 +1001,7 @@ export class SafeMath {
      *
      * @param x - The input value (must be ≥ 1)
      * @returns ln(x) scaled by 10^6 for fixed-point precision
+     * @throws {Revert} When x is zero (log of zero)
      *
      * @example
      * ```typescript
@@ -1036,19 +1033,19 @@ export class SafeMath {
      * - Algorithm: Decomposes x = 2^k * (1 + r) where 0 ≤ r < 1
      * - Then: ln(x) = k*ln(2) + ln(1+r)
      * - Uses polyLn1p3 for accurate ln(1+r) approximation
-     * - Returns 0 for inputs 0 or 1 (mathematically ln(1) = 0)
      * - Result scaled by 10^6 to maintain 6 decimal places of precision
      * - Gas cost increases logarithmically with input magnitude
      * - Maximum theoretical input: u256.Max (though precision may degrade)
      * - Monotonicity guaranteed across entire input range
      */
     public static preciseLog(x: u256): u256 {
-        if (x.isZero() || u256.eq(x, SafeMath.ONE)) {
-            return u256.Zero;
+        const bitLen = SafeMath.bitLength256(x);
+
+        if (bitLen === 0) {
+            throw new Revert('SafeMath: log of zero');
         }
 
-        const bitLen = SafeMath.bitLength256(x);
-        if (bitLen <= 1) {
+        if (bitLen === 1) {
             return u256.Zero;
         }
 
@@ -1079,6 +1076,7 @@ export class SafeMath {
      *
      * @param x - The input value
      * @returns ln(x) scaled by 10^6 for fixed-point precision
+     * @throws {Revert} When x is zero (log of zero)
      *
      * @example
      * ```typescript
@@ -1102,18 +1100,18 @@ export class SafeMath {
      * @remarks
      * - Algorithm: ln(x) ≈ (bitLength(x) - 1) * ln(2)
      * - Exact for all powers of 2
-     * - Returns 0 for inputs 0 and 1
      * - Result scaled by 10^6 for 6 decimal places of precision
      * - O(1) complexity, extremely gas efficient
      * - Monotonically non-decreasing (required for security)
      */
     public static approxLog(x: u256): u256 {
-        if (x.isZero() || u256.eq(x, SafeMath.ONE)) {
-            return u256.Zero;
+        const bitLen: u32 = SafeMath.bitLength256(x);
+
+        if (bitLen === 0) {
+            throw new Revert('SafeMath: log of zero');
         }
 
-        const bitLen: u32 = SafeMath.bitLength256(x);
-        if (bitLen <= 1) {
+        if (bitLen === 1) {
             return u256.Zero;
         }
 
@@ -1260,10 +1258,18 @@ export class SafeMath {
      * @param a - Numerator (must be > 0)
      * @param b - Denominator (must be > 0)
      * @returns ln(a/b) * 1,000,000
+     * @throws {Revert} When:
+     * - a is zero (log of zero)
+     * - b is zero (division by zero)
+     * - result is negative (return type is unsigned)
      */
     public static preciseLogRatio(a: u256, b: u256): u256 {
-        if (a.isZero() || b.isZero()) {
-            return u256.Zero;
+        if (b.isZero()) {
+            throw new Revert('SafeMath: division by zero');
+        }
+
+        if (a.isZero()) {
+            throw new Revert('SafeMath: log of zero');
         }
 
         // If a == b, ln(1) = 0
@@ -1280,8 +1286,7 @@ export class SafeMath {
 
         if (scaledRatio.isZero()) {
             // a/b is very small, return negative (but we only handle positive ln)
-            // For a < b, ln(a/b) < 0. Return 0 or handle separately if needed.
-            return u256.Zero;
+            throw new Revert('SafeMath: negative log result');
         }
 
         // If scaledRatio == SCALE, then a/b == 1, ln = 0
@@ -1290,9 +1295,8 @@ export class SafeMath {
         }
 
         // If scaledRatio < SCALE (i.e., a < b), ln is negative
-        // We only return positive values, so return 0 for this case
         if (u256.lt(scaledRatio, SCALE)) {
-            return u256.Zero;
+            throw new Revert('SafeMath: negative log result');
         }
 
         // Now scaledRatio > SCALE, meaning a/b > 1, so ln(a/b) > 0
