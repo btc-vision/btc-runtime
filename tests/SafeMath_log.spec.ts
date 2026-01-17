@@ -1674,6 +1674,33 @@ describe('SafeMath - preciseLogRatio', () => {
         });
     });
 
+    describe('Regression - preciseLogRatio', () => {
+        it('should return a positive ln for ratio just above 1 (1.000001 : 1)', () => {
+            const a = u256.fromU64(1_000_001);
+            const b = u256.fromU64(1_000_000);
+
+            const result = SafeMath.preciseLogRatio(a, b);
+            expect(result).toStrictEqual(
+                u256.fromU32(1),
+                'ln(1.000001) * 1e6 should round to 1, not 0',
+            );
+        });
+
+        it('should compute ln(1.99) accurately (regression for Taylor divergence)', () => {
+            const a = u256.fromU32(199);
+            const b = u256.fromU32(100);
+
+            const result = SafeMath.preciseLogRatio(a, b);
+            const expected: u64 = 688134; // ln(1.99) * 1e6
+
+            const diff = result.toU64() > expected ? result.toU64() - expected : expected - result.toU64();
+            expect(diff <= 2).toBe(
+                true,
+                `ln(1.99) should be near ${expected}, got ${result.toString()}`,
+            );
+        });
+    });
+
     describe('Security and determinism', () => {
         it('should be deterministic - same inputs always give same output', () => {
             const a = u256.fromU64(123456789);

@@ -1246,7 +1246,10 @@ export class SafeMath {
 
         // Sum and apply final scaling
         const atanhSum: u64 = wScaled + t3 + t5 + t7 + t9;
-        return atanhSum << 1; // Multiply by 2 using bit shift
+        const result: u64 = atanhSum << 1; // Multiply by 2 using bit shift
+
+        // Preserve monotonicity for tiny positive inputs that would round to zero
+        return result == 0 ? 1 : result;
     }
 
     /**
@@ -1303,11 +1306,11 @@ export class SafeMath {
         // fractionScaled = scaledRatio - SCALE represents fraction * SCALE
         const fractionScaled = SafeMath.sub(scaledRatio, SCALE);
 
-        // For small fractions (a/b < 2, i.e., fractionScaled < SCALE), use Taylor series
+        // For small fractions (a/b < 2, i.e., fractionScaled < SCALE), use the stable polyLn1p3 approximation
         // Note: Use strict less-than to ensure ratio = 2 uses the k*ln(2) decomposition
         // This ensures continuity at the boundary - both paths give ln(2) for ratio = 2
         if (u256.lt(fractionScaled, SCALE)) {
-            return this.calculateLnOnePlusFraction(fractionScaled, SCALE);
+            return u256.fromU64(SafeMath.polyLn1p3(fractionScaled.toU64()));
         }
 
         // For ratios >= 2, use the decomposition:
@@ -1329,10 +1332,10 @@ export class SafeMath {
         // temp/SCALE is in [1, 2), so (temp - SCALE)/SCALE is in [0, 1)
 
         const normalizedFraction = SafeMath.sub(temp, SCALE);
-        const lnNormalized = this.calculateLnOnePlusFraction(normalizedFraction, SCALE);
+        const lnNormalized = SafeMath.polyLn1p3(normalizedFraction.toU64());
         const base = SafeMath.mul(u256.fromU32(k), LN2_SCALED);
 
-        return SafeMath.add(base, lnNormalized);
+        return SafeMath.add(base, u256.fromU64(lnNormalized));
     }
 
     /**
@@ -1353,41 +1356,5 @@ export class SafeMath {
     private static doubleModNoCarry(x: u256, m: u256): u256 {
         const mMinusX = u256.sub(m, x);
         return u256.ge(x, mMinusX) ? u256.sub(x, mMinusX) : u256.add(x, x);
-    }
-
-    // ==================== Internal Helper Functions ====================
-
-    /**
-     * Helper function: Calculate ln(1 + x) where x is provided as xScaled = x * scale
-     * Returns the result scaled by scale (i.e., ln(1+x) * scale)
-     *
-     * Uses Taylor series: ln(1+x) ≈ x - x²/2 + x³/3 - x⁴/4 + x⁵/5
-     * Valid for 0 <= x <= 1 (i.e., xScaled <= scale)
-     */
-    private static calculateLnOnePlusFraction(xScaled: u256, scale: u256): u256 {
-        if (xScaled.isZero()) {
-            return u256.Zero;
-        }
-
-        // x² scaled
-        const x2 = SafeMath.div(SafeMath.mul(xScaled, xScaled), scale);
-
-        // x³ scaled
-        const x3 = SafeMath.div(SafeMath.mul(x2, xScaled), scale);
-
-        // x⁴ scaled
-        const x4 = SafeMath.div(SafeMath.mul(x3, xScaled), scale);
-
-        // x⁵ scaled
-        const x5 = SafeMath.div(SafeMath.mul(x4, xScaled), scale);
-
-        // ln(1+x) ≈ x - x²/2 + x³/3 - x⁴/4 + x⁵/5
-        let result = xScaled;
-        result = SafeMath.sub(result, SafeMath.div(x2, u256.fromU32(2)));
-        result = SafeMath.add(result, SafeMath.div(x3, u256.fromU32(3)));
-        result = SafeMath.sub(result, SafeMath.div(x4, u256.fromU32(4)));
-        result = SafeMath.add(result, SafeMath.div(x5, u256.fromU32(5)));
-
-        return result;
     }
 }
