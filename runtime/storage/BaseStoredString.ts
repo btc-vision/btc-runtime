@@ -83,7 +83,7 @@ export abstract class BaseStoredString {
         let chunkCount: u64 = 1;
 
         // In the header slot, we can store up to 28 bytes of data.
-        const remaining = oldLength > 28 ? oldLength - 28 : 0;
+        const remaining: u64 = oldLength > 28 ? oldLength - 28 : 0;
         if (remaining > 0) {
             // Each additional chunk is 32 bytes.
             // Use integer math ceiling: (remaining + 32 - 1) / 32
