@@ -402,6 +402,10 @@ export class BytesWriter {
      * If not, calls `resize()` which by default throws a Revert.
      */
     public allocSafe(size: u32): void {
+        if (size > u32.MAX_VALUE - this.currentOffset) {
+            throw new Revert('BytesWriter: offset overflow');
+        }
+
         const needed = this.currentOffset + size;
         if (needed > u32(this.buffer.byteLength)) {
             const sizeDiff: u32 = needed - u32(this.buffer.byteLength);
