@@ -5,12 +5,16 @@ Plugins extend contract functionality through lifecycle hooks. They allow modula
 ## Overview
 
 ```typescript
-import { Plugin, Blockchain, Calldata, Selector } from '@btc-vision/btc-runtime/runtime';
+import { Plugin, Blockchain, Calldata, Selector, BytesWriter } from '@btc-vision/btc-runtime/runtime';
 
 // Create a plugin by extending Plugin class
 class MyPlugin extends Plugin {
     public override onDeployment(calldata: Calldata): void {
         // Called during contract deployment
+    }
+
+    public override onUpdate(calldata: Calldata): void {
+        // Called when contract bytecode is updated
     }
 
     public override onExecutionStarted(selector: Selector, calldata: Calldata): void {
@@ -20,6 +24,11 @@ class MyPlugin extends Plugin {
     public override onExecutionCompleted(selector: Selector, calldata: Calldata): void {
         // Called after each successful method execution
     }
+
+    public override execute(method: Selector, calldata: Calldata): BytesWriter | null {
+        // Handle method selectors - return BytesWriter if handled, null if not
+        return null;
+    }
 }
 
 // Register with contract
@@ -28,7 +37,7 @@ this.registerPlugin(new MyPlugin());
 
 ## Plugin Lifecycle
 
-Plugins are initialized when the contract is deployed and can intercept method calls:
+Plugins are initialized when the contract is deployed and can intercept method calls or handle them directly:
 
 ```mermaid
 ---
@@ -62,9 +71,14 @@ sequenceDiagram
     Note over Plugin: Pre-execution checks<br/>(access control, pausing, etc.)
     Plugin-->>Blockchain: continue
 
-    Blockchain->>Contract: method executes
-    Note over Contract: Core business logic
-    Contract-->>Blockchain: result
+    alt Plugin handles selector
+        Blockchain->>Plugin: execute(selector, calldata)
+        Plugin-->>Blockchain: BytesWriter result
+    else Contract handles selector
+        Blockchain->>Contract: method executes
+        Note over Contract: Core business logic
+        Contract-->>Blockchain: result
+    end
 
     Blockchain->>Plugin: onExecutionCompleted(selector, calldata)
     Note over Plugin: Post-execution tasks<br/>(metrics, logging, etc.)
@@ -86,8 +100,10 @@ classDiagram
     class Plugin {
         <<base>>
         +onDeployment(calldata: Calldata) void
+        +onUpdate(calldata: Calldata) void
         +onExecutionStarted(selector: Selector, calldata: Calldata) void
         +onExecutionCompleted(selector: Selector, calldata: Calldata) void
+        +execute(method: Selector, calldata: Calldata) BytesWriter|null
     }
 
     class RoleBasedAccessPlugin {
@@ -121,18 +137,26 @@ classDiagram
 
 ### Base Plugin Class
 
-The `Plugin` class provides three lifecycle hooks:
+The `Plugin` class provides lifecycle hooks and method handling:
 
 ```typescript
 export class Plugin {
     // Called once during contract deployment, before contract's onDeployment
     public onDeployment(_calldata: Calldata): void {}
 
+    // Called when contract bytecode is updated via updateContractFromExisting
+    public onUpdate(_calldata: Calldata): void {}
+
     // Called before each method execution
     public onExecutionStarted(_selector: Selector, _calldata: Calldata): void {}
 
     // Called after each successful method execution
     public onExecutionCompleted(_selector: Selector, _calldata: Calldata): void {}
+
+    // Handle method selectors - return BytesWriter if handled, null if not
+    public execute(_method: Selector, _calldata: Calldata): BytesWriter | null {
+        return null;
+    }
 }
 ```
 
@@ -144,12 +168,19 @@ import {
     Calldata,
     Selector,
     Blockchain,
-    Revert
+    BytesWriter,
+    Revert,
+    encodeSelector
 } from '@btc-vision/btc-runtime/runtime';
 
+// Simple logging plugin using lifecycle hooks
 class LoggingPlugin extends Plugin {
     public override onDeployment(calldata: Calldata): void {
         // Log deployment
+    }
+
+    public override onUpdate(calldata: Calldata): void {
+        // Handle contract upgrades
     }
 
     public override onExecutionStarted(selector: Selector, calldata: Calldata): void {
@@ -158,6 +189,23 @@ class LoggingPlugin extends Plugin {
 
     public override onExecutionCompleted(selector: Selector, calldata: Calldata): void {
         // Log method completion
+    }
+}
+
+// Plugin that handles method selectors (like UpgradeablePlugin)
+class MethodHandlerPlugin extends Plugin {
+    public override execute(method: Selector, calldata: Calldata): BytesWriter | null {
+        switch (method) {
+            case encodeSelector('myPluginMethod()'):
+                return this.myPluginMethod();
+            default:
+                return null; // Not handled by this plugin
+        }
+    }
+
+    private myPluginMethod(): BytesWriter {
+        // Method implementation
+        return new BytesWriter(0);
     }
 }
 ```
@@ -551,15 +599,21 @@ export class MyContract extends OP_NET {
 ### Execution Order
 
 ```
+Deployment:
 1. Plugin.onDeployment (for each registered plugin, in order)
 2. Contract.onDeployment
 
-Then for each method call:
+Upgrade (when bytecode is updated):
+1. Plugin.onUpdate (for each registered plugin, in order)
+2. Contract.onUpdate
+
+Method execution:
 1. Plugin.onExecutionStarted (for each registered plugin, in order)
 2. Contract.onExecutionStarted
-3. Contract method executes
-4. Plugin.onExecutionCompleted (for each registered plugin, in order)
-5. Contract.onExecutionCompleted
+3. Plugin.execute (check plugins first, return if handled)
+4. Contract method executes (if no plugin handled it)
+5. Plugin.onExecutionCompleted (for each registered plugin, in order)
+6. Contract.onExecutionCompleted
 ```
 
 ### Metrics Plugin Example
@@ -886,7 +940,9 @@ export class CompleteContract extends OP_NET {
 | Lifecycle Event | Solidity | OPNet |
 |-----------------|----------|-------|
 | Contract deployment | Single constructor | `onDeployment` per plugin + contract |
+| Contract upgrade | Proxy reinitialize | `onUpdate` per plugin + contract |
 | Before method call | Modifiers (manual per function) | `onExecutionStarted` (automatic) |
+| Method handling | Function dispatch | `execute` returns BytesWriter or null |
 | After method call | No built-in hook | `onExecutionCompleted` (automatic) |
 | Error handling | try/catch (limited) | Revert in any hook |
 
@@ -928,12 +984,21 @@ class MyPlugin extends Plugin {
         // Implementation
     }
 
+    public override onUpdate(calldata: Calldata): void {
+        // Implementation
+    }
+
     public override onExecutionStarted(selector: Selector, calldata: Calldata): void {
         // Implementation
     }
 
     public override onExecutionCompleted(selector: Selector, calldata: Calldata): void {
         // Implementation
+    }
+
+    public override execute(method: Selector, calldata: Calldata): BytesWriter | null {
+        // Return BytesWriter if handled, null if not
+        return null;
     }
 }
 ```

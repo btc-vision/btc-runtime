@@ -31,6 +31,7 @@ classDiagram
         -Uint8Array typedArray
         -u32 currentOffset
         +BytesWriter(length)
+        +write~T~(value) void
         +writeU8(value)
         +writeU16(value, be)
         +writeU32(value, be)
@@ -52,6 +53,7 @@ classDiagram
         -DataView buffer
         -i32 currentOffset
         +BytesReader(bytes)
+        +read~T~() T
         +readU8() u8
         +readU16(be) u16
         +readU32(be) u32
@@ -141,6 +143,25 @@ writer.writeBytesWithLength(data);
 
 // Selector (4 bytes, big-endian)
 writer.writeSelector(selector);
+```
+
+### Generic Write Method
+
+The `write<T>()` method automatically selects the correct write method based on the type:
+
+```typescript
+// Automatically dispatches to the correct write method
+writer.write<u64>(12345);                    // writeU64
+writer.write<u256>(amount);                  // writeU256
+writer.write<bool>(true);                    // writeBoolean
+writer.write<Address>(addr);                 // writeAddress
+writer.write<ExtendedAddress>(extAddr);      // writeExtendedAddress
+writer.write<string>('hello');               // writeStringWithLength
+
+// Supported types:
+// - Primitives: bool, u8, u16, u32, u64, i8, i16, i32, i64
+// - Big numbers: u128, u256, i128
+// - Complex: Address, ExtendedAddress, Selector, string, Uint8Array
 ```
 
 ### Writing Arrays
@@ -264,6 +285,25 @@ const data2: Uint8Array = reader.readBytesWithLength();
 
 // Selector (4 bytes, big-endian)
 const selector: Selector = reader.readSelector();
+```
+
+### Generic Read Method
+
+The `read<T>()` method automatically selects the correct read method based on the type:
+
+```typescript
+// Automatically dispatches to the correct read method
+const num: u64 = reader.read<u64>();              // readU64
+const amount: u256 = reader.read<u256>();         // readU256
+const flag: bool = reader.read<bool>();           // readBoolean
+const addr: Address = reader.read<Address>();     // readAddress
+const extAddr: ExtendedAddress = reader.read<ExtendedAddress>();  // readExtendedAddress
+const text: string = reader.read<string>();       // readStringWithLength
+
+// Supported types:
+// - Primitives: bool, u8, u16, u32, u64, i8, i16, i32, i64
+// - Big numbers: u128, u256, i128
+// - Complex: Address, ExtendedAddress, Selector, string
 ```
 
 ### Reading Arrays
