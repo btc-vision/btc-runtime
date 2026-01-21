@@ -66,6 +66,30 @@ export declare function tStorePointer(key: ArrayBuffer, value: ArrayBuffer): voi
 export declare function deployFromAddress(originAddress: ArrayBuffer, salt: ArrayBuffer, calldata: ArrayBuffer, calldataLength: u32, resultAddress: ArrayBuffer): u32;
 
 /**
+ * Updates the calling contract's bytecode from an existing contract.
+ *
+ * This VM opcode enables bytecode replacement where a contract can replace its own
+ * execution logic by referencing another deployed contract containing the new WASM bytecode.
+ * The new bytecode takes effect at the next block.
+ *
+ * @param {ArrayBuffer} sourceAddress - The address of the contract containing the new bytecode.
+ * @param {ArrayBuffer} calldata - The calldata for the update (passed to onUpdate if implemented).
+ * @param {u32} calldataLength - The length of the calldata.
+ * @returns {u32} - Status code (0 = success, non-zero = failure).
+ *
+ * @remarks
+ * - The source contract must be an already-deployed contract
+ * - Storage layout compatibility is the developer's responsibility
+ * - The contract address and all storage slots persist unchanged
+ * - Only the execution logic changes
+ *
+ * @warning This is a privileged operation. Contracts should implement their own
+ *          permission checks and optional timelock patterns before calling this.
+ */
+@external('env', 'updateFromAddress')
+export declare function updateFromAddress(sourceAddress: ArrayBuffer, calldata: ArrayBuffer, calldataLength: u32): u32;
+
+/**
  * Calls a contract.
  * @param {ArrayBuffer} address - The address of the contract to call.
  * @param {ArrayBuffer} calldata - The calldata for the contract call.

@@ -62,6 +62,7 @@ classDiagram
         +address Address (getter)
         +contractDeployer Address (getter)
         +onDeployment(_calldata: Calldata) void
+        +onUpdate(_calldata: Calldata) void
         +onExecutionStarted(_selector: Selector, _calldata: Calldata) void
         +onExecutionCompleted(_selector: Selector, _calldata: Calldata) void
         +execute(method: Selector, _calldata: Calldata) BytesWriter
@@ -234,6 +235,27 @@ constructor(uint256 initialSupply, string memory tokenName) {
 // OPNet: One-time init in onDeployment()
 // Constructor runs every call, onDeployment runs once
 ```
+
+### 2b. Update (onUpdate)
+
+Runs when the contract's bytecode is updated via `updateContractFromExisting`:
+
+```typescript
+public override onUpdate(calldata: Calldata): void {
+    super.onUpdate(calldata); // Notify plugins
+
+    // Read migration parameters
+    const fromVersion = calldata.readU64();
+
+    // Perform migration based on version
+    if (fromVersion === 1) {
+        // Initialize new storage added in this version
+        this._newFeature.value = u256.fromU64(100);
+    }
+}
+```
+
+> **Note:** This hook is called on the **new** bytecode, not the old one. See [Contract Upgrades](../advanced/contract-upgrades.md#the-onupdate-lifecycle-hook) for details.
 
 ### 3. Method Execution
 

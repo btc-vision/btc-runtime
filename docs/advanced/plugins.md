@@ -23,7 +23,7 @@ class MyPlugin extends Plugin {
 }
 
 // Register with contract
-Blockchain.registerPlugin(new MyPlugin());
+this.registerPlugin(new MyPlugin());
 ```
 
 ## Plugin Lifecycle
@@ -44,7 +44,7 @@ sequenceDiagram
     Note over Deployer,Blockchain: Contract Deployment
     Deployer->>Contract: constructor()
     Contract->>Plugin: new Plugin()
-    Contract->>Blockchain: registerPlugin(plugin)
+    Contract->>Contract: registerPlugin(plugin)
 
     Deployer->>Contract: deploy(calldata)
     Blockchain->>Plugin: onDeployment(calldata)
@@ -178,7 +178,7 @@ export class MyContract extends OP_NET {
 
         // Create and register plugins
         this.loggingPlugin = new LoggingPlugin();
-        Blockchain.registerPlugin(this.loggingPlugin);
+        this.registerPlugin(this.loggingPlugin);
     }
 }
 ```
@@ -190,7 +190,7 @@ public override onDeployment(calldata: Calldata): void {
     const enableLogging = calldata.readBoolean();
 
     if (enableLogging) {
-        Blockchain.registerPlugin(new LoggingPlugin());
+        this.registerPlugin(new LoggingPlugin());
     }
 
     // Continue with normal deployment
@@ -518,7 +518,7 @@ export class MyContract extends OP_NET {
             Blockchain.nextPointer,
             Blockchain.nextPointer
         );
-        Blockchain.registerPlugin(this.feePlugin);
+        this.registerPlugin(this.feePlugin);
     }
 
     @method(
@@ -733,7 +733,7 @@ export class MyContract extends OP_NET {
         super();
         // Single plugin handles ALL access control
         this.accessPlugin = new RoleBasedAccessPlugin(Blockchain.nextPointer);
-        Blockchain.registerPlugin(this.accessPlugin);
+        this.registerPlugin(this.accessPlugin);
     }
 
     @method()
@@ -812,7 +812,7 @@ export class MyContract extends OP_NET {
     public constructor() {
         super();
         this.pausablePlugin = new PausablePlugin(Blockchain.nextPointer);
-        Blockchain.registerPlugin(this.pausablePlugin);
+        this.registerPlugin(this.pausablePlugin);
     }
 
     @method(ABIDataTypes.UINT256)
@@ -861,19 +861,19 @@ export class CompleteContract extends OP_NET {
 
         // Order matters - security checks first!
         this.accessPlugin = new RoleBasedAccessPlugin(Blockchain.nextPointer);
-        Blockchain.registerPlugin(this.accessPlugin);  // 1. Check permissions
+        this.registerPlugin(this.accessPlugin);  // 1. Check permissions
 
         this.pausablePlugin = new PausablePlugin(Blockchain.nextPointer);
-        Blockchain.registerPlugin(this.pausablePlugin);  // 2. Check pause status
+        this.registerPlugin(this.pausablePlugin);  // 2. Check pause status
 
         this.feePlugin = new FeeCollectorPlugin(
             Blockchain.nextPointer,
             Blockchain.nextPointer
         );
-        Blockchain.registerPlugin(this.feePlugin);  // 3. Fee calculations
+        this.registerPlugin(this.feePlugin);  // 3. Fee calculations
 
         this.metricsPlugin = new MetricsPlugin(Blockchain.nextPointer);
-        Blockchain.registerPlugin(this.metricsPlugin);  // 4. Track metrics
+        this.registerPlugin(this.metricsPlugin);  // 4. Track metrics
     }
 
     // All plugins execute their hooks automatically
@@ -994,9 +994,9 @@ public override onExecutionStarted(selector: Selector, calldata: Calldata): void
 
 ```typescript
 // Security checks should come first
-Blockchain.registerPlugin(this.accessControl);  // Check permissions first
-Blockchain.registerPlugin(this.pausable);       // Then pausable
-Blockchain.registerPlugin(this.metrics);        // Metrics last
+this.registerPlugin(this.accessControl);  // Check permissions first
+this.registerPlugin(this.pausable);       // Then pausable
+this.registerPlugin(this.metrics);        // Metrics last
 ```
 
 ---

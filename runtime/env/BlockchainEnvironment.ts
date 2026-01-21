@@ -22,12 +22,12 @@ import {
     storePointer,
     tLoadPointer,
     tStorePointer,
+    updateFromAddress,
     validateBitcoinAddress,
     verifySignature,
 } from './global';
 import { eqUint, MapUint8Array } from '../generic/MapUint8Array';
 import { EMPTY_BUFFER } from '../math/bytes';
-import { Plugin } from '../plugins/Plugin';
 import { Calldata } from '../types';
 import { Revert } from '../types/Revert';
 import { Selector } from '../math/abi';
@@ -75,7 +75,6 @@ export class BlockchainEnvironment {
     private storage: MapUint8Array = new MapUint8Array();
     private transientStorage: MapUint8Array = new MapUint8Array();
     private _selfContract: Potential<OP_NET> = null;
-    private _plugins: Plugin[] = [];
     private _network: Networks = Networks.Unknown;
 
     /**
@@ -268,32 +267,29 @@ export class BlockchainEnvironment {
     }
 
     /**
-     * Registers a plugin to extend contract functionality.
-     *
-     * @param plugin - Plugin instance to register
-     *
-     * @remarks
-     * Plugins execute in registration order and have full access to contract state.
-     */
-    public registerPlugin(plugin: Plugin): void {
-        this._plugins.push(plugin);
-    }
-
-    /**
      * Handles contract deployment initialization.
      *
      * @param calldata - Deployment parameters
      *
      * @remarks
-     * Called once during deployment. State changes here are permanent.
+     * Called once during deployment. Delegates to the contract's onDeployment
+     * which handles plugin notification.
      */
     public onDeployment(calldata: Calldata): void {
-        const len = this._plugins.length;
-        for (let i: i32 = 0; i < len; i++) {
-            // Unchecked access for speed
-            unchecked(this._plugins[i].onDeployment(calldata));
-        }
         this.contract.onDeployment(calldata);
+    }
+
+    /**
+     * Handles contract bytecode update.
+     *
+     * @param calldata - Update parameters passed to updateContractFromExisting
+     *
+     * @remarks
+     * Called when the contract's bytecode is updated. Delegates to the contract's
+     * onUpdate which handles plugin notification and migration logic.
+     */
+    public onUpdate(calldata: Calldata): void {
+        this.contract.onUpdate(calldata);
     }
 
     /**
@@ -303,13 +299,9 @@ export class BlockchainEnvironment {
      * @param calldata - Method parameters
      *
      * @remarks
-     * Used for access control, reentrancy guards, and validation.
+     * Delegates to the contract's onExecutionStarted which handles plugin notification.
      */
     public onExecutionStarted(selector: Selector, calldata: Calldata): void {
-        const len = this._plugins.length;
-        for (let i: i32 = 0; i < len; i++) {
-            unchecked(this._plugins[i].onExecutionStarted(selector, calldata));
-        }
         this.contract.onExecutionStarted(selector, calldata);
     }
 
@@ -320,13 +312,9 @@ export class BlockchainEnvironment {
      * @param calldata - Method parameters that were passed
      *
      * @remarks
-     * Only called on successful execution. Used for cleanup and events.
+     * Delegates to the contract's onExecutionCompleted which handles plugin notification.
      */
     public onExecutionCompleted(selector: Selector, calldata: Calldata): void {
-        const len = this._plugins.length;
-        for (let i: i32 = 0; i < len; i++) {
-            unchecked(this._plugins[i].onExecutionCompleted(selector, calldata));
-        }
         this.contract.onExecutionCompleted(selector, calldata);
     }
 
@@ -589,6 +577,116 @@ export class BlockchainEnvironment {
 
         const contractAddressReader = new BytesReader(Uint8Array.wrap(resultAddressBuffer));
         return contractAddressReader.readAddress();
+    }
+
+    /**
+     * Updates this contract's bytecode from an existing deployed contract.
+     *
+     * This method triggers a bytecode replacement where the calling contract's execution
+     * logic is replaced with the bytecode from the source contract. The new bytecode
+     * takes effect at the next block.
+     *
+     * @param sourceAddress - Address of the contract containing the new bytecode
+     * @throws {Revert} When the source address is invalid or the update fails
+     *
+     * @warning This is a privileged operation with significant implications:
+     *          - Storage layout compatibility is entirely the developer's responsibility
+     *          - The contract address and all storage slots persist unchanged
+     *          - Only the execution logic changes
+     *          - The source contract must be an already-deployed contract
+     *
+     * @remarks
+     * Contracts should implement their own permission checks and optional timelock
+     * patterns before calling this method. A recommended pattern is:
+     *
+     * 1. `submitUpdate(address)` - Logs source address and block number, validates
+     *    that the address is an existing deployed contract
+     * 2. `applyUpdate(address)` - Can only be called after a configured delay,
+     *    verifies address matches the submitted one, then calls this method
+     *
+     * This pattern gives users time to assess pending changes and exit if needed.
+     *
+     * @example
+     * ```typescript
+     * // Simple immediate update (not recommended for production)
+     * public upgrade(calldata: Calldata): BytesWriter {
+     *     this.onlyDeployer(Blockchain.tx.sender);
+     *     const newBytecodeAddress = calldata.readAddress();
+     *     Blockchain.updateContractFromExisting(newBytecodeAddress);
+     *     return new BytesWriter(0);
+     * }
+     * ```
+     *
+     * @example
+     * ```typescript
+     * // Timelock pattern (recommended)
+     * private pendingUpdatePointer: u16 = Blockchain.nextPointer;
+     * private pendingUpdate: StoredAddress = new StoredAddress(this.pendingUpdatePointer);
+     *
+     * private pendingUpdateBlockPointer: u16 = Blockchain.nextPointer;
+     * private pendingUpdateBlock: StoredU64 = new StoredU64(this.pendingUpdateBlockPointer);
+     *
+     * private readonly UPDATE_DELAY: u64 = 144; // ~1 day in blocks
+     *
+     * public submitUpdate(calldata: Calldata): BytesWriter {
+     *     this.onlyDeployer(Blockchain.tx.sender);
+     *     const sourceAddress = calldata.readAddress();
+     *
+     *     // Validate source is an existing contract
+     *     if (!Blockchain.isContract(sourceAddress)) {
+     *         throw new Revert('Source must be a deployed contract');
+     *     }
+     *
+     *     this.pendingUpdate.value = sourceAddress;
+     *     this.pendingUpdateBlock.value = Blockchain.block.number;
+     *     return new BytesWriter(0);
+     * }
+     *
+     * public applyUpdate(calldata: Calldata): BytesWriter {
+     *     this.onlyDeployer(Blockchain.tx.sender);
+     *     const sourceAddress = calldata.readAddress();
+     *
+     *     // Verify address matches pending update
+     *     if (!sourceAddress.equals(this.pendingUpdate.value)) {
+     *         throw new Revert('Address does not match pending update');
+     *     }
+     *
+     *     // Verify delay has passed
+     *     const submitBlock = this.pendingUpdateBlock.value;
+     *     if (Blockchain.block.number < submitBlock + this.UPDATE_DELAY) {
+     *         throw new Revert('Update delay not elapsed');
+     *     }
+     *
+     *     Blockchain.updateContractFromExisting(sourceAddress);
+     *     return new BytesWriter(0);
+     * }
+     * ```
+     */
+    public updateContractFromExisting(
+        sourceAddress: Address,
+        calldata: BytesWriter | null = null,
+    ): void {
+        if (!sourceAddress) {
+            throw new Revert('Source address is required');
+        }
+
+        if (!this.isContract(sourceAddress)) {
+            throw new Revert('Source address must be a deployed contract');
+        }
+
+        const callDataBuffer = calldata
+            ? calldata.getBuffer().buffer
+            : new ArrayBuffer(0);
+
+        const status = updateFromAddress(
+            sourceAddress.buffer,
+            callDataBuffer,
+            callDataBuffer.byteLength,
+        );
+
+        if (status !== 0) {
+            throw new Revert('Failed to update contract bytecode');
+        }
     }
 
     /**
