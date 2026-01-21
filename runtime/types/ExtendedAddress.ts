@@ -5,20 +5,13 @@ import { Network } from '../script/Networks';
 import { Address } from './Address';
 import { BitcoinAddresses } from '../script/BitcoinAddresses';
 import {
+    DEAD_ARRAY,
     getCachedDeadAddress,
     getCachedZeroAddress,
     setCachedDeadAddress,
     setCachedZeroAddress,
+    ZERO_ARRAY,
 } from './ExtendedAddressCache';
-
-const DEAD_ARRAY: u8[] = [
-    40, 74, 228, 172, 219, 50, 169, 155, 163, 235, 250, 102, 169, 29, 219, 65, 167, 183, 161, 210,
-    254, 244, 21, 57, 153, 34, 205, 138, 4, 72, 92, 2,
-];
-
-const ZERO_ARRAY: u8[] = [
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-];
 
 /**
  * Extended address implementation for Bitcoin with dual-key support.
