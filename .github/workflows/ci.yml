@@ -105,7 +105,7 @@ jobs:
                 "on_property": "mergedAt"
               },
               "template": "#{{CHANGELOG}}",
-              "pr_template": "- #{{TITLE}} (#{{NUMBER}}) by @#{{AUTHOR}}",
+              "pr_template": "- #{{TITLE}} ([##{{NUMBER}}](#{{URL}})) by @#{{AUTHOR}}",
               "empty_template": "- No changes",
               "max_tags_to_fetch": 200,
               "max_pull_requests": 200,
@@ -118,20 +118,18 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update CHANGELOG.md
+        env:
+          CHANGELOG_CONTENT: ${{ steps.changelog.outputs.changelog }}
         run: |
           TAG="${{ github.ref_name }}"
           DATE=$(date +%Y-%m-%d)
-
-          # Write changelog to temp file to avoid shell escaping issues
-          cat > /tmp/new_entry.md << 'CHANGELOG_EOF'
-          ${{ steps.changelog.outputs.changelog }}
-          CHANGELOG_EOF
-
-          # Create the new entry header
           NEW_HEADER="## [$TAG] - $DATE"
 
+          # Write changelog content to temp file using env var (avoids shell escaping)
+          printf '%s\n' "$CHANGELOG_CONTENT" > /tmp/new_entry.md
+
           if [ -f CHANGELOG.md ]; then
-            # Create new file with entry inserted after header
+            # Create new file with entry inserted after header line
             {
               head -n 1 CHANGELOG.md
               echo ""
