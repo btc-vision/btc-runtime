@@ -121,29 +121,43 @@ jobs:
         run: |
           TAG="${{ github.ref_name }}"
           DATE=$(date +%Y-%m-%d)
-          CHANGELOG="${{ steps.changelog.outputs.changelog }}"
 
-          # Create new changelog entry
-          NEW_ENTRY="## [$TAG] - $DATE
+          # Write changelog to temp file to avoid shell escaping issues
+          cat > /tmp/new_entry.md << 'CHANGELOG_EOF'
+          ${{ steps.changelog.outputs.changelog }}
+          CHANGELOG_EOF
 
-          $CHANGELOG
-          "
+          # Create the new entry header
+          NEW_HEADER="## [$TAG] - $DATE"
 
-          # Check if CHANGELOG.md exists
           if [ -f CHANGELOG.md ]; then
-            # Insert new entry after the header
-            sed -i '/^# Changelog/a\
-          '"$NEW_ENTRY"'' CHANGELOG.md
+            # Create new file with entry inserted after header
+            {
+              head -n 1 CHANGELOG.md
+              echo ""
+              echo "$NEW_HEADER"
+              echo ""
+              cat /tmp/new_entry.md
+              echo ""
+              tail -n +2 CHANGELOG.md
+            } > /tmp/CHANGELOG_NEW.md
+            mv /tmp/CHANGELOG_NEW.md CHANGELOG.md
           else
             # Create new CHANGELOG.md
-            echo "# Changelog
-
-          All notable changes to this project will be documented in this file.
-
-          This changelog is automatically generated from merged pull requests.
-
-          $NEW_ENTRY" > CHANGELOG.md
+            {
+              echo "# Changelog"
+              echo ""
+              echo "All notable changes to this project will be documented in this file."
+              echo ""
+              echo "This changelog is automatically generated from merged pull requests."
+              echo ""
+              echo "$NEW_HEADER"
+              echo ""
+              cat /tmp/new_entry.md
+            } > CHANGELOG.md
           fi
+
+          rm -f /tmp/new_entry.md
 
       - name: Commit changelog
         run: |
