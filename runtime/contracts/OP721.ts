@@ -716,7 +716,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     }
 
     protected _safeTransfer(from: Address, to: Address, tokenId: u256, data: Uint8Array): void {
-        this._transfer(from,  to, tokenId);
+        this._transfer(from, to, tokenId);
 
         if (Blockchain.isContract(to)) {
             this._checkOnOP721Received(from, to, tokenId, data);

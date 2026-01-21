@@ -290,7 +290,9 @@ export class BytesReader {
      * @returns A SchnorrSignature containing the address and signature
      */
     public readSchnorrSignature(): SchnorrSignature {
-        this.verifyEnd(this.currentOffset + EXTENDED_ADDRESS_BYTE_LENGTH + SCHNORR_SIGNATURE_BYTE_LENGTH);
+        this.verifyEnd(
+            this.currentOffset + EXTENDED_ADDRESS_BYTE_LENGTH + SCHNORR_SIGNATURE_BYTE_LENGTH,
+        );
 
         const address = this.readExtendedAddress();
         const signature = this.readBytes(SCHNORR_SIGNATURE_BYTE_LENGTH);

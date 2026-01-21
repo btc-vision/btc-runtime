@@ -99,20 +99,6 @@ export class AddressMap<V> implements IMap<Address, V> {
         return -1;
     }
 
-    private isLastIndex(key: Uint8Array): bool {
-        if (this._lastIndex !== -1) {
-            const cachedKey = unchecked(this._keys[this._lastIndex]);
-            // Check length first, then full content equality
-            if (cachedKey.length === key.length) {
-                if (memory.compare(cachedKey.dataStart, key.dataStart, key.length) === 0) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
     @inline
     public has(key: Address): bool {
         return this.indexOf(key) !== -1;
@@ -147,5 +133,19 @@ export class AddressMap<V> implements IMap<Address, V> {
 
     public toString(): string {
         return `Map(size=${this._keys.length})`;
+    }
+
+    private isLastIndex(key: Uint8Array): bool {
+        if (this._lastIndex !== -1) {
+            const cachedKey = unchecked(this._keys[this._lastIndex]);
+            // Check length first, then full content equality
+            if (cachedKey.length === key.length) {
+                if (memory.compare(cachedKey.dataStart, key.dataStart, key.length) === 0) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

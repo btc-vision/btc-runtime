@@ -107,20 +107,6 @@ export class MapUint8Array implements IMap<Uint8Array, Uint8Array> {
         return -1;
     }
 
-    private isLastIndex(key: Uint8Array): bool {
-        if (this._lastIndex !== -1) {
-            const cachedKey = unchecked(this._keys[this._lastIndex]);
-            // Check length first, then full content equality
-            if (cachedKey.length === key.length) {
-                if (memory.compare(cachedKey.dataStart, key.dataStart, key.length) === 0) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
     @inline
     public has(key: Uint8Array): bool {
         return this.indexOf(key) !== -1;
@@ -179,5 +165,19 @@ export class MapUint8Array implements IMap<Uint8Array, Uint8Array> {
 
     public toString(): string {
         return `Map(size=${this._keys.length})`;
+    }
+
+    private isLastIndex(key: Uint8Array): bool {
+        if (this._lastIndex !== -1) {
+            const cachedKey = unchecked(this._keys[this._lastIndex]);
+            // Check length first, then full content equality
+            if (cachedKey.length === key.length) {
+                if (memory.compare(cachedKey.dataStart, key.dataStart, key.length) === 0) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

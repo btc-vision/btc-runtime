@@ -67,9 +67,7 @@ export class ExtendedAddressMap<V> implements IMap<ExtendedAddress, V> {
             if (load<u64>(key.dataStart) !== load<u64>(searchMldsaData)) continue;
 
             // Quick prefix check on tweaked public key (first 8 bytes)
-            if (
-                load<u64>(key.tweakedPublicKey.dataStart) !== load<u64>(searchTweakedData)
-            )
+            if (load<u64>(key.tweakedPublicKey.dataStart) !== load<u64>(searchTweakedData))
                 continue;
 
             // Full comparison of ML-DSA key hash (32 bytes)
@@ -83,30 +81,6 @@ export class ExtendedAddressMap<V> implements IMap<ExtendedAddress, V> {
         }
 
         return -1;
-    }
-
-    private isLastIndex(key: ExtendedAddress): bool {
-        if (this._lastIndex !== -1) {
-            const cachedKey = unchecked(this._keys[this._lastIndex]);
-
-            // Check ML-DSA key hash equality
-            if (memory.compare(cachedKey.dataStart, key.dataStart, 32) !== 0) {
-                return false;
-            }
-
-            // Check tweaked public key equality
-            if (
-                memory.compare(
-                    cachedKey.tweakedPublicKey.dataStart,
-                    key.tweakedPublicKey.dataStart,
-                    32,
-                ) === 0
-            ) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     @inline
@@ -143,5 +117,29 @@ export class ExtendedAddressMap<V> implements IMap<ExtendedAddress, V> {
 
     public toString(): string {
         return `ExtendedAddressMap(size=${this._keys.length})`;
+    }
+
+    private isLastIndex(key: ExtendedAddress): bool {
+        if (this._lastIndex !== -1) {
+            const cachedKey = unchecked(this._keys[this._lastIndex]);
+
+            // Check ML-DSA key hash equality
+            if (memory.compare(cachedKey.dataStart, key.dataStart, 32) !== 0) {
+                return false;
+            }
+
+            // Check tweaked public key equality
+            if (
+                memory.compare(
+                    cachedKey.tweakedPublicKey.dataStart,
+                    key.tweakedPublicKey.dataStart,
+                    32,
+                ) === 0
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

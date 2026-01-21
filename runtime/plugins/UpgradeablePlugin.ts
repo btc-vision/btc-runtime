@@ -11,9 +11,9 @@ import { ADDRESS_BYTE_LENGTH } from '../utils';
 import { Calldata } from '../types';
 import { EMPTY_POINTER } from '../math/bytes';
 import {
-    UpgradeSubmittedEvent,
     UpgradeAppliedEvent,
     UpgradeCancelledEvent,
+    UpgradeSubmittedEvent,
 } from '../events/upgradeable/UpgradeableEvents';
 
 /**
@@ -42,27 +42,6 @@ import {
  * ```
  */
 export class UpgradeablePlugin extends Plugin {
-    // Method selectors
-    public static get SUBMIT_UPGRADE_SELECTOR(): Selector {
-        return encodeSelector('submitUpgrade(address)');
-    }
-
-    public static get APPLY_UPGRADE_SELECTOR(): Selector {
-        return encodeSelector('applyUpgrade(address)');
-    }
-
-    public static get CANCEL_UPGRADE_SELECTOR(): Selector {
-        return encodeSelector('cancelUpgrade()');
-    }
-
-    public static get PENDING_UPGRADE_SELECTOR(): Selector {
-        return encodeSelector('pendingUpgrade()');
-    }
-
-    public static get UPGRADE_DELAY_SELECTOR(): Selector {
-        return encodeSelector('upgradeDelay()');
-    }
-
     private readonly _pendingUpgradeAddress: StoredAddress;
     private readonly _pendingUpgradeBlock: StoredU256;
     private readonly _upgradeDelay: u64;
@@ -88,6 +67,27 @@ export class UpgradeablePlugin extends Plugin {
         this._upgradeDelay = upgradeDelay;
         this._pendingUpgradeAddress = new StoredAddress(addressPointer);
         this._pendingUpgradeBlock = new StoredU256(blockPointer, EMPTY_POINTER);
+    }
+
+    // Method selectors
+    public static get SUBMIT_UPGRADE_SELECTOR(): Selector {
+        return encodeSelector('submitUpgrade(address)');
+    }
+
+    public static get APPLY_UPGRADE_SELECTOR(): Selector {
+        return encodeSelector('applyUpgrade(address)');
+    }
+
+    public static get CANCEL_UPGRADE_SELECTOR(): Selector {
+        return encodeSelector('cancelUpgrade()');
+    }
+
+    public static get PENDING_UPGRADE_SELECTOR(): Selector {
+        return encodeSelector('pendingUpgrade()');
+    }
+
+    public static get UPGRADE_DELAY_SELECTOR(): Selector {
+        return encodeSelector('upgradeDelay()');
     }
 
     /**

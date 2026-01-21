@@ -8,9 +8,9 @@ import { Revert } from '../types/Revert';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { EMPTY_POINTER } from '../math/bytes';
 import {
-    UpgradeSubmittedEvent,
     UpgradeAppliedEvent,
     UpgradeCancelledEvent,
+    UpgradeSubmittedEvent,
 } from '../events/upgradeable/UpgradeableEvents';
 
 const pendingUpgradeAddressPointer: u16 = Blockchain.nextPointer;
