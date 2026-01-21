@@ -38,9 +38,13 @@ classDiagram
         +writeU128(value, be)
         +writeU256(value, be)
         +writeAddress(addr)
+        +writeExtendedAddress(extAddr)
+        +writeSchnorrSignature(addr, sig)
         +writeString(str)
         +writeBytes(data)
         +writeBoolean(bool)
+        +writeExtendedAddressArray(arr)
+        +writeExtendedAddressMapU256(map)
         +getBuffer() Uint8Array
     }
 
@@ -55,9 +59,13 @@ classDiagram
         +readU128(be) u128
         +readU256(be) u256
         +readAddress() Address
+        +readExtendedAddress() ExtendedAddress
+        +readSchnorrSignature() SchnorrSignature
         +readString() string
         +readBytes(length) Uint8Array
         +readBoolean() bool
+        +readExtendedAddressArray() ExtendedAddress[]
+        +readExtendedAddressMapU256() ExtendedAddressMap
         +hasMoreData() bool
     }
 
@@ -113,6 +121,12 @@ writer.writeI64(value);
 // Address (32 bytes)
 writer.writeAddress(address);
 
+// ExtendedAddress (64 bytes: 32 tweaked key + 32 ML-DSA key hash)
+writer.writeExtendedAddress(extendedAddress);
+
+// Schnorr signature with signer address (128 bytes total)
+writer.writeSchnorrSignature(signerAddress, signature);
+
 // String without length prefix
 writer.writeString('Hello, World!');
 
@@ -137,6 +151,9 @@ All array methods use a u16 length prefix (max 65535 elements):
 // Address array (u16 length prefix + addresses)
 writer.writeAddressArray(addresses);
 
+// ExtendedAddress array (u16 length prefix + 64-byte addresses)
+writer.writeExtendedAddressArray(extendedAddresses);
+
 // Numeric arrays (u16 length prefix + values)
 writer.writeU8Array(u8Values);
 writer.writeU16Array(u16Values);
@@ -150,6 +167,9 @@ writer.writeArrayOfBuffer(buffers);
 
 // AddressMap<u256> (u16 count, then address + u256 pairs)
 writer.writeAddressMapU256(addressMap);
+
+// ExtendedAddressMap<u256> (u16 count, then 64-byte address + u256 pairs)
+writer.writeExtendedAddressMapU256(extendedAddressMap);
 ```
 
 ### Getting Results
@@ -222,6 +242,14 @@ const i64val: i64 = reader.readI64();
 // Address (32 bytes)
 const addr: Address = reader.readAddress();
 
+// ExtendedAddress (64 bytes: 32 tweaked key + 32 ML-DSA key hash)
+const extAddr: ExtendedAddress = reader.readExtendedAddress();
+
+// Schnorr signature with signer address (128 bytes)
+const schnorrSig: SchnorrSignature = reader.readSchnorrSignature();
+const signer: ExtendedAddress = schnorrSig.address;
+const signature: Uint8Array = schnorrSig.signature;
+
 // String with known length (bytes read, zeroStop = true)
 const name: string = reader.readString(32);  // reads up to 32 bytes, stops at null
 
@@ -246,6 +274,9 @@ All array methods expect a u16 length prefix:
 // Address array
 const addresses: Address[] = reader.readAddressArray();
 
+// ExtendedAddress array (64 bytes each)
+const extAddresses: ExtendedAddress[] = reader.readExtendedAddressArray();
+
 // Numeric arrays
 const u8Values: u8[] = reader.readU8Array();
 const u16Values: u16[] = reader.readU16Array();
@@ -259,6 +290,9 @@ const buffers: Uint8Array[] = reader.readArrayOfBuffer();
 
 // AddressMap<u256>
 const addressMap: AddressMap<u256> = reader.readAddressMapU256();
+
+// ExtendedAddressMap<u256> (64-byte addresses as keys)
+const extAddressMap: ExtendedAddressMap<u256> = reader.readExtendedAddressMapU256();
 ```
 
 ### Position Management
@@ -291,6 +325,8 @@ reader.verifyEnd(offset + 32);  // Throws Revert if not enough bytes
 | `u128`/`i128` | 16 | Big-endian (default) |
 | `u256` | 32 | Big-endian (default) |
 | `Address` | 32 | Raw bytes |
+| `ExtendedAddress` | 64 | 32 bytes tweaked key + 32 bytes ML-DSA key hash |
+| `SchnorrSignature` | 128 | 64 bytes ExtendedAddress + 64 bytes signature |
 | `Selector` | 4 | Big-endian (u32) |
 | `string` | 4 + n | Length prefix (u32 BE) + UTF-8 |
 | `bytes` | 4 + n | Length prefix (u32 BE) + raw |
