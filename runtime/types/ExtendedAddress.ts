@@ -11,6 +11,15 @@ import {
     setCachedZeroAddress,
 } from './ExtendedAddressCache';
 
+const DEAD_ARRAY: u8[] = [
+    40, 74, 228, 172, 219, 50, 169, 155, 163, 235, 250, 102, 169, 29, 219, 65, 167, 183, 161, 210,
+    254, 244, 21, 57, 153, 34, 205, 138, 4, 72, 92, 2,
+];
+
+const ZERO_ARRAY: u8[] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+
 /**
  * Extended address implementation for Bitcoin with dual-key support.
  *
@@ -94,16 +103,7 @@ export class ExtendedAddress extends Address {
     public static dead(): ExtendedAddress {
         let cached = getCachedDeadAddress();
         if (cached === 0) {
-            const addr = new ExtendedAddress(
-                [
-                    40, 74, 228, 172, 219, 50, 169, 155, 163, 235, 250, 102, 169, 29, 219, 65, 167,
-                    183, 161, 210, 254, 244, 21, 57, 153, 34, 205, 138, 4, 72, 92, 2,
-                ],
-                [
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0,
-                ],
-            );
+            const addr = new ExtendedAddress(DEAD_ARRAY, ZERO_ARRAY);
             cached = changetype<usize>(addr);
             setCachedDeadAddress(cached);
         }
@@ -126,16 +126,7 @@ export class ExtendedAddress extends Address {
     public static zero(): ExtendedAddress {
         let cached = getCachedZeroAddress();
         if (cached === 0) {
-            const addr = new ExtendedAddress(
-                [
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0,
-                ],
-                [
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0,
-                ],
-            );
+            const addr = new ExtendedAddress(ZERO_ARRAY, ZERO_ARRAY);
             cached = changetype<usize>(addr);
             setCachedZeroAddress(cached);
         }
@@ -437,32 +428,14 @@ export class ExtendedAddress extends Address {
  * Pre-initialized zero ExtendedAddress constant.
  * Both the tweaked key and ML-DSA key hash are all zeros.
  */
-export const ZERO_BITCOIN_ADDRESS: ExtendedAddress = new ExtendedAddress(
-    [
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0,
-    ],
-    [
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0,
-    ],
-);
+export const ZERO_BITCOIN_ADDRESS: ExtendedAddress = new ExtendedAddress(ZERO_ARRAY, ZERO_ARRAY);
 
 /**
  * Pre-initialized dead ExtendedAddress constant.
  * The tweaked key is zero while the ML-DSA key hash represents the canonical dead address.
  * Hash: 284ae4acdb32a99ba3ebfa66a91ddb41a7b7a1d2fef415399922cd8a04485c02
  */
-export const DEAD_ADDRESS: ExtendedAddress = new ExtendedAddress(
-    [
-        40, 74, 228, 172, 219, 50, 169, 155, 163, 235, 250, 102, 169, 29, 219, 65, 167, 183, 161,
-        210, 254, 244, 21, 57, 153, 34, 205, 138, 4, 72, 92, 2,
-    ],
-    [
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0,
-    ],
-);
+export const DEAD_ADDRESS: ExtendedAddress = new ExtendedAddress(DEAD_ARRAY, ZERO_ARRAY);
 
 /**
  * Type alias for nullable ExtendedAddress references.
