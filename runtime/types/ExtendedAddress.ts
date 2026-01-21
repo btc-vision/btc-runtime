@@ -332,12 +332,14 @@ export class ExtendedAddress extends Address {
     public isDead(): bool {
         // Use cached dead address for comparison
         const deadAddr = ExtendedAddress.dead();
+
         // Compare both ML-DSA key hash (this) and tweaked key
         for (let i = 0; i < this.length; i++) {
             if (this[i] != deadAddr[i]) {
                 return false;
             }
         }
+
         for (let i = 0; i < this.tweakedPublicKey.length; i++) {
             if (this.tweakedPublicKey[i] != deadAddr.tweakedPublicKey[i]) {
                 return false;

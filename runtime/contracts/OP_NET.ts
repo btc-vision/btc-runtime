@@ -78,11 +78,14 @@ export class OP_NET implements IBTC {
         }
 
         // Try registered plugins
+        const startOffset = calldata.getOffset();
         for (let i = 0; i < this._plugins.length; i++) {
             const result = this._plugins[i].execute(method, calldata);
             if (result !== null) {
                 return result;
             }
+
+            calldata.setOffset(startOffset);
         }
 
         // No handler found

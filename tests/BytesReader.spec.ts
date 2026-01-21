@@ -5,8 +5,6 @@ import { Address } from '../runtime/types/Address';
 import { ExtendedAddress } from '../runtime/types/ExtendedAddress';
 import { AddressMap } from '../runtime/generic/AddressMap';
 import { ExtendedAddressMap } from '../runtime/generic/ExtendedAddressMap';
-import { Revert } from '../runtime/types/Revert';
-import { SchnorrSignature } from '../runtime/types/SchnorrSignature';
 
 // Helper functions to create test addresses
 function createTestAddress(seed: u8): Address {
@@ -349,7 +347,7 @@ describe('BytesReader', () => {
             const data = new Uint8Array(5);
             data[0] = 65; // 'A'
             data[1] = 66; // 'B'
-            data[2] = 0;  // null terminator
+            data[2] = 0; // null terminator
             data[3] = 67; // 'C'
             data[4] = 68; // 'D'
 
@@ -395,7 +393,7 @@ describe('BytesReader', () => {
     describe('readString', () => {
         it('should read string of specified length', () => {
             const data = new Uint8Array(5);
-            data[0] = 72;  // 'H'
+            data[0] = 72; // 'H'
             data[1] = 101; // 'e'
             data[2] = 108; // 'l'
             data[3] = 108; // 'l'
@@ -408,9 +406,9 @@ describe('BytesReader', () => {
 
         it('should read exact bytes (does not stop at null)', () => {
             const data = new Uint8Array(3);
-            data[0] = 72;  // 'H'
+            data[0] = 72; // 'H'
             data[1] = 105; // 'i'
-            data[2] = 33;  // '!'
+            data[2] = 33; // '!'
 
             const reader = new BytesReader(data);
             const result = reader.readString(3);
