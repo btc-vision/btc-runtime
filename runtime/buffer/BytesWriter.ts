@@ -1,15 +1,18 @@
 import { i128, u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { AddressMap } from '../generic/AddressMap';
+import { ExtendedAddressMap } from '../generic/ExtendedAddressMap';
 import { Selector } from '../math/abi';
 import { Address } from '../types/Address';
 import { Revert } from '../types/Revert';
 import {
     ADDRESS_BYTE_LENGTH,
+    EXTENDED_ADDRESS_BYTE_LENGTH,
     I128_BYTE_LENGTH,
     I16_BYTE_LENGTH,
     I32_BYTE_LENGTH,
     I64_BYTE_LENGTH,
     I8_BYTE_LENGTH,
+    SCHNORR_SIGNATURE_BYTE_LENGTH,
     U128_BYTE_LENGTH,
     U16_BYTE_LENGTH,
     U256_BYTE_LENGTH,
@@ -17,6 +20,7 @@ import {
     U64_BYTE_LENGTH,
     U8_BYTE_LENGTH,
 } from '../utils';
+import { ExtendedAddress } from '../types/ExtendedAddress';
 import { BytesReader } from './BytesReader';
 
 const arrayTooLargeError: string = 'Array is too large';
@@ -90,10 +94,14 @@ export class BytesWriter {
             this.writeBoolean(<boolean>value);
         } else if (isString<T>()) {
             this.writeStringWithLength(<string>value);
+        } else if (value instanceof ExtendedAddress) {
+            // Check ExtendedAddress before Address (ExtendedAddress extends Address)
+            this.writeExtendedAddress(<ExtendedAddress>value);
+        } else if (value instanceof Address) {
+            // Check Address before Uint8Array (Address extends Uint8Array)
+            this.writeAddress(<Address>value);
         } else if (value instanceof Uint8Array) {
             this.writeBytesWithLength(<Uint8Array>value);
-        } else if (value instanceof Address) {
-            this.writeAddress(<Address>value);
         } else if (value instanceof u128) {
             this.writeU128(<u128>value);
         } else if (value instanceof u256) {
@@ -291,6 +299,20 @@ export class BytesWriter {
         }
     }
 
+    /**
+     * Writes an array of ExtendedAddress (64 bytes each).
+     * Format: [u16 length][ExtendedAddress 0][ExtendedAddress 1]...
+     */
+    public writeExtendedAddressArray(value: ExtendedAddress[]): void {
+        if (value.length > 65535) throw new Revert(arrayTooLargeError);
+        this.allocSafe(U16_BYTE_LENGTH + value.length * EXTENDED_ADDRESS_BYTE_LENGTH);
+        this.writeU16(u16(value.length));
+
+        for (let i: i32 = 0; i < value.length; i++) {
+            this.writeExtendedAddress(value[i]);
+        }
+    }
+
     // --------------------------------------------------- //
 
     public writeBytes(value: Uint8Array): void {
@@ -336,6 +358,42 @@ export class BytesWriter {
         this.writeBytes(bytes);
     }
 
+    /**
+     * Writes an ExtendedAddress (64 bytes total).
+     * Format: [32 bytes tweakedPublicKey][32 bytes ML-DSA key hash]
+     *
+     * @param value - The ExtendedAddress to write
+     */
+    public writeExtendedAddress(value: ExtendedAddress): void {
+        this.allocSafe(EXTENDED_ADDRESS_BYTE_LENGTH);
+        // Write tweaked public key first (32 bytes)
+        this.writeBytes(value.tweakedPublicKey);
+        // Write ML-DSA key hash (32 bytes) - inherited from Address
+        this.writeBytes(value);
+    }
+
+    /**
+     * Writes a Schnorr signature with its associated ExtendedAddress.
+     * Format: [64 bytes ExtendedAddress][64 bytes signature]
+     *
+     * Used for serializing signed data where both the signer's address
+     * and their Schnorr signature need to be stored together.
+     *
+     * @param address - The signer's ExtendedAddress (64 bytes)
+     * @param signature - The 64-byte Schnorr signature
+     * @throws {Revert} If signature is not exactly 64 bytes
+     */
+    public writeSchnorrSignature(address: ExtendedAddress, signature: Uint8Array): void {
+        if (signature.length !== SCHNORR_SIGNATURE_BYTE_LENGTH) {
+            throw new Revert(
+                `Invalid Schnorr signature length: expected ${SCHNORR_SIGNATURE_BYTE_LENGTH}, got ${signature.length}`,
+            );
+        }
+        this.allocSafe(EXTENDED_ADDRESS_BYTE_LENGTH + SCHNORR_SIGNATURE_BYTE_LENGTH);
+        this.writeExtendedAddress(address);
+        this.writeBytes(signature);
+    }
+
     // zero-copy bulk writer
     public writeRaw(data: Uint8Array): void {
         const n = data.length;
@@ -369,7 +427,7 @@ export class BytesWriter {
     }
 
     /**
-     * Equivalent to TS’s writeAddressValueTuple, except specialized for u256 values.
+     * Equivalent to TS's writeAddressValueTuple, except specialized for u256 values.
      */
     public writeAddressMapU256(value: AddressMap<u256>, be: boolean = true): void {
         const keys: Address[] = value.keys();
@@ -379,6 +437,22 @@ export class BytesWriter {
 
         for (let i: i32 = 0; i < keys.length; i++) {
             this.writeAddress(keys[i]);
+            this.writeU256(value.get(keys[i]), be);
+        }
+    }
+
+    /**
+     * Writes a map of ExtendedAddress -> u256.
+     * Format: [u16 length][ExtendedAddress key][u256 value]...
+     */
+    public writeExtendedAddressMapU256(value: ExtendedAddressMap<u256>, be: boolean = true): void {
+        const keys: ExtendedAddress[] = value.keys();
+        if (keys.length > 65535) throw new Revert('Map size is too large');
+
+        this.writeU16(u16(keys.length), be);
+
+        for (let i: i32 = 0; i < keys.length; i++) {
+            this.writeExtendedAddress(keys[i]);
             this.writeU256(value.get(keys[i]), be);
         }
     }

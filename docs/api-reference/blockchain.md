@@ -432,6 +432,34 @@ const newContract = Blockchain.deployContractFromExisting(
 );
 ```
 
+### updateContractFromExisting
+
+Updates the calling contract's bytecode from another deployed contract. The new bytecode takes effect at the next block.
+
+```typescript
+updateContractFromExisting(
+    sourceAddress: Address,
+    calldata?: BytesWriter | null
+): void
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `sourceAddress` | `Address` | Contract containing new bytecode |
+| `calldata` | `BytesWriter \| null` | Optional calldata passed to VM (default: empty) |
+
+```typescript
+// Basic upgrade (not recommended without access control)
+Blockchain.updateContractFromExisting(newBytecodeAddress);
+
+// With calldata
+const upgradeData = new BytesWriter(32);
+upgradeData.writeU256(migrationVersion);
+Blockchain.updateContractFromExisting(newBytecodeAddress, upgradeData);
+```
+
+> **Warning:** This is a privileged operation. Always implement access control (e.g., `onlyDeployer`) and consider using the `Upgradeable` base class or `UpgradeablePlugin` for timelock protection. See [Contract Upgrades](../advanced/contract-upgrades.md) for details.
+
 ## Cryptographic Operations
 
 ### sha256
@@ -698,20 +726,6 @@ log(data: string): void
 Blockchain.log('Debug: operation started');
 ```
 
-## Plugin Methods
-
-### registerPlugin
-
-Registers a plugin.
-
-```typescript
-registerPlugin(plugin: Plugin): void
-```
-
-```typescript
-Blockchain.registerPlugin(new MyPlugin());
-```
-
 ## Lifecycle Hooks
 
 These are called by the runtime:
@@ -719,8 +733,28 @@ These are called by the runtime:
 | Method | When Called |
 |--------|-------------|
 | `onDeployment(calldata)` | Contract deployment |
+| `onUpdate(calldata)` | Contract bytecode update (via `updateContractFromExisting`) |
 | `onExecutionStarted(selector, calldata)` | Before method execution |
 | `onExecutionCompleted(selector, calldata)` | After successful execution |
+
+### onUpdate
+
+Called when the contract's bytecode is updated via `updateContractFromExisting`. Use this hook to perform storage migrations or initialization logic when upgrading.
+
+```typescript
+public override onUpdate(calldata: Calldata): void {
+    super.onUpdate(calldata); // Call plugins first
+
+    // Perform migration logic
+    const migrationVersion = calldata.readU64();
+    if (migrationVersion === 2) {
+        // Migrate from v1 to v2
+        this.migrateToV2();
+    }
+}
+```
+
+> **Note:** The calldata is the same data passed to `Blockchain.updateContractFromExisting(sourceAddress, calldata)`. If no calldata was provided, an empty reader is passed.
 
 ---
 

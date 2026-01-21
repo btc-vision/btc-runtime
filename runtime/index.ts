@@ -20,6 +20,7 @@ export * from './interfaces/IBTC';
 export * from './events/NetEvent';
 export * from './events/predefined';
 export * from './events/op20s/OP20SEvents';
+export * from './events/upgradeable/UpgradeableEvents';
 
 /** Env */
 export * from './env/classes/UTXO';
@@ -35,6 +36,7 @@ export * from './env/consensus/MLDSAMetadata';
 export * from './generic/Map';
 export * from './generic/MapU256';
 export * from './generic/AddressMap';
+export * from './generic/ExtendedAddressMap';
 
 /** Types */
 export * from './types';
@@ -43,6 +45,7 @@ export * from './types';
 export * from './lang/Definitions';
 export * from './types/Address';
 export * from './types/ExtendedAddress';
+export * from './types/SchnorrSignature';
 export * from './types/Revert';
 export * from './types/SafeMath';
 export * from './types/SafeMathI128';
@@ -106,4 +109,9 @@ export * from './contracts/interfaces/IOP721';
 export * from './contracts/interfaces/IOP1155';
 export * from './contracts/interfaces/OP721InitParameters';
 export * from './contracts/ReentrancyGuard';
+export * from './contracts/Upgradeable';
 export * from './contracts/interfaces/OP1155InitParameters';
+
+/** Plugins */
+export * from './plugins/Plugin';
+export * from './plugins/UpgradeablePlugin';

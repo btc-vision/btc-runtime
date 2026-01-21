@@ -1,4 +1,6 @@
 export const ADDRESS_BYTE_LENGTH: i32 = 32;
+export const EXTENDED_ADDRESS_BYTE_LENGTH: i32 = 64;
+export const SCHNORR_SIGNATURE_BYTE_LENGTH: i32 = 64;
 export const SELECTOR_BYTE_LENGTH: i32 = 4;
 
 export const U256_BYTE_LENGTH: i32 = 32;

@@ -587,7 +587,6 @@ classDiagram
         +getBlockHash(blockNumber) Uint8Array
         +emit(event) void
         +log(data) void
-        +registerPlugin(plugin) void
     }
 
     class Block {
@@ -715,7 +714,6 @@ export class MyContract extends OP_NET {
 | `Blockchain.getBlockHash()` | `Uint8Array` | Historical block hash |
 | `Blockchain.emit()` | `void` | Emit event |
 | `Blockchain.log()` | `void` | Debug logging (testing only) |
-| `Blockchain.registerPlugin()` | `void` | Register a plugin |
 
 ---
 

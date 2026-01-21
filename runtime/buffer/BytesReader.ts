@@ -1,15 +1,18 @@
 import { i128, u128, u256 } from '@btc-vision/as-bignum/assembly';
 import { AddressMap } from '../generic/AddressMap';
+import { ExtendedAddressMap } from '../generic/ExtendedAddressMap';
 import { Selector } from '../math/abi';
 import { Address } from '../types/Address';
 import { Revert } from '../types/Revert';
 import {
     ADDRESS_BYTE_LENGTH,
+    EXTENDED_ADDRESS_BYTE_LENGTH,
     I128_BYTE_LENGTH,
     I16_BYTE_LENGTH,
     I32_BYTE_LENGTH,
     I64_BYTE_LENGTH,
     I8_BYTE_LENGTH,
+    SCHNORR_SIGNATURE_BYTE_LENGTH,
     U128_BYTE_LENGTH,
     U16_BYTE_LENGTH,
     U256_BYTE_LENGTH,
@@ -17,6 +20,8 @@ import {
     U64_BYTE_LENGTH,
     U8_BYTE_LENGTH,
 } from '../utils';
+import { ExtendedAddress } from '../types/ExtendedAddress';
+import { SchnorrSignature } from '../types/SchnorrSignature';
 
 @final
 export class BytesReader {
@@ -32,8 +37,7 @@ export class BytesReader {
     }
 
     public read<T>(): T {
-        const id = idof<T>();
-
+        // Handle primitives first (before calling idof which doesn't work on primitives)
         if (isBoolean<T>()) {
             return this.readBoolean() as T;
         } else if (isString<T>()) {
@@ -70,12 +74,19 @@ export class BytesReader {
                         throw new Revert(`Invalid size ${size}`);
                 }
             }
-        } else if (id === idof<u256>()) {
+        }
+
+        // For reference types, use idof
+        const id = idof<T>();
+
+        if (id === idof<u256>()) {
             return this.readU256() as T;
         } else if (id === idof<u128>()) {
             return this.readU128() as T;
         } else if (id === idof<i128>()) {
             return this.readI128() as T;
+        } else if (id === idof<ExtendedAddress>()) {
+            return this.readExtendedAddress() as T;
         } else if (id === idof<Address>()) {
             return this.readAddress() as T;
         } else if (id === idof<Uint8Array>()) {
@@ -245,6 +256,48 @@ export class BytesReader {
         return addr;
     }
 
+    /**
+     * Reads an ExtendedAddress (64 bytes).
+     * Format: [32 bytes tweakedPublicKey][32 bytes ML-DSA key hash]
+     *
+     * @returns The ExtendedAddress read from the buffer
+     */
+    public readExtendedAddress(): ExtendedAddress {
+        this.verifyEnd(this.currentOffset + EXTENDED_ADDRESS_BYTE_LENGTH);
+
+        // Read tweaked public key (32 bytes)
+        const tweakedPublicKey: u8[] = new Array<u8>(ADDRESS_BYTE_LENGTH);
+        for (let i: i32 = 0; i < ADDRESS_BYTE_LENGTH; i++) {
+            tweakedPublicKey[i] = this.readU8();
+        }
+
+        // Read ML-DSA key hash (32 bytes)
+        const publicKey: u8[] = new Array<u8>(ADDRESS_BYTE_LENGTH);
+        for (let i: i32 = 0; i < ADDRESS_BYTE_LENGTH; i++) {
+            publicKey[i] = this.readU8();
+        }
+
+        return new ExtendedAddress(tweakedPublicKey, publicKey);
+    }
+
+    /**
+     * Reads a Schnorr signature with its associated ExtendedAddress.
+     * Format: [64 bytes ExtendedAddress][64 bytes signature]
+     *
+     * Used for deserializing signed data where both the signer's address
+     * and their Schnorr signature are stored together.
+     *
+     * @returns A SchnorrSignature containing the address and signature
+     */
+    public readSchnorrSignature(): SchnorrSignature {
+        this.verifyEnd(this.currentOffset + EXTENDED_ADDRESS_BYTE_LENGTH + SCHNORR_SIGNATURE_BYTE_LENGTH);
+
+        const address = this.readExtendedAddress();
+        const signature = this.readBytes(SCHNORR_SIGNATURE_BYTE_LENGTH);
+
+        return new SchnorrSignature(address, signature);
+    }
+
     // ------------------- Arrays ------------------- //
 
     public readArrayOfBuffer(be: boolean = true): Uint8Array[] {
@@ -329,6 +382,40 @@ export class BytesReader {
 
             if (result.has(address)) {
                 throw new Revert('Duplicate address found in map');
+            }
+            result.set(address, value);
+        }
+
+        return result;
+    }
+
+    /**
+     * Reads an array of ExtendedAddress (64 bytes each).
+     * Format: [u16 length][ExtendedAddress 0][ExtendedAddress 1]...
+     */
+    public readExtendedAddressArray(be: boolean = true): ExtendedAddress[] {
+        const length = this.readU16(be);
+        const result = new Array<ExtendedAddress>(length);
+        for (let i: u16 = 0; i < length; i++) {
+            result[i] = this.readExtendedAddress();
+        }
+        return result;
+    }
+
+    /**
+     * Reads a map of ExtendedAddress -> u256.
+     * Format: [u16 length][ExtendedAddress key][u256 value]...
+     */
+    public readExtendedAddressMapU256(be: boolean = true): ExtendedAddressMap<u256> {
+        const length = this.readU16(be);
+        const result = new ExtendedAddressMap<u256>();
+
+        for (let i: u16 = 0; i < length; i++) {
+            const address = this.readExtendedAddress();
+            const value = this.readU256(be);
+
+            if (result.has(address)) {
+                throw new Revert('Duplicate extended address found in map');
             }
             result.set(address, value);
         }
