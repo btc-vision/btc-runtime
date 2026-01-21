@@ -4,6 +4,12 @@ import { Blockchain } from '../env';
 import { Network } from '../script/Networks';
 import { Address } from './Address';
 import { BitcoinAddresses } from '../script/BitcoinAddresses';
+import {
+    getCachedDeadAddress,
+    getCachedZeroAddress,
+    setCachedDeadAddress,
+    setCachedZeroAddress,
+} from './ExtendedAddressCache';
 
 /**
  * Extended address implementation for Bitcoin with dual-key support.
@@ -86,7 +92,22 @@ export class ExtendedAddress extends Address {
      * ```
      */
     public static dead(): ExtendedAddress {
-        return DEAD_ADDRESS.clone();
+        let cached = getCachedDeadAddress();
+        if (cached === 0) {
+            const addr = new ExtendedAddress(
+                [
+                    40, 74, 228, 172, 219, 50, 169, 155, 163, 235, 250, 102, 169, 29, 219, 65, 167,
+                    183, 161, 210, 254, 244, 21, 57, 153, 34, 205, 138, 4, 72, 92, 2,
+                ],
+                [
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0,
+                ],
+            );
+            cached = changetype<usize>(addr);
+            setCachedDeadAddress(cached);
+        }
+        return changetype<ExtendedAddress>(cached).clone();
     }
 
     /**
@@ -103,7 +124,22 @@ export class ExtendedAddress extends Address {
      * ```
      */
     public static zero(): ExtendedAddress {
-        return ZERO_BITCOIN_ADDRESS.clone();
+        let cached = getCachedZeroAddress();
+        if (cached === 0) {
+            const addr = new ExtendedAddress(
+                [
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0,
+                ],
+                [
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0,
+                ],
+            );
+            cached = changetype<usize>(addr);
+            setCachedZeroAddress(cached);
+        }
+        return changetype<ExtendedAddress>(cached).clone();
     }
 
     /**
@@ -299,7 +335,7 @@ export class ExtendedAddress extends Address {
     /**
      * Checks if this address equals the canonical dead address.
      *
-     * @returns `true` if this address matches DEAD_ADDRESS, `false` otherwise
+     * @returns `true` if this address matches the dead address, `false` otherwise
      *
      * @example
      * ```typescript
@@ -310,8 +346,16 @@ export class ExtendedAddress extends Address {
      * ```
      */
     public isDead(): bool {
+        // Use cached dead address for comparison
+        const deadAddr = ExtendedAddress.dead();
+        // Compare both ML-DSA key hash (this) and tweaked key
         for (let i = 0; i < this.length; i++) {
-            if (this[i] != DEAD_ADDRESS[i]) {
+            if (this[i] != deadAddr[i]) {
+                return false;
+            }
+        }
+        for (let i = 0; i < this.tweakedPublicKey.length; i++) {
+            if (this.tweakedPublicKey[i] != deadAddr.tweakedPublicKey[i]) {
                 return false;
             }
         }

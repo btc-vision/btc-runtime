@@ -15,7 +15,7 @@ import {
     UpgradeSubmittedEvent,
     UpgradeAppliedEvent,
     UpgradeCancelledEvent,
-} from '../runtime/contracts/Upgradeable';
+} from '../runtime/events/upgradeable/UpgradeableEvents';
 import { Address } from '../runtime/types/Address';
 import { ADDRESS_BYTE_LENGTH } from '../runtime/utils';
 

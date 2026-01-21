@@ -37,8 +37,7 @@ export class BytesReader {
     }
 
     public read<T>(): T {
-        const id = idof<T>();
-
+        // Handle primitives first (before calling idof which doesn't work on primitives)
         if (isBoolean<T>()) {
             return this.readBoolean() as T;
         } else if (isString<T>()) {
@@ -75,7 +74,12 @@ export class BytesReader {
                         throw new Revert(`Invalid size ${size}`);
                 }
             }
-        } else if (id === idof<u256>()) {
+        }
+
+        // For reference types, use idof
+        const id = idof<T>();
+
+        if (id === idof<u256>()) {
             return this.readU256() as T;
         } else if (id === idof<u128>()) {
             return this.readU128() as T;

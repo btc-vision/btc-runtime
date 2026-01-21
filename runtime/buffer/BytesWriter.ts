@@ -94,12 +94,14 @@ export class BytesWriter {
             this.writeBoolean(<boolean>value);
         } else if (isString<T>()) {
             this.writeStringWithLength(<string>value);
-        } else if (value instanceof Uint8Array) {
-            this.writeBytesWithLength(<Uint8Array>value);
         } else if (value instanceof ExtendedAddress) {
+            // Check ExtendedAddress before Address (ExtendedAddress extends Address)
             this.writeExtendedAddress(<ExtendedAddress>value);
         } else if (value instanceof Address) {
+            // Check Address before Uint8Array (Address extends Uint8Array)
             this.writeAddress(<Address>value);
+        } else if (value instanceof Uint8Array) {
+            this.writeBytesWithLength(<Uint8Array>value);
         } else if (value instanceof u128) {
             this.writeU128(<u128>value);
         } else if (value instanceof u256) {

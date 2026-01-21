@@ -587,6 +587,7 @@ export class BlockchainEnvironment {
      * takes effect at the next block.
      *
      * @param sourceAddress - Address of the contract containing the new bytecode
+     * @param [calldata] - Optional parameters passed to the new bytecode's onUpdate method
      * @throws {Revert} When the source address is invalid or the update fails
      *
      * @warning This is a privileged operation with significant implications:
@@ -674,9 +675,7 @@ export class BlockchainEnvironment {
             throw new Revert('Source address must be a deployed contract');
         }
 
-        const callDataBuffer = calldata
-            ? calldata.getBuffer().buffer
-            : new ArrayBuffer(0);
+        const callDataBuffer = calldata ? calldata.getBuffer().buffer : new ArrayBuffer(0);
 
         const status = updateFromAddress(
             sourceAddress.buffer,
