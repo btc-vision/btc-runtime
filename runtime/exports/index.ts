@@ -43,9 +43,24 @@ export function onDeploy(calldataLength: u32): u32 {
     getCalldata(0, calldataLength, calldataBuffer);
 
     const calldata: Calldata = new BytesReader(Uint8Array.wrap(calldataBuffer));
-
     Blockchain.onExecutionStarted(0, calldata);
     Blockchain.onDeployment(calldata);
+    Blockchain.onExecutionCompleted(0, calldata);
+
+    return 0;
+}
+
+export function onUpdate(calldataLength: u32): u32 {
+    const environmentVariablesBuffer = new ArrayBuffer(ENVIRONMENT_VARIABLES_BYTE_LENGTH);
+    getEnvironmentVariables(0, ENVIRONMENT_VARIABLES_BYTE_LENGTH, environmentVariablesBuffer);
+    Blockchain.setEnvironmentVariables(Uint8Array.wrap(environmentVariablesBuffer));
+
+    const calldataBuffer = new ArrayBuffer(calldataLength);
+    getCalldata(0, calldataLength, calldataBuffer);
+
+    const calldata: Calldata = new BytesReader(Uint8Array.wrap(calldataBuffer));
+    Blockchain.onExecutionStarted(0, calldata);
+    Blockchain.onUpdate(calldata);
     Blockchain.onExecutionCompleted(0, calldata);
 
     return 0;
