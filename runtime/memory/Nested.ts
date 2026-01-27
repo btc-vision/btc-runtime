@@ -4,6 +4,7 @@ import { BytesWriter } from '../buffer/BytesWriter';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { Address } from '../types/Address';
 import { Revert } from '../types/Revert';
+import { BytesReader } from '../buffer/BytesReader';
 
 @final
 export class Nested<T> {
@@ -61,8 +62,8 @@ export class Nested<T> {
             // We know T is Address
             return changetype<T>(value);
         } else if (isInteger<T>()) {
-            // For a simple integer, just pull out the first byte
-            return value[0] as T;
+            const reader = new BytesReader(value);
+            return reader.read<T>();
         } else if (isString<T>()) {
             // T is a string
             return changetype<T>(String.UTF8.decode(value.buffer));
