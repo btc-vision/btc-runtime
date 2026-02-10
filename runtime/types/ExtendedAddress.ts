@@ -116,7 +116,7 @@ export class ExtendedAddress extends Address {
      * }
      * ```
      */
-    public static zero(): ExtendedAddress {
+    public static override zero(): ExtendedAddress {
         let cached = getCachedZeroAddress();
         if (cached === 0) {
             const addr = new ExtendedAddress(ZERO_ARRAY, ZERO_ARRAY);
@@ -221,7 +221,7 @@ export class ExtendedAddress extends Address {
      * const addr = ExtendedAddress.fromUint8Array(combined);
      * ```
      */
-    public static fromUint8Array(bytes: Uint8Array): ExtendedAddress {
+    public static override fromUint8Array(bytes: Uint8Array): ExtendedAddress {
         if (bytes.length !== 64) {
             throw new Error('Expected 64 bytes: 32 for tweakedPublicKey, 32 for publicKey');
         }
@@ -306,7 +306,7 @@ export class ExtendedAddress extends Address {
      * not the tweaked Schnorr key. Use ZERO_BITCOIN_ADDRESS for a fully
      * zero ExtendedAddress.
      */
-    public isZero(): bool {
+    public override isZero(): bool {
         for (let i = 0; i < this.length; i++) {
             if (this[i] != 0) {
                 return false;
@@ -381,7 +381,7 @@ export class ExtendedAddress extends Address {
      *
      * @override Overrides the base Address.toString() which returns hex
      */
-    public toString(): string {
+    public override toString(): string {
         return this.p2tr();
     }
 

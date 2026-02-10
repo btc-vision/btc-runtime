@@ -317,7 +317,7 @@ export class Address extends Uint8Array {
      *
      * @returns The address as a hex string (delegates to toHex())
      */
-    public toString(): string {
+    public override toString(): string {
         return this.toHex();
     }
 
@@ -351,6 +351,7 @@ export class Address extends Uint8Array {
      * @private
      */
     @operator('[]')
+    // @ts-ignore
     private ___get(index: i32): u8 {
         if (u32(index) >= u32(this.length)) {
             throw new RangeError('Index out of range');
@@ -371,6 +372,7 @@ export class Address extends Uint8Array {
      * @private
      */
     @operator('[]=')
+    // @ts-ignore
     private ___set(index: i32, value: u8): void {
         if (this.isDefined) {
             throw new Revert(`Cannot modify address data.`);

@@ -103,7 +103,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
      * Reentrancy protection level for this contract.
      * Set to CALLBACK to allow single-depth callbacks for safeTransfer operations.
      */
-    protected readonly reentrancyLevel: ReentrancyLevel = ReentrancyLevel.CALLBACK;
+    protected override readonly reentrancyLevel: ReentrancyLevel = ReentrancyLevel.CALLBACK;
 
     /**
      * Nested mapping of owner -> spender -> allowance amount.
@@ -748,7 +748,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
      * Checks if a selector should bypass reentrancy guards.
      * @protected
      */
-    protected isSelectorExcluded(selector: Selector): boolean {
+    protected override isSelectorExcluded(selector: Selector): boolean {
         if (
             selector === BALANCE_OF_SELECTOR ||
             selector === ALLOWANCE_SELECTOR ||
@@ -841,7 +841,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
      * Internal: Builds EIP-712 domain separator.
      * @protected
      */
-    protected _buildDomainSeparator(): Uint8Array {
+    protected override _buildDomainSeparator(): Uint8Array {
         const writer = new BytesWriter(32 * 5 + ADDRESS_BYTE_LENGTH);
         writer.writeBytesU8Array(OP712_DOMAIN_TYPE_HASH);
         writer.writeBytes(sha256String(this._name.value));

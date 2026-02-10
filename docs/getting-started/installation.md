@@ -106,7 +106,7 @@ npm install --save-dev assemblyscript prettier typescript
         "@btc-vision/opnet-transform": "^0.1.12"
     },
     "devDependencies": {
-        "assemblyscript": "^0.28.9",
+        "@btc-vision/assemblyscript": "^0.29.2",
         "prettier": "^3.7.4"
     }
 }

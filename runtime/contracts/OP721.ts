@@ -914,7 +914,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         this._baseURI.value = baseURI;
     }
 
-    protected _buildDomainSeparator(): Uint8Array {
+    protected override _buildDomainSeparator(): Uint8Array {
         const writer = new BytesWriter(32 * 5 + ADDRESS_BYTE_LENGTH);
         writer.writeBytesU8Array(OP712_DOMAIN_TYPE_HASH);
 
@@ -1014,6 +1014,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         for (let i: i32 = 0; i < 32; i++) {
             addr[i] = bytes[i];
         }
+
         return addr;
     }
 
