@@ -45,13 +45,15 @@ import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { ReentrancyGuard, ReentrancyLevel } from './ReentrancyGuard';
 import { ExtendedAddress } from '../types/ExtendedAddress';
 
-const nonceMapPointer: u16 = Blockchain.nextPointer;
-const maxSupplyPointer: u16 = Blockchain.nextPointer;
+const namePointer: u16 = Blockchain.nextPointer;
+const symbolPointer: u16 = Blockchain.nextPointer;
+const iconPointer: u16 = Blockchain.nextPointer;
 const decimalsPointer: u16 = Blockchain.nextPointer;
-const stringPointer: u16 = Blockchain.nextPointer;
 const totalSupplyPointer: u16 = Blockchain.nextPointer;
-const allowanceMapPointer: u16 = Blockchain.nextPointer;
+const maxSupplyPointer: u16 = Blockchain.nextPointer;
 const balanceOfMapPointer: u16 = Blockchain.nextPointer;
+const allowanceMapPointer: u16 = Blockchain.nextPointer;
+const nonceMapPointer: u16 = Blockchain.nextPointer;
 
 /**
  * OP20 Token Standard Implementation for OPNet.
@@ -150,9 +152,9 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         this._totalSupply = new StoredU256(totalSupplyPointer, EMPTY_POINTER);
         this._maxSupply = new StoredU256(maxSupplyPointer, EMPTY_POINTER);
         this._decimals = new StoredU256(decimalsPointer, EMPTY_POINTER);
-        this._name = new StoredString(stringPointer, 0);
-        this._symbol = new StoredString(stringPointer, 1);
-        this._icon = new StoredString(stringPointer, 2);
+        this._name = new StoredString(namePointer);
+        this._symbol = new StoredString(symbolPointer);
+        this._icon = new StoredString(iconPointer);
     }
 
     /**
