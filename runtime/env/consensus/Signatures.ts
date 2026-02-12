@@ -4,4 +4,5 @@
 export enum SignaturesMethods {
     Schnorr = 0x00,
     MLDSA = 0x01,
+    ECDSA = 0x02,
 }

@@ -92,6 +92,9 @@ export * from './shared-libraries/OP20Utils';
 /** Utils */
 export * from './utils';
 
+/** Hashing */
+export * from './hashing/keccak256';
+
 /** Bitcoin */
 export * from './script/reader/ScriptReader';
 export * from './script/ScriptUtils';
