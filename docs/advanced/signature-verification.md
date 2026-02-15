@@ -1,19 +1,19 @@
 # Signature Verification
 
-OPNet supports multiple signature schemes for authentication and authorization. This guide covers Schnorr signatures, quantum-resistant ML-DSA, and common verification patterns.
+OPNet supports multiple signature schemes for authentication and authorization. This guide covers Schnorr signatures, ECDSA (secp256k1), quantum-resistant ML-DSA, and common verification patterns.
 
 ## Overview
 
 ```typescript
-import { Blockchain } from '@btc-vision/btc-runtime/runtime';
+import { Blockchain, SignaturesMethods } from '@btc-vision/btc-runtime/runtime';
 
 // Consensus-aware signature verification (recommended)
 // Uses Schnorr during transition period, ML-DSA after quantum deadline
 const isValid: bool = Blockchain.verifySignature(
-    Blockchain.tx.origin,  // Address or ExtendedAddress
+    Blockchain.tx.origin,  // ExtendedAddress
     signature,              // Signature bytes
     messageHash,            // 32-byte message hash
-    false                   // forceMLDSA: false = auto, true = require ML-DSA
+    SignaturesMethods.Schnorr  // Signature type (default)
 );
 
 // Force quantum-resistant verification (always uses ML-DSA)
@@ -21,13 +21,27 @@ const isValidQuantum: bool = Blockchain.verifySignature(
     Blockchain.tx.origin,
     signature,
     messageHash,
-    true  // Force ML-DSA regardless of consensus flags
+    SignaturesMethods.MLDSA  // Force ML-DSA regardless of consensus flags
+);
+
+// ECDSA verification (deprecated, Ethereum ecrecover model)
+const isValidECDSA: bool = Blockchain.verifyECDSASignature(
+    publicKey,      // 33, 64, or 65-byte secp256k1 public key
+    signature,      // 65-byte signature: r(32) || s(32) || v(1)
+    messageHash,    // 32-byte message hash (typically keccak256)
+);
+
+// ECDSA verification (deprecated, Bitcoin direct verify model)
+const isValidBTC: bool = Blockchain.verifyBitcoinECDSASignature(
+    publicKey,      // 33, 64, or 65-byte secp256k1 public key
+    signature,      // 64-byte compact signature: r(32) || s(32)
+    messageHash,    // 32-byte message hash (typically SHA-256 double hash)
 );
 ```
 
 ## Signature Scheme Comparison
 
-OPNet supports both traditional Schnorr signatures and quantum-resistant ML-DSA:
+OPNet supports Schnorr, ECDSA (secp256k1), and quantum-resistant ML-DSA signatures:
 
 ```mermaid
 ---
@@ -36,6 +50,13 @@ config:
 ---
 flowchart LR
     subgraph OPNet["OPNet Signature Verification"]
+        subgraph ECDSA["ECDSA - Legacy (Deprecated)"]
+            E1["Public Key: 33/64/65 bytes"]
+            E2["Signature: 64 or 65 bytes"]
+            E3["Security: Classical only"]
+            E4["Status: Deprecated"]
+        end
+
         subgraph Schnorr["Schnorr - Traditional"]
             S1["Public Key: 32 bytes"]
             S2["Signature: 64 bytes"]
@@ -50,7 +71,8 @@ flowchart LR
             M4["Status: Recommended"]
         end
 
-        Q["Quantum Computer Threat"] -.->|"Breaks"| S3
+        Q["Quantum Computer Threat"] -.->|"Breaks"| E3
+        Q -.->|"Breaks"| S3
         Q -.->|"Cannot break"| M3
     end
 ```
@@ -60,11 +82,13 @@ flowchart LR
 The recommended approach for all signature verification:
 
 ```typescript
+import { SignaturesMethods } from '@btc-vision/btc-runtime/runtime';
+
 Blockchain.verifySignature(
     address: ExtendedAddress,  // Signer's address (contains both key references)
     signature: Uint8Array,     // Signature bytes
     hash: Uint8Array,          // 32-byte message hash
-    forceMLDSA: boolean = false  // Force quantum-resistant verification
+    signatureType: SignaturesMethods = SignaturesMethods.Schnorr  // Signature type
 ): boolean
 ```
 
@@ -73,13 +97,15 @@ Blockchain.verifySignature(
 - `mldsaPublicKey` (1,312 bytes for Level2) - for quantum-resistant ML-DSA signatures
 
 **Behavior:**
-- When `forceMLDSA = false`: Uses Schnorr if `UNSAFE_QUANTUM_SIGNATURES_ALLOWED` consensus flag is set, otherwise ML-DSA
-- When `forceMLDSA = true`: Always uses ML-DSA (quantum-resistant)
+- `SignaturesMethods.Schnorr` (default): Uses Schnorr verification if `UNSAFE_QUANTUM_SIGNATURES_ALLOWED` consensus flag is set, otherwise falls back to ML-DSA
+- `SignaturesMethods.MLDSA`: Always uses ML-DSA (quantum-resistant) verification with ML-DSA-44 (Level2)
+- `SignaturesMethods.ECDSA`: Emits a deprecation error recommending migration to ML-DSA. Use `verifyECDSASignature()` or `verifyBitcoinECDSASignature()` directly instead
 
 The method automatically:
 1. Loads the appropriate public key from the address
-2. Selects the correct verification algorithm based on consensus rules
+2. Selects the correct verification algorithm based on the `signatureType` parameter and consensus rules
 3. Handles all internal key formatting
+4. Throws a `Revert` if the signature type is not allowed under current consensus rules
 
 ## Schnorr Verification
 
@@ -96,7 +122,7 @@ sequenceDiagram
     participant SchnorrVerifier as Schnorr Verifier
     participant ExtendedAddress as ExtendedAddress
 
-    Contract->>Blockchain: verifySignature(address, sig, hash, false)
+    Contract->>Blockchain: verifySignature(address, sig, hash, Schnorr)
     Note over Blockchain: Check consensus flags
     Blockchain->>Blockchain: UNSAFE_QUANTUM_SIGNATURES_ALLOWED?
 
@@ -139,8 +165,8 @@ sequenceDiagram
     participant MLDSAVerifier as ML-DSA Verifier
     participant Address as Address
 
-    Contract->>Blockchain: verifySignature(address, sig, hash, true)
-    Note over Blockchain: forceMLDSA = true
+    Contract->>Blockchain: verifySignature(address, sig, hash, MLDSA)
+    Note over Blockchain: signatureType = MLDSA
 
     Blockchain->>Address: Load mldsaPublicKey
     Note over Address: SHA256 hash stored in address
@@ -180,6 +206,77 @@ const isValid = Blockchain.verifyMLDSASignature(
 | Level5 | ML-DSA-87 | 2,592 bytes | 4,627 bytes | Category 5 (~AES-256) |
 
 **OPNet uses ML-DSA-44 (Level2) by default.**
+
+## ECDSA Verification (Deprecated)
+
+OPNet now supports ECDSA (secp256k1) signatures for backward compatibility with Ethereum and Bitcoin ecosystems. These methods are **deprecated** and only available when `UNSAFE_QUANTUM_SIGNATURES_ALLOWED` consensus flag is set.
+
+### Ethereum ECDSA (ecrecover model)
+
+```typescript
+// Verifies using Ethereum ecrecover: recovers signer from (hash, v, r, s)
+const isValid: bool = Blockchain.verifyECDSASignature(
+    publicKey,      // secp256k1 public key (33, 64, or 65 bytes)
+    signature,      // 65-byte signature: r(32) || s(32) || v(1)
+    messageHash     // 32-byte message hash (typically keccak256)
+);
+```
+
+### Bitcoin ECDSA (direct verify model)
+
+```typescript
+// Verifies directly against public key, enforces BIP-0062 low-S normalization
+const isValid: bool = Blockchain.verifyBitcoinECDSASignature(
+    publicKey,      // secp256k1 public key (33, 64, or 65 bytes)
+    signature,      // 64-byte compact signature: r(32) || s(32)
+    messageHash     // 32-byte message hash (typically SHA-256 double hash)
+);
+```
+
+### ECDSA Sub-Types
+
+| Sub-Type | Model | Signature Size | Description |
+|----------|-------|---------------|-------------|
+| `ECDSASubType.Ethereum` | ecrecover | 65 bytes (r32 \|\| s32 \|\| v1) | Recovers signer public key from signature |
+| `ECDSASubType.Bitcoin` | Direct verify | 64 bytes (r32 \|\| s32) | Verifies directly against provided public key |
+
+### Accepted Public Key Formats
+
+Both ECDSA methods accept secp256k1 public keys in these formats:
+
+| Format | Size | Prefix | Description |
+|--------|------|--------|-------------|
+| Compressed | 33 bytes | `0x02` or `0x03` | Standard SEC1 compressed |
+| Raw | 64 bytes | None | Raw X \|\| Y coordinates, no prefix |
+| Uncompressed | 65 bytes | `0x04` | Standard SEC1 uncompressed |
+| Hybrid | 65 bytes | `0x06` or `0x07` | SEC1 hybrid (rewritten to `0x04` on host) |
+
+### ECDSA Deprecation Warning
+
+Both ECDSA methods emit a runtime `WARNING` and are gated behind the `UNSAFE_QUANTUM_SIGNATURES_ALLOWED` consensus flag. They will throw a `Revert` if called when unsafe signatures are not allowed. Contracts should migrate to `verifySignature()` with ML-DSA for long-term quantum security.
+
+## Keccak-256 Hashing
+
+OPNet includes a built-in Keccak-256 implementation (Ethereum-compatible, pre-NIST). This is useful for ECDSA-related workflows, Ethereum-style function selectors, and EIP-712 typed data hashing.
+
+```typescript
+import { keccak256, keccak256Concat, functionSelector, ethAddressFromPubKey } from '@btc-vision/btc-runtime/runtime';
+
+// Basic keccak256 hash
+const hash: Uint8Array = keccak256(data);  // 32-byte digest
+
+// Hash concatenated byte arrays (common for abi.encodePacked patterns)
+const hash2: Uint8Array = keccak256Concat(a, b);
+
+// Compute 4-byte Ethereum function selector
+const sel: Uint8Array = functionSelector('transfer(address,uint256)');
+// sel == 0xa9059cbb
+
+// Derive Ethereum address from 64-byte uncompressed public key
+const addr: Uint8Array = ethAddressFromPubKey(publicKey64);  // 20-byte address
+```
+
+**Important:** This is original Keccak-256 (as used by Ethereum), NOT NIST SHA-3-256. The difference is the domain separation padding byte: Keccak uses `0x01`, SHA-3 uses `0x06`.
 
 ## Message Hash Construction
 
@@ -266,7 +363,7 @@ function buildPermitHash(
 ## Complete Contract Example
 
 ```typescript
-import { OP_NET, Blockchain, Calldata, BytesWriter, Revert, sha256 } from '@btc-vision/btc-runtime/runtime';
+import { OP_NET, Blockchain, Calldata, BytesWriter, Revert, sha256, SignaturesMethods } from '@btc-vision/btc-runtime/runtime';
 
 @final
 class SignatureContract extends OP_NET {
@@ -287,7 +384,7 @@ class SignatureContract extends OP_NET {
             Blockchain.tx.origin,
             signature,
             messageHash,
-            true  // Force ML-DSA for quantum resistance
+            SignaturesMethods.MLDSA  // Force ML-DSA for quantum resistance
         );
 
         const writer = new BytesWriter(1);
@@ -313,7 +410,7 @@ class SignatureContract extends OP_NET {
             Blockchain.tx.origin,  // ExtendedAddress from transaction
             signature,
             messageHash,
-            false  // Use consensus-aware verification
+            SignaturesMethods.Schnorr  // Use consensus-aware Schnorr verification
         );
 
         const writer = new BytesWriter(1);
@@ -331,34 +428,39 @@ OPNet provides significant advantages over Solidity for signature verification, 
 
 | Feature | Solidity/EVM | OPNet | OPNet Advantage |
 |---------|--------------|-------|-----------------|
-| **Primary Signature Scheme** | ECDSA (secp256k1) | Schnorr + ML-DSA | Quantum-resistant option |
+| **Primary Signature Scheme** | ECDSA (secp256k1) | Schnorr + ML-DSA + ECDSA | Multiple schemes, quantum-resistant option |
 | **Quantum Resistance** | Not supported | ML-DSA (FIPS 204) | Future-proof security |
+| **ECDSA Support** | Only option | Supported (deprecated) | Backward compatibility with Ethereum/Bitcoin |
 | **Signature Recovery** | `ecrecover()` returns address | Direct verification | Cleaner API |
 | **Public Key Access** | Must be stored/derived | Automatic via `Address` | No custom storage needed |
 | **Verification Function** | Multiple parameters (v, r, s) | Single signature bytes | Simpler interface |
 | **EIP-712 Support** | Manual implementation | Built-in domain separation | Type-safe messages |
+| **Keccak-256 Hashing** | Native opcode | Built-in runtime module | Ethereum-compatible hashing |
 | **Batch Verification** | Not native | Supported | Better performance |
-| **Key Sizes** | 33/65 bytes (secp256k1) | 32 bytes (Schnorr) / 1,312+ bytes (ML-DSA) | Flexible security |
+| **Key Sizes** | 33/65 bytes (secp256k1) | 32 bytes (Schnorr) / 33-65 bytes (ECDSA) / 1,312+ bytes (ML-DSA) | Flexible security |
 
 ### Signature Scheme Comparison
 
-| Aspect | Solidity (ECDSA) | OPNet (Schnorr) | OPNet (ML-DSA) |
-|--------|------------------|-----------------|----------------|
-| Algorithm | secp256k1 ECDSA | BIP340 Schnorr | FIPS 204 Lattice |
-| Public Key Size | 33 or 65 bytes | 32 bytes | 1,312+ bytes |
-| Signature Size | 65 bytes (v, r, s) | 64 bytes | 2,420+ bytes |
-| Quantum Safe | No | No | **Yes** |
-| Bitcoin Native | No | Yes | Yes |
-| Batch Verification | No | Yes | Yes |
-| Signature Malleability | Yes (fixable) | No | No |
+| Aspect | Solidity (ECDSA) | OPNet (ECDSA) | OPNet (Schnorr) | OPNet (ML-DSA) |
+|--------|------------------|---------------|-----------------|----------------|
+| Algorithm | secp256k1 ECDSA | secp256k1 ECDSA | BIP340 Schnorr | FIPS 204 Lattice |
+| Public Key Size | 33 or 65 bytes | 33, 64, or 65 bytes | 32 bytes | 1,312+ bytes |
+| Signature Size | 65 bytes (v, r, s) | 64 or 65 bytes | 64 bytes | 2,420+ bytes |
+| Quantum Safe | No | No | No | **Yes** |
+| Bitcoin Native | No | Yes (Bitcoin sub-type) | Yes | Yes |
+| Batch Verification | No | No | Yes | Yes |
+| Signature Malleability | Yes (fixable) | No (BIP-0062 low-S) | No | No |
+| Status | Only option | Deprecated | Transition | **Recommended** |
 
 ### Capability Matrix
 
 | Capability | Solidity | OPNet |
 |------------|:--------:|:-----:|
-| ECDSA verification | Yes | No (not needed) |
+| ECDSA verification (Ethereum ecrecover) | Yes | Yes (deprecated) |
+| ECDSA verification (Bitcoin direct) | No | Yes (deprecated) |
 | Schnorr verification | No | Yes |
 | ML-DSA (quantum-safe) verification | No | Yes |
+| Keccak-256 hashing | Yes (native) | Yes (runtime module) |
 | Automatic public key loading | No | Yes |
 | Consensus-aware algorithm selection | No | Yes |
 | EIP-712 domain separation | Manual | Built-in pattern |
@@ -411,10 +513,10 @@ function verifySignature(
 ): bool {
     // Single function call - handles everything
     const isValid = Blockchain.verifySignature(
-        signer,      // Address contains public key reference
-        signature,   // Full signature bytes
-        hash,        // Message hash
-        true         // Force quantum-resistant ML-DSA
+        signer,                      // Address contains public key reference
+        signature,                   // Full signature bytes
+        hash,                        // Message hash
+        SignaturesMethods.MLDSA      // Force quantum-resistant ML-DSA
     );
 
     // Returns false on invalid (never throws for invalid sig)
@@ -480,7 +582,7 @@ public permit(calldata: Calldata): BytesWriter {
 
     const digest = this.buildPermitHash(owner, spender, value, nonce, deadline);
 
-    if (!Blockchain.verifySignature(owner, signature, digest, false)) {
+    if (!Blockchain.verifySignature(owner, signature, digest, SignaturesMethods.Schnorr)) {
         throw new Revert('Invalid signature');
     }
 
@@ -528,7 +630,7 @@ function verify(bytes32 hash, uint8 v, bytes32 r, bytes32 s) public view returns
 function verify(hash: Uint8Array, signature: Uint8Array, signer: Address): bool {
     // Returns false on invalid signature - no silent failures
     // Returns false on malformed input - no exceptions
-    return Blockchain.verifySignature(signer, signature, hash, true);
+    return Blockchain.verifySignature(signer, signature, hash, SignaturesMethods.MLDSA);
 }
 ```
 
@@ -536,12 +638,13 @@ function verify(hash: Uint8Array, signature: Uint8Array, signer: Address): bool 
 
 | Solidity Limitation | OPNet Solution |
 |---------------------|----------------|
-| ECDSA only | Schnorr + ML-DSA support |
+| ECDSA only | ECDSA + Schnorr + ML-DSA support |
 | No quantum resistance | Built-in ML-DSA (FIPS 204) |
 | Complex v, r, s handling | Single signature bytes parameter |
 | Must store/derive public keys | Automatic key loading from Address |
 | Silent ecrecover failures | Clean boolean returns |
-| Signature malleability | BIP340 Schnorr (no malleability) |
+| Signature malleability | BIP340 Schnorr / BIP-0062 low-S ECDSA (no malleability) |
+| No keccak256 in runtime | Built-in Ethereum-compatible keccak256 |
 | Manual EIP-712 implementation | Built-in domain separation patterns |
 | No consensus-aware selection | Automatic algorithm selection |
 
@@ -572,7 +675,7 @@ public executeWithSignature(calldata: Calldata): BytesWriter {
     const messageHash = sha256(message.getBuffer());
 
     // Verify signature from sender
-    if (!Blockchain.verifySignature(Blockchain.tx.origin, signature, messageHash, true)) {
+    if (!Blockchain.verifySignature(Blockchain.tx.origin, signature, messageHash, SignaturesMethods.MLDSA)) {
         throw new Revert('Invalid signature');
     }
 
@@ -617,7 +720,7 @@ public permit(calldata: Calldata): BytesWriter {
     const messageHash = this.buildPermitHash(owner, spender, value, nonce, deadline);
 
     // Verify signature
-    if (!Blockchain.verifySignature(owner, signature, messageHash, false)) {
+    if (!Blockchain.verifySignature(owner, signature, messageHash, SignaturesMethods.Schnorr)) {
         throw new Revert('Invalid signature');
     }
 
@@ -651,7 +754,7 @@ public executeMultiSig(calldata: Calldata): BytesWriter {
         const signature = signatures[i];
 
         if (this.isAuthorizedSigner(signer)) {
-            if (Blockchain.verifySignature(signer, signature, actionHash, true)) {
+            if (Blockchain.verifySignature(signer, signature, actionHash, SignaturesMethods.MLDSA)) {
                 validCount++;
             }
         }
@@ -705,7 +808,7 @@ const DOMAIN_SEPARATOR = buildDomainSeparator(
 
 ```typescript
 // For high-security operations, force ML-DSA
-Blockchain.verifySignature(signer, signature, hash, true);
+Blockchain.verifySignature(signer, signature, hash, SignaturesMethods.MLDSA);
 ```
 
 ---

@@ -8,7 +8,7 @@ Quantum computers pose a threat to traditional cryptographic schemes:
 
 | Algorithm | Quantum Threat | OPNet Status |
 |-----------|---------------|--------------|
-| ECDSA | Vulnerable (Shor's algorithm) | Not used |
+| ECDSA | Vulnerable (Shor's algorithm) | Supported (deprecated), transition to ML-DSA |
 | Schnorr | Vulnerable (Shor's algorithm) | Supported, with transition plan |
 | ML-DSA | Quantum-resistant | **Fully supported** |
 
@@ -22,12 +22,12 @@ const message = new BytesWriter(32);
 message.writeString('Sign this message');
 const messageHash = sha256(message.getBuffer());
 
-// forceMLDSA = true ensures quantum-resistant verification
+// SignaturesMethods.MLDSA ensures quantum-resistant verification
 const isValid = Blockchain.verifySignature(
     Blockchain.tx.origin,  // Signer's address
     signature,              // Signature bytes
     messageHash,            // Message hash
-    true                    // Force ML-DSA (quantum-resistant)
+    SignaturesMethods.MLDSA // Force ML-DSA (quantum-resistant)
 );
 ```
 
@@ -264,12 +264,12 @@ public verifySignature(calldata: Calldata): BytesWriter {
     message.writeString('Hello, world! This is a test message for MLDSA signing.');
     const messageHash = sha256(message.getBuffer());
 
-    // Verify with quantum resistance (forceMLDSA = true)
+    // Verify with quantum resistance (MLDSA)
     const isValid = Blockchain.verifySignature(
         Blockchain.tx.origin,
         signature,
         messageHash,
-        true  // Force ML-DSA
+        SignaturesMethods.MLDSA  // Force ML-DSA
     );
 
     const writer = new BytesWriter(1);
@@ -289,7 +289,7 @@ const isValid = Blockchain.verifySignature(
     signer,
     signature,
     messageHash,
-    false  // Let consensus decide
+    SignaturesMethods.Schnorr  // Let consensus decide (falls back to ML-DSA if Schnorr not allowed)
 );
 ```
 
@@ -382,7 +382,7 @@ class QuantumSecureContract extends OP_NET {
             Blockchain.tx.origin,
             signature,
             messageHash,
-            true  // Force ML-DSA
+            SignaturesMethods.MLDSA  // Force ML-DSA
         );
 
         const writer = new BytesWriter(1);
@@ -408,7 +408,7 @@ class QuantumSecureContract extends OP_NET {
             signer,
             signature,
             messageHash,
-            true
+            SignaturesMethods.MLDSA
         );
 
         const writer = new BytesWriter(1);
@@ -451,7 +451,8 @@ OPNet is the first smart contract platform with built-in quantum-resistant crypt
 
 | Algorithm | Shor's Algorithm Impact | Grover's Algorithm Impact | Status in OPNet |
 |-----------|------------------------|---------------------------|-----------------|
-| ECDSA (Solidity) | **Broken** (polynomial time) | Weakened | Not used |
+| ECDSA (Solidity) | **Broken** (polynomial time) | Weakened | N/A |
+| ECDSA (OPNet) | **Broken** (polynomial time) | Weakened | Deprecated |
 | Schnorr (OPNet) | **Broken** (polynomial time) | Weakened | Transition only |
 | ML-DSA (OPNet) | **Secure** | Minimal impact | **Recommended** |
 
@@ -476,7 +477,8 @@ OPNet is the first smart contract platform with built-in quantum-resistant crypt
 
 | Capability | Solidity | OPNet |
 |------------|:--------:|:-----:|
-| ECDSA verification | Yes | No (deprecated) |
+| ECDSA verification (Ethereum) | Yes | Yes (deprecated) |
+| ECDSA verification (Bitcoin) | No | Yes (deprecated) |
 | Schnorr verification | No | Yes |
 | ML-DSA-44 verification | No | Yes |
 | ML-DSA-65 verification | No | Yes |
@@ -558,7 +560,7 @@ public verify(calldata: Calldata): BytesWriter {
         this.expectedSigner.value,
         signature,
         hash,
-        true  // Force quantum-resistant ML-DSA
+        SignaturesMethods.MLDSA  // Force quantum-resistant ML-DSA
     );
 
     const writer = new BytesWriter(1);
@@ -639,9 +641,9 @@ class OPNetContract extends OP_NET {
 
 1. **Use `Address.mldsaPublicKey`** - Don't store ML-DSA keys manually; the Address class handles key loading and caching automatically (see [The Address Class](#the-address-class))
 
-2. **Force ML-DSA for high-security operations** - Set `forceMLDSA = true` in `Blockchain.verifySignature()` for critical operations (see [Signature Verification](#signature-verification))
+2. **Force ML-DSA for high-security operations** - Pass `SignaturesMethods.MLDSA` to `Blockchain.verifySignature()` for critical operations (see [Signature Verification](#signature-verification))
 
-3. **Use consensus-aware verification for general use** - Set `forceMLDSA = false` to let the network decide which algorithm to use during the transition period
+3. **Use consensus-aware verification for general use** - Pass `SignaturesMethods.Schnorr` (the default) to let the network decide which algorithm to use during the transition period. When Schnorr is no longer allowed by consensus, it automatically falls back to ML-DSA
 
 4. **Document security level** - When using quantum-resistant signatures, document the ML-DSA level in your contract comments:
 

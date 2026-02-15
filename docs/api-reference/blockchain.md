@@ -493,11 +493,13 @@ const txHash = Blockchain.hash256(txData);  // 32 bytes
 Verifies signature based on current consensus rules.
 
 ```typescript
+import { SignaturesMethods } from '@btc-vision/btc-runtime/runtime';
+
 verifySignature(
     address: ExtendedAddress,
     signature: Uint8Array,
     hash: Uint8Array,
-    forceMLDSA: boolean = false
+    signatureType: SignaturesMethods = SignaturesMethods.Schnorr
 ): boolean
 ```
 
@@ -506,24 +508,25 @@ verifySignature(
 | `address` | `ExtendedAddress` | Signer's address |
 | `signature` | `Uint8Array` | Signature bytes (64 for Schnorr, 2420+ for ML-DSA) |
 | `hash` | `Uint8Array` | 32-byte message hash |
-| `forceMLDSA` | `boolean` | Force ML-DSA verification |
+| `signatureType` | `SignaturesMethods` | Signature type: `Schnorr` (default), `MLDSA`, or `ECDSA` |
 | **Returns** | `boolean` | True if valid |
 
-The signature verification selects the appropriate algorithm based on consensus rules:
+The signature verification selects the appropriate algorithm based on the `signatureType` parameter and consensus rules:
 
 ```mermaid
 flowchart LR
     subgraph "verifySignature Flow"
         Start([Verify Signature]) --> GetInput[Receive address,<br/>signature, hash]
-        GetInput --> CheckConsensus{unsafeSignaturesAllowed()<br/>AND !forceMLDSA?}
+        GetInput --> CheckType{signatureType?}
+        CheckType -->|Schnorr| CheckConsensus{unsafeSignatures<br/>Allowed?}
         CheckConsensus -->|Yes| Schnorr[Schnorr Path]
-        CheckConsensus -->|No| MLDSA[ML-DSA Path]
+        CheckConsensus -->|No| MLDSA
+        CheckType -->|MLDSA| MLDSA[ML-DSA Path]
+        CheckType -->|ECDSA| ECDSAErr[Error: Use dedicated<br/>ECDSA methods]
     end
 
     subgraph "Schnorr Verification"
-        Schnorr --> ValidateSig{signature.length<br/>== 64?}
-        ValidateSig -->|Yes| SchnorrVerify[Verify Schnorr]
-        ValidateSig -->|No| SchnorrFail([Revert])
+        Schnorr --> SchnorrVerify[Verify Schnorr]
         SchnorrVerify --> SchnorrResult{Valid?}
     end
 
@@ -564,16 +567,15 @@ sequenceDiagram
     C->>C: Combine: 0x1901 + domain + structHash
     C->>C: messageHash = SHA-256(combined)
 
-    C->>BC: verifySignature(address, signature, messageHash, forceMLDSA?)
+    C->>BC: verifySignature(address, signature, messageHash, signatureType)
 
     BC->>Cons: Check consensus flags
     Cons->>BC: unsafeSignaturesAllowed()
 
-    alt unsafeSignaturesAllowed() AND !forceMLDSA
-        BC->>BC: Validate signature.length == 64
+    alt signatureType == Schnorr AND unsafeSignaturesAllowed()
         BC->>Crypto: verifySchnorr(tweakedPublicKey, sig, hash)
         Crypto->>BC: Valid/Invalid
-    else ML-DSA required (consensus or forced)
+    else signatureType == MLDSA OR !unsafeSignaturesAllowed()
         BC->>BC: Use ML-DSA Level2 (ML-DSA-44)
         BC->>Crypto: verifyMLDSA(Level2, mldsaPublicKey, sig, hash)
         Crypto->>BC: Valid/Invalid
@@ -581,6 +583,48 @@ sequenceDiagram
 
     BC->>C: Return boolean
 ```
+
+### verifyECDSASignature (Deprecated)
+
+Verifies an ECDSA signature using the Ethereum ecrecover model (secp256k1).
+
+```typescript
+verifyECDSASignature(
+    publicKey: Uint8Array,
+    signature: Uint8Array,
+    hash: Uint8Array
+): boolean
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `publicKey` | `Uint8Array` | secp256k1 public key (33, 64, or 65 bytes) |
+| `signature` | `Uint8Array` | 65-byte signature: r(32) \|\| s(32) \|\| v(1) |
+| `hash` | `Uint8Array` | 32-byte message hash (typically keccak256) |
+| **Returns** | `boolean` | True if ecrecover produces matching key |
+
+> **Warning:** Only available when `UNSAFE_QUANTUM_SIGNATURES_ALLOWED` consensus flag is set. Throws `Revert` otherwise.
+
+### verifyBitcoinECDSASignature (Deprecated)
+
+Verifies an ECDSA signature using the Bitcoin direct verification model (secp256k1).
+
+```typescript
+verifyBitcoinECDSASignature(
+    publicKey: Uint8Array,
+    signature: Uint8Array,
+    hash: Uint8Array
+): boolean
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `publicKey` | `Uint8Array` | secp256k1 public key (33, 64, or 65 bytes) |
+| `signature` | `Uint8Array` | 64-byte compact signature: r(32) \|\| s(32) |
+| `hash` | `Uint8Array` | 32-byte message hash (typically SHA-256 double hash) |
+| **Returns** | `boolean` | True if signature is valid |
+
+> **Warning:** Only available when `UNSAFE_QUANTUM_SIGNATURES_ALLOWED` consensus flag is set. Throws `Revert` otherwise. Enforces BIP-0062 low-S normalization.
 
 ### verifyMLDSASignature
 
@@ -625,6 +669,45 @@ verifySchnorrSignature(
 ```
 
 > **Note:** Use `verifySignature()` instead for automatic consensus migration.
+
+## Keccak-256 Hashing
+
+Ethereum-compatible Keccak-256 hash functions (original Keccak, not NIST SHA-3-256).
+
+### keccak256
+
+```typescript
+import { keccak256 } from '@btc-vision/btc-runtime/runtime';
+keccak256(data: Uint8Array): Uint8Array  // 32-byte digest
+```
+
+### keccak256Concat
+
+Hash two concatenated byte arrays. Common for `abi.encodePacked` patterns.
+
+```typescript
+import { keccak256Concat } from '@btc-vision/btc-runtime/runtime';
+keccak256Concat(a: Uint8Array, b: Uint8Array): Uint8Array  // 32-byte digest
+```
+
+### functionSelector
+
+Compute Ethereum-style 4-byte function selector.
+
+```typescript
+import { functionSelector } from '@btc-vision/btc-runtime/runtime';
+functionSelector(signature: string): Uint8Array  // 4 bytes
+// e.g. functionSelector('transfer(address,uint256)') => 0xa9059cbb
+```
+
+### ethAddressFromPubKey
+
+Derive Ethereum address from 64-byte uncompressed public key.
+
+```typescript
+import { ethAddressFromPubKey } from '@btc-vision/btc-runtime/runtime';
+ethAddressFromPubKey(publicKey: Uint8Array): Uint8Array  // 20-byte Ethereum address
+```
 
 ## Utility Methods
 

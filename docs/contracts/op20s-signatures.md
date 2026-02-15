@@ -42,7 +42,7 @@ export class MyToken extends OP20S {
 | Feature | ERC20Permit (EIP-2612) | OP20S (OPNet) |
 |---------|------------------------|---------------|
 | Language | Solidity | AssemblyScript |
-| Signature Type | ECDSA (v, r, s) | Schnorr or ML-DSA |
+| Signature Type | ECDSA (v, r, s) | Schnorr, ECDSA (deprecated), or ML-DSA |
 | Domain Separator | EIP-712 | EIP-712 style |
 | Quantum Resistance | No | Yes (ML-DSA option) |
 | Signature Parameter | Three params (v, r, s) | Single bytes param |
