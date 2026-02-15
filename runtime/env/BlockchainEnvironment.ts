@@ -963,8 +963,8 @@ export class BlockchainEnvironment {
             if (signatureType === SignaturesMethods.Schnorr) {
                 return this.internalVerifySchnorr(address, signature, hash);
             } else if (signatureType === SignaturesMethods.ECDSA) {
-                ERROR(
-                    `Please consider migrating to a more secure, quantum-resistant signature scheme like ML-DSA as ECDSA signatures are vulnerable to quantum attacks. You may still use this via Blockchain.verifyECDSASignature() if needed, but it is not recommended for long-term security.`,
+                throw new Revert(
+                    'ECDSA verification is not supported by verifySignature(). Use verifyECDSASignature() or verifyBitcoinECDSASignature() instead.',
                 );
             }
         } else {
@@ -1207,9 +1207,10 @@ export class BlockchainEnvironment {
      * Internal ECDSA verification that dispatches to the host with the correct
      * sub-type byte so the host knows which verification model to use.
      *
-     * Host buffer layout: [type(1), subtype(1), ...pubkey_material]
+     * Host buffer layout: [type(1), subtype(1), format(1), ...pubkey_material]
      *   type    = SignaturesMethods.ECDSA (0x00)
      *   subtype = ECDSASubType.Ethereum (0x00) or ECDSASubType.Bitcoin (0x01)
+     *   format  = ECDSAKeyFormat tag describing the public key encoding
      *   pubkey  = raw SEC1 bytes (33, 64, or 65 bytes depending on format)
      */
     private internalVerifyECDSA(

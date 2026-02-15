@@ -176,6 +176,12 @@ export function functionSelector(signature: string): Uint8Array {
  * @returns 20-byte Ethereum address as Uint8Array
  */
 export function ethAddressFromPubKey(publicKey: Uint8Array): Uint8Array {
+    if (publicKey.length !== 64) {
+        throw new Error(
+            `ethAddressFromPubKey expects a 64-byte uncompressed public key (without 0x04 prefix), got ${publicKey.length} bytes`,
+        );
+    }
+
     const hash = keccak256(publicKey);
     const addr = new Uint8Array(20);
     for (let i: i32 = 0; i < 20; i++) {
