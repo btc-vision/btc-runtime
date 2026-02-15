@@ -33,7 +33,7 @@ import { Revert } from '../types/Revert';
 import { Selector } from '../math/abi';
 import { Network, Networks } from '../script/Networks';
 import { ExtendedAddress } from '../types/ExtendedAddress';
-import { SignaturesMethods } from './consensus/Signatures';
+import { ECDSAKeyFormat, ECDSASubType, SignaturesMethods } from './consensus/Signatures';
 import { MLDSAMetadata, MLDSASecurityLevel } from './consensus/MLDSAMetadata';
 
 export * from '../env/global';
@@ -917,7 +917,7 @@ export class BlockchainEnvironment {
      * @param hash - The 32-byte message hash that was signed. Usually a SHA256 hash
      *               of the transaction data or message being verified.
      *
-     * @param forceMLDSA - Optional flag to force ML-DSA verification even if Schnorr is allowed.
+     * @param signatureType - Optional parameter to explicitly specify the signature type for verification.
      *
      * @returns `true` if the signature is valid for the given address and hash,
      *          `false` if verification fails or if the signature format is invalid
@@ -954,12 +954,20 @@ export class BlockchainEnvironment {
         address: ExtendedAddress,
         signature: Uint8Array,
         hash: Uint8Array,
-        forceMLDSA: boolean = false,
+        signatureType: SignaturesMethods = SignaturesMethods.Schnorr,
     ): boolean {
-        if (this.tx.consensus.unsafeSignaturesAllowed() && !forceMLDSA) {
-            return this.internalVerifySchnorr(address, signature, hash);
+        if (
+            this.tx.consensus.unsafeSignaturesAllowed() &&
+            signatureType !== SignaturesMethods.MLDSA
+        ) {
+            if (signatureType === SignaturesMethods.Schnorr) {
+                return this.internalVerifySchnorr(address, signature, hash);
+            } else if (signatureType === SignaturesMethods.ECDSA) {
+                ERROR(
+                    `Please consider migrating to a more secure, quantum-resistant signature scheme like ML-DSA as ECDSA signatures are vulnerable to quantum attacks. You may still use this via Blockchain.verifyECDSASignature() if needed, but it is not recommended for long-term security.`,
+                );
+            }
         } else {
-            // Default to ML-DSA Level 2 (ML-DSA-44) for quantum resistance
             return this.verifyMLDSASignature(
                 MLDSASecurityLevel.Level2,
                 address.mldsaPublicKey,
@@ -967,6 +975,10 @@ export class BlockchainEnvironment {
                 hash,
             );
         }
+
+        throw new Revert(
+            'Invalid signature type or signatures schema not allowed under current consensus rules',
+        );
     }
 
     /**
@@ -1107,6 +1119,183 @@ export class BlockchainEnvironment {
         const hash = new ArrayBuffer(32);
         getBlockHash(blockNumber, hash);
         return Uint8Array.wrap(hash);
+    }
+
+    /**
+     * Verifies an ECDSA signature using the Ethereum ecrecover model (secp256k1).
+     *
+     * Recovers the signer public key from (hash, r, s, v) and compares against
+     * the provided public key material. Signature must be 65 bytes in Ethereum
+     * wire format: r (32) || s (32) || v (1).
+     *
+     * Accepted public key formats:
+     *   33 bytes  -> compressed SEC1 (0x02/0x03 prefix)
+     *   64 bytes  -> raw uncompressed (x || y, no prefix)
+     *   65 bytes  -> uncompressed SEC1 (0x04 prefix) or hybrid SEC1 (0x06/0x07 prefix)
+     *
+     * @param publicKey - The public key to verify against
+     * @param signature - 65-byte ECDSA signature: r (32) || s (32) || v (1)
+     * @param hash - 32-byte message hash (typically keccak256 of EIP-191/EIP-712 payload)
+     * @returns true if ecrecover(hash, v, r, s) produces a key matching publicKey
+     *
+     * @throws {Revert} If signature is not exactly 65 bytes
+     * @throws {Revert} If hash is not exactly 32 bytes
+     * @throws {Revert} If publicKey length/prefix is invalid
+     *
+     * @deprecated Use Blockchain.verifySignature() for consensus-aware verification.
+     */
+    public verifyECDSASignature(
+        publicKey: Uint8Array,
+        signature: Uint8Array,
+        hash: Uint8Array,
+    ): boolean {
+        if (!this.tx.consensus.unsafeSignaturesAllowed()) {
+            throw new Revert(
+                'ECDSA signatures are not allowed under current consensus rules. Use verifySignature() for consensus-aware verification.',
+            );
+        }
+
+        WARNING(
+            'verifyECDSASignature is deprecated. Use verifySignature() for consensus-aware signature verification and quantum resistance support.',
+        );
+
+        return this.internalVerifyECDSA(publicKey, signature, hash, ECDSASubType.Ethereum);
+    }
+
+    /**
+     * Verifies an ECDSA signature using the Bitcoin direct verification model (secp256k1).
+     *
+     * Verifies the signature directly against the provided public key without
+     * key recovery. The host enforces BIP-0062 low-S normalization to reject
+     * signature malleability. Signature must be 64 bytes compact: r (32) || s (32).
+     *
+     * Accepted public key formats:
+     *   33 bytes  -> compressed SEC1 (0x02/0x03 prefix)
+     *   64 bytes  -> raw uncompressed (x || y, no prefix)
+     *   65 bytes  -> uncompressed SEC1 (0x04 prefix) or hybrid SEC1 (0x06/0x07 prefix)
+     *
+     * @param publicKey - The public key to verify against
+     * @param signature - 64-byte compact ECDSA signature: r (32) || s (32)
+     * @param hash - 32-byte message hash (typically SHA-256 double hash for Bitcoin)
+     * @returns true if the signature is valid for the given key and hash
+     *
+     * @throws {Revert} If signature is not exactly 64 bytes
+     * @throws {Revert} If hash is not exactly 32 bytes
+     * @throws {Revert} If publicKey length/prefix is invalid
+     *
+     * @deprecated Use Blockchain.verifySignature() for consensus-aware verification.
+     */
+    public verifyBitcoinECDSASignature(
+        publicKey: Uint8Array,
+        signature: Uint8Array,
+        hash: Uint8Array,
+    ): boolean {
+        if (!this.tx.consensus.unsafeSignaturesAllowed()) {
+            throw new Revert(
+                'ECDSA signatures are not allowed under current consensus rules. Use verifySignature() for consensus-aware verification.',
+            );
+        }
+
+        WARNING(
+            'verifyBitcoinECDSASignature is deprecated. Use verifySignature() for consensus-aware signature verification and quantum resistance support.',
+        );
+
+        return this.internalVerifyECDSA(publicKey, signature, hash, ECDSASubType.Bitcoin);
+    }
+
+    /**
+     * Internal ECDSA verification that dispatches to the host with the correct
+     * sub-type byte so the host knows which verification model to use.
+     *
+     * Host buffer layout: [type(1), subtype(1), ...pubkey_material]
+     *   type    = SignaturesMethods.ECDSA (0x00)
+     *   subtype = ECDSASubType.Ethereum (0x00) or ECDSASubType.Bitcoin (0x01)
+     *   pubkey  = raw SEC1 bytes (33, 64, or 65 bytes depending on format)
+     */
+    private internalVerifyECDSA(
+        pubKey: Uint8Array,
+        signature: Uint8Array,
+        hash: Uint8Array,
+        subType: ECDSASubType,
+    ): boolean {
+        if (subType === ECDSASubType.Ethereum) {
+            if (signature.length !== 65)
+                throw new Revert(
+                    'Invalid ECDSA signature length. Ethereum format requires exactly 65 bytes (r32 || s32 || v1).',
+                );
+        } else if (subType === ECDSASubType.Bitcoin) {
+            if (signature.length !== 64)
+                throw new Revert(
+                    'Invalid ECDSA signature length. Bitcoin format requires exactly 64 bytes (r32 || s32).',
+                );
+        } else {
+            throw new Revert('Unsupported ECDSA sub-type.');
+        }
+
+        if (hash.length !== 32) throw new Revert('Invalid hash length.');
+
+        this.validateSecp256k1PublicKey(pubKey);
+
+        const keyLen: i32 = pubKey.length;
+
+        let formatTag: ECDSAKeyFormat;
+        if (keyLen === 33) {
+            formatTag = ECDSAKeyFormat.Compressed;
+        } else if (keyLen === 64) {
+            formatTag = ECDSAKeyFormat.Raw;
+        } else if (pubKey[0] === 0x06 || pubKey[0] === 0x07) {
+            formatTag = ECDSAKeyFormat.Hybrid;
+        } else {
+            formatTag = ECDSAKeyFormat.Uncompressed;
+        }
+
+        const bufferLen: i32 = 3 + keyLen;
+        const buffer = new Uint8Array(bufferLen);
+        const ptr = buffer.dataStart;
+
+        store<u8>(ptr, <u8>SignaturesMethods.ECDSA);
+        store<u8>(ptr + 1, <u8>subType);
+        store<u8>(ptr + 2, <u8>formatTag);
+        memory.copy(ptr + 3, pubKey.dataStart, keyLen);
+
+        return verifySignature(buffer.buffer, signature.buffer, hash.buffer) === 1;
+    }
+
+    /**
+     * Validates that a byte array is a well-formed secp256k1 public key.
+     *
+     * Accepted formats:
+     *   33 bytes with 0x02 or 0x03 prefix  -> compressed SEC1
+     *   64 bytes (any first byte)           -> raw uncompressed (x || y, no prefix)
+     *   65 bytes with 0x04 prefix           -> uncompressed SEC1
+     *   65 bytes with 0x06 or 0x07 prefix   -> hybrid SEC1
+     *
+     * @param key - The raw public key bytes to validate
+     * @throws {Revert} If the key length or prefix is not a recognized format
+     */
+    private validateSecp256k1PublicKey(key: Uint8Array): void {
+        const keyLen: i32 = key.length;
+
+        if (keyLen === 33) {
+            const prefix: u8 = key[0];
+            if (prefix !== 0x02 && prefix !== 0x03) {
+                throw new Revert('Invalid compressed public key prefix. Expected 0x02 or 0x03.');
+            }
+        } else if (keyLen === 64) {
+            // Raw uncompressed: 32-byte X || 32-byte Y, no prefix byte.
+            // No prefix validation needed since the first byte is part of the X coordinate.
+        } else if (keyLen === 65) {
+            const prefix: u8 = key[0];
+            if (prefix !== 0x04 && prefix !== 0x06 && prefix !== 0x07) {
+                throw new Revert(
+                    'Invalid uncompressed public key prefix. Expected 0x04, 0x06, or 0x07.',
+                );
+            }
+        } else {
+            throw new Revert(
+                'Invalid ECDSA public key length. Accepted: 33 (compressed), 64 (raw), or 65 (uncompressed/hybrid).',
+            );
+        }
     }
 
     private internalVerifySchnorr(

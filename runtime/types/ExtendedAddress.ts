@@ -12,6 +12,7 @@ import {
     setCachedZeroAddress,
     ZERO_ARRAY,
 } from './ExtendedAddressCache';
+import { Revert } from './Revert';
 
 /**
  * Extended address implementation for Bitcoin with dual-key support.
@@ -60,14 +61,14 @@ export class ExtendedAddress extends Address {
      * @param tweakedPublicKey - 32-byte tweaked Schnorr public key for taproot
      * @param publicKey - 32-byte ML-DSA public key hash (SHA256 of full ML-DSA key)
      *
-     * @throws {Error} If tweakedPublicKey is not exactly 32 bytes
-     * @throws {Error} If publicKey is not exactly 32 bytes (thrown by parent class)
+     * @throws {Revert} If tweakedPublicKey is not exactly 32 bytes
+     * @throws {Revert} If publicKey is not exactly 32 bytes (thrown by parent class)
      */
     public constructor(tweakedPublicKey: u8[], publicKey: u8[]) {
         super(publicKey);
 
         if (tweakedPublicKey.length !== 32) {
-            throw new Error('Tweaked public key must be 32 bytes long');
+            throw new Revert('Tweaked public key must be 32 bytes long');
         }
 
         this.tweakedPublicKey = new Uint8Array(32);
