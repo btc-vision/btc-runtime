@@ -113,7 +113,7 @@ export class StoredU32 {
     @inline
     public toString(): string {
         this.ensureValues();
-        return `[${this._values[0].toString()}, ${this._values[1].toString()}, ${this._values[2].toString()}, ${this._values[3].toString()},, ${this._values[4].toString()},, ${this._values[5].toString()},, ${this._values[6].toString()},, ${this._values[7].toString()}]`;
+        return `[${this._values[0].toString()}, ${this._values[1].toString()}, ${this._values[2].toString()}, ${this._values[3].toString()}, ${this._values[4].toString()}, ${this._values[5].toString()}, ${this._values[6].toString()}, ${this._values[7].toString()}]`;
     }
 
     /**

@@ -1,6 +1,7 @@
 import { Blockchain } from '../env';
-import { GET_EMPTY_BUFFER } from '../math/bytes';
+import { EMPTY_POINTER, GET_EMPTY_BUFFER } from '../math/bytes';
 import { Revert } from '../types/Revert';
+import { encodePointer } from '../math/abi';
 
 @final
 export class StoredBoolean {
@@ -10,11 +11,7 @@ export class StoredBoolean {
         public pointer: u16,
         defaultValue: bool,
     ) {
-        const pointerBuffer = GET_EMPTY_BUFFER();
-        pointerBuffer[0] = pointer & 255;
-        pointerBuffer[1] = (pointer >> 8) & 255;
-
-        this.pointerBuffer = pointerBuffer;
+        this.pointerBuffer = encodePointer(pointer, EMPTY_POINTER, true, 'StoredBoolean');
 
         const value = GET_EMPTY_BUFFER();
         if (defaultValue) {
