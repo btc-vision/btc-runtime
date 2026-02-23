@@ -5,12 +5,14 @@ export enum Networks {
     Mainnet = 0,
     Testnet = 1,
     Regtest = 2,
+    OpnetTestnet = 3,
 }
 
 @final
 export class NetworkManager {
     private readonly mainnet: Uint8Array;
     private readonly testnet: Uint8Array;
+    private readonly opnetTestnet: Uint8Array;
     private readonly regtest: Uint8Array;
 
     constructor() {
@@ -35,8 +37,16 @@ export class NetworkManager {
             0x46, 0x6e, 0x22, 0x06,
         ]);
 
+        const opnetTestnet = new Uint8Array(32);
+        opnetTestnet.set([
+            0x73, 0x32, 0xf1, 0x3c, 0x2f, 0x3d, 0x75, 0xa5, 0x0b, 0x9b, 0x8f, 0xf8, 0x75, 0xb5,
+            0x5b, 0x98, 0x05, 0xb8, 0xe2, 0xf1, 0x70, 0x2f, 0xaf, 0xee, 0x1f, 0x6b, 0x10, 0x85,
+            0x7f, 0x01, 0x00, 0x00,
+        ]);
+
         this.mainnet = mainnet;
         this.testnet = testnet;
+        this.opnetTestnet = opnetTestnet;
         this.regtest = regtest;
     }
 
@@ -48,6 +58,8 @@ export class NetworkManager {
                 return 'tb';
             case Networks.Regtest:
                 return 'bcrt';
+            case Networks.OpnetTestnet:
+                return 'opt1';
             default:
                 throw new Revert('Unknown network');
         }
@@ -65,6 +77,9 @@ export class NetworkManager {
             case Networks.Regtest:
                 out.set(this.regtest);
                 return out;
+            case Networks.OpnetTestnet:
+                out.set(this.opnetTestnet);
+                return out;
             default:
                 throw new Revert('Unknown network');
         }
@@ -78,6 +93,7 @@ export class NetworkManager {
         if (this.equals(chainId, this.mainnet)) return Networks.Mainnet;
         if (this.equals(chainId, this.testnet)) return Networks.Testnet;
         if (this.equals(chainId, this.regtest)) return Networks.Regtest;
+        if (this.equals(chainId, this.opnetTestnet)) return Networks.OpnetTestnet;
 
         throw new Revert('Unknown chain id');
     }
