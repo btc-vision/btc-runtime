@@ -244,17 +244,18 @@ export declare function getOutputsSize(): u32;
  *
  * The signature algorithm is determined by the public key format:
  * - First byte indicates the signature type:
- *   - 0x00: Schnorr signature (33 bytes total - type byte + 32-byte x-only public key)
- *   - 0x01: ML-DSA signature (variable length based on security level)
+ *   - 0x00: ECDSA signature
+ *   - 0x01: Schnorr signature (33 bytes total - type byte + 32-byte x-only public key)
+ *   - 0x02: ML-DSA signature (variable length based on security level)
  *
  * For Schnorr signatures:
- * - Public key format: [0x00] + [32-byte x-only public key] (33 bytes total)
+ * - Public key format: [0x01] + [32-byte x-only public key] (33 bytes total)
  * - Signature: 64 bytes
  * - Message: 32 bytes (typically a hash)
  * - Note: Schnorr signatures are only allowed when UNSAFE_QUANTUM_SIGNATURES_ALLOWED consensus flag is set
  *
  * For ML-DSA signatures (quantum-resistant):
- * - Public key format: [0x01] + [level byte] + [public key data]
+ * - Public key format: [0x02] + [level byte] + [public key data]
  *   - Level 0x00: ML-DSA-44 (1313 bytes total - 1 header byte + 1312 key bytes)
  *   - Level 0x01: ML-DSA-65 (1955 bytes total - 1 header byte + 1952 key bytes)
  *   - Level 0x02: ML-DSA-87 (2593 bytes total - 1 header byte + 2592 key bytes)
@@ -268,7 +269,7 @@ export declare function getOutputsSize(): u32;
  * ```typescript
  * // Schnorr signature verification
  * const writer = new BytesWriter(33);
- * writer.writeU8(0x00); // Schnorr type
+ * writer.writeU8(0x01); // Schnorr type
  * writer.writeBytes(xOnlyPublicKey); // 32-byte x-only public key
  *
  * const publicKey = writer.getBuffer().buffer;
@@ -282,7 +283,7 @@ export declare function getOutputsSize(): u32;
  * ```typescript
  * // ML-DSA-44 signature verification
  * const writer = new BytesWriter(1314);
- * writer.writeU8(0x01); // ML-DSA type
+ * writer.writeU8(0x02); // ML-DSA type
  * writer.writeU8(0x00); // ML-DSA-44 level
  * writer.writeBytes(mldsaPublicKey); // 1312-byte public key
  *
