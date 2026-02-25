@@ -56,7 +56,7 @@ const allowanceMapPointer: u16 = Blockchain.nextPointer;
 const nonceMapPointer: u16 = Blockchain.nextPointer;
 
 /**
- * OP20 Token Standard Implementation for OPNet.
+ * OP20 Token Standard Implementation for OP_NET.
  *
  * This abstract class implements the OP20 token standard, providing a complete
  * fungible token implementation with advanced features including:
@@ -67,7 +67,7 @@ const nonceMapPointer: u16 = Blockchain.nextPointer;
  * - Unlimited approval optimization (u256.Max)
  *
  * @remarks
- * OP20 is OPNet's equivalent of ERC20, adapted for Bitcoin's UTXO model with
+ * OP20 is OP_NET's equivalent of ERC20, adapted for Bitcoin's UTXO model with
  * additional security features. All storage uses persistent pointers for
  * cross-transaction state management. The contract includes built-in protection
  * against common attack vectors including reentrancy and integer overflow.

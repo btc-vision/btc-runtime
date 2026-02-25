@@ -1,6 +1,6 @@
 # Documentation
 
-Welcome to the comprehensive documentation for **@btc-vision/btc-runtime**, the OPNet Smart Contract Runtime for Bitcoin L1.
+Welcome to the comprehensive documentation for **@btc-vision/btc-runtime**, the OP_NET Smart Contract Runtime for Bitcoin L1.
 
 ## Quick Start
 
@@ -98,7 +98,7 @@ npm run build:token
 - [Pointer System](./core-concepts/storage-system.md#pointer-system)
 - [Storage Types](./core-concepts/storage-system.md#storage-types)
 - [Reading and Writing](./core-concepts/storage-system.md#reading-and-writing)
-- [Solidity vs OPNet Comparison](./core-concepts/storage-system.md#solidity-vs-opnet-comparison)
+- [Solidity vs OP_NET Comparison](./core-concepts/storage-system.md#solidity-vs-opnet-comparison)
 - [Best Practices](./core-concepts/storage-system.md#best-practices)
 
 #### [Pointers](./core-concepts/pointers.md)
@@ -261,7 +261,7 @@ npm run build:token
 
 #### [ReentrancyGuard](./contracts/reentrancy-guard.md)
 - [Overview](./contracts/reentrancy-guard.md#overview)
-- [OpenZeppelin vs OPNet ReentrancyGuard](./contracts/reentrancy-guard.md#openzeppelin-vs-opnet-reentrancyguard)
+- [OpenZeppelin vs OP_NET ReentrancyGuard](./contracts/reentrancy-guard.md#openzeppelin-vs-opnet-reentrancyguard)
 - [What is Reentrancy?](./contracts/reentrancy-guard.md#what-is-reentrancy)
   - [The Attack](./contracts/reentrancy-guard.md#the-attack)
   - [The Defense](./contracts/reentrancy-guard.md#the-defense)
@@ -307,7 +307,7 @@ npm run build:token
 - [Address Comparison](./types/address.md#address-comparison)
 - [Special Addresses](./types/address.md#special-addresses)
 - [Address Methods](./types/address.md#address-methods)
-- [Solidity vs OPNet Comparison](./types/address.md#solidity-vs-opnet-comparison)
+- [Solidity vs OP_NET Comparison](./types/address.md#solidity-vs-opnet-comparison)
 - [Best Practices](./types/address.md#best-practices)
 
 #### [SafeMath](./types/safe-math.md)
@@ -322,14 +322,14 @@ npm run build:token
 - [Reading Values](./types/calldata.md#reading-values)
 - [Reading Arrays](./types/calldata.md#reading-arrays)
 - [Reading Complex Types](./types/calldata.md#reading-complex-types)
-- [Solidity vs OPNet Comparison](./types/calldata.md#solidity-vs-opnet-comparison)
+- [Solidity vs OP_NET Comparison](./types/calldata.md#solidity-vs-opnet-comparison)
 - [Best Practices](./types/calldata.md#best-practices)
 
 #### [BytesWriter/Reader](./types/bytes-writer-reader.md)
 - [Overview](./types/bytes-writer-reader.md#overview)
 - [BytesWriter](./types/bytes-writer-reader.md#byteswriter)
 - [BytesReader](./types/bytes-writer-reader.md#bytesreader)
-- [Solidity vs OPNet Comparison](./types/bytes-writer-reader.md#solidity-vs-opnet-comparison)
+- [Solidity vs OP_NET Comparison](./types/bytes-writer-reader.md#solidity-vs-opnet-comparison)
 - [Migration Patterns](./types/bytes-writer-reader.md#migration-patterns)
 - [Best Practices](./types/bytes-writer-reader.md#best-practices)
 
@@ -354,7 +354,7 @@ npm run build:token
 - [Initialization](./storage/stored-primitives.md#initialization)
   - [Default Values](./storage/stored-primitives.md#default-values)
   - [Setting Initial Values](./storage/stored-primitives.md#setting-initial-values)
-- [Solidity vs OPNet Comparison](./storage/stored-primitives.md#solidity-vs-opnet-comparison)
+- [Solidity vs OP_NET Comparison](./storage/stored-primitives.md#solidity-vs-opnet-comparison)
 - [Side-by-Side Code Examples](./storage/stored-primitives.md#side-by-side-code-examples)
   - [Counter Contract](./storage/stored-primitives.md#counter-contract)
   - [Ownable Contract](./storage/stored-primitives.md#ownable-contract)
@@ -375,7 +375,7 @@ npm run build:token
   - [Get](./storage/stored-arrays.md#get)
   - [Set](./storage/stored-arrays.md#set)
   - [Length](./storage/stored-arrays.md#length)
-- [Solidity vs OPNet Comparison](./storage/stored-arrays.md#solidity-vs-opnet-comparison)
+- [Solidity vs OP_NET Comparison](./storage/stored-arrays.md#solidity-vs-opnet-comparison)
 - [Side-by-Side Code Examples](./storage/stored-arrays.md#side-by-side-code-examples)
   - [Simple Address List](./storage/stored-arrays.md#simple-address-list)
   - [Value Queue (FIFO-like with array)](./storage/stored-arrays.md#value-queue-fifo-like-with-array)
@@ -399,7 +399,7 @@ npm run build:token
 - [Nested Maps](./storage/stored-maps.md#nested-maps)
 - [MapOfMap](./storage/stored-maps.md#mapofmap)
   - [MapOfMap Get/Set Pattern](./storage/stored-maps.md#mapofmap-getset-pattern)
-- [Solidity vs OPNet Comparison](./storage/stored-maps.md#solidity-vs-opnet-comparison)
+- [Solidity vs OP_NET Comparison](./storage/stored-maps.md#solidity-vs-opnet-comparison)
 - [Side-by-Side Code Examples](./storage/stored-maps.md#side-by-side-code-examples)
   - [Simple Key-Value Store](./storage/stored-maps.md#simple-key-value-store)
   - [Approval System with Nested Mapping](./storage/stored-maps.md#approval-system-with-nested-mapping)
@@ -417,7 +417,7 @@ npm run build:token
   - [Methods](./storage/memory-maps.md#methods)
 - [Storage Flow](./storage/memory-maps.md#storage-flow)
   - [Address to Storage Key](./storage/memory-maps.md#address-to-storage-key)
-- [Solidity vs OPNet Comparison](./storage/memory-maps.md#solidity-vs-opnet-comparison)
+- [Solidity vs OP_NET Comparison](./storage/memory-maps.md#solidity-vs-opnet-comparison)
 - [Side-by-Side Code Examples](./storage/memory-maps.md#side-by-side-code-examples)
   - [Basic Token Balance Tracking](./storage/memory-maps.md#basic-token-balance-tracking)
   - [Staking Contract](./storage/memory-maps.md#staking-contract)
@@ -470,7 +470,7 @@ npm run build:token
 - [Schnorr Signatures](./advanced/signature-verification.md#schnorr-signatures)
 - [ML-DSA Signatures](./advanced/signature-verification.md#ml-dsa-signatures)
 - [Verification API](./advanced/signature-verification.md#verification-api)
-- [Solidity vs OPNet Comparison](./advanced/signature-verification.md#solidity-vs-opnet-comparison)
+- [Solidity vs OP_NET Comparison](./advanced/signature-verification.md#solidity-vs-opnet-comparison)
 - [Best Practices](./advanced/signature-verification.md#best-practices)
 
 #### [Quantum Resistance](./advanced/quantum-resistance.md)
@@ -479,7 +479,7 @@ npm run build:token
 - [Security Levels](./advanced/quantum-resistance.md#security-levels)
 - [The Address Class](./advanced/quantum-resistance.md#the-address-class)
 - [Migration Path](./advanced/quantum-resistance.md#migration-path)
-- [Solidity vs OPNet Comparison](./advanced/quantum-resistance.md#solidity-vs-opnet-comparison)
+- [Solidity vs OP_NET Comparison](./advanced/quantum-resistance.md#solidity-vs-opnet-comparison)
 - [Best Practices](./advanced/quantum-resistance.md#best-practices)
 
 #### [Bitcoin Scripts](./advanced/bitcoin-scripts.md)
@@ -496,7 +496,7 @@ npm run build:token
   - [CSV (CheckSequenceVerify)](./advanced/bitcoin-scripts.md#csv-checksequenceverify)
   - [CLTV (CheckLockTimeVerify)](./advanced/bitcoin-scripts.md#cltv-checklockimeverify)
 - [Script Analysis](./advanced/bitcoin-scripts.md#script-analysis)
-- [Solidity vs OPNet Comparison](./advanced/bitcoin-scripts.md#solidity-vs-opnet-comparison)
+- [Solidity vs OP_NET Comparison](./advanced/bitcoin-scripts.md#solidity-vs-opnet-comparison)
 - [Best Practices](./advanced/bitcoin-scripts.md#best-practices)
 
 #### [Contract Upgrades](./advanced/contract-upgrades.md)
@@ -524,7 +524,7 @@ npm run build:token
   - [onExecutionCompleted](./advanced/plugins.md#onexecutioncompleted)
   - [execute](./advanced/plugins.md#execute)
 - [Built-in Plugins](./advanced/plugins.md#built-in-plugins)
-- [Solidity vs OPNet Comparison](./advanced/plugins.md#solidity-vs-opnet-comparison)
+- [Solidity vs OP_NET Comparison](./advanced/plugins.md#solidity-vs-opnet-comparison)
 - [Best Practices](./advanced/plugins.md#best-practices)
 
 ---
@@ -632,7 +632,7 @@ npm run build:token
 
 - [Example Tokens Repository](https://github.com/btc-vision/example-tokens)
 - [btc-runtime Repository](https://github.com/btc-vision/btc-runtime)
-- [OPNet Website](https://opnet.org)
+- [OP_NET Website](https://opnet.org)
 
 ## Solidity Developer?
 

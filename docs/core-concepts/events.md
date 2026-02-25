@@ -1,6 +1,6 @@
 # Events
 
-Events in OPNet allow contracts to emit signals that can be observed by off-chain systems. They're essential for tracking state changes, building user interfaces, and indexing blockchain data.
+Events in OP_NET allow contracts to emit signals that can be observed by off-chain systems. They're essential for tracking state changes, building user interfaces, and indexing blockchain data.
 
 ## Overview
 
@@ -81,7 +81,7 @@ classDiagram
 
 ### Using Predefined Events
 
-OPNet provides common events out of the box:
+OP_NET provides common events out of the box:
 
 ```typescript
 import {
@@ -162,7 +162,7 @@ event Stake(address indexed staker, uint256 amount, uint64 duration);
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 @final
 export class StakeEvent extends NetEvent {
     public constructor(staker: Address, amount: u256, duration: u64) {
@@ -469,7 +469,7 @@ event Transfer(address indexed from, address indexed to, uint256 value);
 ```
 
 ```typescript
-// OPNet - uses predefined TransferredEvent with operator field
+// OP_NET - uses predefined TransferredEvent with operator field
 // Event type: 'Transferred'
 import { TransferredEvent } from '@btc-vision/btc-runtime/runtime';
 
@@ -494,7 +494,7 @@ emit Transfer(from, to, amount);
 ```
 
 ```typescript
-// OPNet - using predefined TransferredEvent (includes operator)
+// OP_NET - using predefined TransferredEvent (includes operator)
 this.emitEvent(new TransferredEvent(Blockchain.tx.sender, from, to, amount));
 
 // Or using custom TransferEvent (without operator)
@@ -507,7 +507,7 @@ this.emitEvent(new TransferEvent(from, to, amount));
 // Solidity: indexed parameters for filtering
 event Transfer(address indexed from, address indexed to, uint256 value);
 
-// OPNet: All parameters can be filtered by off-chain indexers
+// OP_NET: All parameters can be filtered by off-chain indexers
 // (no explicit "indexed" keyword needed)
 ```
 

@@ -1,6 +1,6 @@
 # OP_NET Base Contract
 
-`OP_NET` is the base class for all OPNet smart contracts. It implements the `IBTC` interface and provides the foundational structure for contract lifecycle, method dispatching, event emission, and access control.
+`OP_NET` is the base class for all OP_NET smart contracts. It implements the `IBTC` interface and provides the foundational structure for contract lifecycle, method dispatching, event emission, and access control.
 
 ## Overview
 
@@ -42,7 +42,7 @@ contract MyContract {
     }
 }
 
-// OPNet: AUTOMATIC method routing via @method decorators
+// OP_NET: AUTOMATIC method routing via @method decorators
 // - Constructor runs on EVERY call
 // - Routing is automatic via decorator system
 // - One-time init in onDeployment()
@@ -52,7 +52,7 @@ contract MyContract {
 
 ### Inheritance Hierarchy
 
-OPNet contracts follow a clear inheritance pattern:
+OP_NET contracts follow a clear inheritance pattern:
 
 ```mermaid
 classDiagram
@@ -118,7 +118,7 @@ classDiagram
 
 ### Deployment and Execution Flow
 
-The following diagram shows how contracts are deployed and executed on OPNet:
+The following diagram shows how contracts are deployed and executed on OP_NET:
 
 ```mermaid
 ---
@@ -198,7 +198,7 @@ public constructor() {
 
 **Key Difference from Solidity:**
 
-| Solidity | OPNet |
+| Solidity | OP_NET |
 |----------|-------|
 | Constructor runs once at deployment | Constructor runs every call |
 | Initialize state in constructor | Initialize state in `onDeployment` |
@@ -232,7 +232,7 @@ constructor(uint256 initialSupply, string memory tokenName) {
     _mint(msg.sender, initialSupply);
 }
 
-// OPNet: One-time init in onDeployment()
+// OP_NET: One-time init in onDeployment()
 // Constructor runs every call, onDeployment runs once
 ```
 
@@ -397,12 +397,12 @@ public transfer(calldata: Calldata): BytesWriter {
 function transfer(address to, uint256 amount) public { }
 // Selector: keccak256("transfer(address,uint256)")[:4]
 
-// OPNet: ALSO automatic via @method decorator
+// OP_NET: ALSO automatic via @method decorator
 // @method({ name: 'to', type: ABIDataTypes.ADDRESS }, ...)
 // public transfer(calldata: Calldata): BytesWriter { }
 ```
 
-**Note:** Both Solidity and OPNet handle selector generation automatically. In OPNet, use `@method` decorators and the runtime handles routing.
+**Note:** Both Solidity and OP_NET handle selector generation automatically. In OP_NET, use `@method` decorators and the runtime handles routing.
 
 ### Built-in Methods
 
@@ -444,7 +444,7 @@ contract MyContract is Ownable {
     }
 }
 
-// OPNet: Built-in onlyDeployer check
+// OP_NET: Built-in onlyDeployer check
 // this.onlyDeployer(Blockchain.tx.sender);
 ```
 
@@ -483,7 +483,7 @@ function setParameter(uint256 value) public onlyAdmin {
     // ...
 }
 
-// OPNet: Similar pattern but with explicit method call
+// OP_NET: Similar pattern but with explicit method call
 // this.onlyAdmin(); at start of method
 ```
 
@@ -509,7 +509,7 @@ event Transfer(address indexed from, address indexed to, uint256 value);
 
 emit Transfer(from, to, amount);
 
-// OPNet: emitEvent method
+// OP_NET: emitEvent method
 this.emitEvent(new TransferEvent(from, to, amount));
 ```
 
@@ -570,7 +570,7 @@ contract MyContract {
     bytes private data;           // slot 2
 }
 
-// OPNet: Explicit pointer allocation
+// OP_NET: Explicit pointer allocation
 // private counterPointer: u16 = Blockchain.nextPointer;
 // private counter: StoredU256 = new StoredU256(this.counterPointer, EMPTY_POINTER);
 ```
@@ -596,7 +596,7 @@ export class MyContract extends OP_NET {
 // Solidity: mapping declaration
 mapping(address => uint256) private balances;
 
-// OPNet: AddressMemoryMap with pointer
+// OP_NET: AddressMemoryMap with pointer
 // private balancesPointer: u16 = Blockchain.nextPointer;
 // this.balances = new AddressMemoryMap(this.balancesPointer);
 ```
@@ -750,7 +750,7 @@ contract MyToken is ERC20, Pausable {
     }
 }
 
-// OPNet: Custom Pausable base class
+// OP_NET: Custom Pausable base class
 // export abstract class Pausable extends OP_NET { ... }
 // this.whenNotPaused(); at start of method
 ```

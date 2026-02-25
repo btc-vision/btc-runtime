@@ -1,6 +1,6 @@
 # Pointers
 
-Pointers are the foundation of OPNet's storage system. Understanding how they work is essential for building efficient and secure smart contracts.
+Pointers are the foundation of OP_NET's storage system. Understanding how they work is essential for building efficient and secure smart contracts.
 
 ## What Are Pointers?
 
@@ -52,7 +52,7 @@ flowchart LR
 
 ## Why Pointers?
 
-OPNet's pointer system provides:
+OP_NET's pointer system provides:
 
 | Benefit | Description |
 |---------|-------------|
@@ -63,7 +63,7 @@ OPNet's pointer system provides:
 
 ## Solidity Comparison
 
-In Solidity, storage slots are assigned implicitly by the compiler. In OPNet, you explicitly allocate pointers at runtime:
+In Solidity, storage slots are assigned implicitly by the compiler. In OP_NET, you explicitly allocate pointers at runtime:
 
 ```solidity
 // Solidity - Implicit slot assignment
@@ -75,7 +75,7 @@ contract Token {
 ```
 
 ```typescript
-// OPNet - Explicit pointer allocation
+// OP_NET - Explicit pointer allocation
 export class Token extends OP_NET {
     private totalSupplyPointer: u16 = Blockchain.nextPointer;  // ~0 (allocated at runtime)
     private namePointer: u16 = Blockchain.nextPointer;          // ~1 (allocated at runtime)
@@ -85,7 +85,7 @@ export class Token extends OP_NET {
 
 ### Storage Key Hashing Comparison
 
-| Solidity | OPNet |
+| Solidity | OP_NET |
 |----------|-------|
 | Automatic slot assignment | Explicit pointer allocation |
 | Slot 0, 1, 2, ... | `Blockchain.nextPointer` |

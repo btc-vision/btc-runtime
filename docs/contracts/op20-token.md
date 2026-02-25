@@ -1,6 +1,6 @@
 # OP20 Token Standard
 
-OP20 is OPNet's fungible token standard, equivalent to Ethereum's ERC20. It provides a complete implementation for creating tokens with transfer, approval, and balance tracking capabilities.
+OP20 is OP_NET's fungible token standard, equivalent to Ethereum's ERC20. It provides a complete implementation for creating tokens with transfer, approval, and balance tracking capabilities.
 
 ## Overview
 
@@ -38,7 +38,7 @@ export class MyToken extends OP20 {
 
 ## ERC20 vs OP20 Comparison
 
-| Feature | ERC20 (Solidity) | OP20 (OPNet) |
+| Feature | ERC20 (Solidity) | OP20 (OP_NET) |
 |---------|------------------|--------------|
 | Language | Solidity | AssemblyScript |
 | Runtime | EVM | WASM |
@@ -286,7 +286,7 @@ flowchart LR
 <table>
 <tr>
 <th>ERC20 (Solidity)</th>
-<th>OP20 (OPNet)</th>
+<th>OP20 (OP_NET)</th>
 </tr>
 <tr>
 <td>

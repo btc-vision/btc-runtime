@@ -1,4 +1,4 @@
-# OPNet Smart Contract Runtime
+# OP_NET Smart Contract Runtime
 
 ![Bitcoin](https://img.shields.io/badge/Bitcoin-000?style=for-the-badge&logo=bitcoin&logoColor=white)
 ![AssemblyScript](https://img.shields.io/badge/assembly%20script-%23000000.svg?style=for-the-badge&logo=assemblyscript&logoColor=white)
@@ -11,13 +11,13 @@
 
 ## Overview
 
-The OPNet Smart Contract Runtime is the framework for building decentralized applications on Bitcoin L1. Written in AssemblyScript and compiled to WebAssembly, it enables smart contract development on Bitcoin with similar expressiveness to Solidity.
+The OP_NET Smart Contract Runtime is the framework for building decentralized applications on Bitcoin L1. Written in AssemblyScript and compiled to WebAssembly, it enables smart contract development on Bitcoin with similar expressiveness to Solidity.
 
-Unlike Bitcoin Layer 2 solutions, OPNet operates directly on Bitcoin's base layer, inheriting Bitcoin's security guarantees and decentralization properties while adding programmable smart contract capabilities.
+Unlike Bitcoin Layer 2 solutions, OP_NET operates directly on Bitcoin's base layer, inheriting Bitcoin's security guarantees and decentralization properties while adding programmable smart contract capabilities.
 
-> **What is OPNet?**
+> **What is OP_NET?**
 >
-> OPNet (Open Protocol Network) is a consensus-layer built on Bitcoin L1. It allows developers to write smart contracts in AssemblyScript or similar that compile to WebAssembly (WASM) and execute deterministically across all network nodes. Think of it as "Solidity for Bitcoin" - you get the programmability of Ethereum with the security of Bitcoin.
+> OP_NET (Open Protocol Network) is a consensus-layer built on Bitcoin L1. It allows developers to write smart contracts in AssemblyScript or similar that compile to WebAssembly (WASM) and execute deterministically across all network nodes. Think of it as "Solidity for Bitcoin" - you get the programmability of Ethereum with the security of Bitcoin.
 
 > **Why AssemblyScript?**
 >
@@ -88,7 +88,7 @@ export class MyToken extends OP20 {
 
 ## Solidity Comparison
 
-| Solidity/EVM                | OPNet/btc-runtime                         |
+| Solidity/EVM                | OP_NET/btc-runtime                         |
 |-----------------------------|-------------------------------------------|
 | `contract MyContract`       | `class MyContract extends OP_NET`         |
 | `constructor()`             | `onDeployment(calldata)`                  |
@@ -138,7 +138,7 @@ See the [pull request template](./.github/PULL_REQUEST_TEMPLATE.md) for requirem
 
 ## Links
 
-- [OPNet](https://opnet.org)
+- [OP_NET](https://opnet.org)
 - [Documentation](./docs/)
 - [GitHub](https://github.com/btc-vision/btc-runtime)
 - [npm](https://www.npmjs.com/package/@btc-vision/btc-runtime)

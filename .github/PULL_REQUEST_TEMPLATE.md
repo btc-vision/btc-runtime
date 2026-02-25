@@ -35,7 +35,7 @@
 - [ ] No new security vulnerabilities introduced
 - [ ] No floating-point arithmetic used
 
-### OPNet Specific
+### OP_NET Specific
 - [ ] Changes are compatible with existing smart contracts
 - [ ] WASM execution behavior is unchanged (or documented if changed)
 - [ ] Storage pointer allocation is correct

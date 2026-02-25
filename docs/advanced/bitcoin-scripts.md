@@ -1,6 +1,6 @@
 # Bitcoin Scripts
 
-OPNet provides utilities for working with Bitcoin scripts, addresses, and timelocks. This enables contracts to interact with Bitcoin's native scripting capabilities.
+OP_NET provides utilities for working with Bitcoin scripts, addresses, and timelocks. This enables contracts to interact with Bitcoin's native scripting capabilities.
 
 ## Overview
 
@@ -20,7 +20,7 @@ import {
 
 ## Networks
 
-OPNet supports three Bitcoin networks:
+OP_NET supports three Bitcoin networks:
 
 ```typescript
 import { Networks, Network } from '@btc-vision/btc-runtime/runtime';
@@ -291,7 +291,7 @@ flowchart LR
     CSV6 -->|"No"| CSV8["Transaction invalid"]
 ```
 
-OPNet provides a built-in method for CSV scripts:
+OP_NET provides a built-in method for CSV scripts:
 
 ```typescript
 import { BitcoinScript, BitcoinAddresses, Network, Networks } from '@btc-vision/btc-runtime/runtime';
@@ -425,7 +425,7 @@ if (result.success) {
 
 ## Script Recognition
 
-OPNet can parse and recognize common script patterns:
+OP_NET can parse and recognize common script patterns:
 
 ### Recognize CSV Timelock
 
@@ -636,13 +636,13 @@ public buildOpReturnScript(data: Uint8Array): Uint8Array {
 }
 ```
 
-## Solidity vs OPNet: Bitcoin Scripts Comparison
+## Solidity vs OP_NET: Bitcoin Scripts Comparison
 
-Bitcoin scripting is fundamentally different from Solidity, as it operates on UTXOs rather than account balances. OPNet uniquely bridges smart contract functionality with native Bitcoin scripting capabilities.
+Bitcoin scripting is fundamentally different from Solidity, as it operates on UTXOs rather than account balances. OP_NET uniquely bridges smart contract functionality with native Bitcoin scripting capabilities.
 
 ### Feature Comparison Table
 
-| Feature | Solidity/EVM | OPNet | OPNet Advantage |
+| Feature | Solidity/EVM | OP_NET | OP_NET Advantage |
 |---------|--------------|-------|-----------------|
 | **Bitcoin Script Support** | Not supported | Full support via `BitcoinOpcodes` | Native Bitcoin integration |
 | **Address Types** | Single type (20 bytes) | P2PKH, P2SH, P2WPKH, P2WSH, P2TR | Full Bitcoin address compatibility |
@@ -657,7 +657,7 @@ Bitcoin scripting is fundamentally different from Solidity, as it operates on UT
 
 ### Capability Matrix
 
-| Capability | Solidity | OPNet |
+| Capability | Solidity | OP_NET |
 |------------|:--------:|:-----:|
 | Create P2PKH addresses | No | Yes |
 | Create P2SH addresses | No | Yes |
@@ -706,10 +706,10 @@ contract TimeLock {
 }
 ```
 
-#### OPNet Approach (Consensus-Enforced)
+#### OP_NET Approach (Consensus-Enforced)
 
 ```typescript
-// OPNet - CSV relative timelock (consensus-enforced)
+// OP_NET - CSV relative timelock (consensus-enforced)
 import { BitcoinScript, BitcoinAddresses, Network, Networks } from '@btc-vision/btc-runtime/runtime';
 
 // Create a timelock script - 144 blocks = ~1 day
@@ -774,10 +774,10 @@ contract MultiSig {
 }
 ```
 
-#### OPNet Approach (Native Bitcoin Multisig)
+#### OP_NET Approach (Native Bitcoin Multisig)
 
 ```typescript
-// OPNet - native Bitcoin multisig (simple, consensus-enforced)
+// OP_NET - native Bitcoin multisig (simple, consensus-enforced)
 import { BitcoinScript, BitcoinAddresses, Network, Networks } from '@btc-vision/btc-runtime/runtime';
 
 // Build a 2-of-3 multisig script - one line of code!
@@ -805,7 +805,7 @@ if (recognized.ok) {
 
 ### Script Building Comparison
 
-| Task | Solidity | OPNet |
+| Task | Solidity | OP_NET |
 |------|----------|-------|
 | Build P2PKH script | Not possible | `buildP2PKHScript(pubkeyHash)` |
 | Build multisig script | Custom contract | `BitcoinScript.multisig(m, pubkeys)` |
@@ -817,7 +817,7 @@ if (recognized.ok) {
 
 ### Transaction Introspection
 
-| Feature | Solidity | OPNet |
+| Feature | Solidity | OP_NET |
 |---------|----------|-------|
 | Access tx outputs | `msg.value` only | `Blockchain.tx.outputs` (full array) |
 | Access tx inputs | Not possible | `Blockchain.tx.inputs` (full array) |
@@ -846,7 +846,7 @@ contract DataEmbed {
 ```
 
 ```typescript
-// OPNet - OP_RETURN (native Bitcoin, permanent)
+// OP_NET - OP_RETURN (native Bitcoin, permanent)
 import { BytesWriter, BitcoinOpcodes } from '@btc-vision/btc-runtime/runtime';
 
 function buildOpReturnScript(data: Uint8Array): Uint8Array {
@@ -869,9 +869,9 @@ function buildOpReturnScript(data: Uint8Array): Uint8Array {
 // - No complex event parsing needed
 ```
 
-### Why OPNet for Bitcoin Integration?
+### Why OP_NET for Bitcoin Integration?
 
-| Solidity Limitation | OPNet Solution |
+| Solidity Limitation | OP_NET Solution |
 |---------------------|----------------|
 | Cannot interact with Bitcoin | Full Bitcoin script support |
 | No UTXO awareness | Complete transaction introspection |

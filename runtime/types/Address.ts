@@ -6,7 +6,7 @@ import { MLDSASecurityLevel } from '../env/consensus/MLDSAMetadata';
 import { ArrayLike } from '../interfaces/as';
 
 /**
- * Represents a 32-byte address in the OPNet system.
+ * Represents a 32-byte address in the OP_NET system.
  *
  * This class extends Uint8Array to provide a fixed-size 32-byte address with additional
  * functionality for quantum-resistant cryptography. The address stores the SHA256 hash

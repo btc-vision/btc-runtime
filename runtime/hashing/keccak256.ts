@@ -1,5 +1,5 @@
 /**
- * Keccak-256 implementation for OPNet (AssemblyScript / btc-runtime compatible)
+ * Keccak-256 implementation for OP_NET (AssemblyScript / btc-runtime compatible)
  *
  * This implements the ORIGINAL Keccak-256 as used by Ethereum (pre-NIST),
  * NOT the NIST SHA-3-256 standard. The difference is the domain separation

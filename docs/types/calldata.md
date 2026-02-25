@@ -235,11 +235,11 @@ Arrays use a u16 length prefix (max 65535 elements):
 |----------------------|-----------|-----------|-----|
 ```
 
-## Solidity vs OPNet Comparison
+## Solidity vs OP_NET Comparison
 
 ### Calldata Decoding Comparison Table
 
-| Feature | Solidity | OPNet |
+| Feature | Solidity | OP_NET |
 |---------|----------|-------|
 | **Parameter access** | Automatic (named parameters) | Manual sequential reading |
 | **Decode function** | `abi.decode(data, (T1, T2))` | `calldata.readT1(); calldata.readT2();` |
@@ -251,7 +251,7 @@ Arrays use a u16 length prefix (max 65535 elements):
 
 ### Type-by-Type Decoding Comparison
 
-| Solidity Decoding | OPNet Decoding |
+| Solidity Decoding | OP_NET Decoding |
 |-------------------|----------------|
 | `abi.decode(data, (uint256))` | `calldata.readU256()` |
 | `abi.decode(data, (uint128))` | `calldata.readU128()` |
@@ -282,7 +282,7 @@ function transfer(address to, uint256 amount) public returns (bool) {
 ```
 
 ```typescript
-// OPNet - Parameters read sequentially
+// OP_NET - Parameters read sequentially
 public transfer(calldata: Calldata): BytesWriter {
     // Must read in exact order they were encoded
     const to: Address = calldata.readAddress();
@@ -312,7 +312,7 @@ function transferFrom(
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 public transferFrom(calldata: Calldata): BytesWriter {
     const from: Address = calldata.readAddress();
     const to: Address = calldata.readAddress();
@@ -344,7 +344,7 @@ function decodeWithOffset(bytes calldata data) public pure {
 ```
 
 ```typescript
-// OPNet - Sequential reading handles offset automatically
+// OP_NET - Sequential reading handles offset automatically
 public decodeTransfer(calldata: Calldata): BytesWriter {
     const to: Address = calldata.readAddress();      // Reads bytes 0-31
     const amount: u256 = calldata.readU256();        // Reads bytes 32-63
@@ -372,7 +372,7 @@ function processData(bytes calldata data) public {
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 public setName(calldata: Calldata): BytesWriter {
     const name: string = calldata.readString();  // Length-prefixed
     if (name.length == 0) {
@@ -408,7 +408,7 @@ function batchTransfer(
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 public batchTransfer(calldata: Calldata): BytesWriter {
     const recipients: Address[] = calldata.readAddressArray();
     const amounts: u256[] = calldata.readU256Array();
@@ -443,7 +443,7 @@ function safeTransferFrom(
 ```
 
 ```typescript
-// OPNet - Check for remaining data
+// OP_NET - Check for remaining data
 public safeTransferFrom(calldata: Calldata): BytesWriter {
     const from: Address = calldata.readAddress();
     const to: Address = calldata.readAddress();
@@ -466,7 +466,7 @@ public safeTransferFrom(calldata: Calldata): BytesWriter {
 
 ### Encoding Format Differences
 
-| Aspect | Solidity ABI | OPNet |
+| Aspect | Solidity ABI | OP_NET |
 |--------|--------------|-------|
 | **Byte order** | Big-endian | Big-endian (default) |
 | **Address padding** | Left-padded to 32 bytes | 32 bytes (native size) |
@@ -478,7 +478,7 @@ public safeTransferFrom(calldata: Calldata): BytesWriter {
 
 ### Encoding Size Comparison
 
-| Type | Solidity ABI Size | OPNet Size |
+| Type | Solidity ABI Size | OP_NET Size |
 |------|-------------------|------------|
 | `bool` | 32 bytes | 1 byte |
 | `uint8` | 32 bytes | 1 byte |
@@ -492,7 +492,7 @@ public safeTransferFrom(calldata: Calldata): BytesWriter {
 
 ### Key Differences Summary
 
-| Solidity | OPNet |
+| Solidity | OP_NET |
 |----------|-------|
 | Named parameters in function signature | Single `Calldata` parameter |
 | Automatic ABI decoding | Manual `read*()` methods |

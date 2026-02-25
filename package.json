@@ -1,10 +1,10 @@
 {
     "name": "@btc-vision/btc-runtime",
     "version": "1.11.0-rc.10",
-    "description": "Bitcoin L1 Smart Contract Runtime for OPNet. Build decentralized applications on Bitcoin using AssemblyScript and WebAssembly. Fully audited.",
+    "description": "Bitcoin L1 Smart Contract Runtime for OP_NET. Build decentralized applications on Bitcoin using AssemblyScript and WebAssembly. Fully audited.",
     "main": "btc/index.ts",
     "types": "btc/index.ts",
-    "author": "OPNet <support@opnet.org>",
+    "author": "OP_NET <support@opnet.org>",
     "license": "Apache-2.0",
     "homepage": "https://opnet.org",
     "repository": {

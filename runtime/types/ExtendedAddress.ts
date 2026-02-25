@@ -24,7 +24,7 @@ import { Revert } from './Revert';
  *
  * @remarks
  * This class is marked as @final and cannot be extended. It represents the complete
- * address format for OPNet's quantum-resistant transition, supporting both legacy
+ * address format for OP_NET's quantum-resistant transition, supporting both legacy
  * Schnorr signatures and future ML-DSA signatures within the same address structure.
  *
  * The tweaked public key enables P2TR (pay-to-taproot) address generation while

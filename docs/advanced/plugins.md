@@ -48,7 +48,7 @@ sequenceDiagram
     participant Deployer as 👤 Deployer
     participant Contract as Contract
     participant Plugin as Plugin
-    participant Blockchain as OPNet Runtime
+    participant Blockchain as OP_NET Runtime
 
     Note over Deployer,Blockchain: Contract Deployment
     Deployer->>Contract: constructor()
@@ -256,7 +256,7 @@ config:
   theme: dark
 ---
 flowchart LR
-    subgraph OPNet["OPNet Plugin-Based Access Control"]
+    subgraph OP_NET["OP_NET Plugin-Based Access Control"]
         A["👤 User calls method"] --> B["onExecutionStarted"]
         B --> C{"Method requires role?"}
 
@@ -658,13 +658,13 @@ class MetricsPlugin extends Plugin {
 }
 ```
 
-## Solidity vs OPNet: Plugin System Comparison
+## Solidity vs OP_NET: Plugin System Comparison
 
-OPNet plugins provide a more flexible and powerful alternative to Solidity's inheritance and modifier patterns. They enable cross-cutting concerns without tight coupling.
+OP_NET plugins provide a more flexible and powerful alternative to Solidity's inheritance and modifier patterns. They enable cross-cutting concerns without tight coupling.
 
 ### Feature Comparison Table
 
-| Feature | Solidity/EVM | OPNet | OPNet Advantage |
+| Feature | Solidity/EVM | OP_NET | OP_NET Advantage |
 |---------|--------------|-------|-----------------|
 | **Code Reuse Pattern** | Inheritance | Composition (Plugins) | Flexible, no diamond problem |
 | **Pre-Execution Hooks** | Modifiers | `onExecutionStarted` | Centralized, selector-aware |
@@ -677,7 +677,7 @@ OPNet plugins provide a more flexible and powerful alternative to Solidity's inh
 
 ### Pattern Mapping Table
 
-| Solidity Pattern | OPNet Plugin Equivalent | Improvement |
+| Solidity Pattern | OP_NET Plugin Equivalent | Improvement |
 |-----------------|------------------------|-------------|
 | OpenZeppelin `Ownable` | `RoleBasedAccessPlugin` with ADMIN role | Multi-role support |
 | OpenZeppelin `Pausable` | `PausablePlugin` | Selector-specific pausing |
@@ -689,7 +689,7 @@ OPNet plugins provide a more flexible and powerful alternative to Solidity's inh
 
 ### Capability Matrix
 
-| Capability | Solidity | OPNet |
+| Capability | Solidity | OP_NET |
 |------------|:--------:|:-----:|
 | Pre-execution hooks | Modifiers (per-function) | Plugins (centralized) |
 | Post-execution hooks | Manual | Built-in |
@@ -718,7 +718,7 @@ flowchart TB
         S6["Diamond Problem Risk"]
     end
 
-    subgraph OPNet["OPNet - Plugin Composition"]
+    subgraph OP_NET["OP_NET - Plugin Composition"]
         O1["Contract"] --> O2["OP_NET base"]
         O3["AccessPlugin"] -.->|"registered"| O1
         O4["PausablePlugin"] -.->|"registered"| O1
@@ -729,7 +729,7 @@ flowchart TB
 
 ### Code Complexity Comparison
 
-| Aspect | Solidity | OPNet |
+| Aspect | Solidity | OP_NET |
 |--------|----------|-------|
 | Adding access control | Import + inherit + add modifiers | Register plugin |
 | Adding pausable | Import + inherit + add modifiers | Register plugin |
@@ -775,10 +775,10 @@ contract MyContract is Ownable, AccessControl {
 }
 ```
 
-#### OPNet: Plugin-Based Composition
+#### OP_NET: Plugin-Based Composition
 
 ```typescript
-// OPNet with Plugin - Composition-based
+// OP_NET with Plugin - Composition-based
 @final
 export class MyContract extends OP_NET {
     private accessPlugin: RoleBasedAccessPlugin;
@@ -855,10 +855,10 @@ contract MyContract is Pausable {
 }
 ```
 
-#### OPNet: Automatic Selector-Based Pausing
+#### OP_NET: Automatic Selector-Based Pausing
 
 ```typescript
-// OPNet with Plugin
+// OP_NET with Plugin
 @final
 export class MyContract extends OP_NET {
     private pausablePlugin: PausablePlugin;
@@ -902,7 +902,7 @@ export class MyContract extends OP_NET {
 ### Multiple Plugins Example
 
 ```typescript
-// OPNet - Composing multiple plugins (no inheritance conflicts)
+// OP_NET - Composing multiple plugins (no inheritance conflicts)
 @final
 export class CompleteContract extends OP_NET {
     private accessPlugin: RoleBasedAccessPlugin;
@@ -937,7 +937,7 @@ export class CompleteContract extends OP_NET {
 
 ### Lifecycle Hook Comparison
 
-| Lifecycle Event | Solidity | OPNet |
+| Lifecycle Event | Solidity | OP_NET |
 |-----------------|----------|-------|
 | Contract deployment | Single constructor | `onDeployment` per plugin + contract |
 | Contract upgrade | Proxy reinitialize | `onUpdate` per plugin + contract |
@@ -946,9 +946,9 @@ export class CompleteContract extends OP_NET {
 | After method call | No built-in hook | `onExecutionCompleted` (automatic) |
 | Error handling | try/catch (limited) | Revert in any hook |
 
-### Why OPNet Plugins?
+### Why OP_NET Plugins?
 
-| Solidity Limitation | OPNet Solution |
+| Solidity Limitation | OP_NET Solution |
 |---------------------|----------------|
 | Modifier on every function | Centralized selector-based routing |
 | Multiple inheritance complexity | Simple composition |

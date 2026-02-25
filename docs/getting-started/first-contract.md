@@ -1,6 +1,6 @@
 # Your First Contract
 
-This tutorial guides you through creating a complete OP20 token contract from scratch. By the end, you'll understand the core concepts of OPNet smart contract development.
+This tutorial guides you through creating a complete OP20 token contract from scratch. By the end, you'll understand the core concepts of OP_NET smart contract development.
 
 ## What We're Building
 
@@ -59,7 +59,7 @@ Let's break this down piece by piece.
 
 ## Contract Lifecycle Overview
 
-This diagram illustrates the complete lifecycle of an OPNet smart contract from deployment to execution:
+This diagram illustrates the complete lifecycle of an OP_NET smart contract from deployment to execution:
 
 ```mermaid
 ---
@@ -163,10 +163,10 @@ public constructor() {
 }
 ```
 
-**IMPORTANT:** In OPNet, the constructor runs on **every** contract interaction, not just deployment. This is different from Solidity!
+**IMPORTANT:** In OP_NET, the constructor runs on **every** contract interaction, not just deployment. This is different from Solidity!
 
 ```typescript
-// OPNet                           // Solidity
+// OP_NET                           // Solidity
 public constructor() {             // constructor() {
     super();                       //     // Runs ONCE at deployment
     // Runs EVERY time!            // }
@@ -302,7 +302,7 @@ function mint(address to, uint256 amount) external onlyOwner {
 
 ### u256 - Big Numbers
 
-OPNet uses `u256` for large numbers (like balances):
+OP_NET uses `u256` for large numbers (like balances):
 
 ```typescript
 import { u256 } from '@btc-vision/as-bignum/assembly';
@@ -318,7 +318,7 @@ const c = u256.fromString('99999999999999'); // From string (large numbers)
 
 **Why not native numbers?**
 
-| JavaScript/TypeScript | AssemblyScript/OPNet |
+| JavaScript/TypeScript | AssemblyScript/OP_NET |
 |----------------------|----------------------|
 | `number` (64-bit float) | Non-deterministic! |
 | `BigInt` | Not supported in WASM |
@@ -326,7 +326,7 @@ const c = u256.fromString('99999999999999'); // From string (large numbers)
 
 ### Address
 
-Addresses are 32 bytes in OPNet:
+Addresses are 32 bytes in OP_NET:
 
 ```typescript
 import { Address, Blockchain } from '@btc-vision/btc-runtime/runtime';
@@ -423,7 +423,7 @@ Here's a side-by-side comparison of the complete contract:
 
 <table>
 <tr>
-<th>OPNet (AssemblyScript)</th>
+<th>OP_NET (AssemblyScript)</th>
 <th>Solidity</th>
 </tr>
 <tr>

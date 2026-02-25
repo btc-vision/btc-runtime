@@ -11,7 +11,7 @@ config:
 ---
 sequenceDiagram
     participant ContractA as Contract A
-    participant Blockchain as OPNet Runtime
+    participant Blockchain as OP_NET Runtime
     participant ContractB as Contract B
 
     Note over ContractA: Prepare calldata
@@ -93,7 +93,7 @@ const result = Blockchain.call(tokenContract, writer, true);
 
 ```mermaid
 flowchart LR
-    subgraph OPNet["OPNet Cross-Contract Call Flow"]
+    subgraph OP_NET["OP_NET Cross-Contract Call Flow"]
         A["Blockchain.call<br/>target, data, stopOnFailure"] --> B{"stopOnFailure?"}
 
         B -->|"true"| C["Execute call"]
@@ -312,7 +312,7 @@ public batchTransfer(calldata: Calldata): BytesWriter {
 
 ## Solidity Comparison
 
-| Solidity | OPNet |
+| Solidity | OP_NET |
 |----------|-------|
 | `token.transfer(to, amount)` | `Blockchain.call(token, encodeTransfer(...), true)` |
 | `(bool s, bytes memory d) = target.call(data)` | `Blockchain.call(target, data, false)` |
@@ -333,7 +333,7 @@ contract Router {
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 import { OP_NET, Blockchain, Address, Calldata, BytesWriter, ABIDataTypes, method, returns } from '@btc-vision/btc-runtime/runtime';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 

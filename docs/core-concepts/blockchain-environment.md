@@ -1,6 +1,6 @@
 # Blockchain Environment
 
-The `Blockchain` object is the primary interface for interacting with the OPNet runtime. It provides access to block information, transaction context, storage operations, cryptographic functions, and cross-contract calls.
+The `Blockchain` object is the primary interface for interacting with the OP_NET runtime. It provides access to block information, transaction context, storage operations, cryptographic functions, and cross-contract calls.
 
 ## Overview
 
@@ -55,15 +55,15 @@ flowchart LR
 
 ### Solidity Comparison
 
-| Solidity | OPNet | Notes |
+| Solidity | OP_NET | Notes |
 |----------|-------|-------|
 | `block.number` | `Blockchain.block.number` | Current block height |
-| `block.timestamp` | `Blockchain.block.medianTimestamp` | OPNet uses Median Time Past |
+| `block.timestamp` | `Blockchain.block.medianTimestamp` | OP_NET uses Median Time Past |
 | `blockhash(n)` | `Blockchain.getBlockHash(n)` | Historical block hash |
 
 ### Median Time Past
 
-OPNet uses **Median Time Past (MTP)** instead of raw block timestamps. MTP is the median of the last 11 block timestamps, providing more reliable time measurements that are resistant to miner manipulation.
+OP_NET uses **Median Time Past (MTP)** instead of raw block timestamps. MTP is the median of the last 11 block timestamps, providing more reliable time measurements that are resistant to miner manipulation.
 
 ```typescript
 // Get current timestamp (median time past)
@@ -140,7 +140,7 @@ This distinction is critical for security:
 
 ### Solidity Comparison
 
-| Solidity | OPNet | Notes |
+| Solidity | OP_NET | Notes |
 |----------|-------|-------|
 | `msg.sender` | `Blockchain.tx.sender` | Immediate caller |
 | `tx.origin` | `Blockchain.tx.origin` | Original signer (ExtendedAddress) |
@@ -157,7 +157,7 @@ config:
 sequenceDiagram
     participant User as User/EOA
     participant TX as Transaction Broadcast
-    participant VM as OPNet VM
+    participant VM as OP_NET VM
     participant ContractA as Target Contract
     participant ContractB as External Contract
     participant Storage as Storage
@@ -166,7 +166,7 @@ sequenceDiagram
     User->>TX: Sign transaction
     TX->>VM: Broadcast transaction
 
-    Note over User,Storage: OPNet Runtime Initialization
+    Note over User,Storage: OP_NET Runtime Initialization
     VM->>VM: Initialize Blockchain Context
     VM->>VM: Set tx.origin = User Address
     VM->>VM: Set tx.sender = User Address
@@ -401,7 +401,7 @@ sequenceDiagram
 // Solidity
 (bool success, bytes memory data) = target.call(calldata);
 
-// OPNet
+// OP_NET
 const result = Blockchain.call(target, calldata, true);
 // result.success: boolean
 // result.data: BytesReader
@@ -438,7 +438,7 @@ const doubleHash: Uint8Array = Blockchain.hash256(data);
 
 ### Signature Verification
 
-OPNet supports Schnorr, ECDSA (secp256k1), and quantum-resistant ML-DSA signatures:
+OP_NET supports Schnorr, ECDSA (secp256k1), and quantum-resistant ML-DSA signatures:
 
 ```typescript
 import { SignaturesMethods } from '@btc-vision/btc-runtime/runtime';
@@ -525,7 +525,7 @@ ML-DSA Security Levels:
 
 ### Keccak-256 Hashing
 
-OPNet includes an Ethereum-compatible Keccak-256 implementation (original Keccak, not NIST SHA-3):
+OP_NET includes an Ethereum-compatible Keccak-256 implementation (original Keccak, not NIST SHA-3):
 
 ```typescript
 import { keccak256, keccak256Concat, functionSelector, ethAddressFromPubKey } from '@btc-vision/btc-runtime/runtime';

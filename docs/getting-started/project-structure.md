@@ -1,6 +1,6 @@
 # Project Structure
 
-This guide explains the standard project structure for OPNet smart contract development and how the btc-runtime library is organized.
+This guide explains the standard project structure for OP_NET smart contract development and how the btc-runtime library is organized.
 
 ## Your Project Structure
 
@@ -72,7 +72,7 @@ graph LR
     TOKEN -.->|"tested by"| SPEC
 ```
 
-A typical OPNet contract project looks like this:
+A typical OP_NET contract project looks like this:
 
 ```
 my-opnet-project/
@@ -168,8 +168,8 @@ AssemblyScript compiler configuration with per-contract targets:
 | `use` | Links custom abort function for error handling |
 | `optimizeLevel` | Optimization level (0-3), higher = faster but larger |
 | `shrinkLevel` | Code size reduction (0-2) |
-| `transform` | OPNet transform for decorator processing |
-| `runtime: "stub"` | Minimal runtime (OPNet provides its own) |
+| `transform` | OP_NET transform for decorator processing |
+| `runtime: "stub"` | Minimal runtime (OP_NET provides its own) |
 
 ### package.json Scripts
 
@@ -384,7 +384,7 @@ import {
 
 ### Storage Pointer System
 
-This diagram illustrates how OPNet manages persistent storage using pointers:
+This diagram illustrates how OP_NET manages persistent storage using pointers:
 
 ```mermaid
 ---
@@ -529,7 +529,7 @@ export class MyToken extends Pausable {
 
 ## Comparison with Solidity Projects
 
-| Solidity | OPNet | Notes |
+| Solidity | OP_NET | Notes |
 |----------|-------|-------|
 | `contracts/` | `src/token/`, `src/nft/` | Contract source files (one folder per contract) |
 | `interfaces/` | `src/shared/` | Type definitions and shared logic |

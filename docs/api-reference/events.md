@@ -507,7 +507,7 @@ class Unpaused extends NetEvent {
 
 ### Indexed-Style Events
 
-While OPNet doesn't have Solidity's indexed parameters, you can structure events for efficient filtering:
+While OP_NET doesn't have Solidity's indexed parameters, you can structure events for efficient filtering:
 
 ```typescript
 @final
@@ -621,7 +621,7 @@ class Withdraw extends NetEvent {
 
 ## Solidity Comparison
 
-| Solidity | OPNet |
+| Solidity | OP_NET |
 |----------|-------|
 | `event Transfer(address indexed from, address indexed to, uint256 value)` | `class TransferredEvent extends NetEvent` |
 | `emit Transfer(from, to, value)` | `emitEvent(new TransferredEvent(operator, from, to, value))` |

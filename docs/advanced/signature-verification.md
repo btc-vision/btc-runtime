@@ -1,6 +1,6 @@
 # Signature Verification
 
-OPNet supports multiple signature schemes for authentication and authorization. This guide covers Schnorr signatures, ECDSA (secp256k1), quantum-resistant ML-DSA, and common verification patterns.
+OP_NET supports multiple signature schemes for authentication and authorization. This guide covers Schnorr signatures, ECDSA (secp256k1), quantum-resistant ML-DSA, and common verification patterns.
 
 ## Overview
 
@@ -41,7 +41,7 @@ const isValidBTC: bool = Blockchain.verifyBitcoinECDSASignature(
 
 ## Signature Scheme Comparison
 
-OPNet supports Schnorr, ECDSA (secp256k1), and quantum-resistant ML-DSA signatures:
+OP_NET supports Schnorr, ECDSA (secp256k1), and quantum-resistant ML-DSA signatures:
 
 ```mermaid
 ---
@@ -49,7 +49,7 @@ config:
   theme: dark
 ---
 flowchart LR
-    subgraph OPNet["OPNet Signature Verification"]
+    subgraph OP_NET["OP_NET Signature Verification"]
         subgraph ECDSA["ECDSA - Legacy (Deprecated)"]
             E1["Public Key: 33/64/65 bytes"]
             E2["Signature: 64 or 65 bytes"]
@@ -118,7 +118,7 @@ config:
 ---
 sequenceDiagram
     participant Contract as Contract
-    participant Blockchain as OPNet Runtime
+    participant Blockchain as OP_NET Runtime
     participant SchnorrVerifier as Schnorr Verifier
     participant ExtendedAddress as ExtendedAddress
 
@@ -161,7 +161,7 @@ config:
 ---
 sequenceDiagram
     participant Contract as Contract
-    participant Blockchain as OPNet Runtime
+    participant Blockchain as OP_NET Runtime
     participant MLDSAVerifier as ML-DSA Verifier
     participant Address as Address
 
@@ -205,11 +205,11 @@ const isValid = Blockchain.verifyMLDSASignature(
 | Level3 | ML-DSA-65 | 1,952 bytes | 3,309 bytes | Category 3 (~AES-192) |
 | Level5 | ML-DSA-87 | 2,592 bytes | 4,627 bytes | Category 5 (~AES-256) |
 
-**OPNet uses ML-DSA-44 (Level2) by default.**
+**OP_NET uses ML-DSA-44 (Level2) by default.**
 
 ## ECDSA Verification (Deprecated)
 
-OPNet now supports ECDSA (secp256k1) signatures for backward compatibility with Ethereum and Bitcoin ecosystems. These methods are **deprecated** and only available when `UNSAFE_QUANTUM_SIGNATURES_ALLOWED` consensus flag is set.
+OP_NET now supports ECDSA (secp256k1) signatures for backward compatibility with Ethereum and Bitcoin ecosystems. These methods are **deprecated** and only available when `UNSAFE_QUANTUM_SIGNATURES_ALLOWED` consensus flag is set.
 
 ### Ethereum ECDSA (ecrecover model)
 
@@ -257,7 +257,7 @@ Both ECDSA methods emit a runtime `WARNING` and are gated behind the `UNSAFE_QUA
 
 ## Keccak-256 Hashing
 
-OPNet includes a built-in Keccak-256 implementation (Ethereum-compatible, pre-NIST). This is useful for ECDSA-related workflows, Ethereum-style function selectors, and EIP-712 typed data hashing.
+OP_NET includes a built-in Keccak-256 implementation (Ethereum-compatible, pre-NIST). This is useful for ECDSA-related workflows, Ethereum-style function selectors, and EIP-712 typed data hashing.
 
 ```typescript
 import { keccak256, keccak256Concat, functionSelector, ethAddressFromPubKey } from '@btc-vision/btc-runtime/runtime';
@@ -375,7 +375,7 @@ class SignatureContract extends OP_NET {
 
         // Create the message to verify
         const message = new BytesWriter(32);
-        message.writeString('Hello, OPNet!');
+        message.writeString('Hello, OP_NET!');
         const messageHash = sha256(message.getBuffer());
 
         // Verify using consensus-aware method
@@ -420,13 +420,13 @@ class SignatureContract extends OP_NET {
 }
 ```
 
-## Solidity vs OPNet: Signature Verification Comparison
+## Solidity vs OP_NET: Signature Verification Comparison
 
-OPNet provides significant advantages over Solidity for signature verification, including quantum-resistant signatures, native Schnorr support, and simplified APIs.
+OP_NET provides significant advantages over Solidity for signature verification, including quantum-resistant signatures, native Schnorr support, and simplified APIs.
 
 ### Feature Comparison Table
 
-| Feature | Solidity/EVM | OPNet | OPNet Advantage |
+| Feature | Solidity/EVM | OP_NET | OP_NET Advantage |
 |---------|--------------|-------|-----------------|
 | **Primary Signature Scheme** | ECDSA (secp256k1) | Schnorr + ML-DSA + ECDSA | Multiple schemes, quantum-resistant option |
 | **Quantum Resistance** | Not supported | ML-DSA (FIPS 204) | Future-proof security |
@@ -441,7 +441,7 @@ OPNet provides significant advantages over Solidity for signature verification, 
 
 ### Signature Scheme Comparison
 
-| Aspect | Solidity (ECDSA) | OPNet (ECDSA) | OPNet (Schnorr) | OPNet (ML-DSA) |
+| Aspect | Solidity (ECDSA) | OP_NET (ECDSA) | OP_NET (Schnorr) | OP_NET (ML-DSA) |
 |--------|------------------|---------------|-----------------|----------------|
 | Algorithm | secp256k1 ECDSA | secp256k1 ECDSA | BIP340 Schnorr | FIPS 204 Lattice |
 | Public Key Size | 33 or 65 bytes | 33, 64, or 65 bytes | 32 bytes | 1,312+ bytes |
@@ -454,7 +454,7 @@ OPNet provides significant advantages over Solidity for signature verification, 
 
 ### Capability Matrix
 
-| Capability | Solidity | OPNet |
+| Capability | Solidity | OP_NET |
 |------------|:--------:|:-----:|
 | ECDSA verification (Ethereum ecrecover) | Yes | Yes (deprecated) |
 | ECDSA verification (Bitcoin direct) | No | Yes (deprecated) |
@@ -502,10 +502,10 @@ function verifySignature(
 }
 ```
 
-#### OPNet: verifySignature
+#### OP_NET: verifySignature
 
 ```typescript
-// OPNet - verifySignature (simple, safe)
+// OP_NET - verifySignature (simple, safe)
 function verifySignature(
     signer: Address,
     signature: Uint8Array,
@@ -557,7 +557,7 @@ function permit(
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 @method(
     { name: 'owner', type: ABIDataTypes.ADDRESS },
     { name: 'spender', type: ABIDataTypes.ADDRESS },
@@ -593,7 +593,7 @@ public permit(calldata: Calldata): BytesWriter {
 
 ### Security Comparison
 
-| Security Aspect | Solidity | OPNet |
+| Security Aspect | Solidity | OP_NET |
 |-----------------|----------|-------|
 | Signature Malleability | Vulnerable (requires OpenZeppelin) | Not vulnerable |
 | Replay Attack Protection | Manual nonce tracking | Built-in patterns |
@@ -604,7 +604,7 @@ public permit(calldata: Calldata): BytesWriter {
 
 ### Implementation Complexity
 
-| Task | Solidity Lines of Code | OPNet Lines of Code |
+| Task | Solidity Lines of Code | OP_NET Lines of Code |
 |------|:----------------------:|:-------------------:|
 | Basic signature verification | ~15 | ~5 |
 | EIP-712 domain separator | ~20 | ~15 |
@@ -626,7 +626,7 @@ function verify(bytes32 hash, uint8 v, bytes32 r, bytes32 s) public view returns
 ```
 
 ```typescript
-// OPNet - Clear boolean result
+// OP_NET - Clear boolean result
 function verify(hash: Uint8Array, signature: Uint8Array, signer: Address): bool {
     // Returns false on invalid signature - no silent failures
     // Returns false on malformed input - no exceptions
@@ -634,9 +634,9 @@ function verify(hash: Uint8Array, signature: Uint8Array, signer: Address): bool 
 }
 ```
 
-### Why OPNet for Signature Verification?
+### Why OP_NET for Signature Verification?
 
-| Solidity Limitation | OPNet Solution |
+| Solidity Limitation | OP_NET Solution |
 |---------------------|----------------|
 | ECDSA only | ECDSA + Schnorr + ML-DSA support |
 | No quantum resistance | Built-in ML-DSA (FIPS 204) |

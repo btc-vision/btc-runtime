@@ -1,10 +1,10 @@
 # Security
 
-Security is paramount in smart contract development. This guide covers OPNet's security mechanisms and best practices for writing secure contracts.
+Security is paramount in smart contract development. This guide covers OP_NET's security mechanisms and best practices for writing secure contracts.
 
 ## Security Mechanisms
 
-OPNet provides several built-in security features:
+OP_NET provides several built-in security features:
 
 | Feature | Description |
 |---------|-------------|
@@ -48,7 +48,7 @@ const remainder = SafeMath.mod(a, b); // Reverts on division by zero
 
 ### Solidity Comparison
 
-In Solidity 0.8+, arithmetic operations revert on overflow/underflow by default. OPNet achieves the same behavior through SafeMath:
+In Solidity 0.8+, arithmetic operations revert on overflow/underflow by default. OP_NET achieves the same behavior through SafeMath:
 
 ```solidity
 // Solidity 0.8+ - automatic overflow protection
@@ -56,7 +56,7 @@ uint256 result = a + b;  // Reverts on overflow
 ```
 
 ```typescript
-// OPNet - explicit SafeMath usage
+// OP_NET - explicit SafeMath usage
 const result = SafeMath.add(a, b);  // Reverts on overflow
 ```
 
@@ -138,7 +138,7 @@ modifier onlyOwner() {
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 protected onlyOwner(): void {
     if (!Blockchain.tx.sender.equals(this.owner.value)) {
         throw new Revert('Not owner');

@@ -615,11 +615,11 @@ protected override encodeData(writer: BytesWriter): void {
 }
 ```
 
-## Solidity vs OPNet Comparison
+## Solidity vs OP_NET Comparison
 
 ### Encoding/Decoding Comparison Table
 
-| Feature | Solidity | OPNet |
+| Feature | Solidity | OP_NET |
 |---------|----------|-------|
 | **Encode function** | `abi.encode(...)` | `BytesWriter` methods |
 | **Decode function** | `abi.decode(data, (types))` | `BytesReader` methods |
@@ -632,7 +632,7 @@ protected override encodeData(writer: BytesWriter): void {
 
 ### Type Encoding Comparison
 
-| Solidity Encoding | OPNet Encoding |
+| Solidity Encoding | OP_NET Encoding |
 |-------------------|----------------|
 | `abi.encode(uint256)` | `writer.writeU256(value)` |
 | `abi.encode(uint128)` | `writer.writeU128(value)` |
@@ -659,12 +659,12 @@ bytes memory packed = abi.encodePacked(recipient, amount);
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 const writer = new BytesWriter(64);  // 32 + 32 bytes
 writer.writeAddress(recipient);
 writer.writeU256(amount);
 const data: Uint8Array = writer.getBuffer();
-// OPNet encoding is similar to encodePacked (no padding)
+// OP_NET encoding is similar to encodePacked (no padding)
 ```
 
 #### Basic Decoding
@@ -675,7 +675,7 @@ const data: Uint8Array = writer.getBuffer();
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 const reader = new BytesReader(data);
 const to: Address = reader.readAddress();
 const amount: u256 = reader.readU256();
@@ -696,7 +696,7 @@ function encodeTransferData(
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 function encodeTransferData(
     from: Address,
     to: Address,
@@ -724,7 +724,7 @@ bytes memory callData = abi.encodeWithSignature("transfer(address,uint256)", to,
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 const TRANSFER_SELECTOR: Selector = Selector.from("transfer(address,uint256)");
 const writer = new BytesWriter(68);  // 4 + 32 + 32
 writer.writeSelector(TRANSFER_SELECTOR);
@@ -745,7 +745,7 @@ function getInfo() public view returns (address, uint256, bool) {
 ```
 
 ```typescript
-// OPNet - Manual return encoding
+// OP_NET - Manual return encoding
 public getInfo(_calldata: Calldata): BytesWriter {
     const writer = new BytesWriter(65);  // 32 + 32 + 1
     writer.writeAddress(this._owner.value);
@@ -766,7 +766,7 @@ if (success) {
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 const result = Blockchain.call(target, callData, true);
 if (result.success) {
     const reader = new BytesReader(result.data);
@@ -793,7 +793,7 @@ function encodeOrder(Order memory order) public pure returns (bytes memory) {
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 class Order {
     maker: Address;
     taker: Address;
@@ -826,7 +826,7 @@ function _transfer(address from, address to, uint256 amount) internal {
 ```
 
 ```typescript
-// OPNet - Custom event class with manual encoding
+// OP_NET - Custom event class with manual encoding
 export class TransferEvent extends NetEvent {
     constructor(
         public readonly from: Address,
@@ -861,7 +861,7 @@ function extractAddress(bytes calldata data, uint offset) public pure returns (a
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 function extractSelector(data: Uint8Array): Selector {
     const reader = new BytesReader(data);
     return reader.readSelector();
@@ -879,7 +879,7 @@ function extractAddress(data: Uint8Array, offset: u32): Address {
 
 ### Size Comparison (Encoding Overhead)
 
-| Data | Solidity abi.encode | Solidity encodePacked | OPNet |
+| Data | Solidity abi.encode | Solidity encodePacked | OP_NET |
 |------|---------------------|----------------------|-------|
 | `bool` | 32 bytes | 1 byte | 1 byte |
 | `uint8` | 32 bytes | 1 byte | 1 byte |
@@ -893,7 +893,7 @@ function extractAddress(data: Uint8Array, offset: u32): Address {
 
 ### Key Differences Summary
 
-| Aspect | Solidity | OPNet |
+| Aspect | Solidity | OP_NET |
 |--------|----------|-------|
 | **Encoding approach** | `abi.encode()` function | BytesWriter object methods |
 | **Decoding approach** | `abi.decode()` with type tuple | BytesReader sequential reads |
@@ -914,7 +914,7 @@ bytes memory encoded = abi.encode(addr, amount, flag);
 ```
 
 ```typescript
-// OPNet equivalent
+// OP_NET equivalent
 const writer = new BytesWriter(65);  // 32 + 32 + 1
 writer.writeAddress(addr);
 writer.writeU256(amount);
@@ -930,7 +930,7 @@ const encoded = writer.getBuffer();
 ```
 
 ```typescript
-// OPNet equivalent
+// OP_NET equivalent
 const reader = new BytesReader(data);
 const addr = reader.readAddress();
 const amount = reader.readU256();
@@ -949,7 +949,7 @@ bytes memory data = abi.encodeWithSelector(
 ```
 
 ```typescript
-// OPNet equivalent
+// OP_NET equivalent
 const TRANSFER_SELECTOR: Selector = Selector.from("transfer(address,uint256)");
 const writer = new BytesWriter(68);
 writer.writeSelector(TRANSFER_SELECTOR);

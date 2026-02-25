@@ -112,7 +112,7 @@ function latestRoundData() external view returns (
     uint80 answeredInRound
 );
 
-// OPNet - Custom multi-oracle aggregation
+// OP_NET - Custom multi-oracle aggregation
 @method({ name: 'asset', type: ABIDataTypes.ADDRESS })
 @returns(
     { name: 'price', type: ABIDataTypes.UINT256 },
@@ -977,11 +977,11 @@ contract MultiOracle is Ownable {
 }
 ```
 
-## Solidity vs OPNet Comparison
+## Solidity vs OP_NET Comparison
 
 ### Key Differences Table
 
-| Aspect | Solidity (Chainlink-style) | OPNet |
+| Aspect | Solidity (Chainlink-style) | OP_NET |
 |--------|---------------------------|-------|
 | **Oracle Interface** | `AggregatorV3Interface` with rounds | Custom multi-oracle aggregation |
 | **Price Storage** | `mapping(address => PriceData)` | `AddressMemoryMap` |
@@ -992,7 +992,7 @@ contract MultiOracle is Ownable {
 | **Staleness Check** | `block.timestamp - data.timestamp` | `now - timestamp > maxStaleness` |
 | **Return Format** | Multiple return values | `BytesWriter` serialization |
 
-### Chainlink vs OPNet Oracle Pattern
+### Chainlink vs OP_NET Oracle Pattern
 
 **Chainlink (Solidity) - Consumer Pattern:**
 ```solidity
@@ -1021,7 +1021,7 @@ contract PriceConsumer {
 }
 ```
 
-**OPNet - Self-Contained Oracle:**
+**OP_NET - Self-Contained Oracle:**
 ```typescript
 @method({ name: 'asset', type: ABIDataTypes.ADDRESS })
 @returns(
@@ -1068,7 +1068,7 @@ function _calculateMedian(uint256[] memory arr, uint256 len) internal pure retur
 }
 ```
 
-**OPNet:**
+**OP_NET:**
 ```typescript
 private calculateMedian(prices: u256[]): u256 {
     const len = prices.length;
@@ -1104,7 +1104,7 @@ bytes32 key = keccak256(abi.encodePacked(oracle, asset));
 oracleSubmissions[key] = PriceData(price, timestamp);
 ```
 
-**OPNet:**
+**OP_NET:**
 ```typescript
 // Uses sha256 for storage key
 private oracleAssetKey(oracle: Address, asset: Address): u256 {
@@ -1122,7 +1122,7 @@ private setOraclePrice(key: u256, price: u256): void {
 }
 ```
 
-### Advantages of OPNet Approach
+### Advantages of OP_NET Approach
 
 | Feature | Benefit |
 |---------|---------|
@@ -1146,7 +1146,7 @@ function _withinDeviation(uint256 oldPrice, uint256 newPrice) internal view retu
 }
 ```
 
-**OPNet:**
+**OP_NET:**
 ```typescript
 private withinDeviation(oldPrice: u256, newPrice: u256): bool {
     const maxDev = this._maxDeviation.value;
@@ -1173,7 +1173,7 @@ function submitPrice(address asset, uint256 price) external {
 }
 ```
 
-**OPNet:**
+**OP_NET:**
 ```typescript
 private oracles: StoredAddressArray;
 
@@ -1200,10 +1200,10 @@ public submitPrice(calldata: Calldata): BytesWriter {
 | Use Case | Recommended Approach |
 |----------|---------------------|
 | **Need Chainlink feeds** | Solidity with AggregatorV3Interface |
-| **Custom oracle network** | OPNet multi-oracle aggregation |
-| **Bitcoin-native DeFi** | OPNet with Bitcoin timestamp |
+| **Custom oracle network** | OP_NET multi-oracle aggregation |
+| **Bitcoin-native DeFi** | OP_NET with Bitcoin timestamp |
 | **Existing EVM infrastructure** | Solidity |
-| **New protocol on Bitcoin** | OPNet |
+| **New protocol on Bitcoin** | OP_NET |
 
 ---
 

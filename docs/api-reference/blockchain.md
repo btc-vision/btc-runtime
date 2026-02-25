@@ -26,7 +26,7 @@ const timestamp = Blockchain.block.medianTimestamp;
 ```
 
 **Solidity Comparison:**
-| Solidity | OPNet |
+| Solidity | OP_NET |
 |----------|-------|
 | `block.number` | `Blockchain.block.number` |
 | `block.timestamp` | `Blockchain.block.medianTimestamp` |
@@ -51,7 +51,7 @@ const unsafeAllowed = Blockchain.tx.consensus.unsafeSignaturesAllowed();
 ```
 
 **Solidity Comparison:**
-| Solidity | OPNet |
+| Solidity | OP_NET |
 |----------|-------|
 | `msg.sender` | `Blockchain.tx.sender` |
 | `tx.origin` | `Blockchain.tx.origin` |
@@ -70,7 +70,7 @@ const deployer = Blockchain.contractDeployer;
 ```
 
 **Solidity Comparison:**
-| Solidity | OPNet |
+| Solidity | OP_NET |
 |----------|-------|
 | `address(this)` | `Blockchain.contractAddress` |
 
@@ -90,7 +90,7 @@ if (Blockchain.network === Networks.Mainnet) {
 ```
 
 **Solidity Comparison:**
-| Solidity | OPNet |
+| Solidity | OP_NET |
 |----------|-------|
 | `block.chainid` | `Blockchain.chainId` |
 
@@ -280,7 +280,7 @@ public getBalance(address: Address): u256 {
 ```
 
 **Solidity Comparison:**
-| Solidity | OPNet |
+| Solidity | OP_NET |
 |----------|-------|
 | `mapping(address => uint256) balances` | `AddressMemoryMap` with pointer |
 | `balances[addr] = value` | `Blockchain.setStorageAt(pointerHash, value)` |
@@ -389,7 +389,7 @@ sequenceDiagram
 ```
 
 **Solidity Comparison:**
-| Solidity | OPNet |
+| Solidity | OP_NET |
 |----------|-------|
 | `target.call(data)` | `Blockchain.call(target, calldata, false)` |
 | `target.functionCall(args)` | `Blockchain.call(target, calldata, true)` |
@@ -740,7 +740,7 @@ if (Blockchain.isContract(targetAddress)) {
 ```
 
 **Solidity Comparison:**
-| Solidity | OPNet |
+| Solidity | OP_NET |
 |----------|-------|
 | `address.code.length > 0` | `Blockchain.isContract(address)` |
 
@@ -772,7 +772,7 @@ const hash = Blockchain.getBlockHash(Blockchain.block.number - 10);
 > **Warning:** Only ~256 recent blocks available. Older blocks return zeros.
 
 **Solidity Comparison:**
-| Solidity | OPNet |
+| Solidity | OP_NET |
 |----------|-------|
 | `blockhash(blockNumber)` | `Blockchain.getBlockHash(blockNumber)` |
 
@@ -791,7 +791,7 @@ Blockchain.emit(new TransferEvent(from, to, amount));
 ```
 
 **Solidity Comparison:**
-| Solidity | OPNet |
+| Solidity | OP_NET |
 |----------|-------|
 | `emit Transfer(from, to, amount)` | `Blockchain.emit(new TransferEvent(from, to, amount))` |
 

@@ -380,7 +380,7 @@ export class SecureUpgradeableVault extends UpgradeableWithReentrancy {
 
 ## Solidity Comparison
 
-| Feature | OpenZeppelin UUPS | OPNet Upgradeable |
+| Feature | OpenZeppelin UUPS | OP_NET Upgradeable |
 |---------|-------------------|-------------------|
 | Upgrade mechanism | delegatecall | Native bytecode replacement |
 | Storage location | Implementation contract | Same contract |

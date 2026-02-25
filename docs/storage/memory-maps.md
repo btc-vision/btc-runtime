@@ -145,11 +145,11 @@ flowchart LR
     H --> I
 ```
 
-## Solidity vs OPNet Comparison
+## Solidity vs OP_NET Comparison
 
 ### Quick Reference Table
 
-| Solidity | OPNet AddressMemoryMap |
+| Solidity | OP_NET AddressMemoryMap |
 |----------|------------------------|
 | `mapping(address => uint256)` | `AddressMemoryMap` |
 | `balances[addr]` | `balances.get(addr)` |
@@ -161,7 +161,7 @@ flowchart LR
 
 ### Operations Comparison
 
-| Operation | Solidity | OPNet |
+| Operation | Solidity | OP_NET |
 |-----------|----------|-------|
 | Declare | `mapping(address => uint256) public balances;` | `private balances: AddressMemoryMap;` |
 | Initialize | Automatic | `this.balances = new AddressMemoryMap(this.balancesPointer);` |
@@ -175,7 +175,7 @@ flowchart LR
 
 ### Common Patterns
 
-| Pattern | Solidity | OPNet |
+| Pattern | Solidity | OP_NET |
 |---------|----------|-------|
 | Transfer balance | `balances[from] -= amt; balances[to] += amt;` | `balances.set(from, SafeMath.sub(balances.get(from), amt)); balances.set(to, SafeMath.add(balances.get(to), amt));` |
 | Check sufficient | `require(balances[addr] >= amount);` | `if (balances.get(addr) < amount) throw new Revert("Insufficient");` |
@@ -186,7 +186,7 @@ flowchart LR
 
 ### Key Differences from Solidity
 
-| Aspect | Solidity | OPNet |
+| Aspect | Solidity | OP_NET |
 |--------|----------|-------|
 | Key type | `address` (20 bytes) | `Address` (32 bytes) |
 | Value type | Any | `u256` only |
@@ -196,7 +196,7 @@ flowchart LR
 
 ### ERC-20 Style Comparison
 
-| ERC-20 Function | Solidity | OPNet |
+| ERC-20 Function | Solidity | OP_NET |
 |-----------------|----------|-------|
 | `balanceOf(address)` | `return balances[owner];` | `return this.balances.get(owner);` |
 | `transfer(to, amount)` | `balances[msg.sender] -= amount; balances[to] += amount;` | `this.balances.set(sender, SafeMath.sub(...)); this.balances.set(to, SafeMath.add(...));` |
@@ -237,7 +237,7 @@ contract TokenBalances {
 }
 ```
 
-**OPNet:**
+**OP_NET:**
 ```typescript
 @final
 export class TokenBalances extends OP_NET {
@@ -344,7 +344,7 @@ contract Staking {
 }
 ```
 
-**OPNet:**
+**OP_NET:**
 ```typescript
 @final
 export class Staking extends OP_NET {

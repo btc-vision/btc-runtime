@@ -39,7 +39,7 @@ export class MyToken extends OP20S {
 
 ## ERC20Permit vs OP20S Comparison
 
-| Feature | ERC20Permit (EIP-2612) | OP20S (OPNet) |
+| Feature | ERC20Permit (EIP-2612) | OP20S (OP_NET) |
 |---------|------------------------|---------------|
 | Language | Solidity | AssemblyScript |
 | Signature Type | ECDSA (v, r, s) | Schnorr, ECDSA (deprecated), or ML-DSA |
@@ -327,7 +327,7 @@ contract.permit(..., nonce=0, signature0);  // FAILS - nonce mismatch
 <table>
 <tr>
 <th>ERC20Permit (Solidity)</th>
-<th>OP20S (OPNet)</th>
+<th>OP20S (OP_NET)</th>
 </tr>
 <tr>
 <td>

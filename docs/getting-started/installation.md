@@ -1,6 +1,6 @@
 # Installation
 
-This guide walks you through setting up your development environment for building OPNet smart contracts.
+This guide walks you through setting up your development environment for building OP_NET smart contracts.
 
 ## Quick Start - Clone Example Project
 
@@ -331,7 +331,7 @@ And add a build script to `package.json`:
 |---------|---------|---------|
 | `@btc-vision/btc-runtime` | ^1.10.8 | Core runtime - contracts, storage, events |
 | `@btc-vision/as-bignum` | ^0.0.6 | 128-bit and 256-bit integer types |
-| `@btc-vision/opnet-transform` | ^0.1.12 | AssemblyScript transform for OPNet |
+| `@btc-vision/opnet-transform` | ^0.1.12 | AssemblyScript transform for OP_NET |
 | `assemblyscript` | ^0.28.9 | AssemblyScript compiler |
 
 ## Troubleshooting

@@ -277,11 +277,11 @@ public override onDeployment(calldata: Calldata): void {
 }
 ```
 
-## Solidity vs OPNet Comparison
+## Solidity vs OP_NET Comparison
 
 ### Quick Reference Table
 
-| Solidity | OPNet | Default Value |
+| Solidity | OP_NET | Default Value |
 |----------|-------|---------------|
 | `uint256 public value;` | `StoredU256` | `u256.Zero` |
 | `uint64[4] packed;` | `StoredU64` | `[0, 0, 0, 0]` |
@@ -294,7 +294,7 @@ public override onDeployment(calldata: Calldata): void {
 
 ### Operations Comparison
 
-| Operation | Solidity | OPNet |
+| Operation | Solidity | OP_NET |
 |-----------|----------|-------|
 | Declare state variable | `uint256 public value;` | `private _value: StoredU256 = new StoredU256(ptr, EMPTY_POINTER);` |
 | Read value | `value` or `this.value` | `this._value.value` |
@@ -309,7 +309,7 @@ public override onDeployment(calldata: Calldata): void {
 
 ### Declaration Patterns
 
-| Solidity Pattern | OPNet Equivalent |
+| Solidity Pattern | OP_NET Equivalent |
 |------------------|------------------|
 | `uint256 public totalSupply;` | `private totalSupplyPtr: u16 = Blockchain.nextPointer;`<br>`private _totalSupply: StoredU256 = new StoredU256(this.totalSupplyPtr, EMPTY_POINTER);` |
 | `string public name = "Token";` | `private namePtr: u16 = Blockchain.nextPointer;`<br>`private _name: StoredString = new StoredString(this.namePtr, 0);`<br>Then in `onDeployment`: `this._name.value = "Token";` |
@@ -346,7 +346,7 @@ contract Counter {
 }
 ```
 
-**OPNet:**
+**OP_NET:**
 ```typescript
 @final
 export class Counter extends OP_NET {
@@ -417,7 +417,7 @@ contract Ownable {
 }
 ```
 
-**OPNet:**
+**OP_NET:**
 ```typescript
 @final
 export class Ownable extends OP_NET {

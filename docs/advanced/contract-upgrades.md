@@ -1,10 +1,10 @@
 # Contract Upgrades
 
-OPNet provides a native bytecode replacement mechanism that allows contracts to upgrade their execution logic while preserving their address and storage state. This guide covers the upgrade mechanism, security considerations, and the timelock pattern for safe upgrades.
+OP_NET provides a native bytecode replacement mechanism that allows contracts to upgrade their execution logic while preserving their address and storage state. This guide covers the upgrade mechanism, security considerations, and the timelock pattern for safe upgrades.
 
 ## Overview
 
-Unlike Ethereum's proxy patterns or Solana's upgrade authority model, OPNet enables contracts to replace their own bytecode through a VM opcode. The mechanism uses an address-based replacement model where new bytecode is deployed to a temporary contract, and the target contract references that address to perform the upgrade.
+Unlike Ethereum's proxy patterns or Solana's upgrade authority model, OP_NET enables contracts to replace their own bytecode through a VM opcode. The mechanism uses an address-based replacement model where new bytecode is deployed to a temporary contract, and the target contract references that address to perform the upgrade.
 
 ```typescript
 import { Blockchain } from '@btc-vision/btc-runtime/runtime';
@@ -22,7 +22,7 @@ sequenceDiagram
     participant Owner as Contract Owner
     participant Target as Target Contract
     participant Source as Source Contract<br/>(New Bytecode)
-    participant VM as OPNet VM
+    participant VM as OP_NET VM
 
     Note over Owner: Step 1: Deploy new bytecode
     Owner->>VM: Deploy new contract with updated code
@@ -429,7 +429,7 @@ This provides a clean transition with no mid-block ambiguity.
 
 ## Comparison with Other Platforms
 
-| Feature | OPNet | Ethereum | Solana |
+| Feature | OP_NET | Ethereum | Solana |
 |---------|-------|----------|--------|
 | Mechanism | VM opcode | Proxy + delegatecall | Upgrade authority |
 | Delay | Contract-level (recommended) | Contract-level only | None (instant) |

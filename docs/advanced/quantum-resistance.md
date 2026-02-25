@@ -1,12 +1,12 @@
 # Quantum Resistance
 
-OPNet includes built-in quantum-resistant cryptography through ML-DSA (Module-Lattice Digital Signature Algorithm). The `Address` class provides automatic access to ML-DSA public keys without requiring any custom storage.
+OP_NET includes built-in quantum-resistant cryptography through ML-DSA (Module-Lattice Digital Signature Algorithm). The `Address` class provides automatic access to ML-DSA public keys without requiring any custom storage.
 
 ## Overview
 
 Quantum computers pose a threat to traditional cryptographic schemes:
 
-| Algorithm | Quantum Threat | OPNet Status |
+| Algorithm | Quantum Threat | OP_NET Status |
 |-----------|---------------|--------------|
 | ECDSA | Vulnerable (Shor's algorithm) | Supported (deprecated), transition to ML-DSA |
 | Schnorr | Vulnerable (Shor's algorithm) | Supported, with transition plan |
@@ -40,7 +40,7 @@ const isValid = Blockchain.verifySignature(
 - Existing signatures remain safe (retroactive attack impossible)
 - Future transactions from exposed addresses are at risk
 
-### OPNet's Approach
+### OP_NET's Approach
 
 1. **Dual signature support** - Both Schnorr and ML-DSA signatures
 2. **Extended addresses** - Store both Schnorr (taproot) and ML-DSA key references
@@ -49,7 +49,7 @@ const isValid = Blockchain.verifySignature(
 
 ## ML-DSA Security Levels
 
-OPNet supports three ML-DSA security levels, from classical Schnorr to quantum-resistant ML-DSA:
+OP_NET supports three ML-DSA security levels, from classical Schnorr to quantum-resistant ML-DSA:
 
 ```mermaid
 ---
@@ -57,7 +57,7 @@ config:
   theme: dark
 ---
 flowchart LR
-    subgraph OPNet["OPNet Security Architecture"]
+    subgraph OP_NET["OP_NET Security Architecture"]
         subgraph Classical["Classical Security"]
             C1["Schnorr<br/>256-bit<br/>Classical: Strong<br/>Quantum: Broken"]
         end
@@ -83,7 +83,7 @@ flowchart LR
 | Level3 | ML-DSA-65 | 1,952 bytes | 3,309 bytes | 4,032 bytes | Category 3 (~AES-192) |
 | Level5 | ML-DSA-87 | 2,592 bytes | 4,627 bytes | 4,896 bytes | Category 5 (~AES-256) |
 
-**OPNet uses ML-DSA-44 (Level2) by default**, balancing security and performance.
+**OP_NET uses ML-DSA-44 (Level2) by default**, balancing security and performance.
 
 ### Level Constants
 
@@ -109,7 +109,7 @@ config:
   theme: dark
 ---
 flowchart LR
-    subgraph OPNet["OPNet Quantum-Resistant Signatures"]
+    subgraph OP_NET["OP_NET Quantum-Resistant Signatures"]
         subgraph MLDSA["ML-DSA-44 - Level2 - Default"]
             PK["Public Key<br/>1,312 bytes"]
             SIG["Signature<br/>2,420 bytes"]
@@ -133,7 +133,7 @@ flowchart LR
 
 ### Automatic ML-DSA Key Access
 
-Every `Address` in OPNet stores the SHA256 hash of an ML-DSA public key. The full public key is automatically loaded on demand:
+Every `Address` in OP_NET stores the SHA256 hash of an ML-DSA public key. The full public key is automatically loaded on demand:
 
 ```typescript
 import { Address, Blockchain } from '@btc-vision/btc-runtime/runtime';
@@ -214,7 +214,7 @@ config:
 sequenceDiagram
     participant User as 👤 User
     participant Wallet as Wallet
-    participant Blockchain as OPNet Runtime
+    participant Blockchain as OP_NET Runtime
     participant Contract as Contract
 
     Note over User,Blockchain: Key Generation (Off-chain)
@@ -310,7 +310,7 @@ const isValid = Blockchain.verifyMLDSASignature(
 
 ## Migration Path: Schnorr to ML-DSA
 
-OPNet manages a phased transition from classical to quantum-resistant signatures:
+OP_NET manages a phased transition from classical to quantum-resistant signatures:
 
 ```mermaid
 ---
@@ -319,7 +319,7 @@ config:
 ---
 sequenceDiagram
     participant User as User/Wallet
-    participant Network as OPNet Network
+    participant Network as OP_NET Network
     participant Consensus as Consensus Rules
 
     Note over User,Consensus: Phase 1: Transition Period (Current)
@@ -431,13 +431,13 @@ class QuantumSecureContract extends OP_NET {
 }
 ```
 
-## Solidity vs OPNet: Quantum Resistance Comparison
+## Solidity vs OP_NET: Quantum Resistance Comparison
 
-OPNet is the first smart contract platform with built-in quantum-resistant cryptography. Solidity and the EVM have no quantum resistance capabilities.
+OP_NET is the first smart contract platform with built-in quantum-resistant cryptography. Solidity and the EVM have no quantum resistance capabilities.
 
 ### Feature Comparison Table
 
-| Feature | Solidity/EVM | OPNet | OPNet Advantage |
+| Feature | Solidity/EVM | OP_NET | OP_NET Advantage |
 |---------|--------------|-------|-----------------|
 | **Quantum-Safe Signatures** | Not supported | ML-DSA (FIPS 204) | Future-proof security |
 | **Post-Quantum Algorithm** | None | ML-DSA-44/65/87 | NIST standardized |
@@ -449,16 +449,16 @@ OPNet is the first smart contract platform with built-in quantum-resistant crypt
 
 ### Quantum Threat Analysis
 
-| Algorithm | Shor's Algorithm Impact | Grover's Algorithm Impact | Status in OPNet |
+| Algorithm | Shor's Algorithm Impact | Grover's Algorithm Impact | Status in OP_NET |
 |-----------|------------------------|---------------------------|-----------------|
 | ECDSA (Solidity) | **Broken** (polynomial time) | Weakened | N/A |
-| ECDSA (OPNet) | **Broken** (polynomial time) | Weakened | Deprecated |
-| Schnorr (OPNet) | **Broken** (polynomial time) | Weakened | Transition only |
-| ML-DSA (OPNet) | **Secure** | Minimal impact | **Recommended** |
+| ECDSA (OP_NET) | **Broken** (polynomial time) | Weakened | Deprecated |
+| Schnorr (OP_NET) | **Broken** (polynomial time) | Weakened | Transition only |
+| ML-DSA (OP_NET) | **Secure** | Minimal impact | **Recommended** |
 
 ### Security Level Comparison
 
-| Security Level | Solidity | OPNet ML-DSA | NIST Category | Quantum Security |
+| Security Level | Solidity | OP_NET ML-DSA | NIST Category | Quantum Security |
 |----------------|----------|--------------|---------------|------------------|
 | ~AES-128 equivalent | ECDSA (broken by quantum) | ML-DSA-44 (Level2) | Category 2 | **Secure** |
 | ~AES-192 equivalent | Not available | ML-DSA-65 (Level3) | Category 3 | **Secure** |
@@ -466,7 +466,7 @@ OPNet is the first smart contract platform with built-in quantum-resistant crypt
 
 ### Key and Signature Size Comparison
 
-| Metric | Solidity (ECDSA) | OPNet (Schnorr) | OPNet (ML-DSA-44) | OPNet (ML-DSA-87) |
+| Metric | Solidity (ECDSA) | OP_NET (Schnorr) | OP_NET (ML-DSA-44) | OP_NET (ML-DSA-87) |
 |--------|------------------|-----------------|-------------------|-------------------|
 | Public Key Size | 33/65 bytes | 32 bytes | 1,312 bytes | 2,592 bytes |
 | Signature Size | 65 bytes | 64 bytes | 2,420 bytes | 4,627 bytes |
@@ -475,7 +475,7 @@ OPNet is the first smart contract platform with built-in quantum-resistant crypt
 
 ### Capability Matrix
 
-| Capability | Solidity | OPNet |
+| Capability | Solidity | OP_NET |
 |------------|:--------:|:-----:|
 | ECDSA verification (Ethereum) | Yes | Yes (deprecated) |
 | ECDSA verification (Bitcoin) | No | Yes (deprecated) |
@@ -491,7 +491,7 @@ OPNet is the first smart contract platform with built-in quantum-resistant crypt
 
 ### Timeline: Quantum Threat vs Platform Readiness
 
-| Timeframe | Quantum Computer Status | Solidity Status | OPNet Status |
+| Timeframe | Quantum Computer Status | Solidity Status | OP_NET Status |
 |-----------|------------------------|-----------------|--------------|
 | **2024-2025** | Early NISQ era (~1000 qubits) | Vulnerable (no plan) | ML-DSA ready |
 | **2026-2030** | Scaling (~4000+ qubits possible) | **Critical risk** | Dual-key transition |
@@ -511,7 +511,7 @@ flowchart LR
         S3 --> S4["Funds at risk"]
     end
 
-    subgraph OPNet["OPNet - Built-in Migration"]
+    subgraph OP_NET["OP_NET - Built-in Migration"]
         O1["Schnorr (current)"] --> O2["Dual-key period"]
         O2 --> O3["ML-DSA only"]
         O3 --> O4["Quantum secure"]
@@ -540,10 +540,10 @@ function verify(bytes32 hash, uint8 v, bytes32 r, bytes32 s) external view retur
 // EIP proposals for PQC have not been implemented
 ```
 
-#### OPNet: Built-in Quantum Resistance
+#### OP_NET: Built-in Quantum Resistance
 
 ```typescript
-// OPNet - Quantum-resistant
+// OP_NET - Quantum-resistant
 @method(
     { name: 'hash', type: ABIDataTypes.BYTES32 },
     { name: 'signature', type: ABIDataTypes.BYTES },
@@ -596,7 +596,7 @@ contract SolidityContract {
 ```
 
 ```typescript
-// OPNet - Automatic key access
+// OP_NET - Automatic key access
 @final
 class OPNetContract extends OP_NET {
 
@@ -615,9 +615,9 @@ class OPNetContract extends OP_NET {
 }
 ```
 
-### Why OPNet for Quantum Security?
+### Why OP_NET for Quantum Security?
 
-| Solidity Limitation | OPNet Solution |
+| Solidity Limitation | OP_NET Solution |
 |---------------------|----------------|
 | ECDSA only (quantum vulnerable) | ML-DSA (quantum resistant) |
 | No upgrade path | Built-in consensus migration |
@@ -630,9 +630,9 @@ class OPNetContract extends OP_NET {
 
 ### Cost Comparison
 
-| Operation | Solidity | OPNet Cost | Notes |
+| Operation | Solidity | OP_NET Cost | Notes |
 |-----------|----------|------------|-------|
-| Store ML-DSA public key | Not practical (1,312 bytes) | 0 | OPNet loads automatically |
+| Store ML-DSA public key | Not practical (1,312 bytes) | 0 | OP_NET loads automatically |
 | Store ML-DSA signature | Not practical (2,420 bytes) | N/A | Not stored, verified |
 | Quantum-safe verification | Not possible | Standard | No additional cost |
 | Key migration | Contract redeploy | Consensus-managed | No user action needed |
