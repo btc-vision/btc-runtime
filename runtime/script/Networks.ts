@@ -58,7 +58,7 @@ export class NetworkManager {
             case Networks.Regtest:
                 return 'bcrt';
             case Networks.OpnetTestnet:
-                return 'opt1';
+                return 'opt';
             default:
                 throw new Revert('Unknown network');
         }
