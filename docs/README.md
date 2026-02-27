@@ -293,7 +293,7 @@ npm run build:token
 - [Events](./contracts/upgradeable.md#events)
 - [Usage Patterns](./contracts/upgradeable.md#usage-patterns)
 - [Security Considerations](./contracts/upgradeable.md#security-considerations)
-- [Upgrade Workflow](./contracts/upgradeable.md#upgrade-workflow)
+- [Update Workflow](./contracts/upgradeable.md#update-workflow)
 - [Combining with Other Base Classes](./contracts/upgradeable.md#combining-with-other-base-classes)
 - [Solidity Comparison](./contracts/upgradeable.md#solidity-comparison)
 
@@ -499,7 +499,7 @@ npm run build:token
 - [Solidity vs OP_NET Comparison](./advanced/bitcoin-scripts.md#solidity-vs-opnet-comparison)
 - [Best Practices](./advanced/bitcoin-scripts.md#best-practices)
 
-#### [Contract Upgrades](./advanced/contract-upgrades.md)
+#### [Contract Updates](./advanced/contract-upgrades.md)
 - [Overview](./advanced/contract-upgrades.md#overview)
 - [How It Works](./advanced/contract-upgrades.md#how-it-works)
 - [Basic Usage](./advanced/contract-upgrades.md#basic-usage)
@@ -511,7 +511,7 @@ npm run build:token
 - [Security Considerations](./advanced/contract-upgrades.md#security-considerations)
 - [Comparison with Other Platforms](./advanced/contract-upgrades.md#comparison-with-other-platforms)
 - [Complete Example](./advanced/contract-upgrades.md#complete-example)
-- [Upgrade Workflow](./advanced/contract-upgrades.md#upgrade-workflow)
+- [Update Workflow](./advanced/contract-upgrades.md#update-workflow)
 
 #### [Plugins](./advanced/plugins.md)
 - [Overview](./advanced/plugins.md#overview)

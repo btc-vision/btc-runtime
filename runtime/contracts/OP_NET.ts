@@ -33,7 +33,7 @@ export class OP_NET implements IBTC {
 
     /**
      * Called when the contract's bytecode is updated via updateContractFromExisting.
-     * Override this method to perform migration logic when the contract is upgraded.
+     * Override this method to perform migration logic when the contract is updated.
      *
      * @param calldata - The calldata passed to updateContractFromExisting
      *

@@ -180,7 +180,7 @@ class LoggingPlugin extends Plugin {
     }
 
     public override onUpdate(calldata: Calldata): void {
-        // Handle contract upgrades
+        // Handle contract updates
     }
 
     public override onExecutionStarted(selector: Selector, calldata: Calldata): void {
@@ -603,7 +603,7 @@ Deployment:
 1. Plugin.onDeployment (for each registered plugin, in order)
 2. Contract.onDeployment
 
-Upgrade (when bytecode is updated):
+Update (when bytecode is updated):
 1. Plugin.onUpdate (for each registered plugin, in order)
 2. Contract.onUpdate
 
@@ -940,7 +940,7 @@ export class CompleteContract extends OP_NET {
 | Lifecycle Event | Solidity | OP_NET |
 |-----------------|----------|-------|
 | Contract deployment | Single constructor | `onDeployment` per plugin + contract |
-| Contract upgrade | Proxy reinitialize | `onUpdate` per plugin + contract |
+| Contract update | Proxy reinitialize | `onUpdate` per plugin + contract |
 | Before method call | Modifiers (manual per function) | `onExecutionStarted` (automatic) |
 | Method handling | Function dispatch | `execute` returns BytesWriter or null |
 | After method call | No built-in hook | `onExecutionCompleted` (automatic) |

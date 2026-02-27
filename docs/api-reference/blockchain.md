@@ -449,16 +449,16 @@ updateContractFromExisting(
 | `calldata` | `BytesWriter \| null` | Optional calldata passed to VM (default: empty) |
 
 ```typescript
-// Basic upgrade (not recommended without access control)
+// Basic update (not recommended without access control)
 Blockchain.updateContractFromExisting(newBytecodeAddress);
 
 // With calldata
-const upgradeData = new BytesWriter(32);
-upgradeData.writeU256(migrationVersion);
-Blockchain.updateContractFromExisting(newBytecodeAddress, upgradeData);
+const updateData = new BytesWriter(32);
+updateData.writeU256(migrationVersion);
+Blockchain.updateContractFromExisting(newBytecodeAddress, updateData);
 ```
 
-> **Warning:** This is a privileged operation. Always implement access control (e.g., `onlyDeployer`) and consider using the `Upgradeable` base class or `UpgradeablePlugin` for timelock protection. See [Contract Upgrades](../advanced/contract-upgrades.md) for details.
+> **Warning:** This is a privileged operation. Always implement access control (e.g., `onlyDeployer`) and consider using the `Upgradeable` base class or `UpgradeablePlugin` for timelock protection. See [Contract Updates](../advanced/contract-upgrades.md) for details.
 
 ## Cryptographic Operations
 

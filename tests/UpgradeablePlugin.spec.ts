@@ -1,14 +1,14 @@
 /**
  * Test Suite: UpgradeablePlugin
  *
- * This test suite validates the UpgradeablePlugin functionality for contract upgrades
+ * This test suite validates the UpgradeablePlugin functionality for contract updates
  * with timelock protection.
  *
  * Expected Behaviors:
- * - Plugin handles upgrade-related method selectors
- * - Timelock delays are enforced before upgrades can be applied
- * - Only deployer can submit, apply, or cancel upgrades
- * - Events are emitted for all upgrade operations
+ * - Plugin handles update-related method selectors
+ * - Timelock delays are enforced before updates can be applied
+ * - Only deployer can submit, apply, or cancel updates
+ * - Events are emitted for all update operations
  * - Plugin correctly identifies handled vs unhandled selectors
  */
 
@@ -18,148 +18,148 @@ import { BytesReader } from '../runtime/buffer/BytesReader';
 
 describe('UpgradeablePlugin', () => {
     describe('Constructor and defaults', () => {
-        it('should use default upgrade delay of 144 blocks', () => {
+        it('should use default update delay of 144 blocks', () => {
             const plugin = new UpgradeablePlugin();
-            expect(plugin.upgradeDelay).toBe(144);
+            expect(plugin.updateDelay).toBe(144);
         });
 
-        it('should accept custom upgrade delay', () => {
+        it('should accept custom update delay', () => {
             const plugin = new UpgradeablePlugin(1008);
-            expect(plugin.upgradeDelay).toBe(1008);
+            expect(plugin.updateDelay).toBe(1008);
         });
 
         it('should accept zero delay for testing', () => {
             const plugin = new UpgradeablePlugin(0);
-            expect(plugin.upgradeDelay).toBe(0);
+            expect(plugin.updateDelay).toBe(0);
         });
 
         it('should accept very long delay', () => {
             const plugin = new UpgradeablePlugin(4320); // ~1 month
-            expect(plugin.upgradeDelay).toBe(4320);
+            expect(plugin.updateDelay).toBe(4320);
         });
     });
 
     describe('Method selectors', () => {
-        it('should have correct submitUpgrade selector', () => {
-            const expected = encodeSelector('submitUpgrade(address)');
-            expect(UpgradeablePlugin.SUBMIT_UPGRADE_SELECTOR).toBe(expected);
+        it('should have correct submitUpdate selector', () => {
+            const expected = encodeSelector('submitUpdate(address)');
+            expect(UpgradeablePlugin.SUBMIT_UPDATE_SELECTOR).toBe(expected);
         });
 
-        it('should have correct applyUpgrade selector', () => {
-            const expected = encodeSelector('applyUpgrade(address,bytes)');
-            expect(UpgradeablePlugin.APPLY_UPGRADE_SELECTOR).toBe(expected);
+        it('should have correct applyUpdate selector', () => {
+            const expected = encodeSelector('applyUpdate(address,bytes)');
+            expect(UpgradeablePlugin.APPLY_UPDATE_SELECTOR).toBe(expected);
         });
 
-        it('should have correct cancelUpgrade selector', () => {
-            const expected = encodeSelector('cancelUpgrade()');
-            expect(UpgradeablePlugin.CANCEL_UPGRADE_SELECTOR).toBe(expected);
+        it('should have correct cancelUpdate selector', () => {
+            const expected = encodeSelector('cancelUpdate()');
+            expect(UpgradeablePlugin.CANCEL_UPDATE_SELECTOR).toBe(expected);
         });
 
-        it('should have correct pendingUpgrade selector', () => {
-            const expected = encodeSelector('pendingUpgrade()');
-            expect(UpgradeablePlugin.PENDING_UPGRADE_SELECTOR).toBe(expected);
+        it('should have correct pendingUpdate selector', () => {
+            const expected = encodeSelector('pendingUpdate()');
+            expect(UpgradeablePlugin.PENDING_UPDATE_SELECTOR).toBe(expected);
         });
 
-        it('should have correct upgradeDelay selector', () => {
-            const expected = encodeSelector('upgradeDelay()');
-            expect(UpgradeablePlugin.UPGRADE_DELAY_SELECTOR).toBe(expected);
+        it('should have correct updateDelay selector', () => {
+            const expected = encodeSelector('updateDelay()');
+            expect(UpgradeablePlugin.UPDATE_DELAY_SELECTOR).toBe(expected);
         });
     });
 
     describe('Initial state', () => {
-        it('should have no pending upgrade initially', () => {
+        it('should have no pending update initially', () => {
             const plugin = new UpgradeablePlugin();
-            expect(plugin.hasPendingUpgrade).toBe(false);
+            expect(plugin.hasPendingUpdate).toBe(false);
         });
 
-        it('should have zero pending upgrade block initially', () => {
+        it('should have zero pending update block initially', () => {
             const plugin = new UpgradeablePlugin();
-            expect(plugin.pendingUpgradeBlock).toBe(0);
+            expect(plugin.pendingUpdateBlock).toBe(0);
         });
 
-        it('should have zero upgrade effective block initially', () => {
+        it('should have zero update effective block initially', () => {
             const plugin = new UpgradeablePlugin();
-            expect(plugin.upgradeEffectiveBlock).toBe(0);
+            expect(plugin.updateEffectiveBlock).toBe(0);
         });
 
-        it('should not be able to apply upgrade initially', () => {
+        it('should not be able to apply update initially', () => {
             const plugin = new UpgradeablePlugin();
-            expect(plugin.canApplyUpgrade).toBe(false);
+            expect(plugin.canApplyUpdate).toBe(false);
         });
     });
 
     describe('Selector matching', () => {
-        it('should recognize submitUpgrade selector', () => {
-            const selector = encodeSelector('submitUpgrade(address)');
-            expect(selector).toBe(UpgradeablePlugin.SUBMIT_UPGRADE_SELECTOR);
+        it('should recognize submitUpdate selector', () => {
+            const selector = encodeSelector('submitUpdate(address)');
+            expect(selector).toBe(UpgradeablePlugin.SUBMIT_UPDATE_SELECTOR);
         });
 
-        it('should recognize applyUpgrade selector', () => {
-            const selector = encodeSelector('applyUpgrade(address,bytes)');
-            expect(selector).toBe(UpgradeablePlugin.APPLY_UPGRADE_SELECTOR);
+        it('should recognize applyUpdate selector', () => {
+            const selector = encodeSelector('applyUpdate(address,bytes)');
+            expect(selector).toBe(UpgradeablePlugin.APPLY_UPDATE_SELECTOR);
         });
 
-        it('should recognize cancelUpgrade selector', () => {
-            const selector = encodeSelector('cancelUpgrade()');
-            expect(selector).toBe(UpgradeablePlugin.CANCEL_UPGRADE_SELECTOR);
+        it('should recognize cancelUpdate selector', () => {
+            const selector = encodeSelector('cancelUpdate()');
+            expect(selector).toBe(UpgradeablePlugin.CANCEL_UPDATE_SELECTOR);
         });
 
-        it('should recognize pendingUpgrade selector', () => {
-            const selector = encodeSelector('pendingUpgrade()');
-            expect(selector).toBe(UpgradeablePlugin.PENDING_UPGRADE_SELECTOR);
+        it('should recognize pendingUpdate selector', () => {
+            const selector = encodeSelector('pendingUpdate()');
+            expect(selector).toBe(UpgradeablePlugin.PENDING_UPDATE_SELECTOR);
         });
 
-        it('should recognize upgradeDelay selector', () => {
-            const selector = encodeSelector('upgradeDelay()');
-            expect(selector).toBe(UpgradeablePlugin.UPGRADE_DELAY_SELECTOR);
+        it('should recognize updateDelay selector', () => {
+            const selector = encodeSelector('updateDelay()');
+            expect(selector).toBe(UpgradeablePlugin.UPDATE_DELAY_SELECTOR);
         });
     });
 
-    describe('Upgrade delay values', () => {
+    describe('Update delay values', () => {
         it('should correctly store 1 hour delay', () => {
             const plugin = new UpgradeablePlugin(6);
-            expect(plugin.upgradeDelay).toBe(6);
+            expect(plugin.updateDelay).toBe(6);
         });
 
         it('should correctly store 24 hour delay', () => {
             const plugin = new UpgradeablePlugin(144);
-            expect(plugin.upgradeDelay).toBe(144);
+            expect(plugin.updateDelay).toBe(144);
         });
 
         it('should correctly store 1 week delay', () => {
             const plugin = new UpgradeablePlugin(1008);
-            expect(plugin.upgradeDelay).toBe(1008);
+            expect(plugin.updateDelay).toBe(1008);
         });
 
         it('should correctly store 1 month delay', () => {
             const plugin = new UpgradeablePlugin(4320);
-            expect(plugin.upgradeDelay).toBe(4320);
+            expect(plugin.updateDelay).toBe(4320);
         });
     });
 
     describe('Selector encoding consistency', () => {
-        it('should produce consistent selector for submitUpgrade', () => {
-            const selector1 = encodeSelector('submitUpgrade(address)');
-            const selector2 = encodeSelector('submitUpgrade(address)');
+        it('should produce consistent selector for submitUpdate', () => {
+            const selector1 = encodeSelector('submitUpdate(address)');
+            const selector2 = encodeSelector('submitUpdate(address)');
             expect(selector1).toBe(selector2);
         });
 
-        it('should produce consistent selector for applyUpgrade', () => {
-            const selector1 = encodeSelector('applyUpgrade(address,bytes)');
-            const selector2 = encodeSelector('applyUpgrade(address,bytes)');
+        it('should produce consistent selector for applyUpdate', () => {
+            const selector1 = encodeSelector('applyUpdate(address,bytes)');
+            const selector2 = encodeSelector('applyUpdate(address,bytes)');
             expect(selector1).toBe(selector2);
         });
 
-        it('should produce consistent selector for cancelUpgrade', () => {
-            const selector1 = encodeSelector('cancelUpgrade()');
-            const selector2 = encodeSelector('cancelUpgrade()');
+        it('should produce consistent selector for cancelUpdate', () => {
+            const selector1 = encodeSelector('cancelUpdate()');
+            const selector2 = encodeSelector('cancelUpdate()');
             expect(selector1).toBe(selector2);
         });
 
         it('should produce different selectors for different methods', () => {
-            const submit = encodeSelector('submitUpgrade(address)');
-            const apply = encodeSelector('applyUpgrade(address,bytes)');
-            const cancel = encodeSelector('cancelUpgrade()');
+            const submit = encodeSelector('submitUpdate(address)');
+            const apply = encodeSelector('applyUpdate(address,bytes)');
+            const cancel = encodeSelector('cancelUpdate()');
 
             expect(submit).not.toBe(apply);
             expect(submit).not.toBe(cancel);
@@ -172,46 +172,46 @@ describe('UpgradeablePlugin', () => {
             const plugin1 = new UpgradeablePlugin(144);
             const plugin2 = new UpgradeablePlugin(1008);
 
-            expect(plugin1.upgradeDelay).toBe(144);
-            expect(plugin2.upgradeDelay).toBe(1008);
+            expect(plugin1.updateDelay).toBe(144);
+            expect(plugin2.updateDelay).toBe(1008);
         });
 
         it('should have independent state between instances', () => {
             const plugin1 = new UpgradeablePlugin(100);
             const plugin2 = new UpgradeablePlugin(200);
 
-            expect(plugin1.hasPendingUpgrade).toBe(false);
-            expect(plugin2.hasPendingUpgrade).toBe(false);
+            expect(plugin1.hasPendingUpdate).toBe(false);
+            expect(plugin2.hasPendingUpdate).toBe(false);
 
             // They should have different delays
-            expect(plugin1.upgradeDelay).not.toBe(plugin2.upgradeDelay);
+            expect(plugin1.updateDelay).not.toBe(plugin2.updateDelay);
         });
     });
 
     describe('Static selector constants', () => {
-        it('should have static SUBMIT_UPGRADE_SELECTOR', () => {
+        it('should have static SUBMIT_UPDATE_SELECTOR', () => {
             // Verify it's accessible as static
-            const selector = UpgradeablePlugin.SUBMIT_UPGRADE_SELECTOR;
+            const selector = UpgradeablePlugin.SUBMIT_UPDATE_SELECTOR;
             expect(selector).not.toBe(0);
         });
 
-        it('should have static APPLY_UPGRADE_SELECTOR', () => {
-            const selector = UpgradeablePlugin.APPLY_UPGRADE_SELECTOR;
+        it('should have static APPLY_UPDATE_SELECTOR', () => {
+            const selector = UpgradeablePlugin.APPLY_UPDATE_SELECTOR;
             expect(selector).not.toBe(0);
         });
 
-        it('should have static CANCEL_UPGRADE_SELECTOR', () => {
-            const selector = UpgradeablePlugin.CANCEL_UPGRADE_SELECTOR;
+        it('should have static CANCEL_UPDATE_SELECTOR', () => {
+            const selector = UpgradeablePlugin.CANCEL_UPDATE_SELECTOR;
             expect(selector).not.toBe(0);
         });
 
-        it('should have static PENDING_UPGRADE_SELECTOR', () => {
-            const selector = UpgradeablePlugin.PENDING_UPGRADE_SELECTOR;
+        it('should have static PENDING_UPDATE_SELECTOR', () => {
+            const selector = UpgradeablePlugin.PENDING_UPDATE_SELECTOR;
             expect(selector).not.toBe(0);
         });
 
-        it('should have static UPGRADE_DELAY_SELECTOR', () => {
-            const selector = UpgradeablePlugin.UPGRADE_DELAY_SELECTOR;
+        it('should have static UPDATE_DELAY_SELECTOR', () => {
+            const selector = UpgradeablePlugin.UPDATE_DELAY_SELECTOR;
             expect(selector).not.toBe(0);
         });
     });
@@ -266,59 +266,59 @@ describe('UpgradeablePlugin', () => {
         });
     });
 
-    describe('Upgrade effective block calculation', () => {
+    describe('Update effective block calculation', () => {
         it('should calculate correct effective block for 1 hour delay', () => {
             const plugin = new UpgradeablePlugin(6);
-            // When no pending upgrade, effective block is 0
-            expect(plugin.upgradeEffectiveBlock).toBe(0);
+            // When no pending update, effective block is 0
+            expect(plugin.updateEffectiveBlock).toBe(0);
         });
 
         it('should calculate correct effective block for 24 hour delay', () => {
             const plugin = new UpgradeablePlugin(144);
-            expect(plugin.upgradeEffectiveBlock).toBe(0);
+            expect(plugin.updateEffectiveBlock).toBe(0);
         });
 
         it('should calculate correct effective block for 1 week delay', () => {
             const plugin = new UpgradeablePlugin(1008);
-            expect(plugin.upgradeEffectiveBlock).toBe(0);
+            expect(plugin.updateEffectiveBlock).toBe(0);
         });
     });
 
-    describe('canApplyUpgrade property', () => {
-        it('should return false when no pending upgrade', () => {
+    describe('canApplyUpdate property', () => {
+        it('should return false when no pending update', () => {
             const plugin = new UpgradeablePlugin(144);
-            expect(plugin.canApplyUpgrade).toBe(false);
+            expect(plugin.canApplyUpdate).toBe(false);
         });
 
-        it('should return false for zero delay with no pending upgrade', () => {
+        it('should return false for zero delay with no pending update', () => {
             const plugin = new UpgradeablePlugin(0);
-            expect(plugin.canApplyUpgrade).toBe(false);
+            expect(plugin.canApplyUpdate).toBe(false);
         });
 
-        it('should return false for large delay with no pending upgrade', () => {
+        it('should return false for large delay with no pending update', () => {
             const plugin = new UpgradeablePlugin(10000);
-            expect(plugin.canApplyUpgrade).toBe(false);
+            expect(plugin.canApplyUpdate).toBe(false);
         });
     });
 
-    describe('hasPendingUpgrade property', () => {
+    describe('hasPendingUpdate property', () => {
         it('should return false initially', () => {
             const plugin = new UpgradeablePlugin();
-            expect(plugin.hasPendingUpgrade).toBe(false);
+            expect(plugin.hasPendingUpdate).toBe(false);
         });
 
         it('should return false for multiple new instances', () => {
             for (let i = 0; i < 5; i++) {
                 const plugin = new UpgradeablePlugin(i * 10);
-                expect(plugin.hasPendingUpgrade).toBe(false);
+                expect(plugin.hasPendingUpdate).toBe(false);
             }
         });
     });
 
-    describe('pendingUpgradeAddress property', () => {
+    describe('pendingUpdateAddress property', () => {
         it('should return zero address initially', () => {
             const plugin = new UpgradeablePlugin();
-            const address = plugin.pendingUpgradeAddress;
+            const address = plugin.pendingUpdateAddress;
             // Check that address is all zeros (empty) using isZero() method
             expect(address.isZero()).toBe(true);
         });
@@ -327,11 +327,11 @@ describe('UpgradeablePlugin', () => {
     describe('Selector uniqueness', () => {
         it('should have all unique selectors', () => {
             const selectors: u32[] = [
-                UpgradeablePlugin.SUBMIT_UPGRADE_SELECTOR,
-                UpgradeablePlugin.APPLY_UPGRADE_SELECTOR,
-                UpgradeablePlugin.CANCEL_UPGRADE_SELECTOR,
-                UpgradeablePlugin.PENDING_UPGRADE_SELECTOR,
-                UpgradeablePlugin.UPGRADE_DELAY_SELECTOR,
+                UpgradeablePlugin.SUBMIT_UPDATE_SELECTOR,
+                UpgradeablePlugin.APPLY_UPDATE_SELECTOR,
+                UpgradeablePlugin.CANCEL_UPDATE_SELECTOR,
+                UpgradeablePlugin.PENDING_UPDATE_SELECTOR,
+                UpgradeablePlugin.UPDATE_DELAY_SELECTOR,
             ];
 
             // Check all pairs are different
@@ -346,46 +346,46 @@ describe('UpgradeablePlugin', () => {
         });
 
         it('should have non-zero selectors', () => {
-            expect(UpgradeablePlugin.SUBMIT_UPGRADE_SELECTOR).not.toBe(0);
-            expect(UpgradeablePlugin.APPLY_UPGRADE_SELECTOR).not.toBe(0);
-            expect(UpgradeablePlugin.CANCEL_UPGRADE_SELECTOR).not.toBe(0);
-            expect(UpgradeablePlugin.PENDING_UPGRADE_SELECTOR).not.toBe(0);
-            expect(UpgradeablePlugin.UPGRADE_DELAY_SELECTOR).not.toBe(0);
+            expect(UpgradeablePlugin.SUBMIT_UPDATE_SELECTOR).not.toBe(0);
+            expect(UpgradeablePlugin.APPLY_UPDATE_SELECTOR).not.toBe(0);
+            expect(UpgradeablePlugin.CANCEL_UPDATE_SELECTOR).not.toBe(0);
+            expect(UpgradeablePlugin.PENDING_UPDATE_SELECTOR).not.toBe(0);
+            expect(UpgradeablePlugin.UPDATE_DELAY_SELECTOR).not.toBe(0);
         });
     });
 
-    describe('Boundary values for upgrade delay', () => {
+    describe('Boundary values for update delay', () => {
         it('should handle minimum delay (0)', () => {
             const plugin = new UpgradeablePlugin(0);
-            expect(plugin.upgradeDelay).toBe(0);
+            expect(plugin.updateDelay).toBe(0);
         });
 
         it('should handle delay of 1', () => {
             const plugin = new UpgradeablePlugin(1);
-            expect(plugin.upgradeDelay).toBe(1);
+            expect(plugin.updateDelay).toBe(1);
         });
 
         it('should handle large delay values', () => {
             const plugin = new UpgradeablePlugin(u64.MAX_VALUE);
-            expect(plugin.upgradeDelay).toBe(u64.MAX_VALUE);
+            expect(plugin.updateDelay).toBe(u64.MAX_VALUE);
         });
 
         it('should handle typical production values', () => {
             // 1 hour
             const hourPlugin = new UpgradeablePlugin(6);
-            expect(hourPlugin.upgradeDelay).toBe(6);
+            expect(hourPlugin.updateDelay).toBe(6);
 
             // 24 hours
             const dayPlugin = new UpgradeablePlugin(144);
-            expect(dayPlugin.upgradeDelay).toBe(144);
+            expect(dayPlugin.updateDelay).toBe(144);
 
             // 1 week
             const weekPlugin = new UpgradeablePlugin(1008);
-            expect(weekPlugin.upgradeDelay).toBe(1008);
+            expect(weekPlugin.updateDelay).toBe(1008);
 
             // 1 month
             const monthPlugin = new UpgradeablePlugin(4320);
-            expect(monthPlugin.upgradeDelay).toBe(4320);
+            expect(monthPlugin.updateDelay).toBe(4320);
         });
     });
 });

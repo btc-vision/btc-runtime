@@ -1,6 +1,6 @@
 # Upgradeable
 
-The `Upgradeable` base class provides a secure upgrade mechanism with configurable timelock protection. Contracts extending `Upgradeable` can replace their bytecode while giving users time to assess pending changes.
+The `Upgradeable` base class provides a secure update mechanism with configurable timelock protection. Contracts extending `Upgradeable` can replace their bytecode while giving users time to assess pending changes.
 
 > **Alternative**: If you're already extending another base class (like `OP20` or `OP721`), use the [`UpgradeablePlugin`](../advanced/contract-upgrades.md#using-the-upgradeableplugin) instead. Just call `this.registerPlugin(new UpgradeablePlugin(144))` in your constructor - no other code changes needed!
 
@@ -19,19 +19,19 @@ import {
 @final
 export class MyContract extends Upgradeable {
     // Set delay: 144 blocks = ~24 hours
-    protected readonly upgradeDelay: u64 = 144;
+    protected readonly updateDelay: u64 = 144;
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
         switch (method) {
-            case encodeSelector('submitUpgrade'):
-                return this.submitUpgrade(calldata.readAddress());
-            case encodeSelector('applyUpgrade'): {
+            case encodeSelector('submitUpdate'):
+                return this.submitUpdate(calldata.readAddress());
+            case encodeSelector('applyUpdate'): {
                 const sourceAddress = calldata.readAddress();
                 const updateCalldata = calldata.readBytesWithLength();
-                return this.applyUpgrade(sourceAddress, updateCalldata);
+                return this.applyUpdate(sourceAddress, updateCalldata);
             }
-            case encodeSelector('cancelUpgrade'):
-                return this.cancelUpgrade();
+            case encodeSelector('cancelUpdate'):
+                return this.cancelUpdate();
             default:
                 return super.execute(method, calldata);
         }
@@ -45,21 +45,21 @@ export class MyContract extends Upgradeable {
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `upgradeDelay` | `u64` | Blocks to wait before upgrade can be applied (default: 144 = ~24h) |
-| `pendingUpgradeAddress` | `Address` | Source address of pending upgrade (zero if none) |
-| `pendingUpgradeBlock` | `u64` | Block when upgrade was submitted (0 if none) |
-| `upgradeEffectiveBlock` | `u64` | Block when upgrade can be applied (0 if none) |
-| `hasPendingUpgrade` | `bool` | Whether an upgrade is pending |
-| `canApplyUpgrade` | `bool` | Whether the delay has elapsed |
+| `updateDelay` | `u64` | Blocks to wait before update can be applied (default: 144 = ~24h) |
+| `pendingUpdateAddress` | `Address` | Source address of pending update (zero if none) |
+| `pendingUpdateBlock` | `u64` | Block when update was submitted (0 if none) |
+| `updateEffectiveBlock` | `u64` | Block when update can be applied (0 if none) |
+| `hasPendingUpdate` | `bool` | Whether an update is pending |
+| `canApplyUpdate` | `bool` | Whether the delay has elapsed |
 
 ### Methods
 
-#### submitUpgrade
+#### submitUpdate
 
-Submits an upgrade for timelock. Only callable by deployer.
+Submits an update for timelock. Only callable by deployer.
 
 ```typescript
-protected submitUpgrade(sourceAddress: Address): BytesWriter
+protected submitUpdate(sourceAddress: Address): BytesWriter
 ```
 
 **Parameters:**
@@ -68,16 +68,16 @@ protected submitUpgrade(sourceAddress: Address): BytesWriter
 **Reverts if:**
 - Caller is not the deployer
 - Source is not a deployed contract
-- An upgrade is already pending
+- An update is already pending
 
-**Emits:** `UpgradeSubmitted(sourceAddress, submitBlock, effectiveBlock)`
+**Emits:** `UpdateSubmitted(sourceAddress, submitBlock, effectiveBlock)`
 
-#### applyUpgrade
+#### applyUpdate
 
-Applies a pending upgrade after the delay has passed. Only callable by deployer.
+Applies a pending update after the delay has passed. Only callable by deployer.
 
 ```typescript
-protected applyUpgrade(sourceAddress: Address, calldata: BytesWriter): BytesWriter
+protected applyUpdate(sourceAddress: Address, calldata: BytesWriter): BytesWriter
 ```
 
 **Parameters:**
@@ -86,34 +86,34 @@ protected applyUpgrade(sourceAddress: Address, calldata: BytesWriter): BytesWrit
 
 **Reverts if:**
 - Caller is not the deployer
-- No upgrade is pending
+- No update is pending
 - Delay has not elapsed
-- Address does not match pending upgrade
+- Address does not match pending update
 
-**Emits:** `UpgradeApplied(sourceAddress, appliedAtBlock)`
+**Emits:** `UpdateApplied(sourceAddress, appliedAtBlock)`
 
-#### cancelUpgrade
+#### cancelUpdate
 
-Cancels a pending upgrade. Only callable by deployer.
+Cancels a pending update. Only callable by deployer.
 
 ```typescript
-protected cancelUpgrade(): BytesWriter
+protected cancelUpdate(): BytesWriter
 ```
 
 **Reverts if:**
 - Caller is not the deployer
-- No upgrade is pending
+- No update is pending
 
-**Emits:** `UpgradeCancelled(sourceAddress, cancelledAtBlock)`
+**Emits:** `UpdateCancelled(sourceAddress, cancelledAtBlock)`
 
 ## Events
 
-### UpgradeSubmittedEvent
+### UpdateSubmittedEvent
 
-Emitted when an upgrade is submitted.
+Emitted when an update is submitted.
 
 ```typescript
-class UpgradeSubmittedEvent extends NetEvent {
+class UpdateSubmittedEvent extends NetEvent {
     constructor(
         sourceAddress: Address,  // Contract with new bytecode
         submitBlock: u64,        // Block when submitted
@@ -122,12 +122,12 @@ class UpgradeSubmittedEvent extends NetEvent {
 }
 ```
 
-### UpgradeAppliedEvent
+### UpdateAppliedEvent
 
-Emitted when an upgrade is applied.
+Emitted when an update is applied.
 
 ```typescript
-class UpgradeAppliedEvent extends NetEvent {
+class UpdateAppliedEvent extends NetEvent {
     constructor(
         sourceAddress: Address,  // Contract with new bytecode
         appliedAtBlock: u64      // Block when applied
@@ -135,12 +135,12 @@ class UpgradeAppliedEvent extends NetEvent {
 }
 ```
 
-### UpgradeCancelledEvent
+### UpdateCancelledEvent
 
-Emitted when a pending upgrade is cancelled.
+Emitted when a pending update is cancelled.
 
 ```typescript
-class UpgradeCancelledEvent extends NetEvent {
+class UpdateCancelledEvent extends NetEvent {
     constructor(
         sourceAddress: Address,  // Cancelled source contract
         cancelledAtBlock: u64    // Block when cancelled
@@ -155,19 +155,19 @@ class UpgradeCancelledEvent extends NetEvent {
 ```typescript
 @final
 export class SimpleUpgradeable extends Upgradeable {
-    protected readonly upgradeDelay: u64 = 144; // ~1 day
+    protected readonly updateDelay: u64 = 144; // ~1 day
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
         switch (method) {
-            case encodeSelector('submitUpgrade'):
-                return this.submitUpgrade(calldata.readAddress());
-            case encodeSelector('applyUpgrade'): {
+            case encodeSelector('submitUpdate'):
+                return this.submitUpdate(calldata.readAddress());
+            case encodeSelector('applyUpdate'): {
                 const sourceAddress = calldata.readAddress();
                 const updateCalldata = calldata.readBytesWithLength();
-                return this.applyUpgrade(sourceAddress, updateCalldata);
+                return this.applyUpdate(sourceAddress, updateCalldata);
             }
-            case encodeSelector('cancelUpgrade'):
-                return this.cancelUpgrade();
+            case encodeSelector('cancelUpdate'):
+                return this.cancelUpdate();
             default:
                 return super.execute(method, calldata);
         }
@@ -175,62 +175,62 @@ export class SimpleUpgradeable extends Upgradeable {
 }
 ```
 
-### With Upgrade Status Views
+### With Update Status Views
 
 ```typescript
 @final
 export class UpgradeableWithViews extends Upgradeable {
-    protected readonly upgradeDelay: u64 = 1008; // ~1 week
+    protected readonly updateDelay: u64 = 1008; // ~1 week
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
         switch (method) {
-            // Upgrade actions
-            case encodeSelector('submitUpgrade'):
-                return this.submitUpgrade(calldata.readAddress());
-            case encodeSelector('applyUpgrade'): {
+            // Update actions
+            case encodeSelector('submitUpdate'):
+                return this.submitUpdate(calldata.readAddress());
+            case encodeSelector('applyUpdate'): {
                 const sourceAddress = calldata.readAddress();
                 const updateCalldata = calldata.readBytesWithLength();
-                return this.applyUpgrade(sourceAddress, updateCalldata);
+                return this.applyUpdate(sourceAddress, updateCalldata);
             }
-            case encodeSelector('cancelUpgrade'):
-                return this.cancelUpgrade();
+            case encodeSelector('cancelUpdate'):
+                return this.cancelUpdate();
 
             // View methods
-            case encodeSelector('getPendingUpgrade'):
-                return this.getPendingUpgrade();
-            case encodeSelector('getUpgradeStatus'):
-                return this.getUpgradeStatus();
+            case encodeSelector('getPendingUpdate'):
+                return this.getPendingUpdate();
+            case encodeSelector('getUpdateStatus'):
+                return this.getUpdateStatus();
 
             default:
                 return super.execute(method, calldata);
         }
     }
 
-    private getPendingUpgrade(): BytesWriter {
+    private getPendingUpdate(): BytesWriter {
         const response = new BytesWriter(32);
-        response.writeAddress(this.pendingUpgradeAddress);
+        response.writeAddress(this.pendingUpdateAddress);
         return response;
     }
 
-    private getUpgradeStatus(): BytesWriter {
+    private getUpdateStatus(): BytesWriter {
         const response = new BytesWriter(17);
-        response.writeBoolean(this.hasPendingUpgrade);
-        response.writeU64(this.pendingUpgradeBlock);
-        response.writeU64(this.upgradeEffectiveBlock);
+        response.writeBoolean(this.hasPendingUpdate);
+        response.writeU64(this.pendingUpdateBlock);
+        response.writeU64(this.updateEffectiveBlock);
         return response;
     }
 }
 ```
 
-### Emergency Upgrades (Not Recommended)
+### Emergency Updates (Not Recommended)
 
-For contracts that need faster upgrades (use with caution):
+For contracts that need faster updates (use with caution):
 
 ```typescript
 @final
 export class QuickUpgradeable extends Upgradeable {
     // Only 6 blocks (~1 hour) - use only for emergencies
-    protected readonly upgradeDelay: u64 = 6;
+    protected readonly updateDelay: u64 = 6;
 
     // ... rest of implementation
 }
@@ -251,13 +251,13 @@ Choose an appropriate delay based on your contract's risk profile:
 
 ### 2. Source Validation
 
-The `submitUpgrade` function validates that the source is a deployed contract. This prevents:
+The `submitUpdate` function validates that the source is a deployed contract. This prevents:
 - Submitting non-existent addresses
 - Last-minute malicious deployments
 
 ### 3. Address Match Verification
 
-The `applyUpgrade` function requires the address to match the pending upgrade. This prevents:
+The `applyUpdate` function requires the address to match the pending update. This prevents:
 - Front-running attacks
 - Address substitution attacks
 
@@ -280,22 +280,22 @@ class ContractV2 extends Upgradeable {
 }
 ```
 
-## Upgrade Workflow
+## Update Workflow
 
 ```
 1. Deploy new bytecode contract
    └─> Returns: newContractAddress
 
-2. Submit upgrade
-   └─> submitUpgrade(newContractAddress)
-   └─> Emits: UpgradeSubmitted
+2. Submit update
+   └─> submitUpdate(newContractAddress)
+   └─> Emits: UpdateSubmitted
 
 3. Wait for delay
    └─> Users can monitor and exit
 
-4. Apply upgrade
-   └─> applyUpgrade(newContractAddress)
-   └─> Emits: UpgradeApplied
+4. Apply update
+   └─> applyUpdate(newContractAddress)
+   └─> Emits: UpdateApplied
    └─> VM calls onUpdate() on new bytecode
    └─> New bytecode active next block
 
@@ -310,7 +310,7 @@ Override `onUpdate` in your new contract version to perform migrations:
 ```typescript
 @final
 export class MyContractV2 extends Upgradeable {
-    protected readonly upgradeDelay: u64 = 144;
+    protected readonly updateDelay: u64 = 144;
 
     // New storage added in V2
     private newFeaturePointer: u16 = Blockchain.nextPointer;
@@ -362,7 +362,7 @@ class UpgradeableWithReentrancy extends Upgradeable {
 
 @final
 export class SecureUpgradeableVault extends UpgradeableWithReentrancy {
-    // Implementation with both upgrade and reentrancy protection
+    // Implementation with both update and reentrancy protection
 }
 ```
 
@@ -370,12 +370,12 @@ export class SecureUpgradeableVault extends UpgradeableWithReentrancy {
 
 | Feature | OpenZeppelin UUPS | OP_NET Upgradeable |
 |---------|-------------------|-------------------|
-| Upgrade mechanism | delegatecall | Native bytecode replacement |
+| Update mechanism | delegatecall | Native bytecode replacement |
 | Storage location | Implementation contract | Same contract |
 | Proxy overhead | Yes | No |
 | Timelock | Separate contract (optional) | Built-in |
 | Events | Custom | Built-in |
-| Cancel upgrade | Custom implementation | Built-in |
+| Cancel update | Custom implementation | Built-in |
 
 ---
 
