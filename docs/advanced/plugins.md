@@ -192,7 +192,7 @@ class LoggingPlugin extends Plugin {
     }
 }
 
-// Plugin that handles method selectors (like UpgradeablePlugin)
+// Plugin that handles method selectors (like UpdatablePlugin)
 class MethodHandlerPlugin extends Plugin {
     public override execute(method: Selector, calldata: Calldata): BytesWriter | null {
         switch (method) {

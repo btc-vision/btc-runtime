@@ -121,7 +121,7 @@ Immediate updates are risky because users have no time to react to potentially m
 ```mermaid
 sequenceDiagram
     participant Owner as Contract Owner
-    participant Contract as Upgradeable Contract
+    participant Contract as Updatable Contract
     participant Users as Users/Indexers
 
     Note over Owner: Day 1: Submit update
@@ -141,11 +141,11 @@ sequenceDiagram
     Contract-->>Users: Emit UpdateApplied event
 ```
 
-### Using the Upgradeable Base Class
+### Using the Updatable Base Class
 
 ```typescript
 import {
-    Upgradeable,
+    Updatable,
     Calldata,
     BytesWriter,
     encodeSelector,
@@ -154,7 +154,7 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 
 @final
-export class MyUpgradeableContract extends Upgradeable {
+export class MyUpdatableContract extends Updatable {
     // Set update delay: 144 blocks = ~24 hours
     protected readonly updateDelay: u64 = 144;
 
@@ -177,14 +177,14 @@ export class MyUpgradeableContract extends Upgradeable {
 }
 ```
 
-### Using the UpgradeablePlugin
+### Using the UpdatablePlugin
 
-If you don't want to extend a base class (for example, if you're already extending `OP20` or `OP721`), use the `UpgradeablePlugin` instead. The plugin system is fully automatic - just register the plugin in your constructor:
+If you don't want to extend a base class (for example, if you're already extending `OP20` or `OP721`), use the `UpdatablePlugin` instead. The plugin system is fully automatic - just register the plugin in your constructor:
 
 ```typescript
 import {
     OP20,
-    UpgradeablePlugin,
+    UpdatablePlugin,
 } from '@btc-vision/btc-runtime/runtime';
 
 @final
@@ -192,7 +192,7 @@ export class MyToken extends OP20 {
     public constructor() {
         super();
         // Register the plugin - 144 blocks = ~24 hours (default)
-        this.registerPlugin(new UpgradeablePlugin(144));
+        this.registerPlugin(new UpdatablePlugin(144));
     }
 
     // No need to modify execute() - update methods are handled automatically!
@@ -219,7 +219,7 @@ The plugin automatically handles these methods:
 
 ### Update Events
 
-The `Upgradeable` contract emits events for monitoring:
+The `Updatable` contract emits events for monitoring:
 
 ```typescript
 // Emitted when an update is submitted
@@ -437,7 +437,7 @@ This provides a clean transition with no mid-block ambiguity.
 
 ```typescript
 import {
-    Upgradeable,
+    Updatable,
     Blockchain,
     Calldata,
     BytesWriter,
@@ -449,7 +449,7 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 
 @final
-export class UpgradeableVault extends Upgradeable {
+export class UpdatableVault extends Updatable {
     // 1-week update delay for security
     protected readonly updateDelay: u64 = 1008;
 

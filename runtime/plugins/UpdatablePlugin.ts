@@ -14,13 +14,13 @@ import {
     UpdateAppliedEvent,
     UpdateCancelledEvent,
     UpdateSubmittedEvent,
-} from '../events/upgradeable/UpgradeableEvents';
+} from '../events/updatable/UpdatableEvents';
 
 /**
- * UpgradeablePlugin - Plugin for upgradeable contracts with timelock protection.
+ * UpdatablePlugin - Plugin for updatable contracts with timelock protection.
  *
  * This plugin provides a secure update mechanism with a configurable delay period.
- * Unlike extending the Upgradeable base class, this plugin can be added to any contract.
+ * Unlike extending the Updatable base class, this plugin can be added to any contract.
  *
  * The pattern prevents instant malicious updates by requiring:
  * 1. submitUpdate() - Submit the source contract address, starts the timelock
@@ -34,20 +34,20 @@ import {
  *     public constructor() {
  *         super();
  *         // 144 blocks = ~24 hours
- *         this.registerPlugin(new UpgradeablePlugin(144));
+ *         this.registerPlugin(new UpdatablePlugin(144));
  *     }
  *
  *     // No need to modify execute() - the plugin handles update methods automatically!
  * }
  * ```
  */
-export class UpgradeablePlugin extends Plugin {
+export class UpdatablePlugin extends Plugin {
     private readonly _pendingUpdateAddress: StoredAddress;
     private readonly _pendingUpdateBlock: StoredU256;
     private readonly _updateDelay: u64;
 
     /**
-     * Creates a new UpgradeablePlugin.
+     * Creates a new UpdatablePlugin.
      *
      * @param updateDelay - Number of blocks to wait before update can be applied.
      *                       Default: 144 blocks (~24 hours)
@@ -145,15 +145,15 @@ export class UpgradeablePlugin extends Plugin {
      */
     public override execute(method: Selector, calldata: Calldata): BytesWriter | null {
         switch (method) {
-            case UpgradeablePlugin.SUBMIT_UPDATE_SELECTOR:
+            case UpdatablePlugin.SUBMIT_UPDATE_SELECTOR:
                 return this.submitUpdate(calldata);
-            case UpgradeablePlugin.APPLY_UPDATE_SELECTOR:
+            case UpdatablePlugin.APPLY_UPDATE_SELECTOR:
                 return this.applyUpdate(calldata);
-            case UpgradeablePlugin.CANCEL_UPDATE_SELECTOR:
+            case UpdatablePlugin.CANCEL_UPDATE_SELECTOR:
                 return this.cancelUpdate();
-            case UpgradeablePlugin.PENDING_UPDATE_SELECTOR:
+            case UpdatablePlugin.PENDING_UPDATE_SELECTOR:
                 return this.getPendingUpdate();
-            case UpgradeablePlugin.UPDATE_DELAY_SELECTOR:
+            case UpdatablePlugin.UPDATE_DELAY_SELECTOR:
                 return this.getUpdateDelay();
             default:
                 return null;

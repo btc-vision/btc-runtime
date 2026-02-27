@@ -1,14 +1,14 @@
-# Upgradeable
+# Updatable
 
-The `Upgradeable` base class provides a secure update mechanism with configurable timelock protection. Contracts extending `Upgradeable` can replace their bytecode while giving users time to assess pending changes.
+The `Updatable` base class provides a secure update mechanism with configurable timelock protection. Contracts extending `Updatable` can replace their bytecode while giving users time to assess pending changes.
 
-> **Alternative**: If you're already extending another base class (like `OP20` or `OP721`), use the [`UpgradeablePlugin`](../advanced/contract-upgrades.md#using-the-upgradeableplugin) instead. Just call `this.registerPlugin(new UpgradeablePlugin(144))` in your constructor - no other code changes needed!
+> **Alternative**: If you're already extending another base class (like `OP20` or `OP721`), use the [`UpdatablePlugin`](../advanced/updatable#using-the-updatableplugin) instead. Just call `this.registerPlugin(new UpdatablePlugin(144))` in your constructor - no other code changes needed!
 
 ## Overview
 
 ```typescript
 import {
-    Upgradeable,
+    Updatable,
     Calldata,
     BytesWriter,
     encodeSelector,
@@ -17,7 +17,7 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 
 @final
-export class MyContract extends Upgradeable {
+export class MyContract extends Updatable {
     // Set delay: 144 blocks = ~24 hours
     protected readonly updateDelay: u64 = 144;
 
@@ -150,11 +150,11 @@ class UpdateCancelledEvent extends NetEvent {
 
 ## Usage Patterns
 
-### Basic Upgradeable Contract
+### Basic Updatable Contract
 
 ```typescript
 @final
-export class SimpleUpgradeable extends Upgradeable {
+export class SimpleUpdatable extends Updatable {
     protected readonly updateDelay: u64 = 144; // ~1 day
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
@@ -179,7 +179,7 @@ export class SimpleUpgradeable extends Upgradeable {
 
 ```typescript
 @final
-export class UpgradeableWithViews extends Upgradeable {
+export class UpdatableWithViews extends Updatable {
     protected readonly updateDelay: u64 = 1008; // ~1 week
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
@@ -228,7 +228,7 @@ For contracts that need faster updates (use with caution):
 
 ```typescript
 @final
-export class QuickUpgradeable extends Upgradeable {
+export class QuickUpdatable extends Updatable {
     // Only 6 blocks (~1 hour) - use only for emergencies
     protected readonly updateDelay: u64 = 6;
 
@@ -267,13 +267,13 @@ When upgrading, ensure storage layout compatibility:
 
 ```typescript
 // V1 - Original
-class ContractV1 extends Upgradeable {
+class ContractV1 extends Updatable {
     private ptr1: u16 = Blockchain.nextPointer; // Pointer 1
     private ptr2: u16 = Blockchain.nextPointer; // Pointer 2
 }
 
 // V2 - Add new pointers at the END
-class ContractV2 extends Upgradeable {
+class ContractV2 extends Updatable {
     private ptr1: u16 = Blockchain.nextPointer; // Pointer 1 (same)
     private ptr2: u16 = Blockchain.nextPointer; // Pointer 2 (same)
     private ptr3: u16 = Blockchain.nextPointer; // Pointer 3 (NEW)
@@ -309,7 +309,7 @@ Override `onUpdate` in your new contract version to perform migrations:
 
 ```typescript
 @final
-export class MyContractV2 extends Upgradeable {
+export class MyContractV2 extends Updatable {
     protected readonly updateDelay: u64 = 144;
 
     // New storage added in V2
@@ -331,15 +331,15 @@ export class MyContractV2 extends Upgradeable {
 }
 ```
 
-See [The onUpdate Lifecycle Hook](../advanced/contract-upgrades.md#the-onupdate-lifecycle-hook) for more details.
+See [The onUpdate Lifecycle Hook](../advanced/updatable#the-onupdate-lifecycle-hook) for more details.
 
 ## Combining with Other Base Classes
 
-### Upgradeable + ReentrancyGuard
+### Updatable + ReentrancyGuard
 
 ```typescript
 // Create a combined base class
-class UpgradeableWithReentrancy extends Upgradeable {
+class UpdatableWithReentrancy extends Updatable {
     protected readonly reentrancyLevel: ReentrancyLevel = ReentrancyLevel.STANDARD;
     private _locked: StoredBoolean;
 
@@ -361,14 +361,14 @@ class UpgradeableWithReentrancy extends Upgradeable {
 }
 
 @final
-export class SecureUpgradeableVault extends UpgradeableWithReentrancy {
+export class SecureUpdatableVault extends UpdatableWithReentrancy {
     // Implementation with both update and reentrancy protection
 }
 ```
 
 ## Solidity Comparison
 
-| Feature | OpenZeppelin UUPS | OP_NET Upgradeable |
+| Feature | OpenZeppelin UUPS | OP_NET Updatable |
 |---------|-------------------|-------------------|
 | Update mechanism | delegatecall | Native bytecode replacement |
 | Storage location | Implementation contract | Same contract |

@@ -1,7 +1,7 @@
 /**
- * Test Suite: Upgradeable Contract and Events
+ * Test Suite: Updatable Contract and Events
  *
- * This test suite validates the Upgradeable contract events and their data encoding.
+ * This test suite validates the Updatable contract events and their data encoding.
  *
  * Expected Behaviors:
  * - UpdateSubmittedEvent correctly encodes source address and block numbers
@@ -15,7 +15,7 @@ import {
     UpdateSubmittedEvent,
     UpdateAppliedEvent,
     UpdateCancelledEvent,
-} from '../runtime/events/upgradeable/UpgradeableEvents';
+} from '../runtime/events/updatable/UpdatableEvents';
 import { Address } from '../runtime/types/Address';
 import { ADDRESS_BYTE_LENGTH } from '../runtime/utils';
 
@@ -48,7 +48,7 @@ function createSequentialAddress(): Address {
     return new Address(bytes);
 }
 
-describe('Upgradeable Events', () => {
+describe('Updatable Events', () => {
     describe('UpdateSubmittedEvent', () => {
         it('should create event with correct type name', () => {
             const address = createZeroAddress();

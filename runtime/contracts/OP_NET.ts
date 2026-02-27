@@ -100,7 +100,7 @@ export class OP_NET implements IBTC {
      * ```typescript
      * public constructor() {
      *     super();
-     *     this.registerPlugin(new UpgradeablePlugin(144));
+     *     this.registerPlugin(new UpdatablePlugin(144));
      * }
      * ```
      *

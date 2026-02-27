@@ -458,7 +458,7 @@ updateData.writeU256(migrationVersion);
 Blockchain.updateContractFromExisting(newBytecodeAddress, updateData);
 ```
 
-> **Warning:** This is a privileged operation. Always implement access control (e.g., `onlyDeployer`) and consider using the `Upgradeable` base class or `UpgradeablePlugin` for timelock protection. See [Contract Updates](../advanced/contract-upgrades.md) for details.
+> **Warning:** This is a privileged operation. Always implement access control (e.g., `onlyDeployer`) and consider using the `Updatable` base class or `UpdatablePlugin` for timelock protection. See [Contract Updates](../advanced/updatable) for details.
 
 ## Cryptographic Operations
 

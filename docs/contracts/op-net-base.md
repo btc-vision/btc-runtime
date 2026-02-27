@@ -255,7 +255,7 @@ public override onUpdate(calldata: Calldata): void {
 }
 ```
 
-> **Note:** This hook is called on the **new** bytecode, not the old one. See [Contract Updates](../advanced/contract-upgrades.md#the-onupdate-lifecycle-hook) for details.
+> **Note:** This hook is called on the **new** bytecode, not the old one. See [Contract Updates](../advanced/updatable#the-onupdate-lifecycle-hook) for details.
 
 ### 3. Method Execution
 

@@ -11,13 +11,13 @@ import {
     UpdateAppliedEvent,
     UpdateCancelledEvent,
     UpdateSubmittedEvent,
-} from '../events/upgradeable/UpgradeableEvents';
+} from '../events/updatable/UpdatableEvents';
 
 const pendingUpdateAddressPointer: u16 = Blockchain.nextPointer;
 const pendingUpdateBlockPointer: u16 = Blockchain.nextPointer;
 
 /**
- * Upgradeable - Base contract for upgradeable contracts with timelock protection.
+ * Updatable - Base contract for updatable contracts with timelock protection.
  *
  * This contract provides a secure update mechanism with a configurable delay period.
  * The pattern prevents instant malicious updates by requiring:
@@ -30,7 +30,7 @@ const pendingUpdateBlockPointer: u16 = Blockchain.nextPointer;
  * @example
  * ```typescript
  * @final
- * export class MyUpgradeableContract extends Upgradeable {
+ * export class MyUpdatableContract extends Updatable {
  *     // Set a 24-hour delay (144 blocks at 10 min/block)
  *     protected readonly updateDelay: u64 = 144;
  *
@@ -51,7 +51,7 @@ const pendingUpdateBlockPointer: u16 = Blockchain.nextPointer;
  * }
  * ```
  */
-export class Upgradeable extends OP_NET {
+export class Updatable extends OP_NET {
     /**
      * The pending update source address.
      * Zero address means no pending update.
