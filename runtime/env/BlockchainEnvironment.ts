@@ -675,12 +675,12 @@ export class BlockchainEnvironment {
             throw new Revert('Source address must be a deployed contract');
         }
 
-        const callDataBuffer = calldata ? calldata.getBuffer().buffer : new ArrayBuffer(0);
+        const calldataBuffer = calldata ? calldata.getBuffer().buffer : new ArrayBuffer(0);
 
         const status = updateFromAddress(
             sourceAddress.buffer,
-            callDataBuffer,
-            callDataBuffer.byteLength,
+            calldataBuffer,
+            calldataBuffer.byteLength,
         );
 
         if (status !== 0) {
