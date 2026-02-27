@@ -610,7 +610,7 @@ export class BlockchainEnvironment {
      * @example
      * ```typescript
      * // Simple immediate update (not recommended for production)
-     * public upgrade(calldata: Calldata): BytesWriter {
+     * public update(calldata: Calldata): BytesWriter {
      *     this.onlyDeployer(Blockchain.tx.sender);
      *     const newBytecodeAddress = calldata.readAddress();
      *     Blockchain.updateContractFromExisting(newBytecodeAddress);
@@ -903,7 +903,7 @@ export class BlockchainEnvironment {
      * The `unsafeSignaturesAllowed()` flag indicates whether the network is still accepting
      * legacy Schnorr signatures. This flag will be `true` during the transition period to
      * maintain backwards compatibility with existing infrastructure. Once the network completes
-     * its quantum-resistant upgrade, this flag will permanently become `false`, enforcing
+     * its quantum-resistant update, this flag will permanently become `false`, enforcing
      * ML-DSA signatures exclusively.
      *
      * @param address - The address containing the public key(s) to verify against.

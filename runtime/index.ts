@@ -20,7 +20,7 @@ export * from './interfaces/IBTC';
 export * from './events/NetEvent';
 export * from './events/predefined';
 export * from './events/op20s/OP20SEvents';
-export * from './events/upgradeable/UpgradeableEvents';
+export * from './events/updatable/UpdatableEvents';
 
 /** Env */
 export * from './env/classes/UTXO';
@@ -112,9 +112,9 @@ export * from './contracts/interfaces/IOP721';
 export * from './contracts/interfaces/IOP1155';
 export * from './contracts/interfaces/OP721InitParameters';
 export * from './contracts/ReentrancyGuard';
-export * from './contracts/Upgradeable';
+export * from './contracts/Updatable';
 export * from './contracts/interfaces/OP1155InitParameters';
 
 /** Plugins */
 export * from './plugins/Plugin';
-export * from './plugins/UpgradeablePlugin';
+export * from './plugins/UpdatablePlugin';
