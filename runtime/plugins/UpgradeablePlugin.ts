@@ -75,7 +75,7 @@ export class UpgradeablePlugin extends Plugin {
     }
 
     public static get APPLY_UPGRADE_SELECTOR(): Selector {
-        return encodeSelector('applyUpgrade(address)');
+        return encodeSelector('applyUpgrade(address,bytes)');
     }
 
     public static get CANCEL_UPGRADE_SELECTOR(): Selector {
@@ -214,16 +214,13 @@ export class UpgradeablePlugin extends Plugin {
 
         Blockchain.emit(new UpgradeAppliedEvent(sourceAddress, Blockchain.block.number));
 
-        // Extract remaining calldata for onUpdate
-        const remainingLength = calldata.byteLength - calldata.getOffset();
-        const updateCalldata = new BytesWriter(remainingLength);
-        if (remainingLength > 0) {
-            const remainingBytes = calldata.readBytes(remainingLength);
-            updateCalldata.writeBytes(remainingBytes);
-        }
+        const updateCalldata = calldata.readBytesWithLength();
+
+        const writer = new BytesWriter(updateCalldata.byteLength)
+        writer.writeBytes(updateCalldata);
 
         // Perform upgrade - new bytecode takes effect next block
-        Blockchain.updateContractFromExisting(sourceAddress, updateCalldata);
+        Blockchain.updateContractFromExisting(sourceAddress, writer);
 
         return new BytesWriter(0);
     }

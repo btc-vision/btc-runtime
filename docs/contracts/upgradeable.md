@@ -27,11 +27,7 @@ export class MyContract extends Upgradeable {
                 return this.submitUpgrade(calldata.readAddress());
             case encodeSelector('applyUpgrade'): {
                 const sourceAddress = calldata.readAddress();
-                const remainingLength = calldata.byteLength - ADDRESS_BYTE_LENGTH;
-                const updateCalldata = new BytesWriter(remainingLength);
-                if (remainingLength > 0) {
-                    updateCalldata.writeBytes(calldata.readBytes(remainingLength));
-                }
+                const updateCalldata = calldata.readBytesWithLength();
                 return this.applyUpgrade(sourceAddress, updateCalldata);
             }
             case encodeSelector('cancelUpgrade'):
@@ -167,11 +163,7 @@ export class SimpleUpgradeable extends Upgradeable {
                 return this.submitUpgrade(calldata.readAddress());
             case encodeSelector('applyUpgrade'): {
                 const sourceAddress = calldata.readAddress();
-                const remainingLength = calldata.byteLength - ADDRESS_BYTE_LENGTH;
-                const updateCalldata = new BytesWriter(remainingLength);
-                if (remainingLength > 0) {
-                    updateCalldata.writeBytes(calldata.readBytes(remainingLength));
-                }
+                const updateCalldata = calldata.readBytesWithLength();
                 return this.applyUpgrade(sourceAddress, updateCalldata);
             }
             case encodeSelector('cancelUpgrade'):
@@ -197,11 +189,7 @@ export class UpgradeableWithViews extends Upgradeable {
                 return this.submitUpgrade(calldata.readAddress());
             case encodeSelector('applyUpgrade'): {
                 const sourceAddress = calldata.readAddress();
-                const remainingLength = calldata.byteLength - ADDRESS_BYTE_LENGTH;
-                const updateCalldata = new BytesWriter(remainingLength);
-                if (remainingLength > 0) {
-                    updateCalldata.writeBytes(calldata.readBytes(remainingLength));
-                }
+                const updateCalldata = calldata.readBytesWithLength();
                 return this.applyUpgrade(sourceAddress, updateCalldata);
             }
             case encodeSelector('cancelUpgrade'):
