@@ -1,10 +1,10 @@
-# Contract Upgrades
+# Contract Updates
 
-OP_NET provides a native bytecode replacement mechanism that allows contracts to upgrade their execution logic while preserving their address and storage state. This guide covers the upgrade mechanism, security considerations, and the timelock pattern for safe upgrades.
+OP_NET provides a native bytecode replacement mechanism that allows contracts to update their execution logic while preserving their address and storage state. This guide covers the update mechanism, security considerations, and the timelock pattern for safe updates.
 
 ## Overview
 
-Unlike Ethereum's proxy patterns or Solana's upgrade authority model, OP_NET enables contracts to replace their own bytecode through a VM opcode. The mechanism uses an address-based replacement model where new bytecode is deployed to a temporary contract, and the target contract references that address to perform the upgrade.
+Unlike Ethereum's proxy patterns or Solana's upgrade authority model, OP_NET enables contracts to replace their own bytecode through a VM opcode. The mechanism uses an address-based replacement model where new bytecode is deployed to a temporary contract, and the target contract references that address to perform the update.
 
 ```typescript
 import { Blockchain } from '@btc-vision/btc-runtime/runtime';
@@ -28,8 +28,8 @@ sequenceDiagram
     Owner->>VM: Deploy new contract with updated code
     VM->>Source: Create contract at new address
 
-    Note over Owner: Step 2: Call upgrade function
-    Owner->>Target: upgrade(sourceAddress)
+    Note over Owner: Step 2: Call update function
+    Owner->>Target: update(sourceAddress)
     Target->>Target: Validate permissions
     Target->>Target: Validate source is a contract
 
@@ -63,7 +63,7 @@ Blockchain.updateContractFromExisting(
 ): void
 ```
 
-### Simple Upgrade Function
+### Simple Update Function
 
 ```typescript
 import {
@@ -80,15 +80,15 @@ import {
 export class MyContract extends OP_NET {
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
         switch (method) {
-            case encodeSelector('upgrade(address)'):
-                return this.upgrade(calldata);
+            case encodeSelector('update(address)'):
+                return this.update(calldata);
             default:
                 return super.execute(method, calldata);
         }
     }
 
-    private upgrade(calldata: Calldata): BytesWriter {
-        // Only deployer can upgrade
+    private update(calldata: Calldata): BytesWriter {
+        // Only deployer can update
         this.onlyDeployer(Blockchain.tx.sender);
 
         const sourceAddress = calldata.readAddress();
@@ -98,7 +98,7 @@ export class MyContract extends OP_NET {
             throw new Revert('Source must be a deployed contract');
         }
 
-        // Perform upgrade - takes effect next block
+        // Perform update - takes effect next block
         Blockchain.updateContractFromExisting(sourceAddress);
 
         return new BytesWriter(0);
@@ -108,44 +108,44 @@ export class MyContract extends OP_NET {
 
 ## The Timelock Pattern
 
-Immediate upgrades are risky because users have no time to react to potentially malicious changes. The timelock pattern addresses this by requiring a delay between submitting and applying an upgrade.
+Immediate updates are risky because users have no time to react to potentially malicious changes. The timelock pattern addresses this by requiring a delay between submitting and applying an update.
 
 ### Why Use a Timelock?
 
-1. **User Protection**: Users can monitor for pending upgrades and exit if they distrust changes
-2. **Attack Prevention**: Prevents instant malicious upgrades
-3. **Transparency**: All pending upgrades are visible on-chain
+1. **User Protection**: Users can monitor for pending updates and exit if they distrust changes
+2. **Attack Prevention**: Prevents instant malicious updates
+3. **Transparency**: All pending updates are visible on-chain
 
 ### Timelock Flow
 
 ```mermaid
 sequenceDiagram
     participant Owner as Contract Owner
-    participant Contract as Upgradeable Contract
+    participant Contract as Updatable Contract
     participant Users as Users/Indexers
 
-    Note over Owner: Day 1: Submit upgrade
-    Owner->>Contract: submitUpgrade(sourceAddress)
+    Note over Owner: Day 1: Submit update
+    Owner->>Contract: submitUpdate(sourceAddress)
     Contract->>Contract: Store pending address + block
-    Contract-->>Users: Emit UpgradeSubmitted event
+    Contract-->>Users: Emit UpdateSubmitted event
 
     Note over Users: Users can monitor and exit
-    Users->>Users: Review pending upgrade
+    Users->>Users: Review pending update
     Users->>Users: Exit if distrustful
 
     Note over Owner: Day 2+: Apply after delay
-    Owner->>Contract: applyUpgrade(sourceAddress, updateCalldata)
+    Owner->>Contract: applyUpdate(sourceAddress, updateCalldata)
     Contract->>Contract: Verify delay elapsed
     Contract->>Contract: Verify address matches
-    Contract->>Contract: Execute upgrade
-    Contract-->>Users: Emit UpgradeApplied event
+    Contract->>Contract: Execute update
+    Contract-->>Users: Emit UpdateApplied event
 ```
 
-### Using the Upgradeable Base Class
+### Using the Updatable Base Class
 
 ```typescript
 import {
-    Upgradeable,
+    Updatable,
     Calldata,
     BytesWriter,
     encodeSelector,
@@ -154,21 +154,21 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 
 @final
-export class MyUpgradeableContract extends Upgradeable {
-    // Set upgrade delay: 144 blocks = ~24 hours
-    protected readonly upgradeDelay: u64 = 144;
+export class MyUpdatableContract extends Updatable {
+    // Set update delay: 144 blocks = ~24 hours
+    protected readonly updateDelay: u64 = 144;
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
         switch (method) {
-            case encodeSelector('submitUpgrade'):
-                return this.submitUpgrade(calldata.readAddress());
-            case encodeSelector('applyUpgrade'): {
+            case encodeSelector('submitUpdate'):
+                return this.submitUpdate(calldata.readAddress());
+            case encodeSelector('applyUpdate'): {
                 const sourceAddress = calldata.readAddress();
                 const updateCalldata = calldata.readBytesWithLength();
-                return this.applyUpgrade(sourceAddress, updateCalldata);
+                return this.applyUpdate(sourceAddress, updateCalldata);
             }
-            case encodeSelector('cancelUpgrade'):
-                return this.cancelUpgrade();
+            case encodeSelector('cancelUpdate'):
+                return this.cancelUpdate();
             // ... other methods
             default:
                 return super.execute(method, calldata);
@@ -177,14 +177,14 @@ export class MyUpgradeableContract extends Upgradeable {
 }
 ```
 
-### Using the UpgradeablePlugin
+### Using the UpdatablePlugin
 
-If you don't want to extend a base class (for example, if you're already extending `OP20` or `OP721`), use the `UpgradeablePlugin` instead. The plugin system is fully automatic - just register the plugin in your constructor:
+If you don't want to extend a base class (for example, if you're already extending `OP20` or `OP721`), use the `UpdatablePlugin` instead. The plugin system is fully automatic - just register the plugin in your constructor:
 
 ```typescript
 import {
     OP20,
-    UpgradeablePlugin,
+    UpdatablePlugin,
 } from '@btc-vision/btc-runtime/runtime';
 
 @final
@@ -192,19 +192,19 @@ export class MyToken extends OP20 {
     public constructor() {
         super();
         // Register the plugin - 144 blocks = ~24 hours (default)
-        this.registerPlugin(new UpgradeablePlugin(144));
+        this.registerPlugin(new UpdatablePlugin(144));
     }
 
-    // No need to modify execute() - upgrade methods are handled automatically!
+    // No need to modify execute() - update methods are handled automatically!
 }
 ```
 
 The plugin automatically handles these methods:
-- `submitUpgrade(address)` - Submit upgrade for timelock
-- `applyUpgrade(address,bytes)` - Apply upgrade after delay
-- `cancelUpgrade()` - Cancel pending upgrade
-- `pendingUpgrade()` - Get pending upgrade info
-- `upgradeDelay()` - Get configured delay
+- `submitUpdate(address)` - Submit update for timelock
+- `applyUpdate(address,bytes)` - Apply update after delay
+- `cancelUpdate()` - Cancel pending update
+- `pendingUpdate()` - Get pending update info
+- `updateDelay()` - Get configured delay
 
 **How it works:** When your contract's `execute()` falls through to `super.execute()`, the base `OP_NET` class automatically checks all registered plugins before throwing "Method not found".
 
@@ -213,30 +213,30 @@ The plugin automatically handles these methods:
 | Delay | Blocks | Use Case |
 |-------|--------|----------|
 | ~1 hour | 6 | Emergency patches (not recommended for production) |
-| ~24 hours | 144 | Standard upgrades (default) |
+| ~24 hours | 144 | Standard updates (default) |
 | ~1 week | 1008 | Critical infrastructure |
 | ~1 month | 4320 | Governance-controlled contracts |
 
-### Upgrade Events
+### Update Events
 
-The `Upgradeable` contract emits events for monitoring:
+The `Updatable` contract emits events for monitoring:
 
 ```typescript
-// Emitted when an upgrade is submitted
-class UpgradeSubmittedEvent {
+// Emitted when an update is submitted
+class UpdateSubmittedEvent {
     sourceAddress: Address;   // New bytecode contract
     submitBlock: u64;         // Block when submitted
-    effectiveBlock: u64;      // Block when upgrade can be applied
+    effectiveBlock: u64;      // Block when update can be applied
 }
 
-// Emitted when an upgrade is applied
-class UpgradeAppliedEvent {
+// Emitted when an update is applied
+class UpdateAppliedEvent {
     sourceAddress: Address;   // New bytecode contract
     appliedAtBlock: u64;      // Block when applied
 }
 
-// Emitted when a pending upgrade is cancelled
-class UpgradeCancelledEvent {
+// Emitted when a pending update is cancelled
+class UpdateCancelledEvent {
     sourceAddress: Address;   // Cancelled source contract
     cancelledAtBlock: u64;    // Block when cancelled
 }
@@ -285,11 +285,11 @@ class MyContractV2Bad extends OP_NET {
 1. **Never remove or reorder existing pointers**
 2. **Always add new pointers at the end**
 3. **Document pointer assignments**
-4. **Test upgrades thoroughly on testnet**
+4. **Test updates thoroughly on testnet**
 
 ## The onUpdate Lifecycle Hook
 
-When a contract's bytecode is updated via `updateContractFromExisting`, the VM calls the `onUpdate` hook on the **new** bytecode. This allows the new contract version to perform migrations, initialize new storage, or validate the upgrade.
+When a contract's bytecode is updated via `updateContractFromExisting`, the VM calls the `onUpdate` hook on the **new** bytecode. This allows the new contract version to perform migrations, initialize new storage, or validate the update.
 
 ### Basic Usage
 
@@ -346,7 +346,7 @@ private migrateFromV2(): void {
 Then pass the version when upgrading:
 
 ```typescript
-// In the upgrade transaction
+// In the update transaction
 const migrationData = new BytesWriter(8);
 migrationData.writeU64(1); // Migrating from version 1
 
@@ -387,15 +387,15 @@ if (!Blockchain.isContract(sourceAddress)) {
 This prevents an attacker from:
 1. Submitting a not-yet-deployed address
 2. Deploying malicious bytecode just before applying
-3. Front-running the upgrade
+3. Front-running the update
 
 ### Address Verification at Apply
 
-The `applyUpgrade` function requires the address parameter to match the pending upgrade:
+The `applyUpdate` function requires the address parameter to match the pending update:
 
 ```typescript
-if (!sourceAddress.equals(this.pendingUpgradeAddress)) {
-    throw new Revert('Address does not match pending upgrade');
+if (!sourceAddress.equals(this.pendingUpdateAddress)) {
+    throw new Revert('Address does not match pending update');
 }
 ```
 
@@ -410,7 +410,7 @@ The VM does not enforce any specific permission model. Implement appropriate acc
 this.onlyDeployer(Blockchain.tx.sender);
 
 // Advanced: Multisig or governance
-if (!this.isAuthorizedUpgrader(Blockchain.tx.sender)) {
+if (!this.isAuthorizedUpdater(Blockchain.tx.sender)) {
     throw new Revert('Not authorized');
 }
 ```
@@ -437,7 +437,7 @@ This provides a clean transition with no mid-block ambiguity.
 
 ```typescript
 import {
-    Upgradeable,
+    Updatable,
     Blockchain,
     Calldata,
     BytesWriter,
@@ -449,9 +449,9 @@ import {
 } from '@btc-vision/btc-runtime/runtime';
 
 @final
-export class UpgradeableVault extends Upgradeable {
-    // 1-week upgrade delay for security
-    protected readonly upgradeDelay: u64 = 1008;
+export class UpdatableVault extends Updatable {
+    // 1-week update delay for security
+    protected readonly updateDelay: u64 = 1008;
 
     // Storage pointers - never reorder these
     private totalDepositedPointer: u16 = Blockchain.nextPointer;
@@ -467,22 +467,22 @@ export class UpgradeableVault extends Upgradeable {
 
     public override execute(method: Selector, calldata: Calldata): BytesWriter {
         switch (method) {
-            // Upgrade methods
-            case encodeSelector('submitUpgrade'):
-                return this.submitUpgrade(calldata.readAddress());
-            case encodeSelector('applyUpgrade'): {
+            // Update methods
+            case encodeSelector('submitUpdate'):
+                return this.submitUpdate(calldata.readAddress());
+            case encodeSelector('applyUpdate'): {
                 const sourceAddress = calldata.readAddress();
                 const updateCalldata = calldata.readBytesWithLength();
-                return this.applyUpgrade(sourceAddress, updateCalldata);
+                return this.applyUpdate(sourceAddress, updateCalldata);
             }
-            case encodeSelector('cancelUpgrade'):
-                return this.cancelUpgrade();
+            case encodeSelector('cancelUpdate'):
+                return this.cancelUpdate();
 
-            // View methods for upgrade status
-            case encodeSelector('pendingUpgrade'):
-                return this.getPendingUpgrade();
-            case encodeSelector('upgradeEffectiveBlock'):
-                return this.getUpgradeEffectiveBlock();
+            // View methods for update status
+            case encodeSelector('pendingUpdate'):
+                return this.getPendingUpdate();
+            case encodeSelector('updateEffectiveBlock'):
+                return this.getUpdateEffectiveBlock();
 
             // Business logic
             case encodeSelector('deposit'):
@@ -493,16 +493,16 @@ export class UpgradeableVault extends Upgradeable {
         }
     }
 
-    private getPendingUpgrade(): BytesWriter {
+    private getPendingUpdate(): BytesWriter {
         const response = new BytesWriter(40);
-        response.writeAddress(this.pendingUpgradeAddress);
-        response.writeU64(this.pendingUpgradeBlock);
+        response.writeAddress(this.pendingUpdateAddress);
+        response.writeU64(this.pendingUpdateBlock);
         return response;
     }
 
-    private getUpgradeEffectiveBlock(): BytesWriter {
+    private getUpdateEffectiveBlock(): BytesWriter {
         const response = new BytesWriter(8);
-        response.writeU64(this.upgradeEffectiveBlock);
+        response.writeU64(this.updateEffectiveBlock);
         return response;
     }
 
@@ -513,13 +513,13 @@ export class UpgradeableVault extends Upgradeable {
 }
 ```
 
-## Upgrade Workflow
+## Update Workflow
 
 1. **Develop and test new version** on testnet
 2. **Deploy new bytecode** as a separate contract
-3. **Submit upgrade** with `submitUpgrade(newAddress)`
+3. **Submit update** with `submitUpdate(newAddress)`
 4. **Wait for delay** (users can exit during this period)
-5. **Apply upgrade** with `applyUpgrade(newAddress, updateCalldata)`
+5. **Apply update** with `applyUpdate(newAddress, updateCalldata)`
 6. **Verify** new functionality works correctly
 
 ---

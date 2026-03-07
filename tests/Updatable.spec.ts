@@ -1,21 +1,21 @@
 /**
- * Test Suite: Upgradeable Contract and Events
+ * Test Suite: Updatable Contract and Events
  *
- * This test suite validates the Upgradeable contract events and their data encoding.
+ * This test suite validates the Updatable contract events and their data encoding.
  *
  * Expected Behaviors:
- * - UpgradeSubmittedEvent correctly encodes source address and block numbers
- * - UpgradeAppliedEvent correctly encodes source address and applied block
- * - UpgradeCancelledEvent correctly encodes source address and cancelled block
+ * - UpdateSubmittedEvent correctly encodes source address and block numbers
+ * - UpdateAppliedEvent correctly encodes source address and applied block
+ * - UpdateCancelledEvent correctly encodes source address and cancelled block
  * - All events have correct event type names
  * - Event data lengths are within limits
  */
 
 import {
-    UpgradeSubmittedEvent,
-    UpgradeAppliedEvent,
-    UpgradeCancelledEvent,
-} from '../runtime/events/upgradeable/UpgradeableEvents';
+    UpdateSubmittedEvent,
+    UpdateAppliedEvent,
+    UpdateCancelledEvent,
+} from '../runtime/events/updatable/UpdatableEvents';
 import { Address } from '../runtime/types/Address';
 import { ADDRESS_BYTE_LENGTH } from '../runtime/utils';
 
@@ -48,144 +48,144 @@ function createSequentialAddress(): Address {
     return new Address(bytes);
 }
 
-describe('Upgradeable Events', () => {
-    describe('UpgradeSubmittedEvent', () => {
+describe('Updatable Events', () => {
+    describe('UpdateSubmittedEvent', () => {
         it('should create event with correct type name', () => {
             const address = createZeroAddress();
-            const event = new UpgradeSubmittedEvent(address, 100, 244);
-            expect(event.eventType).toBe('UpgradeSubmitted');
+            const event = new UpdateSubmittedEvent(address, 100, 244);
+            expect(event.eventType).toBe('UpdateSubmitted');
         });
 
         it('should have correct data length', () => {
             const address = createZeroAddress();
-            const event = new UpgradeSubmittedEvent(address, 100, 244);
+            const event = new UpdateSubmittedEvent(address, 100, 244);
             // ADDRESS_BYTE_LENGTH + 8 (submitBlock) + 8 (effectiveBlock) = ADDRESS_BYTE_LENGTH + 16
             expect(event.length).toBe(ADDRESS_BYTE_LENGTH + 16);
         });
 
         it('should encode zero block numbers correctly', () => {
             const address = createZeroAddress();
-            const event = new UpgradeSubmittedEvent(address, 0, 0);
+            const event = new UpdateSubmittedEvent(address, 0, 0);
             expect(event.length).toBe(ADDRESS_BYTE_LENGTH + 16);
         });
 
         it('should encode large block numbers', () => {
             const address = createZeroAddress();
             const largeBlock: u64 = 1000000000;
-            const event = new UpgradeSubmittedEvent(address, largeBlock, largeBlock + 144);
+            const event = new UpdateSubmittedEvent(address, largeBlock, largeBlock + 144);
             expect(event.length).toBe(ADDRESS_BYTE_LENGTH + 16);
         });
 
         it('should encode max u64 block numbers', () => {
             const address = createZeroAddress();
-            const event = new UpgradeSubmittedEvent(address, u64.MAX_VALUE - 1, u64.MAX_VALUE);
+            const event = new UpdateSubmittedEvent(address, u64.MAX_VALUE - 1, u64.MAX_VALUE);
             expect(event.length).toBe(ADDRESS_BYTE_LENGTH + 16);
         });
 
         it('should handle non-zero address bytes', () => {
             const address = createSequentialAddress();
-            const event = new UpgradeSubmittedEvent(address, 500, 644);
-            expect(event.eventType).toBe('UpgradeSubmitted');
+            const event = new UpdateSubmittedEvent(address, 500, 644);
+            expect(event.eventType).toBe('UpdateSubmitted');
             expect(event.length).toBe(ADDRESS_BYTE_LENGTH + 16);
         });
 
         it('should have retrievable event data', () => {
             const address = createZeroAddress();
-            const event = new UpgradeSubmittedEvent(address, 100, 244);
+            const event = new UpdateSubmittedEvent(address, 100, 244);
             const data = event.getEventData();
             expect(data.length).toBe(ADDRESS_BYTE_LENGTH + 16);
         });
     });
 
-    describe('UpgradeAppliedEvent', () => {
+    describe('UpdateAppliedEvent', () => {
         it('should create event with correct type name', () => {
             const address = createZeroAddress();
-            const event = new UpgradeAppliedEvent(address, 244);
-            expect(event.eventType).toBe('UpgradeApplied');
+            const event = new UpdateAppliedEvent(address, 244);
+            expect(event.eventType).toBe('UpdateApplied');
         });
 
         it('should have correct data length', () => {
             const address = createZeroAddress();
-            const event = new UpgradeAppliedEvent(address, 244);
+            const event = new UpdateAppliedEvent(address, 244);
             // ADDRESS_BYTE_LENGTH + 8 (appliedAtBlock)
             expect(event.length).toBe(ADDRESS_BYTE_LENGTH + 8);
         });
 
         it('should encode zero block number correctly', () => {
             const address = createZeroAddress();
-            const event = new UpgradeAppliedEvent(address, 0);
+            const event = new UpdateAppliedEvent(address, 0);
             expect(event.length).toBe(ADDRESS_BYTE_LENGTH + 8);
         });
 
         it('should encode large block numbers', () => {
             const address = createZeroAddress();
             const largeBlock: u64 = 999999999999;
-            const event = new UpgradeAppliedEvent(address, largeBlock);
+            const event = new UpdateAppliedEvent(address, largeBlock);
             expect(event.length).toBe(ADDRESS_BYTE_LENGTH + 8);
         });
 
         it('should encode max u64 block number', () => {
             const address = createZeroAddress();
-            const event = new UpgradeAppliedEvent(address, u64.MAX_VALUE);
+            const event = new UpdateAppliedEvent(address, u64.MAX_VALUE);
             expect(event.length).toBe(ADDRESS_BYTE_LENGTH + 8);
         });
 
         it('should handle non-zero address bytes', () => {
             const address = createPatternAddress(0xff);
-            const event = new UpgradeAppliedEvent(address, 1000);
-            expect(event.eventType).toBe('UpgradeApplied');
+            const event = new UpdateAppliedEvent(address, 1000);
+            expect(event.eventType).toBe('UpdateApplied');
         });
 
         it('should have retrievable event data', () => {
             const address = createZeroAddress();
-            const event = new UpgradeAppliedEvent(address, 100);
+            const event = new UpdateAppliedEvent(address, 100);
             const data = event.getEventData();
             expect(data.length).toBe(ADDRESS_BYTE_LENGTH + 8);
         });
     });
 
-    describe('UpgradeCancelledEvent', () => {
+    describe('UpdateCancelledEvent', () => {
         it('should create event with correct type name', () => {
             const address = createZeroAddress();
-            const event = new UpgradeCancelledEvent(address, 150);
-            expect(event.eventType).toBe('UpgradeCancelled');
+            const event = new UpdateCancelledEvent(address, 150);
+            expect(event.eventType).toBe('UpdateCancelled');
         });
 
         it('should have correct data length', () => {
             const address = createZeroAddress();
-            const event = new UpgradeCancelledEvent(address, 150);
+            const event = new UpdateCancelledEvent(address, 150);
             // ADDRESS_BYTE_LENGTH + 8 (cancelledAtBlock)
             expect(event.length).toBe(ADDRESS_BYTE_LENGTH + 8);
         });
 
         it('should encode zero block number correctly', () => {
             const address = createZeroAddress();
-            const event = new UpgradeCancelledEvent(address, 0);
+            const event = new UpdateCancelledEvent(address, 0);
             expect(event.length).toBe(ADDRESS_BYTE_LENGTH + 8);
         });
 
         it('should encode large block numbers', () => {
             const address = createZeroAddress();
             const largeBlock: u64 = 123456789012345;
-            const event = new UpgradeCancelledEvent(address, largeBlock);
+            const event = new UpdateCancelledEvent(address, largeBlock);
             expect(event.length).toBe(ADDRESS_BYTE_LENGTH + 8);
         });
 
         it('should encode max u64 block number', () => {
             const address = createZeroAddress();
-            const event = new UpgradeCancelledEvent(address, u64.MAX_VALUE);
+            const event = new UpdateCancelledEvent(address, u64.MAX_VALUE);
             expect(event.length).toBe(ADDRESS_BYTE_LENGTH + 8);
         });
 
         it('should handle non-zero address bytes', () => {
             const address = createSequentialAddress();
-            const event = new UpgradeCancelledEvent(address, 999);
-            expect(event.eventType).toBe('UpgradeCancelled');
+            const event = new UpdateCancelledEvent(address, 999);
+            expect(event.eventType).toBe('UpdateCancelled');
         });
 
         it('should have retrievable event data', () => {
             const address = createZeroAddress();
-            const event = new UpgradeCancelledEvent(address, 100);
+            const event = new UpdateCancelledEvent(address, 100);
             const data = event.getEventData();
             expect(data.length).toBe(ADDRESS_BYTE_LENGTH + 8);
         });
@@ -194,9 +194,9 @@ describe('Upgradeable Events', () => {
     describe('Event type name distinctness', () => {
         it('should have unique event type names', () => {
             const address = createZeroAddress();
-            const submitted = new UpgradeSubmittedEvent(address, 100, 244);
-            const applied = new UpgradeAppliedEvent(address, 244);
-            const cancelled = new UpgradeCancelledEvent(address, 150);
+            const submitted = new UpdateSubmittedEvent(address, 100, 244);
+            const applied = new UpdateAppliedEvent(address, 244);
+            const cancelled = new UpdateCancelledEvent(address, 150);
 
             expect(submitted.eventType).not.toBe(applied.eventType);
             expect(submitted.eventType).not.toBe(cancelled.eventType);
@@ -205,13 +205,13 @@ describe('Upgradeable Events', () => {
 
         it('should have descriptive event type names', () => {
             const address = createZeroAddress();
-            const submitted = new UpgradeSubmittedEvent(address, 100, 244);
-            const applied = new UpgradeAppliedEvent(address, 244);
-            const cancelled = new UpgradeCancelledEvent(address, 150);
+            const submitted = new UpdateSubmittedEvent(address, 100, 244);
+            const applied = new UpdateAppliedEvent(address, 244);
+            const cancelled = new UpdateCancelledEvent(address, 150);
 
-            expect(submitted.eventType.includes('Upgrade')).toBe(true);
-            expect(applied.eventType.includes('Upgrade')).toBe(true);
-            expect(cancelled.eventType.includes('Upgrade')).toBe(true);
+            expect(submitted.eventType.includes('Update')).toBe(true);
+            expect(applied.eventType.includes('Update')).toBe(true);
+            expect(cancelled.eventType.includes('Update')).toBe(true);
         });
     });
 
@@ -226,7 +226,7 @@ describe('Upgradeable Events', () => {
             bytes[ADDRESS_BYTE_LENGTH - 1] = 0xbb;
             const address = new Address(bytes);
 
-            const event = new UpgradeSubmittedEvent(address, 100, 244);
+            const event = new UpdateSubmittedEvent(address, 100, 244);
             const data = event.getEventData();
 
             // First byte should be the first address byte
@@ -240,7 +240,7 @@ describe('Upgradeable Events', () => {
             const submitBlock: u64 = 0x0102030405060708;
             const effectiveBlock: u64 = 0x1112131415161718;
 
-            const event = new UpgradeSubmittedEvent(address, submitBlock, effectiveBlock);
+            const event = new UpdateSubmittedEvent(address, submitBlock, effectiveBlock);
             const data = event.getEventData();
 
             // Block numbers start after address (big-endian encoding by default)
@@ -259,8 +259,8 @@ describe('Upgradeable Events', () => {
             const address1 = createZeroAddress();
             const address2 = createPatternAddress(0xff);
 
-            const event1 = new UpgradeSubmittedEvent(address1, 100, 244);
-            const event2 = new UpgradeSubmittedEvent(address2, 200, 344);
+            const event1 = new UpdateSubmittedEvent(address1, 100, 244);
+            const event2 = new UpdateSubmittedEvent(address2, 200, 344);
 
             expect(event1.length).toBe(event2.length);
             expect(event1.eventType).toBe(event2.eventType);
@@ -283,8 +283,8 @@ describe('Upgradeable Events', () => {
             const address = createZeroAddress();
 
             for (let i: u64 = 0; i < 100; i++) {
-                const event = new UpgradeSubmittedEvent(address, i, i + 144);
-                expect(event.eventType).toBe('UpgradeSubmitted');
+                const event = new UpdateSubmittedEvent(address, i, i + 144);
+                expect(event.eventType).toBe('UpdateSubmitted');
                 expect(event.length).toBe(ADDRESS_BYTE_LENGTH + 16);
             }
         });
@@ -293,7 +293,7 @@ describe('Upgradeable Events', () => {
     describe('Event data boundary cases', () => {
         it('should handle all-zero address', () => {
             const address = createZeroAddress();
-            const event = new UpgradeAppliedEvent(address, 0);
+            const event = new UpdateAppliedEvent(address, 0);
             expect(event.length).toBe(ADDRESS_BYTE_LENGTH + 8);
 
             const data = event.getEventData();
@@ -310,7 +310,7 @@ describe('Upgradeable Events', () => {
 
         it('should handle all-ones address', () => {
             const address = createPatternAddress(0xff);
-            const event = new UpgradeCancelledEvent(address, u64.MAX_VALUE);
+            const event = new UpdateCancelledEvent(address, u64.MAX_VALUE);
 
             expect(event.length).toBe(ADDRESS_BYTE_LENGTH + 8);
 

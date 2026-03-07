@@ -531,7 +531,7 @@ function verify(bytes32 hash, uint8 v, bytes32 r, bytes32 s) external view retur
 
     // CRITICAL VULNERABILITIES:
     // - ECDSA is broken by Shor's algorithm
-    // - No upgrade path to quantum-safe algorithms
+    // - No update path to quantum-safe algorithms
     // - All funds signed with exposed public keys at risk
     // - No way to add ML-DSA or other PQC algorithms
 }
@@ -620,7 +620,7 @@ class OPNetContract extends OP_NET {
 | Solidity Limitation | OP_NET Solution |
 |---------------------|----------------|
 | ECDSA only (quantum vulnerable) | ML-DSA (quantum resistant) |
-| No upgrade path | Built-in consensus migration |
+| No update path | Built-in consensus migration |
 | Must store large keys manually | Automatic key loading |
 | No NIST PQC algorithms | FIPS 204 ML-DSA |
 | Single key per address | Dual-key architecture |
