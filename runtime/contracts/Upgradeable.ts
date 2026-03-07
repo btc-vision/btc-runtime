@@ -40,8 +40,7 @@ const pendingUpgradeBlockPointer: u16 = Blockchain.nextPointer;
  *                 return this.submitUpgrade(calldata.readAddress());
  *             case encodeSelector('applyUpgrade'):
  *                 const sourceAddress = calldata.readAddress();
- *                 const updateCalldata = new BytesWriter(calldata.byteLength - ADDRESS_BYTE_LENGTH);
- *                 // Copy remaining calldata for onUpdate
+ *                 const updateCalldata = calldata.readBytesWithLength();
  *                 return this.applyUpgrade(sourceAddress, updateCalldata);
  *             case encodeSelector('cancelUpgrade'):
  *                 return this.cancelUpgrade();

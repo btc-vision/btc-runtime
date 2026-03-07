@@ -134,7 +134,7 @@ sequenceDiagram
     Users->>Users: Exit if distrustful
 
     Note over Owner: Day 2+: Apply after delay
-    Owner->>Contract: applyUpgrade(sourceAddress)
+    Owner->>Contract: applyUpgrade(sourceAddress, updateCalldata)
     Contract->>Contract: Verify delay elapsed
     Contract->>Contract: Verify address matches
     Contract->>Contract: Execute upgrade
@@ -164,11 +164,7 @@ export class MyUpgradeableContract extends Upgradeable {
                 return this.submitUpgrade(calldata.readAddress());
             case encodeSelector('applyUpgrade'): {
                 const sourceAddress = calldata.readAddress();
-                const remainingLength = calldata.byteLength - ADDRESS_BYTE_LENGTH;
-                const updateCalldata = new BytesWriter(remainingLength);
-                if (remainingLength > 0) {
-                    updateCalldata.writeBytes(calldata.readBytes(remainingLength));
-                }
+                const updateCalldata = calldata.readBytesWithLength();
                 return this.applyUpgrade(sourceAddress, updateCalldata);
             }
             case encodeSelector('cancelUpgrade'):
@@ -205,7 +201,7 @@ export class MyToken extends OP20 {
 
 The plugin automatically handles these methods:
 - `submitUpgrade(address)` - Submit upgrade for timelock
-- `applyUpgrade(address)` - Apply upgrade after delay
+- `applyUpgrade(address,bytes)` - Apply upgrade after delay
 - `cancelUpgrade()` - Cancel pending upgrade
 - `pendingUpgrade()` - Get pending upgrade info
 - `upgradeDelay()` - Get configured delay
@@ -476,11 +472,7 @@ export class UpgradeableVault extends Upgradeable {
                 return this.submitUpgrade(calldata.readAddress());
             case encodeSelector('applyUpgrade'): {
                 const sourceAddress = calldata.readAddress();
-                const remainingLength = calldata.byteLength - ADDRESS_BYTE_LENGTH;
-                const updateCalldata = new BytesWriter(remainingLength);
-                if (remainingLength > 0) {
-                    updateCalldata.writeBytes(calldata.readBytes(remainingLength));
-                }
+                const updateCalldata = calldata.readBytesWithLength();
                 return this.applyUpgrade(sourceAddress, updateCalldata);
             }
             case encodeSelector('cancelUpgrade'):
@@ -527,7 +519,7 @@ export class UpgradeableVault extends Upgradeable {
 2. **Deploy new bytecode** as a separate contract
 3. **Submit upgrade** with `submitUpgrade(newAddress)`
 4. **Wait for delay** (users can exit during this period)
-5. **Apply upgrade** with `applyUpgrade(newAddress)`
+5. **Apply upgrade** with `applyUpgrade(newAddress, updateCalldata)`
 6. **Verify** new functionality works correctly
 
 ---

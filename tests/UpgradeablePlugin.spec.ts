@@ -46,7 +46,7 @@ describe('UpgradeablePlugin', () => {
         });
 
         it('should have correct applyUpgrade selector', () => {
-            const expected = encodeSelector('applyUpgrade(address)');
+            const expected = encodeSelector('applyUpgrade(address,bytes)');
             expect(UpgradeablePlugin.APPLY_UPGRADE_SELECTOR).toBe(expected);
         });
 
@@ -95,7 +95,7 @@ describe('UpgradeablePlugin', () => {
         });
 
         it('should recognize applyUpgrade selector', () => {
-            const selector = encodeSelector('applyUpgrade(address)');
+            const selector = encodeSelector('applyUpgrade(address,bytes)');
             expect(selector).toBe(UpgradeablePlugin.APPLY_UPGRADE_SELECTOR);
         });
 
@@ -145,8 +145,8 @@ describe('UpgradeablePlugin', () => {
         });
 
         it('should produce consistent selector for applyUpgrade', () => {
-            const selector1 = encodeSelector('applyUpgrade(address)');
-            const selector2 = encodeSelector('applyUpgrade(address)');
+            const selector1 = encodeSelector('applyUpgrade(address,bytes)');
+            const selector2 = encodeSelector('applyUpgrade(address,bytes)');
             expect(selector1).toBe(selector2);
         });
 
@@ -158,7 +158,7 @@ describe('UpgradeablePlugin', () => {
 
         it('should produce different selectors for different methods', () => {
             const submit = encodeSelector('submitUpgrade(address)');
-            const apply = encodeSelector('applyUpgrade(address)');
+            const apply = encodeSelector('applyUpgrade(address,bytes)');
             const cancel = encodeSelector('cancelUpgrade()');
 
             expect(submit).not.toBe(apply);
