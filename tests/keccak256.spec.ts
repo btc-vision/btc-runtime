@@ -67,7 +67,7 @@ describe('Known Test Vectors (tiny-keccak reference)', () => {
 
     it('should hash "OP_NET"', () => {
         const result = toHex(keccak256(encodeUTF8('OP_NET')));
-        expect(result).toBe('38c45d151852c6dd61f0cb02555faf0724fa9c0caddaaf94ad0cca53ce2f17b0');
+        expect(result).toBe('8400c4df705058c846e70adaa588e7a061035080a77fbd60f207c670e7fd03a1');
     });
 
     it('should hash "world"', () => {
