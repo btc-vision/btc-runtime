@@ -8,8 +8,6 @@ import { Revert } from '../types/Revert';
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { SafeMath } from '../types/SafeMath';
 import {
-    ON_OP1155_BATCH_RECEIVED_MAGIC,
-    ON_OP1155_RECEIVED_MAGIC,
     ON_OP20_RECEIVED_SELECTOR,
     ON_OP721_RECEIVED_SELECTOR,
 } from '../constants/Exports';
@@ -128,9 +126,7 @@ export class ReentrancyGuard extends OP_NET {
     protected isSelectorExcluded(selector: Selector): boolean {
         return (
             selector === ON_OP20_RECEIVED_SELECTOR ||
-            selector === ON_OP721_RECEIVED_SELECTOR ||
-            selector === ON_OP1155_RECEIVED_MAGIC ||
-            selector === ON_OP1155_BATCH_RECEIVED_MAGIC
+            selector === ON_OP721_RECEIVED_SELECTOR
         );
     }
 }

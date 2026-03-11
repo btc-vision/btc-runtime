@@ -109,11 +109,9 @@ export * from './script/Segwit';
 export * from './constants/Exports';
 export * from './contracts/OP721';
 export * from './contracts/interfaces/IOP721';
-export * from './contracts/interfaces/IOP1155';
 export * from './contracts/interfaces/OP721InitParameters';
 export * from './contracts/ReentrancyGuard';
 export * from './contracts/Updatable';
-export * from './contracts/interfaces/OP1155InitParameters';
 
 /** Plugins */
 export * from './plugins/Plugin';

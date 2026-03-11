@@ -529,8 +529,6 @@ The base `ReentrancyGuard` automatically excludes standard token receiver callba
 // Built-in exclusions in ReentrancyGuard base class:
 // - ON_OP20_RECEIVED_SELECTOR
 // - ON_OP721_RECEIVED_SELECTOR
-// - ON_OP1155_RECEIVED_MAGIC
-// - ON_OP1155_BATCH_RECEIVED_MAGIC
 ```
 
 You can override `isSelectorExcluded` to add custom exclusions:
