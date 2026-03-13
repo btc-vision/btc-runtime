@@ -207,28 +207,6 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         return w;
     }
 
-    @method('collectionInfo')
-    @returns(
-        { name: 'icon', type: ABIDataTypes.STRING },
-        { name: 'banner', type: ABIDataTypes.STRING },
-        { name: 'description', type: ABIDataTypes.STRING },
-        { name: 'website', type: ABIDataTypes.STRING },
-    )
-    public collectionInfo(_: Calldata): BytesWriter {
-        const length =
-            String.UTF8.byteLength(this.collectionIcon) +
-            String.UTF8.byteLength(this.collectionDescription) +
-            String.UTF8.byteLength(this.collectionWebsite) +
-            String.UTF8.byteLength(this.collectionBanner);
-
-        const w = new BytesWriter(U32_BYTE_LENGTH * 4 + length);
-        w.writeStringWithLength(this.collectionIcon);
-        w.writeStringWithLength(this.collectionBanner);
-        w.writeStringWithLength(this.collectionDescription);
-        w.writeStringWithLength(this.collectionWebsite);
-        return w;
-    }
-
     @method({ name: 'tokenId', type: ABIDataTypes.UINT256 })
     @returns({ name: 'uri', type: ABIDataTypes.STRING })
     public tokenURI(calldata: Calldata): BytesWriter {
