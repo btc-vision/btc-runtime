@@ -28,13 +28,7 @@ import { IOP721 } from './interfaces/IOP721';
 import { OP721InitParameters } from './interfaces/OP721InitParameters';
 import { ReentrancyGuard } from './ReentrancyGuard';
 import { StoredMapU256 } from '../storage/maps/StoredMapU256';
-import {
-    ApprovedEvent,
-    ApprovedForAllEvent,
-    MAX_URI_LENGTH,
-    TransferredEvent,
-    URIEvent,
-} from '../events/predefined';
+import { MAX_URI_LENGTH, OP721ApprovedForAllEvent, URIEvent } from '../events/predefined';
 import {
     ON_OP721_RECEIVED_SELECTOR,
     OP712_DOMAIN_TYPE_HASH,
@@ -43,6 +37,10 @@ import {
     OP721_APPROVAL_TYPE_HASH,
 } from '../constants/Exports';
 import { ExtendedAddress } from '../types/ExtendedAddress';
+import { OP721TransferredEvent } from '../events/predefined/OP721TransferredEvent';
+import { OP721ApprovedEvent } from '../events/predefined/OP721ApprovedEvent';
+import { OP721MintedEvent } from '../events/predefined/OP721MintedEvent';
+import { OP721BurnedEvent } from '../events/predefined/OP721BurnedEvent';
 
 const stringPointer: u16 = Blockchain.nextPointer;
 const totalSupplyPointer: u16 = Blockchain.nextPointer;
@@ -606,7 +604,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         // Update total supply
         this._totalSupply.value = SafeMath.add(this._totalSupply.value, u256.One);
 
-        this.createTransferredEvent(Address.zero(), to, tokenId);
+        this.createMintedEvent(to, tokenId);
     }
 
     protected _burn(tokenId: u256): void {
@@ -645,7 +643,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         // Update total supply
         this._totalSupply.value = SafeMath.sub(this._totalSupply.value, u256.One);
 
-        this.createTransferredEvent(owner, Address.zero(), tokenId);
+        this.createBurnedEvent(owner, tokenId);
     }
 
     protected _transfer(from: Address, to: Address, tokenId: u256): void {
@@ -998,18 +996,27 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
 
     // Event creation helpers
     protected createTransferredEvent(from: Address, to: Address, tokenId: u256): void {
-        this.emitEvent(new TransferredEvent(Blockchain.tx.sender, from, to, tokenId));
+        this.emitEvent(new OP721TransferredEvent(Blockchain.tx.sender, from, to, tokenId));
     }
 
     protected createApprovedEvent(owner: Address, approved: Address, tokenId: u256): void {
-        this.emitEvent(new ApprovedEvent(owner, approved, tokenId));
+        this.emitEvent(new OP721ApprovedEvent(owner, approved, tokenId));
     }
+
+    protected createMintedEvent(to: Address, tokenId: u256): void {
+        this.emitEvent(new OP721MintedEvent(to, tokenId));
+    }
+
+    protected createBurnedEvent(from: Address, tokenId: u256): void {
+        this.emitEvent(new OP721BurnedEvent(from, tokenId));
+    }
+
 
     protected createApprovedForAllEvent(
         owner: Address,
         operator: Address,
         approved: boolean,
     ): void {
-        this.emitEvent(new ApprovedForAllEvent(owner, operator, approved));
+        this.emitEvent(new OP721ApprovedForAllEvent(owner, operator, approved));
     }
 }
