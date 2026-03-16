@@ -647,17 +647,18 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     }
 
     protected _transfer(from: Address, to: Address, tokenId: u256): void {
-        // Skip self-transfers
-        if (from === to) return;
+        if (from === Address.zero()) {
+            throw new Revert('Invalid sender');
+        }
+
+        if (to === Address.zero()) {
+            throw new Revert('Invalid receiver');
+        }
 
         const owner = this._ownerOf(tokenId);
 
         if (owner !== from) {
             throw new Revert('Transfer from incorrect owner');
-        }
-
-        if (to === Address.zero()) {
-            throw new Revert('Transfer to zero address');
         }
 
         // Check authorization
