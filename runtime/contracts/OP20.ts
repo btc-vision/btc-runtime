@@ -21,7 +21,7 @@ import {
 } from '../constants/Exports';
 import { Blockchain } from '../env';
 import { sha256, sha256String } from '../env/global';
-import { ApprovedEvent, BurnedEvent, MintedEvent, TransferredEvent } from '../events/predefined';
+import { OP20ApprovedEvent, OP20BurnedEvent, OP20MintedEvent, OP20TransferredEvent } from '../events/predefined';
 import { Selector } from '../math/abi';
 import { EMPTY_POINTER } from '../math/bytes';
 import { AddressMemoryMap } from '../memory/AddressMemoryMap';
@@ -949,15 +949,15 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
 
     /** Event creation helpers */
     protected createBurnedEvent(from: Address, amount: u256): void {
-        this.emitEvent(new BurnedEvent(from, amount));
+        this.emitEvent(new OP20BurnedEvent(from, amount));
     }
 
     protected createApprovedEvent(owner: Address, spender: Address, amount: u256): void {
-        this.emitEvent(new ApprovedEvent(owner, spender, amount));
+        this.emitEvent(new OP20ApprovedEvent(owner, spender, amount));
     }
 
     protected createMintedEvent(to: Address, amount: u256): void {
-        this.emitEvent(new MintedEvent(to, amount));
+        this.emitEvent(new OP20MintedEvent(to, amount));
     }
 
     protected createTransferredEvent(
@@ -966,6 +966,6 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         to: Address,
         amount: u256,
     ): void {
-        this.emitEvent(new TransferredEvent(operator, from, to, amount));
+        this.emitEvent(new OP20TransferredEvent(operator, from, to, amount));
     }
 }

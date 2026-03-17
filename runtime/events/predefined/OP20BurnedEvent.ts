@@ -5,7 +5,7 @@ import { NetEvent } from '../NetEvent';
 import { Address } from '../../types/Address';
 
 @final
-export class BurnedEvent extends NetEvent {
+export class OP20BurnedEvent extends NetEvent {
     constructor(from: Address, amount: u256) {
         const data: BytesWriter = new BytesWriter(ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH);
         data.writeAddress(from);
