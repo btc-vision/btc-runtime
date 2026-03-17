@@ -59,7 +59,7 @@
         "node": ">=24.0.0"
     },
     "dependencies": {
-        "@btc-vision/as-bignum": "^0.1.2",
+        "@btc-vision/as-bignum": "^1.0.0",
         "@btc-vision/as-loader": "^0.0.0",
         "@btc-vision/assemblyscript": "^0.29.3",
         "@btc-vision/opnet-transform": "^1.2.2",
