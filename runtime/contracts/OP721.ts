@@ -465,7 +465,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     }
 
     @method({ name: 'tokenId', type: ABIDataTypes.UINT256 })
-    @emit('Transferred')
+    @emit('Burned')
     public burn(calldata: Calldata): BytesWriter {
         const tokenId = calldata.readU256();
         this._burn(tokenId);
