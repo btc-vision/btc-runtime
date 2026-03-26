@@ -234,7 +234,13 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         return w;
     }
 
-    @method('changeMetadata')
+    @method(
+        'changeMetadata',
+        { name: 'icon', type: ABIDataTypes.STRING },
+        { name: 'banner', type: ABIDataTypes.STRING },
+        { name: 'description', type: ABIDataTypes.STRING },
+        { name: 'website', type: ABIDataTypes.STRING },
+    )
     public changeMetadata(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
 
@@ -1011,7 +1017,6 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     protected createBurnedEvent(from: Address, tokenId: u256): void {
         this.emitEvent(new OP721BurnedEvent(from, tokenId));
     }
-
 
     protected createApprovedForAllEvent(
         owner: Address,
