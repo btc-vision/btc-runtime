@@ -1,6 +1,6 @@
 # OP721 NFT Standard
 
-OP721 is OPNet's non-fungible token standard, equivalent to Ethereum's ERC721. It provides a complete implementation for creating NFTs with ownership tracking, transfers, approvals, and metadata management.
+OP721 is OP_NET's non-fungible token standard, equivalent to Ethereum's ERC721. It provides a complete implementation for creating NFTs with ownership tracking, transfers, approvals, and metadata management.
 
 ## Overview
 
@@ -33,7 +33,7 @@ export class MyNFT extends OP721 {
 
 ## ERC721 vs OP721 Comparison
 
-| Feature | ERC721 (Solidity) | OP721 (OPNet) |
+| Feature | ERC721 (Solidity) | OP721 (OP_NET) |
 |---------|-------------------|---------------|
 | Language | Solidity | AssemblyScript |
 | Runtime | EVM | WASM |
@@ -340,7 +340,7 @@ stateDiagram-v2
 <table>
 <tr>
 <th>ERC721 (Solidity)</th>
-<th>OP721 (OPNet)</th>
+<th>OP721 (OP_NET)</th>
 </tr>
 <tr>
 <td>

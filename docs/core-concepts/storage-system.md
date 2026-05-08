@@ -1,10 +1,10 @@
 # Storage System
 
-OPNet uses a pointer-based storage system that provides deterministic, secure, and efficient data persistence on Bitcoin L1. This guide explains how storage works and how to use it effectively.
+OP_NET uses a pointer-based storage system that provides deterministic, secure, and efficient data persistence on Bitcoin L1. This guide explains how storage works and how to use it effectively.
 
 ## Overview
 
-Unlike Solidity where storage is implicitly managed, OPNet requires explicit pointer allocation for all persistent data. This design provides:
+Unlike Solidity where storage is implicitly managed, OP_NET requires explicit pointer allocation for all persistent data. This design provides:
 
 - **Deterministic storage locations** via SHA256 hashing
 - **Collision-free addressing** through unique pointer combinations
@@ -88,13 +88,13 @@ flowchart LR
     P4 --> N1["owner+spender hash -> allowance"]
 ```
 
-## Solidity vs OPNet Storage Model
+## Solidity vs OP_NET Storage Model
 
-In Solidity, storage slots are assigned implicitly by the compiler. In OPNet, you explicitly allocate pointers at runtime.
+In Solidity, storage slots are assigned implicitly by the compiler. In OP_NET, you explicitly allocate pointers at runtime.
 
 ### Quick Reference Table
 
-| Feature | Solidity | OPNet |
+| Feature | Solidity | OP_NET |
 |---------|----------|-------|
 | Storage slot assignment | Implicit (compiler) | Explicit (`Blockchain.nextPointer`) |
 | Hash function | keccak256 | SHA256 |
@@ -110,7 +110,7 @@ In Solidity, storage slots are assigned implicitly by the compiler. In OPNet, yo
 
 ### Type Mapping Reference
 
-| Solidity Type | OPNet Equivalent | Notes |
+| Solidity Type | OP_NET Equivalent | Notes |
 |---------------|------------------|-------|
 | `uint256` | `StoredU256` | 32 bytes |
 | `uint64` (packed) | `StoredU64` | Stores up to 4 u64 values in one slot |
@@ -136,7 +136,7 @@ contract Token {
 ```
 
 ```typescript
-// OPNet - Explicit pointer allocation
+// OP_NET - Explicit pointer allocation
 export class Token extends OP_NET {
     private readonly totalSupplyPointer: u16 = Blockchain.nextPointer;  // ~0 (allocated at runtime)
     private readonly namePointer: u16 = Blockchain.nextPointer;          // ~1 (allocated at runtime)
@@ -168,7 +168,7 @@ flowchart LR
         S_CONTRACT -->|"CAN hold ETH"| S_CUSTODY["Contract Custody<br/>address(this).balance"]
     end
 
-    subgraph OPNetFlow["OPNet (Bitcoin L1)"]
+    subgraph OPNetFlow["OP_NET (Bitcoin L1)"]
         O_USER[("👤 User")] -->|"Signs Bitcoin TX"| O_TX["Bitcoin Transaction"]
         O_TX -->|"WASM executes"| O_CONTRACT["Smart Contract"]
 
@@ -188,10 +188,10 @@ flowchart LR
     end
 
     subgraph KeyDiff["Critical Differences"]
-        DIFF1["Custody: Solidity holds funds,<br/>OPNet verifies outputs"]
-        DIFF2["Storage: Solidity implicit slots,<br/>OPNet explicit pointers"]
-        DIFF3["Hash: Solidity keccak256,<br/>OPNet SHA256"]
-        DIFF4["Execution: Solidity EVM,<br/>OPNet WASM"]
+        DIFF1["Custody: Solidity holds funds,<br/>OP_NET verifies outputs"]
+        DIFF2["Storage: Solidity implicit slots,<br/>OP_NET explicit pointers"]
+        DIFF3["Hash: Solidity keccak256,<br/>OP_NET SHA256"]
+        DIFF4["Execution: Solidity EVM,<br/>OP_NET WASM"]
     end
 ```
 
@@ -226,15 +226,15 @@ config:
 sequenceDiagram
     participant User
     participant Bitcoin as Bitcoin L1
-    participant OPNet as OPNet Node
+    participant OP_NET as OP_NET Node
     participant WASM as WASM Runtime
     participant Contract
     participant Blockchain as Blockchain API
     participant Storage as Storage System
 
     User->>Bitcoin: Broadcast Transaction
-    Bitcoin->>OPNet: New Block with TX
-    OPNet->>WASM: Execute Contract
+    Bitcoin->>OP_NET: New Block with TX
+    OP_NET->>WASM: Execute Contract
     WASM->>Contract: Instantiate
     Contract->>Blockchain: nextPointer
     Blockchain-->>Contract: 0 (totalSupply)
@@ -247,13 +247,13 @@ sequenceDiagram
     Contract->>Storage: Read/Write with pointers
     Storage-->>Contract: Data
     Contract-->>WASM: Execution Result
-    WASM-->>OPNet: State Changes
-    OPNet->>OPNet: Update State Root
+    WASM-->>OP_NET: State Changes
+    OP_NET->>OP_NET: Update State Root
 ```
 
 ## System Architecture
 
-The following diagram shows how storage fits into the overall OPNet architecture:
+The following diagram shows how storage fits into the overall OP_NET architecture:
 
 ```mermaid
 ---
@@ -271,8 +271,8 @@ flowchart TD
         UTXO["UTXOs"]
     end
 
-    subgraph OPNetConsensus["OPNet Consensus Layer"]
-        INDEXER["OPNet Nodes"]
+    subgraph OPNetConsensus["OP_NET Consensus Layer"]
+        INDEXER["OP_NET Nodes"]
         WASM["WASM Runtime"]
         EPOCH["Epoch Mining<br/>SHA1 PoW"]
         CHECKPOINT["State Checksum<br/>Root Hash"]
@@ -317,7 +317,7 @@ flowchart TD
 
 ## Storage Types
 
-OPNet provides typed storage classes for common data types:
+OP_NET provides typed storage classes for common data types:
 
 ### Primitive Storage
 
@@ -405,7 +405,7 @@ public constructor() {
 
 ### Common Patterns Comparison
 
-| Pattern | Solidity | OPNet |
+| Pattern | Solidity | OP_NET |
 |---------|----------|-------|
 | Increment counter | `counter++;` | `counter.value = SafeMath.add(counter.value, u256.One);` |
 | Read balance | `balances[addr]` | `balanceOf.get(addr)` |
@@ -524,7 +524,7 @@ protected setAllowance(owner: Address, spender: Address, amount: u256): void {
 // struct User { address addr; uint256 balance; bool active; }
 // mapping(uint256 => User) public users;
 
-// OPNet: Use multiple pointers or encode into u256
+// OP_NET: Use multiple pointers or encode into u256
 private readonly userAddressPointer: u16 = Blockchain.nextPointer;
 private readonly userBalancePointer: u16 = Blockchain.nextPointer;
 private readonly userActivePointer: u16 = Blockchain.nextPointer;
@@ -588,7 +588,7 @@ contract SimpleToken {
 }
 ```
 
-**OPNet:**
+**OP_NET:**
 ```typescript
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import {

@@ -1,10 +1,10 @@
 # Decorators
 
-Decorators are essential for OPNet smart contracts. They define the ABI (Application Binary Interface) that allows external callers to interact with your contract methods.
+Decorators are essential for OP_NET smart contracts. They define the ABI (Application Binary Interface) that allows external callers to interact with your contract methods.
 
 ## Overview
 
-OPNet uses three main decorators:
+OP_NET uses three main decorators:
 
 | Decorator | Purpose |
 |-----------|---------|
@@ -51,9 +51,9 @@ flowchart LR
 
 ## Solidity Comparison
 
-OPNet decorators serve the same purpose as Solidity's function signatures but are more explicit:
+OP_NET decorators serve the same purpose as Solidity's function signatures but are more explicit:
 
-| Solidity | OPNet |
+| Solidity | OP_NET |
 |----------|-------|
 | `function name() public view returns (string)` | `@method() @returns({ name: 'name', type: ABIDataTypes.STRING })` |
 | `function balanceOf(address owner) public view returns (uint256)` | `@method({ name: 'owner', type: ABIDataTypes.ADDRESS }) @returns({ name: 'balance', type: ABIDataTypes.UINT256 })` |
@@ -79,7 +79,7 @@ The `ABIDataTypes` enum defines all supported parameter and return types:
 
 | Type | Description | Size |
 |------|-------------|------|
-| `ABIDataTypes.ADDRESS` | OPNet address | 32 bytes |
+| `ABIDataTypes.ADDRESS` | OP_NET address | 32 bytes |
 | `ABIDataTypes.BYTES` | Variable-length bytes | Variable |
 | `ABIDataTypes.BYTES32` | Fixed 32-byte value | 32 bytes |
 

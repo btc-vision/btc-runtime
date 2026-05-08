@@ -287,7 +287,7 @@ function whitelistMint(uint256 quantity, bytes32[] calldata proof) external {
     _mintInternal(msg.sender, quantity);
 }
 
-// OPNet - Using on-chain mapping (simpler approach)
+// OP_NET - Using on-chain mapping (simpler approach)
 @method({ name: 'quantity', type: ABIDataTypes.UINT256 })
 @returns({ name: 'success', type: ABIDataTypes.BOOL })
 @emit('Minted')
@@ -908,7 +908,7 @@ public getSaleInfo(_calldata: Calldata): BytesWriter { }
 
 ## Solidity Comparison
 
-| Aspect | Solidity (ERC721) | OPNet (OP721) |
+| Aspect | Solidity (ERC721) | OP_NET (OP721) |
 |--------|-------------------|---------------|
 | Inheritance | `contract NFT is ERC721, Ownable` | `class NFT extends OP721` |
 | Constructor | `constructor() ERC721("Name", "SYM")` | `onDeployment()` + `this.instantiate(...)` |
@@ -936,7 +936,7 @@ function whitelistMint(uint256 quantity, bytes32[] calldata proof) external paya
 }
 ```
 
-**OPNet (On-chain mapping):**
+**OP_NET (On-chain mapping):**
 ```typescript
 private _whitelist: AddressMemoryMap;
 
@@ -985,7 +985,7 @@ function reveal(string calldata _baseURI) external onlyOwner {
 }
 ```
 
-**OPNet:**
+**OP_NET:**
 ```typescript
 private _baseURI: StoredString;
 private _hiddenURI: StoredString;
@@ -1032,7 +1032,7 @@ function setSalePhase(SalePhase phase) external onlyOwner {
 require(salePhase == SalePhase.WHITELIST, "Whitelist sale not active");
 ```
 
-**OPNet:**
+**OP_NET:**
 ```typescript
 const PHASE_INACTIVE: u8 = 0;
 const PHASE_WHITELIST: u8 = 1;
@@ -1061,7 +1061,7 @@ if (this._salePhase.value != PHASE_WHITELIST) {
 }
 ```
 
-### Advantages of OPNet Approach
+### Advantages of OP_NET Approach
 
 | Feature | Benefit |
 |---------|---------|
@@ -1088,7 +1088,7 @@ function _mintInternal(address to, uint256 quantity) internal {
 }
 ```
 
-**OPNet:**
+**OP_NET:**
 ```typescript
 private _mintInternal(to: Address, quantity: u256): void {
     const currentSupply = this.totalSupply();
@@ -1137,7 +1137,7 @@ function cancelReservation() external {
 }
 ```
 
-**OPNet (Bitcoin UTXO model):**
+**OP_NET (Bitcoin UTXO model):**
 ```typescript
 // Payment handled at Bitcoin transaction level
 // Refund logic would involve different mechanisms
@@ -1180,7 +1180,7 @@ function getSaleInfo() external view returns (
 }
 ```
 
-**OPNet:**
+**OP_NET:**
 ```typescript
 @method()
 @returns(

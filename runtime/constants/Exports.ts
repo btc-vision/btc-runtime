@@ -16,38 +16,8 @@ export const ALLOWANCE_DECREASE_TYPE_HASH: u8[] = [
 // onOP721Received(address,address,uint256,bytes)
 export const ON_OP721_RECEIVED_SELECTOR: u32 = 0x5349f6de;
 
-// onOP1155Received(address,address,uint256,uint256,bytes)
-export const ON_OP1155_RECEIVED_MAGIC: u32 = 0xcedc9fdf;
-
-// onOP1155BatchReceived(address,address,uint256[],uint256[],bytes)
-export const ON_OP1155_BATCH_RECEIVED_MAGIC: u32 = 0x5d95545f;
-
-// Interface IDs
-// balanceOf(address,uint256) -> 0x7ab6c0bc
-// balanceOfBatch(address[],uint256[]) -> 0xed4db4b0
-// safeTransferFrom(address,address,uint256,uint256,bytes) -> 0x0875aead
-// safeBatchTransferFrom(address,address,uint256[],uint256[],bytes) -> 0x1917c486
-// setApprovalForAll(address,bool) -> 0xd97fb4c0
-// isApprovedForAll(address,address) -> 0x67da1fb2
-export const INTERFACE_ID_OP1155: u32 = 0x383cb555;
-
-// sha256("uri(uint256)")
-export const INTERFACE_ID_OP1155_METADATA_URI: u32 = 0x31473f54;
-
 // sha256("supportsInterface(bytes4)")
 export const INTERFACE_ID_ERC165: u32 = 0x0e2b7fe2;
-
-// OP1155Transfer(address from,address to,uint256 id,uint256 amount,uint256 nonce,uint64 deadline)
-export const OP1155_TRANSFER_TYPE_HASH: u8[] = [
-    0x5a, 0x64, 0x2c, 0xa2, 0xd8, 0xfd, 0xe9, 0xe1, 0x28, 0x87, 0x7c, 0xf5, 0x5d, 0x71, 0x96, 0xe3,
-    0x3a, 0xd4, 0x4b, 0xb3, 0x4b, 0x0a, 0x8d, 0x85, 0x8d, 0xa8, 0x04, 0xbd, 0x3b, 0x86, 0x21, 0x0e,
-];
-
-// OP1155BatchTransfer(address from,address to,uint256[] ids,uint256[] amounts,uint256 nonce,uint64 deadline)
-export const OP1155_BATCH_TRANSFER_TYPE_HASH: u8[] = [
-    0x7b, 0xf8, 0xb6, 0x39, 0x5f, 0xea, 0xcc, 0x15, 0x97, 0x12, 0x38, 0x00, 0x91, 0xb9, 0x2b, 0x96,
-    0x67, 0x6b, 0x2b, 0x73, 0x46, 0xff, 0x29, 0x27, 0xbf, 0x1a, 0x54, 0xf8, 0xfc, 0xef, 0x9c, 0x0b,
-];
 
 // sha256("OP712Domain(string name,string version,bytes32 chainId,bytes32 protocolId,address verifyingContract)")
 export const OP712_DOMAIN_TYPE_HASH: u8[] = [

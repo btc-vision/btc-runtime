@@ -1,6 +1,6 @@
 # Storage API Reference
 
-Storage classes provide persistent state management for OPNet smart contracts.
+Storage classes provide persistent state management for OP_NET smart contracts.
 
 ## Import
 
@@ -714,7 +714,7 @@ public updateBoth(a: u256, b: u256): void {
 
 ## Solidity Comparison
 
-| Solidity | OPNet Storage |
+| Solidity | OP_NET Storage |
 |----------|---------------|
 | `uint256 public value` | `StoredU256` |
 | `mapping(address => uint256)` | `AddressMemoryMap` |

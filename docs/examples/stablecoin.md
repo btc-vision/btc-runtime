@@ -85,7 +85,7 @@ modifier onlyRole(bytes32 role) {
     _;
 }
 
-// OPNet - Bit flags for efficiency
+// OP_NET - Bit flags for efficiency
 enum Role { ADMIN = 1, MINTER = 2, PAUSER = 4, BLACKLISTER = 8 }
 
 public hasRole(account: Address, role: u256): bool {
@@ -208,7 +208,7 @@ function pause() external onlyRole(PAUSER_ROLE) {
     _pause();
 }
 
-// OPNet
+// OP_NET
 private whenNotPaused(): void {
     if (this._paused.value) {
         throw new Revert('Pausable: paused');
@@ -979,11 +979,11 @@ contract Stablecoin is ERC20, ERC20Pausable, AccessControl {
 }
 ```
 
-## Solidity vs OPNet Comparison
+## Solidity vs OP_NET Comparison
 
 ### Key Differences Table
 
-| Aspect | Solidity (OpenZeppelin) | OPNet |
+| Aspect | Solidity (OpenZeppelin) | OP_NET |
 |--------|------------------------|-------|
 | **Access Control** | `AccessControl` with `bytes32` role hashes | Bit flags in `u256` with enum |
 | **Role Definition** | `keccak256("MINTER_ROLE")` | `enum Role { MINTER = 2 }` (powers of 2) |
@@ -1017,7 +1017,7 @@ function grantRole(bytes32 role, address account) public onlyRole(getRoleAdmin(r
 }
 ```
 
-**OPNet (Bit Flag System):**
+**OP_NET (Bit Flag System):**
 ```typescript
 // Roles as bit flags (powers of 2)
 enum Role {
@@ -1063,7 +1063,7 @@ contract MyToken is ERC20Pausable {
 }
 ```
 
-**OPNet (Manual Implementation):**
+**OP_NET (Manual Implementation):**
 ```typescript
 private _paused: StoredBoolean;
 
@@ -1106,7 +1106,7 @@ function blacklist(address account) external onlyRole(BLACKLISTER_ROLE) {
 }
 ```
 
-**OPNet:**
+**OP_NET:**
 ```typescript
 private _blacklist: AddressMemoryMap;
 
@@ -1129,7 +1129,7 @@ public blacklist(calldata: Calldata): BytesWriter {
 }
 ```
 
-### Advantages of OPNet Approach
+### Advantages of OP_NET Approach
 
 | Feature | Benefit |
 |---------|---------|
@@ -1142,7 +1142,7 @@ public blacklist(calldata: Calldata): BytesWriter {
 
 ### Minter Allowance Pattern (USDC-style)
 
-Both implementations support minter allowances, but OPNet makes this a first-class feature:
+Both implementations support minter allowances, but OP_NET makes this a first-class feature:
 
 **Solidity:**
 ```solidity
@@ -1155,7 +1155,7 @@ function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
 }
 ```
 
-**OPNet:**
+**OP_NET:**
 ```typescript
 private _minterAllowance: AddressMemoryMap;
 

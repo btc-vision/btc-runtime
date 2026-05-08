@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 function __liftString(pointer, memory) {
     if (!pointer) return null;
     const end = (pointer + new Uint32Array(memory.buffer)[(pointer - 4) >>> 2]) >>> 1,
@@ -45,6 +47,22 @@ export default {
                     'console.log': (data) => {
                         log(data, memory2);
                     },
+
+                    sha256: (data_ptr, data_length, result_ptr) => {
+                        const data = new Uint8Array(memory2.buffer, data_ptr, data_length);
+                        const hashBuffer = crypto.createHash('sha256').update(data).digest();
+                        const resultView = new Uint8Array(memory2.buffer, result_ptr, 32);
+                        resultView.set(hashBuffer);
+                    },
+
+                    load(ptr, len) {},
+                    store(ptr, len) {},
+                    pStore(ptr, len) {},
+                    pLoad(ptr, len) {},
+                    deployContractByAddress(ptr, len) {},
+                    accountType(ptr, len) {},
+                    emit(ptr, len) {},
+                    updateFromAddress(ptr, len) {},
                 },
             }),
         );

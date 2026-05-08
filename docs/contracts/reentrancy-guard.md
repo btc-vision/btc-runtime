@@ -31,9 +31,9 @@ export class MyContract extends ReentrancyGuard {
 }
 ```
 
-## OpenZeppelin vs OPNet ReentrancyGuard
+## OpenZeppelin vs OP_NET ReentrancyGuard
 
-| Feature | OpenZeppelin (Solidity) | OPNet ReentrancyGuard |
+| Feature | OpenZeppelin (Solidity) | OP_NET ReentrancyGuard |
 |---------|-------------------------|----------------------|
 | Protection Scope | Per-function (`nonReentrant` modifier) | All methods by default |
 | Opt-in/Opt-out | Opt-in per function | Opt-out via `isSelectorExcluded` |
@@ -529,8 +529,6 @@ The base `ReentrancyGuard` automatically excludes standard token receiver callba
 // Built-in exclusions in ReentrancyGuard base class:
 // - ON_OP20_RECEIVED_SELECTOR
 // - ON_OP721_RECEIVED_SELECTOR
-// - ON_OP1155_RECEIVED_MAGIC
-// - ON_OP1155_BATCH_RECEIVED_MAGIC
 ```
 
 You can override `isSelectorExcluded` to add custom exclusions:
@@ -564,7 +562,7 @@ export class MyContract extends ReentrancyGuard {
 <table>
 <tr>
 <th>OpenZeppelin ReentrancyGuard</th>
-<th>OPNet ReentrancyGuard</th>
+<th>OP_NET ReentrancyGuard</th>
 </tr>
 <tr>
 <td>
@@ -615,7 +613,7 @@ export class MyContract extends ReentrancyGuard {
 
 Key differences:
 - Solidity: Explicit `nonReentrant` modifier per function
-- OPNet: All methods protected by default (opt-out via `isSelectorExcluded`)
+- OP_NET: All methods protected by default (opt-out via `isSelectorExcluded`)
 
 ## Best Practices
 
@@ -731,7 +729,7 @@ public getValue(): u256 {
     return value;
 }
 
-// In OPNet, the guard is checked at method entry,
+// In OP_NET, the guard is checked at method entry,
 // so this isn't an issue - just be aware of it
 ```
 

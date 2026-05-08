@@ -1,6 +1,6 @@
 # Blockchain Environment
 
-The `Blockchain` object is the primary interface for interacting with the OPNet runtime. It provides access to block information, transaction context, storage operations, cryptographic functions, and cross-contract calls.
+The `Blockchain` object is the primary interface for interacting with the OP_NET runtime. It provides access to block information, transaction context, storage operations, cryptographic functions, and cross-contract calls.
 
 ## Overview
 
@@ -55,15 +55,15 @@ flowchart LR
 
 ### Solidity Comparison
 
-| Solidity | OPNet | Notes |
+| Solidity | OP_NET | Notes |
 |----------|-------|-------|
 | `block.number` | `Blockchain.block.number` | Current block height |
-| `block.timestamp` | `Blockchain.block.medianTimestamp` | OPNet uses Median Time Past |
+| `block.timestamp` | `Blockchain.block.medianTimestamp` | OP_NET uses Median Time Past |
 | `blockhash(n)` | `Blockchain.getBlockHash(n)` | Historical block hash |
 
 ### Median Time Past
 
-OPNet uses **Median Time Past (MTP)** instead of raw block timestamps. MTP is the median of the last 11 block timestamps, providing more reliable time measurements that are resistant to miner manipulation.
+OP_NET uses **Median Time Past (MTP)** instead of raw block timestamps. MTP is the median of the last 11 block timestamps, providing more reliable time measurements that are resistant to miner manipulation.
 
 ```typescript
 // Get current timestamp (median time past)
@@ -140,7 +140,7 @@ This distinction is critical for security:
 
 ### Solidity Comparison
 
-| Solidity | OPNet | Notes |
+| Solidity | OP_NET | Notes |
 |----------|-------|-------|
 | `msg.sender` | `Blockchain.tx.sender` | Immediate caller |
 | `tx.origin` | `Blockchain.tx.origin` | Original signer (ExtendedAddress) |
@@ -157,7 +157,7 @@ config:
 sequenceDiagram
     participant User as User/EOA
     participant TX as Transaction Broadcast
-    participant VM as OPNet VM
+    participant VM as OP_NET VM
     participant ContractA as Target Contract
     participant ContractB as External Contract
     participant Storage as Storage
@@ -166,7 +166,7 @@ sequenceDiagram
     User->>TX: Sign transaction
     TX->>VM: Broadcast transaction
 
-    Note over User,Storage: OPNet Runtime Initialization
+    Note over User,Storage: OP_NET Runtime Initialization
     VM->>VM: Initialize Blockchain Context
     VM->>VM: Set tx.origin = User Address
     VM->>VM: Set tx.sender = User Address
@@ -401,7 +401,7 @@ sequenceDiagram
 // Solidity
 (bool success, bytes memory data) = target.call(calldata);
 
-// OPNet
+// OP_NET
 const result = Blockchain.call(target, calldata, true);
 // result.success: boolean
 // result.data: BytesReader
@@ -438,9 +438,11 @@ const doubleHash: Uint8Array = Blockchain.hash256(data);
 
 ### Signature Verification
 
-OPNet supports both classical Schnorr signatures and quantum-resistant ML-DSA signatures:
+OP_NET supports Schnorr, ECDSA (secp256k1), and quantum-resistant ML-DSA signatures:
 
 ```typescript
+import { SignaturesMethods } from '@btc-vision/btc-runtime/runtime';
+
 // Recommended: Use consensus-aware verification
 // Automatically selects Schnorr or ML-DSA based on consensus rules
 const isValid: bool = Blockchain.verifySignature(
@@ -449,12 +451,12 @@ const isValid: bool = Blockchain.verifySignature(
     hash        // Uint8Array (32 bytes)
 );
 
-// Force ML-DSA verification even if Schnorr is allowed
+// Force ML-DSA verification
 const isValidMLDSA: bool = Blockchain.verifySignature(
     address,
     signature,
     hash,
-    true  // forceMLDSA
+    SignaturesMethods.MLDSA  // Force quantum-resistant ML-DSA
 );
 ```
 
@@ -465,14 +467,37 @@ config:
 ---
 flowchart LR
     subgraph Verify["Blockchain.verifySignature()"]
-        Check{"unsafeSignaturesAllowed()<br/>AND !forceMLDSA?"}
-        Check -->|Yes| Schnorr["Schnorr Verification<br/>(64-byte signature)"]
-        Check -->|No| MLDSA["ML-DSA Verification<br/>(ML-DSA-44, Level2)"]
+        Check{"signatureType?"}
+        Check -->|Schnorr| SchnorrCheck{"unsafeSignaturesAllowed?"}
+        SchnorrCheck -->|Yes| Schnorr["Schnorr Verification<br/>(64-byte signature)"]
+        SchnorrCheck -->|No| MLDSA
+        Check -->|MLDSA| MLDSA["ML-DSA Verification<br/>(ML-DSA-44, Level2)"]
+        Check -->|ECDSA| ECDSAErr["Error: Use dedicated<br/>ECDSA methods"]
     end
-    Input["address, signature, hash, forceMLDSA?"] --> Check
+    Input["address, signature, hash, signatureType"] --> Check
     Schnorr --> Result["boolean"]
     MLDSA --> Result
 ```
+
+#### ECDSA Verification (Deprecated)
+
+```typescript
+// Ethereum ecrecover model (65-byte signature: r32 || s32 || v1)
+const isValid: bool = Blockchain.verifyECDSASignature(
+    publicKey,   // secp256k1 key (33, 64, or 65 bytes)
+    signature,   // 65-byte Ethereum ECDSA signature
+    hash         // 32-byte message hash
+);
+
+// Bitcoin direct verify model (64-byte compact signature: r32 || s32)
+const isValid: bool = Blockchain.verifyBitcoinECDSASignature(
+    publicKey,   // secp256k1 key (33, 64, or 65 bytes)
+    signature,   // 64-byte compact ECDSA signature
+    hash         // 32-byte message hash
+);
+```
+
+> **Warning:** ECDSA methods are deprecated and only available when `UNSAFE_QUANTUM_SIGNATURES_ALLOWED` consensus flag is set. Migrate to ML-DSA for quantum security.
 
 #### Legacy Methods (Deprecated)
 
@@ -497,6 +522,26 @@ ML-DSA Security Levels:
 - **Level2 (ML-DSA-44)**: 1312-byte public key, 2420-byte signature
 - **Level3 (ML-DSA-65)**: 1952-byte public key, 3309-byte signature
 - **Level5 (ML-DSA-87)**: 2592-byte public key, 4627-byte signature
+
+### Keccak-256 Hashing
+
+OP_NET includes an Ethereum-compatible Keccak-256 implementation (original Keccak, not NIST SHA-3):
+
+```typescript
+import { keccak256, keccak256Concat, functionSelector, ethAddressFromPubKey } from '@btc-vision/btc-runtime/runtime';
+
+// Basic keccak256 hash
+const hash: Uint8Array = keccak256(data);  // 32 bytes
+
+// Hash concatenated byte arrays
+const hash2: Uint8Array = keccak256Concat(a, b);
+
+// Ethereum function selector (4 bytes)
+const sel: Uint8Array = functionSelector('transfer(address,uint256)');
+
+// Derive Ethereum address from 64-byte uncompressed public key
+const addr: Uint8Array = ethAddressFromPubKey(pubkey64);  // 20 bytes
+```
 
 See [Signature Verification](../advanced/signature-verification.md) for details.
 
@@ -578,7 +623,9 @@ classDiagram
         +hasTransientStorageAt(pointerHash) bool
         +sha256(buffer) Uint8Array
         +hash256(buffer) Uint8Array
-        +verifySignature(address, sig, hash, forceMLDSA?) bool
+        +verifySignature(address, sig, hash, signatureType?) bool
+        +verifyECDSASignature(pubKey, sig, hash) bool
+        +verifyBitcoinECDSASignature(pubKey, sig, hash) bool
         +verifySchnorrSignature(pubKey, sig, hash) bool
         +verifyMLDSASignature(level, pubKey, sig, hash) bool
         +isContract(address) bool
@@ -587,7 +634,6 @@ classDiagram
         +getBlockHash(blockNumber) Uint8Array
         +emit(event) void
         +log(data) void
-        +registerPlugin(plugin) void
     }
 
     class Block {
@@ -707,6 +753,8 @@ export class MyContract extends OP_NET {
 | `Blockchain.sha256()` | `Uint8Array` | SHA256 hash |
 | `Blockchain.hash256()` | `Uint8Array` | Double SHA256 |
 | `Blockchain.verifySignature()` | `bool` | Consensus-aware signature verification |
+| `Blockchain.verifyECDSASignature()` | `bool` | ECDSA Ethereum ecrecover verification (deprecated) |
+| `Blockchain.verifyBitcoinECDSASignature()` | `bool` | ECDSA Bitcoin direct verification (deprecated) |
 | `Blockchain.verifySchnorrSignature()` | `bool` | Schnorr verification (deprecated) |
 | `Blockchain.verifyMLDSASignature()` | `bool` | ML-DSA verification |
 | `Blockchain.isContract()` | `bool` | Check if address is contract |
@@ -715,7 +763,6 @@ export class MyContract extends OP_NET {
 | `Blockchain.getBlockHash()` | `Uint8Array` | Historical block hash |
 | `Blockchain.emit()` | `void` | Emit event |
 | `Blockchain.log()` | `void` | Debug logging (testing only) |
-| `Blockchain.registerPlugin()` | `void` | Register a plugin |
 
 ---
 

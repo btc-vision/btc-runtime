@@ -260,11 +260,11 @@ flowchart LR
     G --> H["Commit to storage"]
 ```
 
-## Solidity vs OPNet Comparison
+## Solidity vs OP_NET Comparison
 
 ### Quick Reference Table
 
-| Solidity Mapping Type | OPNet Equivalent | Notes |
+| Solidity Mapping Type | OP_NET Equivalent | Notes |
 |-----------------------|------------------|-------|
 | `mapping(uint256 => uint256)` | `StoredMapU256` | u256 keys and values |
 | `mapping(address => uint256)` | `AddressMemoryMap` | Recommended for address keys |
@@ -274,7 +274,7 @@ flowchart LR
 
 ### Operations Comparison
 
-| Operation | Solidity | OPNet (StoredMapU256) |
+| Operation | Solidity | OP_NET (StoredMapU256) |
 |-----------|----------|----------------------|
 | Declare | `mapping(uint256 => uint256) data;` | `private data: StoredMapU256;` |
 | Initialize | Automatic | `this.data = new StoredMapU256(this.dataPointer);` |
@@ -286,7 +286,7 @@ flowchart LR
 
 ### Nested Mapping Comparison
 
-| Operation | Solidity | OPNet (MapOfMap) |
+| Operation | Solidity | OP_NET (MapOfMap) |
 |-----------|----------|------------------|
 | Declare | `mapping(address => mapping(address => uint256)) allowances;` | `private allowances: MapOfMap<u256>;` |
 | Read nested | `allowances[owner][spender]` | `allowances.get(owner).get(spender)` |
@@ -294,7 +294,7 @@ flowchart LR
 
 ### Address Key Patterns
 
-| Solidity Pattern | OPNet Equivalent |
+| Solidity Pattern | OP_NET Equivalent |
 |------------------|------------------|
 | `mapping(address => uint256) balances;` | `private balances: AddressMemoryMap;` (preferred) |
 | `balances[msg.sender]` | `balances.get(Blockchain.tx.sender)` |
@@ -303,7 +303,7 @@ flowchart LR
 
 ### Common Use Cases
 
-| Use Case | Solidity | OPNet |
+| Use Case | Solidity | OP_NET |
 |----------|----------|-------|
 | Token balances | `mapping(address => uint256) balances;` | `AddressMemoryMap` |
 | Approvals | `mapping(address => mapping(address => uint256))` | `MapOfMap<u256>` |
@@ -341,7 +341,7 @@ contract KeyValueStore {
 }
 ```
 
-**OPNet:**
+**OP_NET:**
 ```typescript
 @final
 export class KeyValueStore extends OP_NET {
@@ -414,7 +414,7 @@ contract ApprovalSystem {
 }
 ```
 
-**OPNet:**
+**OP_NET:**
 ```typescript
 @final
 export class ApprovalSystem extends OP_NET {

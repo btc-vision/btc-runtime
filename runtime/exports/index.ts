@@ -7,3 +7,7 @@ export function execute(_calldataLength: u32): u32 {
 export function onDeploy(_calldataLength: u32): u32 {
     throw new Revert(`UNIT TEST ONLY, METHOD NOT IMPLEMENTED.`);
 }
+
+export function onUpdate(calldataLength: u32): u32 {
+    throw new Revert(`UNIT TEST ONLY, METHOD NOT IMPLEMENTED.`);
+}

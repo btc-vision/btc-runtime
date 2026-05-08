@@ -1,8 +1,6 @@
 {
     "extends": "@btc-vision/opnet-transform/std/assembly.json",
-    "include": [
-        "./**/*.ts"
-    ],
+    "include": ["./**/*.ts", "./tests/*.spec.ts"],
     "compilerOptions": {
         "preserveConstEnums": true,
         "experimentalDecorators": true,

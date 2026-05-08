@@ -31,6 +31,7 @@ classDiagram
         -Uint8Array typedArray
         -u32 currentOffset
         +BytesWriter(length)
+        +write~T~(value) void
         +writeU8(value)
         +writeU16(value, be)
         +writeU32(value, be)
@@ -38,9 +39,13 @@ classDiagram
         +writeU128(value, be)
         +writeU256(value, be)
         +writeAddress(addr)
+        +writeExtendedAddress(extAddr)
+        +writeSchnorrSignature(addr, sig)
         +writeString(str)
         +writeBytes(data)
         +writeBoolean(bool)
+        +writeExtendedAddressArray(arr)
+        +writeExtendedAddressMapU256(map)
         +getBuffer() Uint8Array
     }
 
@@ -48,6 +53,7 @@ classDiagram
         -DataView buffer
         -i32 currentOffset
         +BytesReader(bytes)
+        +read~T~() T
         +readU8() u8
         +readU16(be) u16
         +readU32(be) u32
@@ -55,9 +61,13 @@ classDiagram
         +readU128(be) u128
         +readU256(be) u256
         +readAddress() Address
+        +readExtendedAddress() ExtendedAddress
+        +readSchnorrSignature() SchnorrSignature
         +readString() string
         +readBytes(length) Uint8Array
         +readBoolean() bool
+        +readExtendedAddressArray() ExtendedAddress[]
+        +readExtendedAddressMapU256() ExtendedAddressMap
         +hasMoreData() bool
     }
 
@@ -113,6 +123,12 @@ writer.writeI64(value);
 // Address (32 bytes)
 writer.writeAddress(address);
 
+// ExtendedAddress (64 bytes: 32 tweaked key + 32 ML-DSA key hash)
+writer.writeExtendedAddress(extendedAddress);
+
+// Schnorr signature with signer address (128 bytes total)
+writer.writeSchnorrSignature(signerAddress, signature);
+
 // String without length prefix
 writer.writeString('Hello, World!');
 
@@ -129,6 +145,25 @@ writer.writeBytesWithLength(data);
 writer.writeSelector(selector);
 ```
 
+### Generic Write Method
+
+The `write<T>()` method automatically selects the correct write method based on the type:
+
+```typescript
+// Automatically dispatches to the correct write method
+writer.write<u64>(12345);                    // writeU64
+writer.write<u256>(amount);                  // writeU256
+writer.write<bool>(true);                    // writeBoolean
+writer.write<Address>(addr);                 // writeAddress
+writer.write<ExtendedAddress>(extAddr);      // writeExtendedAddress
+writer.write<string>('hello');               // writeStringWithLength
+
+// Supported types:
+// - Primitives: bool, u8, u16, u32, u64, i8, i16, i32, i64
+// - Big numbers: u128, u256, i128
+// - Complex: Address, ExtendedAddress, Selector, string, Uint8Array
+```
+
 ### Writing Arrays
 
 All array methods use a u16 length prefix (max 65535 elements):
@@ -136,6 +171,9 @@ All array methods use a u16 length prefix (max 65535 elements):
 ```typescript
 // Address array (u16 length prefix + addresses)
 writer.writeAddressArray(addresses);
+
+// ExtendedAddress array (u16 length prefix + 64-byte addresses)
+writer.writeExtendedAddressArray(extendedAddresses);
 
 // Numeric arrays (u16 length prefix + values)
 writer.writeU8Array(u8Values);
@@ -150,6 +188,9 @@ writer.writeArrayOfBuffer(buffers);
 
 // AddressMap<u256> (u16 count, then address + u256 pairs)
 writer.writeAddressMapU256(addressMap);
+
+// ExtendedAddressMap<u256> (u16 count, then 64-byte address + u256 pairs)
+writer.writeExtendedAddressMapU256(extendedAddressMap);
 ```
 
 ### Getting Results
@@ -222,6 +263,14 @@ const i64val: i64 = reader.readI64();
 // Address (32 bytes)
 const addr: Address = reader.readAddress();
 
+// ExtendedAddress (64 bytes: 32 tweaked key + 32 ML-DSA key hash)
+const extAddr: ExtendedAddress = reader.readExtendedAddress();
+
+// Schnorr signature with signer address (128 bytes)
+const schnorrSig: SchnorrSignature = reader.readSchnorrSignature();
+const signer: ExtendedAddress = schnorrSig.address;
+const signature: Uint8Array = schnorrSig.signature;
+
 // String with known length (bytes read, zeroStop = true)
 const name: string = reader.readString(32);  // reads up to 32 bytes, stops at null
 
@@ -238,6 +287,25 @@ const data2: Uint8Array = reader.readBytesWithLength();
 const selector: Selector = reader.readSelector();
 ```
 
+### Generic Read Method
+
+The `read<T>()` method automatically selects the correct read method based on the type:
+
+```typescript
+// Automatically dispatches to the correct read method
+const num: u64 = reader.read<u64>();              // readU64
+const amount: u256 = reader.read<u256>();         // readU256
+const flag: bool = reader.read<bool>();           // readBoolean
+const addr: Address = reader.read<Address>();     // readAddress
+const extAddr: ExtendedAddress = reader.read<ExtendedAddress>();  // readExtendedAddress
+const text: string = reader.read<string>();       // readStringWithLength
+
+// Supported types:
+// - Primitives: bool, u8, u16, u32, u64, i8, i16, i32, i64
+// - Big numbers: u128, u256, i128
+// - Complex: Address, ExtendedAddress, Selector, string
+```
+
 ### Reading Arrays
 
 All array methods expect a u16 length prefix:
@@ -245,6 +313,9 @@ All array methods expect a u16 length prefix:
 ```typescript
 // Address array
 const addresses: Address[] = reader.readAddressArray();
+
+// ExtendedAddress array (64 bytes each)
+const extAddresses: ExtendedAddress[] = reader.readExtendedAddressArray();
 
 // Numeric arrays
 const u8Values: u8[] = reader.readU8Array();
@@ -259,6 +330,9 @@ const buffers: Uint8Array[] = reader.readArrayOfBuffer();
 
 // AddressMap<u256>
 const addressMap: AddressMap<u256> = reader.readAddressMapU256();
+
+// ExtendedAddressMap<u256> (64-byte addresses as keys)
+const extAddressMap: ExtendedAddressMap<u256> = reader.readExtendedAddressMapU256();
 ```
 
 ### Position Management
@@ -291,6 +365,8 @@ reader.verifyEnd(offset + 32);  // Throws Revert if not enough bytes
 | `u128`/`i128` | 16 | Big-endian (default) |
 | `u256` | 32 | Big-endian (default) |
 | `Address` | 32 | Raw bytes |
+| `ExtendedAddress` | 64 | 32 bytes tweaked key + 32 bytes ML-DSA key hash |
+| `SchnorrSignature` | 128 | 64 bytes ExtendedAddress + 64 bytes signature |
 | `Selector` | 4 | Big-endian (u32) |
 | `string` | 4 + n | Length prefix (u32 BE) + UTF-8 |
 | `bytes` | 4 + n | Length prefix (u32 BE) + raw |
@@ -539,11 +615,11 @@ protected override encodeData(writer: BytesWriter): void {
 }
 ```
 
-## Solidity vs OPNet Comparison
+## Solidity vs OP_NET Comparison
 
 ### Encoding/Decoding Comparison Table
 
-| Feature | Solidity | OPNet |
+| Feature | Solidity | OP_NET |
 |---------|----------|-------|
 | **Encode function** | `abi.encode(...)` | `BytesWriter` methods |
 | **Decode function** | `abi.decode(data, (types))` | `BytesReader` methods |
@@ -556,7 +632,7 @@ protected override encodeData(writer: BytesWriter): void {
 
 ### Type Encoding Comparison
 
-| Solidity Encoding | OPNet Encoding |
+| Solidity Encoding | OP_NET Encoding |
 |-------------------|----------------|
 | `abi.encode(uint256)` | `writer.writeU256(value)` |
 | `abi.encode(uint128)` | `writer.writeU128(value)` |
@@ -583,12 +659,12 @@ bytes memory packed = abi.encodePacked(recipient, amount);
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 const writer = new BytesWriter(64);  // 32 + 32 bytes
 writer.writeAddress(recipient);
 writer.writeU256(amount);
 const data: Uint8Array = writer.getBuffer();
-// OPNet encoding is similar to encodePacked (no padding)
+// OP_NET encoding is similar to encodePacked (no padding)
 ```
 
 #### Basic Decoding
@@ -599,7 +675,7 @@ const data: Uint8Array = writer.getBuffer();
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 const reader = new BytesReader(data);
 const to: Address = reader.readAddress();
 const amount: u256 = reader.readU256();
@@ -620,7 +696,7 @@ function encodeTransferData(
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 function encodeTransferData(
     from: Address,
     to: Address,
@@ -648,7 +724,7 @@ bytes memory callData = abi.encodeWithSignature("transfer(address,uint256)", to,
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 const TRANSFER_SELECTOR: Selector = Selector.from("transfer(address,uint256)");
 const writer = new BytesWriter(68);  // 4 + 32 + 32
 writer.writeSelector(TRANSFER_SELECTOR);
@@ -669,7 +745,7 @@ function getInfo() public view returns (address, uint256, bool) {
 ```
 
 ```typescript
-// OPNet - Manual return encoding
+// OP_NET - Manual return encoding
 public getInfo(_calldata: Calldata): BytesWriter {
     const writer = new BytesWriter(65);  // 32 + 32 + 1
     writer.writeAddress(this._owner.value);
@@ -690,7 +766,7 @@ if (success) {
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 const result = Blockchain.call(target, callData, true);
 if (result.success) {
     const reader = new BytesReader(result.data);
@@ -717,7 +793,7 @@ function encodeOrder(Order memory order) public pure returns (bytes memory) {
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 class Order {
     maker: Address;
     taker: Address;
@@ -750,7 +826,7 @@ function _transfer(address from, address to, uint256 amount) internal {
 ```
 
 ```typescript
-// OPNet - Custom event class with manual encoding
+// OP_NET - Custom event class with manual encoding
 export class TransferEvent extends NetEvent {
     constructor(
         public readonly from: Address,
@@ -785,7 +861,7 @@ function extractAddress(bytes calldata data, uint offset) public pure returns (a
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 function extractSelector(data: Uint8Array): Selector {
     const reader = new BytesReader(data);
     return reader.readSelector();
@@ -803,7 +879,7 @@ function extractAddress(data: Uint8Array, offset: u32): Address {
 
 ### Size Comparison (Encoding Overhead)
 
-| Data | Solidity abi.encode | Solidity encodePacked | OPNet |
+| Data | Solidity abi.encode | Solidity encodePacked | OP_NET |
 |------|---------------------|----------------------|-------|
 | `bool` | 32 bytes | 1 byte | 1 byte |
 | `uint8` | 32 bytes | 1 byte | 1 byte |
@@ -817,7 +893,7 @@ function extractAddress(data: Uint8Array, offset: u32): Address {
 
 ### Key Differences Summary
 
-| Aspect | Solidity | OPNet |
+| Aspect | Solidity | OP_NET |
 |--------|----------|-------|
 | **Encoding approach** | `abi.encode()` function | BytesWriter object methods |
 | **Decoding approach** | `abi.decode()` with type tuple | BytesReader sequential reads |
@@ -838,7 +914,7 @@ bytes memory encoded = abi.encode(addr, amount, flag);
 ```
 
 ```typescript
-// OPNet equivalent
+// OP_NET equivalent
 const writer = new BytesWriter(65);  // 32 + 32 + 1
 writer.writeAddress(addr);
 writer.writeU256(amount);
@@ -854,7 +930,7 @@ const encoded = writer.getBuffer();
 ```
 
 ```typescript
-// OPNet equivalent
+// OP_NET equivalent
 const reader = new BytesReader(data);
 const addr = reader.readAddress();
 const amount = reader.readU256();
@@ -873,7 +949,7 @@ bytes memory data = abi.encodeWithSelector(
 ```
 
 ```typescript
-// OPNet equivalent
+// OP_NET equivalent
 const TRANSFER_SELECTOR: Selector = Selector.from("transfer(address,uint256)");
 const writer = new BytesWriter(68);
 writer.writeSelector(TRANSFER_SELECTOR);

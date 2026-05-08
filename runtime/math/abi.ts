@@ -102,8 +102,10 @@ export function encodePointer(uniqueIdentifier: u16, typed: Uint8Array, enforce3
     }
 
     const finalPointer = new Uint8Array(32);
-    finalPointer[0] = uniqueIdentifier & 0xff;
-    finalPointer[1] = (uniqueIdentifier >> 8) & 0xff;
+
+    // Encode in big-endian
+    finalPointer[0] = (uniqueIdentifier >> 8) & 0xff;
+    finalPointer[1] = uniqueIdentifier & 0xff;
 
     for (let i = 0; i < 30; i++) {
         finalPointer[i + 2] = array[i];

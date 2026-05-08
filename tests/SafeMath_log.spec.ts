@@ -113,13 +113,10 @@ describe('SafeMath - approximateLog2', () => {
             expect(result).toStrictEqual(u256.Zero);
         });
 
-        it('should return 0 for log2(0) with documentation', () => {
-            // IMPORTANT: Mathematical edge case - log2(0) is undefined
-            // Implementation returns 0 to avoid reverts in smart contracts
-            // This is a deliberate design choice for gas efficiency and contract stability
-            // Callers should check for zero inputs if mathematical correctness is required
-            const result: u256 = SafeMath.approximateLog2(u256.Zero);
-            expect(result).toStrictEqual(u256.Zero);
+        it('should throw for log2(0)', () => {
+            expect(() => {
+                SafeMath.approximateLog2(u256.Zero)
+            }).toThrow('SafeMath: log of zero');
         });
 
         it('should calculate exact log2 for powers of 2', () => {
@@ -474,10 +471,13 @@ describe('SafeMath - approxLog', () => {
     beforeEach(() => {});
 
     describe('Basic functionality', () => {
-        it('should return 0 for ln(0) and ln(1) with documentation', () => {
-            // IMPORTANT: ln(0) is mathematically undefined, but returns 0 to avoid reverts
-            // This is a deliberate design choice for smart contract safety
-            expect(SafeMath.approxLog(u256.Zero)).toStrictEqual(u256.Zero);
+        it('should revert for ln(0)', () => {
+            expect(() => {
+                SafeMath.approxLog(u256.Zero)
+            }).toThrow('SafeMath: log of zero');
+        });
+
+        it('should return 0 for ln(1)', () => {
             expect(SafeMath.approxLog(u256.One)).toStrictEqual(u256.Zero);
         });
 
@@ -533,7 +533,9 @@ describe('SafeMath - approxLog', () => {
 
     describe('Edge cases', () => {
         it('should handle values with bitLength <= 1', () => {
-            expect(SafeMath.approxLog(u256.Zero)).toStrictEqual(u256.Zero);
+            expect(() => {
+                SafeMath.approxLog(u256.Zero)
+            }).toThrow('SafeMath: log of zero');
             expect(SafeMath.approxLog(u256.One)).toStrictEqual(u256.Zero);
         });
 
@@ -681,8 +683,13 @@ describe('SafeMath - preciseLog', () => {
     beforeEach(() => {});
 
     describe('Basic functionality', () => {
-        it('should return 0 for ln(0) and ln(1)', () => {
-            expect(SafeMath.preciseLog(u256.Zero)).toStrictEqual(u256.Zero);
+        it('should throw for ln(0)', () => {
+            expect(() => {
+                SafeMath.preciseLog(u256.Zero)
+            }).toThrow('SafeMath: log of zero');
+        });
+
+        it('should return 0 for and ln(1)', () => {
             expect(SafeMath.preciseLog(u256.One)).toStrictEqual(u256.Zero);
         });
 
@@ -780,7 +787,9 @@ describe('SafeMath - preciseLog', () => {
         });
 
         it('should handle values with bitLength <= 1', () => {
-            expect(SafeMath.preciseLog(u256.Zero)).toStrictEqual(u256.Zero);
+            expect(() => {
+                SafeMath.preciseLog(u256.Zero)
+            }).toThrow('SafeMath: log of zero');
             expect(SafeMath.preciseLog(u256.One)).toStrictEqual(u256.Zero);
         });
     });
@@ -1360,28 +1369,33 @@ describe('SafeMath - preciseLogRatio', () => {
             expect(result3).toStrictEqual(u256.Zero);
         });
 
-        it('should return 0 when a is zero', () => {
-            const result = SafeMath.preciseLogRatio(u256.Zero, u256.fromU32(100));
-            expect(result).toStrictEqual(u256.Zero);
+        it('should throw when a is zero', () => {
+            expect(() => {
+                SafeMath.preciseLogRatio(u256.Zero, u256.fromU32(100));
+            }).toThrow('SafeMath: log of zero');
         });
 
-        it('should return 0 when b is zero', () => {
-            const result = SafeMath.preciseLogRatio(u256.fromU32(100), u256.Zero);
-            expect(result).toStrictEqual(u256.Zero);
+        it('should throw when b is zero', () => {
+            expect(() => {
+                SafeMath.preciseLogRatio(u256.fromU32(100), u256.Zero);
+            }).toThrow('SafeMath: division by zero');
         });
 
-        it('should return 0 when both a and b are zero', () => {
-            const result = SafeMath.preciseLogRatio(u256.Zero, u256.Zero);
-            expect(result).toStrictEqual(u256.Zero);
+        it('should throw when both a and b are zero', () => {
+            expect(() => {
+                SafeMath.preciseLogRatio(u256.Zero, u256.Zero);
+            }).toThrow('SafeMath: division by zero');
         });
 
-        it('should return 0 when a < b (negative ln result)', () => {
-            // ln(a/b) < 0 when a < b, function returns 0 for negative results
-            const result1 = SafeMath.preciseLogRatio(u256.fromU32(50), u256.fromU32(100));
-            expect(result1).toStrictEqual(u256.Zero);
+        it('should throw when a < b (negative ln result)', () => {
+            // ln(a/b) < 0 when a < b
+            expect(() => {
+                SafeMath.preciseLogRatio(u256.fromU32(50), u256.fromU32(100));
+            }).toThrow('SafeMath: negative log result');
 
-            const result2 = SafeMath.preciseLogRatio(u256.fromU32(1), u256.fromU32(1000));
-            expect(result2).toStrictEqual(u256.Zero);
+            expect(() => {
+                SafeMath.preciseLogRatio(u256.fromU32(1), u256.fromU32(1000));
+            }).toThrow('SafeMath: negative log result');
         });
 
         it('should calculate ln(2) correctly for ratio 2:1', () => {
@@ -1671,6 +1685,33 @@ describe('SafeMath - preciseLogRatio', () => {
             expect(u256.gt(result, u256.Zero)).toBe(true, 'Result should be positive');
             expect(u256.gt(result, u256.fromU64(10000000))).toBe(true, 'Result should be > 10M');
             expect(u256.lt(result, u256.fromU64(20000000))).toBe(true, 'Result should be < 20M');
+        });
+    });
+
+    describe('Regression - preciseLogRatio', () => {
+        it('should return a positive ln for ratio just above 1 (1.000001 : 1)', () => {
+            const a = u256.fromU64(1_000_001);
+            const b = u256.fromU64(1_000_000);
+
+            const result = SafeMath.preciseLogRatio(a, b);
+            expect(result).toStrictEqual(
+                u256.fromU32(1),
+                'ln(1.000001) * 1e6 should round to 1, not 0',
+            );
+        });
+
+        it('should compute ln(1.99) accurately (regression for Taylor divergence)', () => {
+            const a = u256.fromU32(199);
+            const b = u256.fromU32(100);
+
+            const result = SafeMath.preciseLogRatio(a, b);
+            const expected: u64 = 688134; // ln(1.99) * 1e6
+
+            const diff = result.toU64() > expected ? result.toU64() - expected : expected - result.toU64();
+            expect(diff <= 2).toBe(
+                true,
+                `ln(1.99) should be near ${expected}, got ${result.toString()}`,
+            );
         });
     });
 
@@ -1968,10 +2009,16 @@ describe('Integration tests for logarithm functions', () => {
     describe('Comprehensive edge case validation', () => {
         it('should handle all zero-related edge cases consistently', () => {
             // All functions should handle zero safely
-            expect(SafeMath.approximateLog2(u256.Zero)).toStrictEqual(u256.Zero);
+            expect(() => {
+                SafeMath.approximateLog2(u256.Zero)
+            }).toThrow('SafeMath: log of zero');
+            expect(() => {
+                SafeMath.approxLog(u256.Zero)
+            }).toThrow('SafeMath: log of zero');
+            expect(() => {
+                SafeMath.preciseLog(u256.Zero)
+            }).toThrow('SafeMath: log of zero');
             expect(SafeMath.bitLength256(u256.Zero)).toBe(0);
-            expect(SafeMath.approxLog(u256.Zero)).toStrictEqual(u256.Zero);
-            expect(SafeMath.preciseLog(u256.Zero)).toStrictEqual(u256.Zero);
             expect(SafeMath.polyLn1p3(0)).toBe(0);
         });
 

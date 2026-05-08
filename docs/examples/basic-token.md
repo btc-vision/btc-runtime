@@ -376,7 +376,7 @@ function mint(address to, uint256 amount) external onlyOwner {
     emit Minted(to, amount);
 }
 
-// OPNet
+// OP_NET
 @method(
     { name: 'to', type: ABIDataTypes.ADDRESS },
     { name: 'amount', type: ABIDataTypes.UINT256 },
@@ -508,7 +508,7 @@ modifier onlyOwner() {
 
 function mint(address to, uint256 amount) external onlyOwner { }
 
-// OPNet uses inline checks
+// OP_NET uses inline checks
 public mint(calldata: Calldata): BytesWriter {
     this.onlyDeployer(Blockchain.tx.sender);  // Throws if not deployer
     // ...
@@ -627,11 +627,11 @@ contract BasicToken is ERC20, Ownable {
 }
 ```
 
-## Solidity vs OPNet Comparison
+## Solidity vs OP_NET Comparison
 
 ### Key Differences Table
 
-| Aspect | Solidity (ERC20) | OPNet (OP20) |
+| Aspect | Solidity (ERC20) | OP_NET (OP20) |
 |--------|------------------|--------------|
 | **Inheritance** | `contract MyToken is ERC20, Ownable` | `class MyToken extends OP20` |
 | **Constructor** | `constructor() ERC20("Name", "SYM")` | `onDeployment()` + `this.instantiate(new OP20InitParameters(...))` |
@@ -658,7 +658,7 @@ function mint(address to, uint256 amount) external onlyOwner {
 }
 ```
 
-**OPNet:**
+**OP_NET:**
 ```typescript
 // Method with decorators
 @method(
@@ -682,7 +682,7 @@ public mint(calldata: Calldata): BytesWriter {
 }
 ```
 
-### Advantages of OPNet Approach
+### Advantages of OP_NET Approach
 
 | Feature | Benefit |
 |---------|---------|
@@ -703,7 +703,7 @@ constructor(string memory name, string memory symbol) ERC20(name, symbol) {
 }
 ```
 
-**OPNet (onDeployment called during contract deployment):**
+**OP_NET (onDeployment called during contract deployment):**
 ```typescript
 public override onDeployment(calldata: Calldata): void {
     const name = calldata.readString();
@@ -721,7 +721,7 @@ event Minted(address indexed to, uint256 amount);
 emit Minted(to, amount);
 ```
 
-**OPNet:**
+**OP_NET:**
 ```typescript
 // Event class definition
 class MintEvent extends NetEvent {

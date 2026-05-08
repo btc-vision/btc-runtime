@@ -1,4 +1,9 @@
-import { bigEndianAdd, GET_EMPTY_BUFFER, readLengthAndStartIndex, writeLengthAndStartIndex, } from '../../math/bytes';
+import {
+    bigEndianAdd,
+    GET_EMPTY_BUFFER,
+    readLengthAndStartIndex,
+    writeLengthAndStartIndex,
+} from '../../math/bytes';
 import { Blockchain } from '../../env';
 import { Revert } from '../../types/Revert';
 import { encodePointer } from '../../math/abi';
@@ -353,6 +358,10 @@ export abstract class StoredPackedArray<T> {
 
     @inline
     public setMultiple(startIndex: u32, values: T[]): void {
+        if (startIndex > u32.MAX_VALUE - <u32>values.length) {
+            throw new Revert('setMultiple: end index overflow (packed array)');
+        }
+
         const end = startIndex + <u32>values.length;
         if (end > this._length) {
             throw new Revert('setMultiple: out of range (packed array)');

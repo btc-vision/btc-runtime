@@ -5,12 +5,16 @@ Plugins extend contract functionality through lifecycle hooks. They allow modula
 ## Overview
 
 ```typescript
-import { Plugin, Blockchain, Calldata, Selector } from '@btc-vision/btc-runtime/runtime';
+import { Plugin, Blockchain, Calldata, Selector, BytesWriter } from '@btc-vision/btc-runtime/runtime';
 
 // Create a plugin by extending Plugin class
 class MyPlugin extends Plugin {
     public override onDeployment(calldata: Calldata): void {
         // Called during contract deployment
+    }
+
+    public override onUpdate(calldata: Calldata): void {
+        // Called when contract bytecode is updated
     }
 
     public override onExecutionStarted(selector: Selector, calldata: Calldata): void {
@@ -20,15 +24,20 @@ class MyPlugin extends Plugin {
     public override onExecutionCompleted(selector: Selector, calldata: Calldata): void {
         // Called after each successful method execution
     }
+
+    public override execute(method: Selector, calldata: Calldata): BytesWriter | null {
+        // Handle method selectors - return BytesWriter if handled, null if not
+        return null;
+    }
 }
 
 // Register with contract
-Blockchain.registerPlugin(new MyPlugin());
+this.registerPlugin(new MyPlugin());
 ```
 
 ## Plugin Lifecycle
 
-Plugins are initialized when the contract is deployed and can intercept method calls:
+Plugins are initialized when the contract is deployed and can intercept method calls or handle them directly:
 
 ```mermaid
 ---
@@ -39,12 +48,12 @@ sequenceDiagram
     participant Deployer as 👤 Deployer
     participant Contract as Contract
     participant Plugin as Plugin
-    participant Blockchain as OPNet Runtime
+    participant Blockchain as OP_NET Runtime
 
     Note over Deployer,Blockchain: Contract Deployment
     Deployer->>Contract: constructor()
     Contract->>Plugin: new Plugin()
-    Contract->>Blockchain: registerPlugin(plugin)
+    Contract->>Contract: registerPlugin(plugin)
 
     Deployer->>Contract: deploy(calldata)
     Blockchain->>Plugin: onDeployment(calldata)
@@ -62,9 +71,14 @@ sequenceDiagram
     Note over Plugin: Pre-execution checks<br/>(access control, pausing, etc.)
     Plugin-->>Blockchain: continue
 
-    Blockchain->>Contract: method executes
-    Note over Contract: Core business logic
-    Contract-->>Blockchain: result
+    alt Plugin handles selector
+        Blockchain->>Plugin: execute(selector, calldata)
+        Plugin-->>Blockchain: BytesWriter result
+    else Contract handles selector
+        Blockchain->>Contract: method executes
+        Note over Contract: Core business logic
+        Contract-->>Blockchain: result
+    end
 
     Blockchain->>Plugin: onExecutionCompleted(selector, calldata)
     Note over Plugin: Post-execution tasks<br/>(metrics, logging, etc.)
@@ -86,8 +100,10 @@ classDiagram
     class Plugin {
         <<base>>
         +onDeployment(calldata: Calldata) void
+        +onUpdate(calldata: Calldata) void
         +onExecutionStarted(selector: Selector, calldata: Calldata) void
         +onExecutionCompleted(selector: Selector, calldata: Calldata) void
+        +execute(method: Selector, calldata: Calldata) BytesWriter|null
     }
 
     class RoleBasedAccessPlugin {
@@ -121,18 +137,26 @@ classDiagram
 
 ### Base Plugin Class
 
-The `Plugin` class provides three lifecycle hooks:
+The `Plugin` class provides lifecycle hooks and method handling:
 
 ```typescript
 export class Plugin {
     // Called once during contract deployment, before contract's onDeployment
     public onDeployment(_calldata: Calldata): void {}
 
+    // Called when contract bytecode is updated via updateContractFromExisting
+    public onUpdate(_calldata: Calldata): void {}
+
     // Called before each method execution
     public onExecutionStarted(_selector: Selector, _calldata: Calldata): void {}
 
     // Called after each successful method execution
     public onExecutionCompleted(_selector: Selector, _calldata: Calldata): void {}
+
+    // Handle method selectors - return BytesWriter if handled, null if not
+    public execute(_method: Selector, _calldata: Calldata): BytesWriter | null {
+        return null;
+    }
 }
 ```
 
@@ -144,12 +168,19 @@ import {
     Calldata,
     Selector,
     Blockchain,
-    Revert
+    BytesWriter,
+    Revert,
+    encodeSelector
 } from '@btc-vision/btc-runtime/runtime';
 
+// Simple logging plugin using lifecycle hooks
 class LoggingPlugin extends Plugin {
     public override onDeployment(calldata: Calldata): void {
         // Log deployment
+    }
+
+    public override onUpdate(calldata: Calldata): void {
+        // Handle contract updates
     }
 
     public override onExecutionStarted(selector: Selector, calldata: Calldata): void {
@@ -158,6 +189,23 @@ class LoggingPlugin extends Plugin {
 
     public override onExecutionCompleted(selector: Selector, calldata: Calldata): void {
         // Log method completion
+    }
+}
+
+// Plugin that handles method selectors (like UpdatablePlugin)
+class MethodHandlerPlugin extends Plugin {
+    public override execute(method: Selector, calldata: Calldata): BytesWriter | null {
+        switch (method) {
+            case encodeSelector('myPluginMethod()'):
+                return this.myPluginMethod();
+            default:
+                return null; // Not handled by this plugin
+        }
+    }
+
+    private myPluginMethod(): BytesWriter {
+        // Method implementation
+        return new BytesWriter(0);
     }
 }
 ```
@@ -178,7 +226,7 @@ export class MyContract extends OP_NET {
 
         // Create and register plugins
         this.loggingPlugin = new LoggingPlugin();
-        Blockchain.registerPlugin(this.loggingPlugin);
+        this.registerPlugin(this.loggingPlugin);
     }
 }
 ```
@@ -190,7 +238,7 @@ public override onDeployment(calldata: Calldata): void {
     const enableLogging = calldata.readBoolean();
 
     if (enableLogging) {
-        Blockchain.registerPlugin(new LoggingPlugin());
+        this.registerPlugin(new LoggingPlugin());
     }
 
     // Continue with normal deployment
@@ -208,7 +256,7 @@ config:
   theme: dark
 ---
 flowchart LR
-    subgraph OPNet["OPNet Plugin-Based Access Control"]
+    subgraph OP_NET["OP_NET Plugin-Based Access Control"]
         A["👤 User calls method"] --> B["onExecutionStarted"]
         B --> C{"Method requires role?"}
 
@@ -518,7 +566,7 @@ export class MyContract extends OP_NET {
             Blockchain.nextPointer,
             Blockchain.nextPointer
         );
-        Blockchain.registerPlugin(this.feePlugin);
+        this.registerPlugin(this.feePlugin);
     }
 
     @method(
@@ -551,15 +599,21 @@ export class MyContract extends OP_NET {
 ### Execution Order
 
 ```
+Deployment:
 1. Plugin.onDeployment (for each registered plugin, in order)
 2. Contract.onDeployment
 
-Then for each method call:
+Update (when bytecode is updated):
+1. Plugin.onUpdate (for each registered plugin, in order)
+2. Contract.onUpdate
+
+Method execution:
 1. Plugin.onExecutionStarted (for each registered plugin, in order)
 2. Contract.onExecutionStarted
-3. Contract method executes
-4. Plugin.onExecutionCompleted (for each registered plugin, in order)
-5. Contract.onExecutionCompleted
+3. Plugin.execute (check plugins first, return if handled)
+4. Contract method executes (if no plugin handled it)
+5. Plugin.onExecutionCompleted (for each registered plugin, in order)
+6. Contract.onExecutionCompleted
 ```
 
 ### Metrics Plugin Example
@@ -604,13 +658,13 @@ class MetricsPlugin extends Plugin {
 }
 ```
 
-## Solidity vs OPNet: Plugin System Comparison
+## Solidity vs OP_NET: Plugin System Comparison
 
-OPNet plugins provide a more flexible and powerful alternative to Solidity's inheritance and modifier patterns. They enable cross-cutting concerns without tight coupling.
+OP_NET plugins provide a more flexible and powerful alternative to Solidity's inheritance and modifier patterns. They enable cross-cutting concerns without tight coupling.
 
 ### Feature Comparison Table
 
-| Feature | Solidity/EVM | OPNet | OPNet Advantage |
+| Feature | Solidity/EVM | OP_NET | OP_NET Advantage |
 |---------|--------------|-------|-----------------|
 | **Code Reuse Pattern** | Inheritance | Composition (Plugins) | Flexible, no diamond problem |
 | **Pre-Execution Hooks** | Modifiers | `onExecutionStarted` | Centralized, selector-aware |
@@ -623,7 +677,7 @@ OPNet plugins provide a more flexible and powerful alternative to Solidity's inh
 
 ### Pattern Mapping Table
 
-| Solidity Pattern | OPNet Plugin Equivalent | Improvement |
+| Solidity Pattern | OP_NET Plugin Equivalent | Improvement |
 |-----------------|------------------------|-------------|
 | OpenZeppelin `Ownable` | `RoleBasedAccessPlugin` with ADMIN role | Multi-role support |
 | OpenZeppelin `Pausable` | `PausablePlugin` | Selector-specific pausing |
@@ -635,7 +689,7 @@ OPNet plugins provide a more flexible and powerful alternative to Solidity's inh
 
 ### Capability Matrix
 
-| Capability | Solidity | OPNet |
+| Capability | Solidity | OP_NET |
 |------------|:--------:|:-----:|
 | Pre-execution hooks | Modifiers (per-function) | Plugins (centralized) |
 | Post-execution hooks | Manual | Built-in |
@@ -664,7 +718,7 @@ flowchart TB
         S6["Diamond Problem Risk"]
     end
 
-    subgraph OPNet["OPNet - Plugin Composition"]
+    subgraph OP_NET["OP_NET - Plugin Composition"]
         O1["Contract"] --> O2["OP_NET base"]
         O3["AccessPlugin"] -.->|"registered"| O1
         O4["PausablePlugin"] -.->|"registered"| O1
@@ -675,7 +729,7 @@ flowchart TB
 
 ### Code Complexity Comparison
 
-| Aspect | Solidity | OPNet |
+| Aspect | Solidity | OP_NET |
 |--------|----------|-------|
 | Adding access control | Import + inherit + add modifiers | Register plugin |
 | Adding pausable | Import + inherit + add modifiers | Register plugin |
@@ -721,10 +775,10 @@ contract MyContract is Ownable, AccessControl {
 }
 ```
 
-#### OPNet: Plugin-Based Composition
+#### OP_NET: Plugin-Based Composition
 
 ```typescript
-// OPNet with Plugin - Composition-based
+// OP_NET with Plugin - Composition-based
 @final
 export class MyContract extends OP_NET {
     private accessPlugin: RoleBasedAccessPlugin;
@@ -733,7 +787,7 @@ export class MyContract extends OP_NET {
         super();
         // Single plugin handles ALL access control
         this.accessPlugin = new RoleBasedAccessPlugin(Blockchain.nextPointer);
-        Blockchain.registerPlugin(this.accessPlugin);
+        this.registerPlugin(this.accessPlugin);
     }
 
     @method()
@@ -801,10 +855,10 @@ contract MyContract is Pausable {
 }
 ```
 
-#### OPNet: Automatic Selector-Based Pausing
+#### OP_NET: Automatic Selector-Based Pausing
 
 ```typescript
-// OPNet with Plugin
+// OP_NET with Plugin
 @final
 export class MyContract extends OP_NET {
     private pausablePlugin: PausablePlugin;
@@ -812,7 +866,7 @@ export class MyContract extends OP_NET {
     public constructor() {
         super();
         this.pausablePlugin = new PausablePlugin(Blockchain.nextPointer);
-        Blockchain.registerPlugin(this.pausablePlugin);
+        this.registerPlugin(this.pausablePlugin);
     }
 
     @method(ABIDataTypes.UINT256)
@@ -848,7 +902,7 @@ export class MyContract extends OP_NET {
 ### Multiple Plugins Example
 
 ```typescript
-// OPNet - Composing multiple plugins (no inheritance conflicts)
+// OP_NET - Composing multiple plugins (no inheritance conflicts)
 @final
 export class CompleteContract extends OP_NET {
     private accessPlugin: RoleBasedAccessPlugin;
@@ -861,19 +915,19 @@ export class CompleteContract extends OP_NET {
 
         // Order matters - security checks first!
         this.accessPlugin = new RoleBasedAccessPlugin(Blockchain.nextPointer);
-        Blockchain.registerPlugin(this.accessPlugin);  // 1. Check permissions
+        this.registerPlugin(this.accessPlugin);  // 1. Check permissions
 
         this.pausablePlugin = new PausablePlugin(Blockchain.nextPointer);
-        Blockchain.registerPlugin(this.pausablePlugin);  // 2. Check pause status
+        this.registerPlugin(this.pausablePlugin);  // 2. Check pause status
 
         this.feePlugin = new FeeCollectorPlugin(
             Blockchain.nextPointer,
             Blockchain.nextPointer
         );
-        Blockchain.registerPlugin(this.feePlugin);  // 3. Fee calculations
+        this.registerPlugin(this.feePlugin);  // 3. Fee calculations
 
         this.metricsPlugin = new MetricsPlugin(Blockchain.nextPointer);
-        Blockchain.registerPlugin(this.metricsPlugin);  // 4. Track metrics
+        this.registerPlugin(this.metricsPlugin);  // 4. Track metrics
     }
 
     // All plugins execute their hooks automatically
@@ -883,16 +937,18 @@ export class CompleteContract extends OP_NET {
 
 ### Lifecycle Hook Comparison
 
-| Lifecycle Event | Solidity | OPNet |
+| Lifecycle Event | Solidity | OP_NET |
 |-----------------|----------|-------|
 | Contract deployment | Single constructor | `onDeployment` per plugin + contract |
+| Contract update | Proxy reinitialize | `onUpdate` per plugin + contract |
 | Before method call | Modifiers (manual per function) | `onExecutionStarted` (automatic) |
+| Method handling | Function dispatch | `execute` returns BytesWriter or null |
 | After method call | No built-in hook | `onExecutionCompleted` (automatic) |
 | Error handling | try/catch (limited) | Revert in any hook |
 
-### Why OPNet Plugins?
+### Why OP_NET Plugins?
 
-| Solidity Limitation | OPNet Solution |
+| Solidity Limitation | OP_NET Solution |
 |---------------------|----------------|
 | Modifier on every function | Centralized selector-based routing |
 | Multiple inheritance complexity | Simple composition |
@@ -928,12 +984,21 @@ class MyPlugin extends Plugin {
         // Implementation
     }
 
+    public override onUpdate(calldata: Calldata): void {
+        // Implementation
+    }
+
     public override onExecutionStarted(selector: Selector, calldata: Calldata): void {
         // Implementation
     }
 
     public override onExecutionCompleted(selector: Selector, calldata: Calldata): void {
         // Implementation
+    }
+
+    public override execute(method: Selector, calldata: Calldata): BytesWriter | null {
+        // Return BytesWriter if handled, null if not
+        return null;
     }
 }
 ```
@@ -994,9 +1059,9 @@ public override onExecutionStarted(selector: Selector, calldata: Calldata): void
 
 ```typescript
 // Security checks should come first
-Blockchain.registerPlugin(this.accessControl);  // Check permissions first
-Blockchain.registerPlugin(this.pausable);       // Then pausable
-Blockchain.registerPlugin(this.metrics);        // Metrics last
+this.registerPlugin(this.accessControl);  // Check permissions first
+this.registerPlugin(this.pausable);       // Then pausable
+this.registerPlugin(this.metrics);        // Metrics last
 ```
 
 ---

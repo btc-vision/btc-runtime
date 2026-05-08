@@ -21,7 +21,7 @@ import {
 } from '../constants/Exports';
 import { Blockchain } from '../env';
 import { sha256, sha256String } from '../env/global';
-import { ApprovedEvent, BurnedEvent, MintedEvent, TransferredEvent } from '../events/predefined';
+import { OP20ApprovedEvent, OP20BurnedEvent, OP20MintedEvent, OP20TransferredEvent } from '../events/predefined';
 import { Selector } from '../math/abi';
 import { EMPTY_POINTER } from '../math/bytes';
 import { AddressMemoryMap } from '../memory/AddressMemoryMap';
@@ -45,16 +45,18 @@ import { OP20InitParameters } from './interfaces/OP20InitParameters';
 import { ReentrancyGuard, ReentrancyLevel } from './ReentrancyGuard';
 import { ExtendedAddress } from '../types/ExtendedAddress';
 
-const nonceMapPointer: u16 = Blockchain.nextPointer;
-const maxSupplyPointer: u16 = Blockchain.nextPointer;
+const namePointer: u16 = Blockchain.nextPointer;
+const symbolPointer: u16 = Blockchain.nextPointer;
+const iconPointer: u16 = Blockchain.nextPointer;
 const decimalsPointer: u16 = Blockchain.nextPointer;
-const stringPointer: u16 = Blockchain.nextPointer;
 const totalSupplyPointer: u16 = Blockchain.nextPointer;
-const allowanceMapPointer: u16 = Blockchain.nextPointer;
+const maxSupplyPointer: u16 = Blockchain.nextPointer;
 const balanceOfMapPointer: u16 = Blockchain.nextPointer;
+const allowanceMapPointer: u16 = Blockchain.nextPointer;
+const nonceMapPointer: u16 = Blockchain.nextPointer;
 
 /**
- * OP20 Token Standard Implementation for OPNet.
+ * OP20 Token Standard Implementation for OP_NET.
  *
  * This abstract class implements the OP20 token standard, providing a complete
  * fungible token implementation with advanced features including:
@@ -65,7 +67,7 @@ const balanceOfMapPointer: u16 = Blockchain.nextPointer;
  * - Unlimited approval optimization (u256.Max)
  *
  * @remarks
- * OP20 is OPNet's equivalent of ERC20, adapted for Bitcoin's UTXO model with
+ * OP20 is OP_NET's equivalent of ERC20, adapted for Bitcoin's UTXO model with
  * additional security features. All storage uses persistent pointers for
  * cross-transaction state management. The contract includes built-in protection
  * against common attack vectors including reentrancy and integer overflow.
@@ -101,7 +103,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
      * Reentrancy protection level for this contract.
      * Set to CALLBACK to allow single-depth callbacks for safeTransfer operations.
      */
-    protected readonly reentrancyLevel: ReentrancyLevel = ReentrancyLevel.CALLBACK;
+    protected override readonly reentrancyLevel: ReentrancyLevel = ReentrancyLevel.CALLBACK;
 
     /**
      * Nested mapping of owner -> spender -> allowance amount.
@@ -150,9 +152,9 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         this._totalSupply = new StoredU256(totalSupplyPointer, EMPTY_POINTER);
         this._maxSupply = new StoredU256(maxSupplyPointer, EMPTY_POINTER);
         this._decimals = new StoredU256(decimalsPointer, EMPTY_POINTER);
-        this._name = new StoredString(stringPointer, 0);
-        this._symbol = new StoredString(stringPointer, 1);
-        this._icon = new StoredString(stringPointer, 2);
+        this._name = new StoredString(namePointer);
+        this._symbol = new StoredString(symbolPointer);
+        this._icon = new StoredString(iconPointer);
     }
 
     /**
@@ -746,7 +748,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
      * Checks if a selector should bypass reentrancy guards.
      * @protected
      */
-    protected isSelectorExcluded(selector: Selector): boolean {
+    protected override isSelectorExcluded(selector: Selector): boolean {
         if (
             selector === BALANCE_OF_SELECTOR ||
             selector === ALLOWANCE_SELECTOR ||
@@ -839,7 +841,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
      * Internal: Builds EIP-712 domain separator.
      * @protected
      */
-    protected _buildDomainSeparator(): Uint8Array {
+    protected override _buildDomainSeparator(): Uint8Array {
         const writer = new BytesWriter(32 * 5 + ADDRESS_BYTE_LENGTH);
         writer.writeBytesU8Array(OP712_DOMAIN_TYPE_HASH);
         writer.writeBytes(sha256String(this._name.value));
@@ -947,15 +949,15 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
 
     /** Event creation helpers */
     protected createBurnedEvent(from: Address, amount: u256): void {
-        this.emitEvent(new BurnedEvent(from, amount));
+        this.emitEvent(new OP20BurnedEvent(from, amount));
     }
 
     protected createApprovedEvent(owner: Address, spender: Address, amount: u256): void {
-        this.emitEvent(new ApprovedEvent(owner, spender, amount));
+        this.emitEvent(new OP20ApprovedEvent(owner, spender, amount));
     }
 
     protected createMintedEvent(to: Address, amount: u256): void {
-        this.emitEvent(new MintedEvent(to, amount));
+        this.emitEvent(new OP20MintedEvent(to, amount));
     }
 
     protected createTransferredEvent(
@@ -964,6 +966,6 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         to: Address,
         amount: u256,
     ): void {
-        this.emitEvent(new TransferredEvent(operator, from, to, amount));
+        this.emitEvent(new OP20TransferredEvent(operator, from, to, amount));
     }
 }

@@ -44,23 +44,7 @@ export class MapUint8Array implements IMap<Uint8Array, Uint8Array> {
     }
 
     public set(key: Uint8Array, value: Uint8Array): this {
-        let index = -1;
-
-        // Check Cache (Fastest)
-        if (this._lastIndex !== -1) {
-            const cachedKey = unchecked(this._keys[this._lastIndex]);
-            // Check length first, then full content equality
-            if (cachedKey.length === key.length) {
-                if (memory.compare(cachedKey.dataStart, key.dataStart, key.length) === 0) {
-                    index = this._lastIndex;
-                }
-            }
-        }
-
-        // Full Scan if cache missed
-        if (index === -1) {
-            index = this.indexOf(key);
-        }
+        let index = this.indexOf(key);
 
         if (index === -1) {
             this._keys.push(key);
@@ -68,7 +52,7 @@ export class MapUint8Array implements IMap<Uint8Array, Uint8Array> {
             this._lastIndex = this._keys.length - 1;
         } else {
             unchecked((this._values[index] = value));
-            // Cache is already pointing to this index (from indexOf or the check above)
+            // Cache is already pointing to this index (from indexOf)
             this._lastIndex = index;
         }
 
@@ -81,6 +65,10 @@ export class MapUint8Array implements IMap<Uint8Array, Uint8Array> {
      * Uses a "Prefix Filter" to skip expensive memory comparisons.
      */
     public indexOf(pointerHash: Uint8Array): i32 {
+        if (this.isLastIndex(pointerHash)) {
+            return this._lastIndex;
+        }
+
         const len = this._keys.length;
         if (len === 0) return -1;
 
@@ -187,5 +175,19 @@ export class MapUint8Array implements IMap<Uint8Array, Uint8Array> {
 
     public toString(): string {
         return `Map(size=${this._keys.length})`;
+    }
+
+    private isLastIndex(key: Uint8Array): bool {
+        if (this._lastIndex !== -1) {
+            const cachedKey = unchecked(this._keys[this._lastIndex]);
+            // Check length first, then full content equality
+            if (cachedKey.length === key.length) {
+                if (memory.compare(cachedKey.dataStart, key.dataStart, key.length) === 0) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

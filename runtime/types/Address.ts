@@ -4,7 +4,7 @@ import { Revert } from './Revert';
 import { ArrayLike } from '../interfaces/as';
 
 /**
- * Represents a 32-byte address in the OPNet system.
+ * Represents a 32-byte address in the OP_NET system.
  *
  * This class extends Uint8Array to provide a fixed-size 32-byte address with additional
  * functionality for quantum-resistant cryptography. The address stores the SHA256 hash
@@ -323,7 +323,7 @@ export class Address extends Uint8Array {
      *
      * @returns The address as a hex string (delegates to toHex())
      */
-    public toString(): string {
+    public override toString(): string {
         return this.toHex();
     }
 
@@ -357,6 +357,7 @@ export class Address extends Uint8Array {
      * @private
      */
     @operator('[]')
+    // @ts-ignore
     private ___get(index: i32): u8 {
         if (u32(index) >= u32(this.length)) {
             throw new RangeError('Index out of range');
@@ -377,6 +378,7 @@ export class Address extends Uint8Array {
      * @private
      */
     @operator('[]=')
+    // @ts-ignore
     private ___set(index: i32, value: u8): void {
         if (this.isDefined) {
             throw new Revert(`Cannot modify address data.`);

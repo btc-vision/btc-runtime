@@ -1,0 +1,6 @@
+AUDIT/*
+.vscode/*
+.idea/*
+.DS_Store
+coverage/*
+tests/*

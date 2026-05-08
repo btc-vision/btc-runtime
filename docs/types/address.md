@@ -1,6 +1,6 @@
 # Address Type
 
-The `Address` type represents a 32-byte Bitcoin/OPNet address. It provides methods for creating, comparing, and serializing addresses.
+The `Address` type represents a 32-byte Bitcoin/OP_NET address. It provides methods for creating, comparing, and serializing addresses.
 
 ## Overview
 
@@ -248,12 +248,12 @@ const sender: Address = reader.readAddress();
 
 ## Address Size
 
-OPNet addresses are **32 bytes**, compared to Ethereum's 20 bytes:
+OP_NET addresses are **32 bytes**, compared to Ethereum's 20 bytes:
 
 | Platform | Address Size | Format |
 |----------|-------------|--------|
 | Ethereum | 20 bytes | 0x + 40 hex chars |
-| OPNet | 32 bytes | 64 hex chars |
+| OP_NET | 32 bytes | 64 hex chars |
 
 ```typescript
 // Full 32-byte address (Address extends Uint8Array)
@@ -303,7 +303,7 @@ this.balances.set(userAddress, newBalance);
 
 ## ML-DSA Public Key Access
 
-Every `Address` in OPNet can access its ML-DSA (quantum-resistant) public key directly:
+Every `Address` in OP_NET can access its ML-DSA (quantum-resistant) public key directly:
 
 ```typescript
 const sender: Address = Blockchain.tx.sender;
@@ -429,11 +429,11 @@ const deadAddr: ExtendedAddress = Blockchain.DEAD_ADDRESS;
 
 See [Quantum Resistance](../advanced/quantum-resistance.md) for details.
 
-## Solidity vs OPNet Comparison
+## Solidity vs OP_NET Comparison
 
 ### Address Type Comparison Table
 
-| Feature | Solidity | OPNet |
+| Feature | Solidity | OP_NET |
 |---------|----------|-------|
 | **Type name** | `address` | `Address` |
 | **Size** | 20 bytes (160 bits) | 32 bytes (256 bits) |
@@ -464,7 +464,7 @@ address self = address(this);
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 const sender: Address = Blockchain.tx.sender;
 const origin: Address = Blockchain.tx.origin;
 const self: Address = Blockchain.contract.address;
@@ -478,7 +478,7 @@ require(to != address(0), "Cannot send to zero address");
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 if (to.equals(Address.zero())) {
     throw new Revert('Cannot send to zero address');
 }
@@ -497,7 +497,7 @@ require(from != to, "Cannot transfer to self");
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 if (!Blockchain.tx.sender.equals(owner)) {
     throw new Revert('Not owner');
 }
@@ -528,7 +528,7 @@ function transferOwnership(address newOwner) public onlyOwner {
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 private ownerPointer: u16 = Blockchain.nextPointer;
 private _owner: StoredAddress;
 
@@ -570,7 +570,7 @@ function balanceOf(address account) public view returns (uint256) {
 ```
 
 ```typescript
-// OPNet
+// OP_NET
 private balancesPointer: u16 = Blockchain.nextPointer;
 private balances: AddressMemoryMap;
 
@@ -600,7 +600,7 @@ bool success = recipient.send(amount); // Returns false on failure
 ```
 
 ```typescript
-// OPNet - No native value transfers on addresses
+// OP_NET - No native value transfers on addresses
 // Bitcoin UTXO model is fundamentally different
 // Token transfers are done via contract calls instead:
 this._transfer(from, to, amount);  // Internal token transfer logic
@@ -608,7 +608,7 @@ this._transfer(from, to, amount);  // Internal token transfer logic
 
 ### Key Differences Explained
 
-| Aspect | Solidity/Ethereum | OPNet/Bitcoin |
+| Aspect | Solidity/Ethereum | OP_NET/Bitcoin |
 |--------|-------------------|---------------|
 | **Address derivation** | Keccak256 hash of public key (last 20 bytes) | SHA256 of ML-DSA public key (32 bytes) |
 | **Native currency** | ETH handled via `payable` | Bitcoin UTXOs handled separately |

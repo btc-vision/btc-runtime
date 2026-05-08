@@ -4,6 +4,15 @@ import { Blockchain } from '../env';
 import { Network } from '../script/Networks';
 import { Address } from './Address';
 import { BitcoinAddresses } from '../script/BitcoinAddresses';
+import {
+    DEAD_ARRAY,
+    getCachedDeadAddress,
+    getCachedZeroAddress,
+    setCachedDeadAddress,
+    setCachedZeroAddress,
+    ZERO_ARRAY,
+} from './ExtendedAddressCache';
+import { Revert } from './Revert';
 
 /**
  * Extended address implementation for Bitcoin with dual-key support.
@@ -15,7 +24,7 @@ import { BitcoinAddresses } from '../script/BitcoinAddresses';
  *
  * @remarks
  * This class is marked as @final and cannot be extended. It represents the complete
- * address format for OPNet's quantum-resistant transition, supporting both legacy
+ * address format for OP_NET's quantum-resistant transition, supporting both legacy
  * Schnorr signatures and future ML-DSA signatures within the same address structure.
  *
  * The tweaked public key enables P2TR (pay-to-taproot) address generation while
@@ -52,14 +61,14 @@ export class ExtendedAddress extends Address {
      * @param tweakedPublicKey - 32-byte tweaked Schnorr public key for taproot
      * @param publicKey - 32-byte ML-DSA public key hash (SHA256 of full ML-DSA key)
      *
-     * @throws {Error} If tweakedPublicKey is not exactly 32 bytes
-     * @throws {Error} If publicKey is not exactly 32 bytes (thrown by parent class)
+     * @throws {Revert} If tweakedPublicKey is not exactly 32 bytes
+     * @throws {Revert} If publicKey is not exactly 32 bytes (thrown by parent class)
      */
     public constructor(tweakedPublicKey: u8[], publicKey: u8[]) {
         super(publicKey);
 
         if (tweakedPublicKey.length !== 32) {
-            throw new Error('Tweaked public key must be 32 bytes long');
+            throw new Revert('Tweaked public key must be 32 bytes long');
         }
 
         this.tweakedPublicKey = new Uint8Array(32);
@@ -86,7 +95,13 @@ export class ExtendedAddress extends Address {
      * ```
      */
     public static dead(): ExtendedAddress {
-        return DEAD_ADDRESS.clone();
+        let cached = getCachedDeadAddress();
+        if (cached === 0) {
+            const addr = new ExtendedAddress(DEAD_ARRAY, ZERO_ARRAY);
+            cached = changetype<usize>(addr);
+            setCachedDeadAddress(cached);
+        }
+        return changetype<ExtendedAddress>(cached).clone();
     }
 
     /**
@@ -102,8 +117,14 @@ export class ExtendedAddress extends Address {
      * }
      * ```
      */
-    public static zero(): ExtendedAddress {
-        return ZERO_BITCOIN_ADDRESS.clone();
+    public static override zero(): ExtendedAddress {
+        let cached = getCachedZeroAddress();
+        if (cached === 0) {
+            const addr = new ExtendedAddress(ZERO_ARRAY, ZERO_ARRAY);
+            cached = changetype<usize>(addr);
+            setCachedZeroAddress(cached);
+        }
+        return changetype<ExtendedAddress>(cached).clone();
     }
 
     /**
@@ -201,7 +222,7 @@ export class ExtendedAddress extends Address {
      * const addr = ExtendedAddress.fromUint8Array(combined);
      * ```
      */
-    public static fromUint8Array(bytes: Uint8Array): ExtendedAddress {
+    public static override fromUint8Array(bytes: Uint8Array): ExtendedAddress {
         if (bytes.length !== 64) {
             throw new Error('Expected 64 bytes: 32 for tweakedPublicKey, 32 for publicKey');
         }
@@ -286,7 +307,7 @@ export class ExtendedAddress extends Address {
      * not the tweaked Schnorr key. Use ZERO_BITCOIN_ADDRESS for a fully
      * zero ExtendedAddress.
      */
-    public isZero(): bool {
+    public override isZero(): bool {
         for (let i = 0; i < this.length; i++) {
             if (this[i] != 0) {
                 return false;
@@ -299,7 +320,7 @@ export class ExtendedAddress extends Address {
     /**
      * Checks if this address equals the canonical dead address.
      *
-     * @returns `true` if this address matches DEAD_ADDRESS, `false` otherwise
+     * @returns `true` if this address matches the dead address, `false` otherwise
      *
      * @example
      * ```typescript
@@ -310,8 +331,18 @@ export class ExtendedAddress extends Address {
      * ```
      */
     public isDead(): bool {
+        // Use cached dead address for comparison
+        const deadAddr = ExtendedAddress.dead();
+
+        // Compare both ML-DSA key hash (this) and tweaked key
         for (let i = 0; i < this.length; i++) {
-            if (this[i] != DEAD_ADDRESS[i]) {
+            if (this[i] != deadAddr[i]) {
+                return false;
+            }
+        }
+
+        for (let i = 0; i < this.tweakedPublicKey.length; i++) {
+            if (this.tweakedPublicKey[i] != deadAddr.tweakedPublicKey[i]) {
                 return false;
             }
         }
@@ -351,7 +382,7 @@ export class ExtendedAddress extends Address {
      *
      * @override Overrides the base Address.toString() which returns hex
      */
-    public toString(): string {
+    public override toString(): string {
         return this.p2tr();
     }
 
@@ -393,32 +424,14 @@ export class ExtendedAddress extends Address {
  * Pre-initialized zero ExtendedAddress constant.
  * Both the tweaked key and ML-DSA key hash are all zeros.
  */
-export const ZERO_BITCOIN_ADDRESS: ExtendedAddress = new ExtendedAddress(
-    [
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0,
-    ],
-    [
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0,
-    ],
-);
+export const ZERO_BITCOIN_ADDRESS: ExtendedAddress = new ExtendedAddress(ZERO_ARRAY, ZERO_ARRAY);
 
 /**
  * Pre-initialized dead ExtendedAddress constant.
  * The tweaked key is zero while the ML-DSA key hash represents the canonical dead address.
  * Hash: 284ae4acdb32a99ba3ebfa66a91ddb41a7b7a1d2fef415399922cd8a04485c02
  */
-export const DEAD_ADDRESS: ExtendedAddress = new ExtendedAddress(
-    [
-        40, 74, 228, 172, 219, 50, 169, 155, 163, 235, 250, 102, 169, 29, 219, 65, 167, 183, 161,
-        210, 254, 244, 21, 57, 153, 34, 205, 138, 4, 72, 92, 2,
-    ],
-    [
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0,
-    ],
-);
+export const DEAD_ADDRESS: ExtendedAddress = new ExtendedAddress(DEAD_ARRAY, ZERO_ARRAY);
 
 /**
  * Type alias for nullable ExtendedAddress references.

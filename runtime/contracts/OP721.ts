@@ -1,3 +1,6 @@
+// THIS STANDARD IS EXPERIMENTAL AND SHOULDN'T BE USED IN REAL PROJECTS
+// CONTRACTS USING THIS COULD BREAK IN THE FUTURE
+
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import { BytesWriter } from '../buffer/BytesWriter';
 import { Blockchain } from '../env';
@@ -25,13 +28,7 @@ import { IOP721 } from './interfaces/IOP721';
 import { OP721InitParameters } from './interfaces/OP721InitParameters';
 import { ReentrancyGuard } from './ReentrancyGuard';
 import { StoredMapU256 } from '../storage/maps/StoredMapU256';
-import {
-    ApprovedEvent,
-    ApprovedForAllEvent,
-    MAX_URI_LENGTH,
-    TransferredEvent,
-    URIEvent,
-} from '../events/predefined';
+import { MAX_URI_LENGTH, OP721ApprovedForAllEvent, URIEvent } from '../events/predefined';
 import {
     ON_OP721_RECEIVED_SELECTOR,
     OP712_DOMAIN_TYPE_HASH,
@@ -40,6 +37,10 @@ import {
     OP721_APPROVAL_TYPE_HASH,
 } from '../constants/Exports';
 import { ExtendedAddress } from '../types/ExtendedAddress';
+import { OP721TransferredEvent } from '../events/predefined/OP721TransferredEvent';
+import { OP721ApprovedEvent } from '../events/predefined/OP721ApprovedEvent';
+import { OP721MintedEvent } from '../events/predefined/OP721MintedEvent';
+import { OP721BurnedEvent } from '../events/predefined/OP721BurnedEvent';
 
 const stringPointer: u16 = Blockchain.nextPointer;
 const totalSupplyPointer: u16 = Blockchain.nextPointer;
@@ -60,10 +61,10 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     protected readonly _name: StoredString;
     protected readonly _symbol: StoredString;
     protected readonly _baseURI: StoredString;
-    protected readonly _collectionBanner: StoredString;
-    protected readonly _collectionIcon: StoredString;
-    protected readonly _collectionDescription: StoredString;
-    protected readonly _collectionWebsite: StoredString;
+    protected readonly _banner: StoredString;
+    protected readonly _icon: StoredString;
+    protected readonly _description: StoredString;
+    protected readonly _website: StoredString;
 
     protected readonly _totalSupply: StoredU256;
     protected readonly _maxSupply: StoredU256;
@@ -94,10 +95,10 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         this._name = new StoredString(stringPointer, 0);
         this._symbol = new StoredString(stringPointer, 2);
         this._baseURI = new StoredString(stringPointer, 3);
-        this._collectionBanner = new StoredString(stringPointer, 4);
-        this._collectionIcon = new StoredString(stringPointer, 5);
-        this._collectionDescription = new StoredString(stringPointer, 6);
-        this._collectionWebsite = new StoredString(stringPointer, 7);
+        this._banner = new StoredString(stringPointer, 4);
+        this._icon = new StoredString(stringPointer, 5);
+        this._description = new StoredString(stringPointer, 6);
+        this._website = new StoredString(stringPointer, 7);
 
         this._totalSupply = new StoredU256(totalSupplyPointer, EMPTY_POINTER);
         this._maxSupply = new StoredU256(maxSupplyPointer, EMPTY_POINTER);
@@ -125,6 +126,10 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         return this._symbol.value;
     }
 
+    public get icon(): string {
+        return this._icon.value;
+    }
+
     public get baseURI(): string {
         return this._baseURI.value;
     }
@@ -137,20 +142,16 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         return this._maxSupply.value;
     }
 
-    public get collectionBanner(): string {
-        return this._collectionBanner.value;
+    public get banner(): string {
+        return this._banner.value;
     }
 
-    public get collectionIcon(): string {
-        return this._collectionIcon.value;
+    public get description(): string {
+        return this._description.value;
     }
 
-    public get collectionDescription(): string {
-        return this._collectionDescription.value;
-    }
-
-    public get collectionWebsite(): string {
-        return this._collectionWebsite.value;
+    public get website(): string {
+        return this._website.value;
     }
 
     public instantiate(
@@ -172,10 +173,10 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         this._initialized.value = u256.One;
         this._tokenURICounter.value = u256.Zero;
 
-        this._collectionBanner.value = params.collectionBanner;
-        this._collectionIcon.value = params.collectionIcon;
-        this._collectionDescription.value = params.collectionDescription;
-        this._collectionWebsite.value = params.collectionWebsite;
+        this._banner.value = params.banner;
+        this._icon.value = params.icon;
+        this._description.value = params.description;
+        this._website.value = params.website;
     }
 
     @method('name')
@@ -201,28 +202,6 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     public fn_maxSupply(_: Calldata): BytesWriter {
         const w = new BytesWriter(U256_BYTE_LENGTH);
         w.writeU256(this.maxSupply);
-        return w;
-    }
-
-    @method('collectionInfo')
-    @returns(
-        { name: 'icon', type: ABIDataTypes.STRING },
-        { name: 'banner', type: ABIDataTypes.STRING },
-        { name: 'description', type: ABIDataTypes.STRING },
-        { name: 'website', type: ABIDataTypes.STRING },
-    )
-    public collectionInfo(_: Calldata): BytesWriter {
-        const length =
-            String.UTF8.byteLength(this.collectionIcon) +
-            String.UTF8.byteLength(this.collectionDescription) +
-            String.UTF8.byteLength(this.collectionWebsite) +
-            String.UTF8.byteLength(this.collectionBanner);
-
-        const w = new BytesWriter(U32_BYTE_LENGTH * 4 + length);
-        w.writeStringWithLength(this.collectionIcon);
-        w.writeStringWithLength(this.collectionBanner);
-        w.writeStringWithLength(this.collectionDescription);
-        w.writeStringWithLength(this.collectionWebsite);
         return w;
     }
 
@@ -255,7 +234,13 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         return w;
     }
 
-    @method('changeMetadata')
+    @method(
+        'changeMetadata',
+        { name: 'icon', type: ABIDataTypes.STRING },
+        { name: 'banner', type: ABIDataTypes.STRING },
+        { name: 'description', type: ABIDataTypes.STRING },
+        { name: 'website', type: ABIDataTypes.STRING },
+    )
     public changeMetadata(calldata: Calldata): BytesWriter {
         this.onlyDeployer(Blockchain.tx.sender);
 
@@ -269,10 +254,10 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         if (description.length == 0) throw new Revert('Description cannot be empty');
         if (website.length == 0) throw new Revert('Website cannot be empty');
 
-        this._collectionIcon.value = icon;
-        this._collectionBanner.value = banner;
-        this._collectionDescription.value = description;
-        this._collectionWebsite.value = website;
+        this._icon.value = icon;
+        this._banner.value = banner;
+        this._description.value = description;
+        this._website.value = website;
 
         return new BytesWriter(0);
     }
@@ -308,6 +293,36 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     @method(
         { name: 'to', type: ABIDataTypes.ADDRESS },
         { name: 'tokenId', type: ABIDataTypes.UINT256 },
+    )
+    @emit('Transferred')
+    public transfer(calldata: Calldata): BytesWriter {
+        const to = calldata.readAddress();
+        const tokenId = calldata.readU256();
+
+        this._transfer(Blockchain.tx.sender, to, tokenId);
+
+        return new BytesWriter(0);
+    }
+
+    @method(
+        { name: 'from', type: ABIDataTypes.ADDRESS },
+        { name: 'to', type: ABIDataTypes.ADDRESS },
+        { name: 'tokenId', type: ABIDataTypes.UINT256 },
+    )
+    @emit('Transferred')
+    public transferFrom(calldata: Calldata): BytesWriter {
+        const from = calldata.readAddress();
+        const to = calldata.readAddress();
+        const amount = calldata.readU256();
+
+        this._transfer(from, to, amount);
+
+        return new BytesWriter(0);
+    }
+
+    @method(
+        { name: 'to', type: ABIDataTypes.ADDRESS },
+        { name: 'tokenId', type: ABIDataTypes.UINT256 },
         { name: 'data', type: ABIDataTypes.BYTES },
     )
     @emit('Transferred')
@@ -316,7 +331,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         const tokenId = calldata.readU256();
         const data = calldata.readBytesWithLength();
 
-        this._transfer(Blockchain.tx.sender, to, tokenId, data);
+        this._safeTransfer(Blockchain.tx.sender, to, tokenId, data);
 
         return new BytesWriter(0);
     }
@@ -334,7 +349,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         const tokenId = calldata.readU256();
         const data = calldata.readBytesWithLength();
 
-        this._transfer(from, to, tokenId, data);
+        this._safeTransfer(from, to, tokenId, data);
 
         return new BytesWriter(0);
     }
@@ -456,7 +471,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     }
 
     @method({ name: 'tokenId', type: ABIDataTypes.UINT256 })
-    @emit('Transferred')
+    @emit('Burned')
     public burn(calldata: Calldata): BytesWriter {
         const tokenId = calldata.readU256();
         this._burn(tokenId);
@@ -493,7 +508,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
 
     @method({ name: 'owner', type: ABIDataTypes.ADDRESS })
     @returns({ name: 'nonce', type: ABIDataTypes.UINT256 })
-    public getApproveNonce(calldata: Calldata): BytesWriter {
+    public nonceOf(calldata: Calldata): BytesWriter {
         const owner = calldata.readAddress();
         const nonce = this._approveNonceMap.get(owner);
         const w = new BytesWriter(U256_BYTE_LENGTH);
@@ -532,10 +547,10 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
     public metadata(_: Calldata): BytesWriter {
         const name = this.name;
         const symbol = this.symbol;
-        const icon = this.collectionIcon;
-        const banner = this.collectionBanner;
-        const description = this.collectionDescription;
-        const website = this.collectionWebsite;
+        const icon = this.icon;
+        const banner = this.banner;
+        const description = this.description;
+        const website = this.website;
         const domainSeparator = this._buildDomainSeparator();
 
         const nameLength = String.UTF8.byteLength(name);
@@ -595,7 +610,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         // Update total supply
         this._totalSupply.value = SafeMath.add(this._totalSupply.value, u256.One);
 
-        this.createTransferEvent(Address.zero(), to, tokenId);
+        this.createMintedEvent(to, tokenId);
     }
 
     protected _burn(tokenId: u256): void {
@@ -634,21 +649,22 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         // Update total supply
         this._totalSupply.value = SafeMath.sub(this._totalSupply.value, u256.One);
 
-        this.createTransferEvent(owner, Address.zero(), tokenId);
+        this.createBurnedEvent(owner, tokenId);
     }
 
-    protected _transfer(from: Address, to: Address, tokenId: u256, data: Uint8Array): void {
-        // Skip self-transfers
-        if (from === to) return;
+    protected _transfer(from: Address, to: Address, tokenId: u256): void {
+        if (from === Address.zero()) {
+            throw new Revert('Invalid sender');
+        }
+
+        if (to === Address.zero()) {
+            throw new Revert('Invalid receiver');
+        }
 
         const owner = this._ownerOf(tokenId);
 
         if (owner !== from) {
             throw new Revert('Transfer from incorrect owner');
-        }
-
-        if (to === Address.zero()) {
-            throw new Revert('Transfer to zero address');
         }
 
         // Check authorization
@@ -679,9 +695,12 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         // Transfer ownership
         this.ownerOfMap.set(tokenId, this._u256FromAddress(to));
 
-        this.createTransferEvent(from, to, tokenId);
+        this.createTransferredEvent(from, to, tokenId);
+    }
 
-        // External call happens after all state changes
+    protected _safeTransfer(from: Address, to: Address, tokenId: u256, data: Uint8Array): void {
+        this._transfer(from, to, tokenId);
+
         if (Blockchain.isContract(to)) {
             this._checkOnOP721Received(from, to, tokenId, data);
         }
@@ -878,7 +897,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         this._baseURI.value = baseURI;
     }
 
-    protected _buildDomainSeparator(): Uint8Array {
+    protected override _buildDomainSeparator(): Uint8Array {
         const writer = new BytesWriter(32 * 5 + ADDRESS_BYTE_LENGTH);
         writer.writeBytesU8Array(OP712_DOMAIN_TYPE_HASH);
 
@@ -978,16 +997,25 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         for (let i: i32 = 0; i < 32; i++) {
             addr[i] = bytes[i];
         }
+
         return addr;
     }
 
     // Event creation helpers
-    protected createTransferEvent(from: Address, to: Address, tokenId: u256): void {
-        this.emitEvent(new TransferredEvent(Blockchain.tx.sender, from, to, tokenId));
+    protected createTransferredEvent(from: Address, to: Address, tokenId: u256): void {
+        this.emitEvent(new OP721TransferredEvent(Blockchain.tx.sender, from, to, tokenId));
     }
 
     protected createApprovedEvent(owner: Address, approved: Address, tokenId: u256): void {
-        this.emitEvent(new ApprovedEvent(owner, approved, tokenId));
+        this.emitEvent(new OP721ApprovedEvent(owner, approved, tokenId));
+    }
+
+    protected createMintedEvent(to: Address, tokenId: u256): void {
+        this.emitEvent(new OP721MintedEvent(to, tokenId));
+    }
+
+    protected createBurnedEvent(from: Address, tokenId: u256): void {
+        this.emitEvent(new OP721BurnedEvent(from, tokenId));
     }
 
     protected createApprovedForAllEvent(
@@ -995,6 +1023,6 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         operator: Address,
         approved: boolean,
     ): void {
-        this.emitEvent(new ApprovedForAllEvent(owner, operator, approved));
+        this.emitEvent(new OP721ApprovedForAllEvent(owner, operator, approved));
     }
 }

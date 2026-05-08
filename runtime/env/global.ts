@@ -54,10 +54,4 @@ export function hash256(data: Uint8Array): Uint8Array {
     return sha256(sha256(data));
 }
 
-/**
- * Converts a string to a byte array.
- * @param {string} str - The string to convert.
- * @returns {Uint8Array} - The byte array.
- */
-
 export * from './Atomic';

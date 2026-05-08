@@ -6,10 +6,10 @@ export class OP721InitParameters {
     public baseURI: string;
     public maxSupply: u256;
 
-    public collectionBanner: string;
-    public collectionIcon: string;
-    public collectionWebsite: string;
-    public collectionDescription: string;
+    public banner: string;
+    public icon: string;
+    public website: string;
+    public description: string;
 
     constructor(
         name: string,
@@ -26,9 +26,9 @@ export class OP721InitParameters {
         this.baseURI = baseURI;
         this.maxSupply = maxSupply;
 
-        this.collectionBanner = collectionBanner;
-        this.collectionIcon = collectionIcon;
-        this.collectionWebsite = collectionWebsite;
-        this.collectionDescription = collectionDescription;
+        this.banner = collectionBanner;
+        this.icon = collectionIcon;
+        this.website = collectionWebsite;
+        this.description = collectionDescription;
     }
 }

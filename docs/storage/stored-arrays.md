@@ -196,11 +196,11 @@ if (this.holders.getLength() === 0) {
 }
 ```
 
-## Solidity vs OPNet Comparison
+## Solidity vs OP_NET Comparison
 
 ### Quick Reference Table
 
-| Solidity Array Type | OPNet Equivalent | Elements per Slot | Default Max |
+| Solidity Array Type | OP_NET Equivalent | Elements per Slot | Default Max |
 |---------------------|------------------|-------------------|-------------|
 | `uint256[]` | `StoredU256Array` | 1 | u32.MAX_VALUE - 1 |
 | `uint128[]` | `StoredU128Array` | 2 | u32.MAX_VALUE - 1 |
@@ -213,7 +213,7 @@ if (this.holders.getLength() === 0) {
 
 ### Operations Comparison
 
-| Operation | Solidity | OPNet |
+| Operation | Solidity | OP_NET |
 |-----------|----------|-------|
 | Declare array | `address[] public holders;` | `private holders: StoredAddressArray;` |
 | Initialize | Automatic | `this.holders = new StoredAddressArray(this.holdersPointer, EMPTY_POINTER);` |
@@ -230,7 +230,7 @@ if (this.holders.getLength() === 0) {
 
 ### Common Patterns
 
-| Pattern | Solidity | OPNet |
+| Pattern | Solidity | OP_NET |
 |---------|----------|-------|
 | Loop through array | `for (uint i = 0; i < arr.length; i++)` | `for (let i: u32 = 0; i < arr.getLength(); i++)` |
 | Remove at index (swap) | `arr[i] = arr[arr.length-1]; arr.pop();` | `arr.set(i, arr.get(arr.getLength()-1)); arr.deleteLast(); arr.save();` |
@@ -276,7 +276,7 @@ contract AddressList {
 }
 ```
 
-**OPNet:**
+**OP_NET:**
 ```typescript
 @final
 export class AddressList extends OP_NET {
@@ -372,7 +372,7 @@ contract ValueQueue {
 }
 ```
 
-**OPNet:**
+**OP_NET:**
 ```typescript
 @final
 export class ValueQueue extends OP_NET {
