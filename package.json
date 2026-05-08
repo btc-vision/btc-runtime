@@ -68,8 +68,7 @@
         "gulplog": "^2.2.0",
         "ts-node": "^10.9.2",
         "typescript": "^6.0.3",
-        "typescript-eslint": "^8.59.2",
-        "yaml": "^2.8.4"
+        "typescript-eslint": "^8.59.2"
     },
     "devDependencies": {
         "@btc-vision/as-covers-assembly": "^0.4.5",
@@ -77,6 +76,7 @@
         "@btc-vision/as-pect-assembly": "^8.3.0",
         "@btc-vision/as-pect-cli": "^8.3.0",
         "@btc-vision/as-pect-transform": "^8.3.0",
-        "@types/node": "^25.6.2"
+        "@types/node": "^25.6.2",
+        "yaml": "^2.8.4"
     }
 }
