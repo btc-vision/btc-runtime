@@ -590,13 +590,13 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         const iconLength = String.UTF8.byteLength(icon);
 
         const totalSize =
-            U32_BYTE_LENGTH * 4 +
-            U256_BYTE_LENGTH * 2 +
+            U32_BYTE_LENGTH * 3 +
             nameLength +
             symbolLength +
             iconLength +
-            domainSeparator.length +
-            U8_BYTE_LENGTH;
+            U8_BYTE_LENGTH +
+            U256_BYTE_LENGTH +
+            32;
 
         const w = new BytesWriter(totalSize);
         w.writeStringWithLength(name);
@@ -604,7 +604,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         w.writeStringWithLength(icon);
         w.writeU8(<u8>this._decimals.value.toU32());
         w.writeU256(this._totalSupply.value);
-        w.writeBytesWithLength(domainSeparator);
+        w.writeBytes(domainSeparator);
 
         return w;
     }

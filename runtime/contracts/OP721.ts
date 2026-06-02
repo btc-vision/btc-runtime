@@ -568,9 +568,8 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
             bannerLength +
             descriptionLength +
             websiteLength +
-            U256_BYTE_LENGTH * 2 +
-            U32_BYTE_LENGTH +
-            domainSeparator.length;
+            U256_BYTE_LENGTH +
+            32;
 
         const w = new BytesWriter(totalSize);
         w.writeStringWithLength(name);
@@ -580,8 +579,7 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         w.writeStringWithLength(description);
         w.writeStringWithLength(website);
         w.writeU256(this.totalSupply);
-        w.writeU256(this.maxSupply);
-        w.writeBytesWithLength(domainSeparator);
+        w.writeBytes(domainSeparator);
 
         return w;
     }
