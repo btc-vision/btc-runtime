@@ -19,6 +19,4 @@ export interface IOP20 {
     burn(callData: Calldata): BytesWriter;
     increaseAllowance(callData: Calldata): BytesWriter;
     decreaseAllowance(callData: Calldata): BytesWriter;
-    increaseAllowanceBySignature(callData: Calldata): BytesWriter;
-    decreaseAllowanceBySignature(callData: Calldata): BytesWriter;
 }

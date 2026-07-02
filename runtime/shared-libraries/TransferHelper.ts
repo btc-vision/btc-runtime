@@ -14,19 +14,9 @@ export const transferSignature = 'transfer(address,uint256)';
 export const transferFromSignature = 'transferFrom(address,address,uint256)';
 export const SafeTransferSignature = 'safeTransfer(address,uint256,bytes)';
 export const SafeTransferFromSignature = 'safeTransferFrom(address,address,uint256,bytes)';
-export const IncreaseAllowanceSignature = 'increaseAllowance(address,uint256)';
-export const DecreaseAllowanceSignature = 'decreaseAllowance(address,uint256)';
 export const BurnSignature = 'burn(uint256)';
 
 export class TransferHelper {
-    public static get INCREASE_ALLOWANCE_SELECTOR(): Selector {
-        return encodeSelector(IncreaseAllowanceSignature);
-    }
-
-    public static get DECREASE_ALLOWANCE_SELECTOR(): Selector {
-        return encodeSelector(DecreaseAllowanceSignature);
-    }
-
     public static get TRANSFER_SELECTOR(): Selector {
         return encodeSelector(transferSignature);
     }
@@ -41,28 +31,6 @@ export class TransferHelper {
 
     public static get SAFE_TRANSFER_FROM_SELECTOR(): Selector {
         return encodeSelector(SafeTransferFromSignature);
-    }
-
-    public static increaseAllowance(token: Address, spender: Address, amount: u256): void {
-        const calldata = new BytesWriter(
-            SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH,
-        );
-        calldata.writeSelector(this.INCREASE_ALLOWANCE_SELECTOR);
-        calldata.writeAddress(spender);
-        calldata.writeU256(amount);
-
-        Blockchain.call(token, calldata);
-    }
-
-    public static decreaseAllowance(token: Address, spender: Address, amount: u256): void {
-        const calldata = new BytesWriter(
-            SELECTOR_BYTE_LENGTH + ADDRESS_BYTE_LENGTH + U256_BYTE_LENGTH,
-        );
-        calldata.writeSelector(this.DECREASE_ALLOWANCE_SELECTOR);
-        calldata.writeAddress(spender);
-        calldata.writeU256(amount);
-
-        Blockchain.call(token, calldata);
     }
 
     public static transfer(token: Address, to: Address, amount: u256): void {

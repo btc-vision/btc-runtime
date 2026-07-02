@@ -21,7 +21,7 @@ import {
 } from '../constants/Exports';
 import { Blockchain } from '../env';
 import { sha256, sha256String } from '../env/global';
-import { OP20ApprovedEvent, OP20BurnedEvent, OP20MintedEvent, OP20TransferredEvent } from '../events/predefined';
+import { OP20ApprovedEvent, OP20BurnedEvent, OP20MintedEvent, OP20TransferredEvent, } from '../events/predefined';
 import { Selector } from '../math/abi';
 import { EMPTY_POINTER } from '../math/bytes';
 import { AddressMemoryMap } from '../memory/AddressMemoryMap';
@@ -477,74 +477,6 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
     }
 
     /**
-     * Increases allowance using an EIP-712 typed signature (gasless approval).
-     *
-     * @param calldata - Contains owner, spender, amount, deadline, and signature
-     * @emits Approved event
-     *
-     * @throws {Revert} If signature is invalid or expired
-     *
-     * @remarks
-     * Enables gasless approvals where a third party can submit the transaction.
-     * Uses Schnorr signatures now, will support ML-DSA after quantum transition.
-     */
-    @method(
-        { name: 'owner', type: ABIDataTypes.BYTES32 },
-        { name: 'ownerTweakedPublicKey', type: ABIDataTypes.BYTES32 },
-        { name: 'spender', type: ABIDataTypes.ADDRESS },
-        { name: 'amount', type: ABIDataTypes.UINT256 },
-        { name: 'deadline', type: ABIDataTypes.UINT64 },
-        { name: 'signature', type: ABIDataTypes.BYTES },
-    )
-    @emit('Approved')
-    public increaseAllowanceBySignature(calldata: Calldata): BytesWriter {
-        const ownerAddress = calldata.readBytesArray(ADDRESS_BYTE_LENGTH);
-        const ownerTweakedPublicKey = calldata.readBytesArray(ADDRESS_BYTE_LENGTH);
-
-        const owner = new ExtendedAddress(ownerTweakedPublicKey, ownerAddress);
-
-        const spender: Address = calldata.readAddress();
-        const amount: u256 = calldata.readU256();
-        const deadline: u64 = calldata.readU64();
-        const signature = calldata.readBytesWithLength();
-
-        this._increaseAllowanceBySignature(owner, spender, amount, deadline, signature);
-        return new BytesWriter(0);
-    }
-
-    /**
-     * Decreases allowance using an EIP-712 typed signature.
-     *
-     * @param calldata - Contains owner, spender, amount, deadline, and signature
-     * @emits Approved event
-     *
-     * @throws {Revert} If signature is invalid or expired
-     */
-    @method(
-        { name: 'owner', type: ABIDataTypes.BYTES32 },
-        { name: 'ownerTweakedPublicKey', type: ABIDataTypes.BYTES32 },
-        { name: 'spender', type: ABIDataTypes.ADDRESS },
-        { name: 'amount', type: ABIDataTypes.UINT256 },
-        { name: 'deadline', type: ABIDataTypes.UINT64 },
-        { name: 'signature', type: ABIDataTypes.BYTES },
-    )
-    @emit('Approved')
-    public decreaseAllowanceBySignature(calldata: Calldata): BytesWriter {
-        const ownerAddress = calldata.readBytesArray(ADDRESS_BYTE_LENGTH);
-        const ownerTweakedPublicKey = calldata.readBytesArray(ADDRESS_BYTE_LENGTH);
-
-        const owner = new ExtendedAddress(ownerTweakedPublicKey, ownerAddress);
-
-        const spender: Address = calldata.readAddress();
-        const amount: u256 = calldata.readU256();
-        const deadline: u64 = calldata.readU64();
-        const signature = calldata.readBytesWithLength();
-
-        this._decreaseAllowanceBySignature(owner, spender, amount, deadline, signature);
-        return new BytesWriter(0);
-    }
-
-    /**
      * Burns tokens from the sender's balance.
      *
      * @param calldata - Contains amount to burn
@@ -861,6 +793,7 @@ export abstract class OP20 extends ReentrancyGuard implements IOP20 {
         if (owner === Address.zero()) {
             throw new Revert('Invalid approver');
         }
+
         if (spender === Address.zero()) {
             throw new Revert('Invalid spender');
         }
