@@ -410,66 +410,6 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         return w;
     }
 
-    @method(
-        { name: 'owner', type: ABIDataTypes.BYTES32 },
-        { name: 'ownerTweakedPublicKey', type: ABIDataTypes.BYTES32 },
-        { name: 'operator', type: ABIDataTypes.ADDRESS },
-        { name: 'tokenId', type: ABIDataTypes.UINT256 },
-        { name: 'deadline', type: ABIDataTypes.UINT64 },
-        { name: 'signature', type: ABIDataTypes.BYTES },
-    )
-    @emit('Approved')
-    public approveBySignature(calldata: Calldata): BytesWriter {
-        const ownerAddress = calldata.readBytesArray(ADDRESS_BYTE_LENGTH);
-        const ownerTweakedPublicKey = calldata.readBytesArray(ADDRESS_BYTE_LENGTH);
-
-        const owner = new ExtendedAddress(ownerTweakedPublicKey, ownerAddress);
-
-        const operator = calldata.readAddress();
-        const tokenId = calldata.readU256();
-        const deadline = calldata.readU64();
-        const signature = calldata.readBytesWithLength();
-
-        // Verify ownership
-        const tokenOwner = this._ownerOf(tokenId);
-        if (tokenOwner !== owner) throw new Revert('Not token owner');
-
-        this._verifyApproveSignature(owner, operator, tokenId, deadline, signature);
-
-        this._approve(operator, tokenId);
-
-        return new BytesWriter(0);
-    }
-
-    @method(
-        { name: 'owner', type: ABIDataTypes.BYTES32 },
-        { name: 'ownerTweakedPublicKey', type: ABIDataTypes.BYTES32 },
-        { name: 'operator', type: ABIDataTypes.ADDRESS },
-        { name: 'approved', type: ABIDataTypes.BOOL },
-        { name: 'deadline', type: ABIDataTypes.UINT64 },
-        { name: 'signature', type: ABIDataTypes.BYTES },
-    )
-    @emit('Approved')
-    public setApprovalForAllBySignature(calldata: Calldata): BytesWriter {
-        const ownerAddress = calldata.readBytesArray(ADDRESS_BYTE_LENGTH);
-        const ownerTweakedPublicKey = calldata.readBytesArray(ADDRESS_BYTE_LENGTH);
-
-        const owner = new ExtendedAddress(ownerTweakedPublicKey, ownerAddress);
-
-        const operator = calldata.readAddress();
-        const approved = calldata.readBoolean();
-        const deadline = calldata.readU64();
-        const signature = calldata.readBytesWithLength();
-
-        if (owner === operator) throw new Revert('Cannot approve self');
-
-        this._verifySetApprovalForAllSignature(owner, operator, approved, deadline, signature);
-
-        this._setApprovalForAll(owner, operator, approved);
-
-        return new BytesWriter(0);
-    }
-
     @method({ name: 'tokenId', type: ABIDataTypes.UINT256 })
     @emit('Burned')
     public burn(calldata: Calldata): BytesWriter {
