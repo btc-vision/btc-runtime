@@ -197,6 +197,42 @@ export abstract class OP721 extends ReentrancyGuard implements IOP721 {
         return w;
     }
 
+    @method('icon')
+    @returns({ name: 'icon', type: ABIDataTypes.STRING })
+    public fn_icon(_: Calldata): BytesWriter {
+        const icon = this.icon;
+        const w = new BytesWriter(String.UTF8.byteLength(icon) + 4);
+        w.writeStringWithLength(icon);
+        return w;
+    }
+
+    @method('banner')
+    @returns({ name: 'banner', type: ABIDataTypes.STRING })
+    public fn_banner(_: Calldata): BytesWriter {
+        const banner = this.banner;
+        const w = new BytesWriter(String.UTF8.byteLength(banner) + 4);
+        w.writeStringWithLength(banner);
+        return w;
+    }
+
+    @method('description')
+    @returns({ name: 'description', type: ABIDataTypes.STRING })
+    public fn_description(_: Calldata): BytesWriter {
+        const description = this.description;
+        const w = new BytesWriter(String.UTF8.byteLength(description) + 4);
+        w.writeStringWithLength(description);
+        return w;
+    }
+
+    @method('website')
+    @returns({ name: 'website', type: ABIDataTypes.STRING })
+    public fn_website(_: Calldata): BytesWriter {
+        const website = this.website;
+        const w = new BytesWriter(String.UTF8.byteLength(website) + 4);
+        w.writeStringWithLength(website);
+        return w;
+    }
+
     @method('maxSupply')
     @returns({ name: 'maxSupply', type: ABIDataTypes.UINT256 })
     public fn_maxSupply(_: Calldata): BytesWriter {
